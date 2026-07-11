@@ -51,7 +51,7 @@ export default async function LandingPage() {
         <div className="homepage-wide-container relative z-10 text-center">
           <FadeIn>
             <div
-              className="animate-main animate-float mb-6 mx-auto inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-[0.28em] uppercase shadow-[0_0_30px_rgba(255,210,74,0.08)] transition-transform duration-300 hover:scale-[1.03]"
+              className="mb-6 mx-auto inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-[0.28em] uppercase shadow-[0_0_30px_rgba(255,210,74,0.08)] transition-transform duration-300 hover:scale-[1.03]"
               style={{
                 border: `1px solid color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 34%, transparent)`,
                 backgroundColor: `color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 12%, transparent)`,
@@ -61,18 +61,14 @@ export default async function LandingPage() {
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
                 <Icon name="code_blocks" className="text-[14px]" />
               </span>
-              <TypingText
-                text="We Connect Innovative Solutions"
-                speed={58}
-                startDelay={250}
-                holdDelay={5000}
-                className="text-inherit"
-                cursorClassName="bg-current"
-              />
+              <span className="text-inherit normal-case tracking-[0.18em]">
+                We Connect Innovative Solutions
+                <span className="company-suffix-blink align-super ml-1 inline-block rounded-sm px-1 text-[0.78em] font-bold tracking-[0.16em] leading-none sm:text-[0.72em] sm:tracking-[0.22em]">Pvt. Ltd</span>
+              </span>
             </div>
             <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.7vw,4.6rem)] font-black leading-[0.94] tracking-[-0.06em] sm:leading-[0.96]">
               <span className="block text-white/95 drop-shadow-[0_6px_24px_rgba(0,0,0,0.25)]">Transforming Ideas Into</span>
-              <span className="animate-main relative mt-5 inline-flex flex-wrap items-center justify-center gap-4">
+              <span className="relative mt-5 inline-flex flex-wrap items-center justify-center gap-4">
                 <span
                   className="absolute inset-x-[-1.25rem] top-1/2 -z-10 h-[72%] -translate-y-1/2 rounded-full blur-3xl"
                   style={{
@@ -86,12 +82,7 @@ export default async function LandingPage() {
                     backgroundColor: "rgba(255,255,255,0.03)",
                   }}
                 >
-                  <span
-                    className="bg-clip-text text-transparent"
-                    style={{
-                      backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})`,
-                    }}
-                  >
+                <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})` }}>
                     <TypingText
                       text={["Digital Products.", "Scalable Brands.", "AI-Powered Systems.", "Premium Experiences.", "Growth That Converts."]}
                       speed={72}

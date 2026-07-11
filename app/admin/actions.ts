@@ -17,7 +17,7 @@ import {
   requireAdminOnly,
   requirePermission,
 } from "@/lib/admin-access";
-import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, Course, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, SoftwareHouse, Submission, Task } from "@/lib/supabase/types";
+import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, ClientHuntLead, Course, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, SoftwareHouse, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
 import { internshipLetterSchema, type InternshipLetterFormValues } from "@/lib/validations/internship-letter";
 import type { BrandingSettingsInput } from "@/lib/branding-settings";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
@@ -86,20 +86,59 @@ export type DailyPendingReportRow = {
   status: "submitted" | "pending";
 };
 
+export type DailyUnpaidReportRow = {
+  studentId: string;
+  studentName: string;
+  courseTitles: string;
+  taskTitles: string;
+  feedback: string;
+  feeStatus: string;
+  status: "submitted" | "pending";
+};
+
+export type PaidFeeStudentDetail = {
+  studentId: string;
+  studentName: string;
+  email: string;
+  courseId: string;
+  courseTitle: string;
+  monthKey: string;
+  amountDue: number;
+  amountPaid: number;
+  status: "paid" | "waived";
+};
+
+export type StudentWorkSummary = {
+  studentId: string;
+  studentName: string;
+  email: string;
+  paidFeesCount: number;
+  tasksCompletedCount: number;
+  clientHuntsDoneCount: number;
+};
+
 export type TaskAnalyticsDashboardData = {
   totalActiveStudents: number;
   todaySubmittedCount: number;
+  completedTasksCount: number;
   pendingStudentsCount: number;
+  paidFeeStudentsCount: number;
   clientHuntingAssignedCount: number;
   clientHuntingPendingCount: number;
   todaySubmittedStudents: StudentTaskDetail[];
   todayNotSubmittedStudents: StudentTaskDetail[];
   dailyPendingReportRows: DailyPendingReportRow[];
+  dailyUnpaidReportRows: DailyUnpaidReportRow[];
   allTaskDetails: StudentTaskDetail[];
   pendingStudents: StudentTaskDetail[];
   activeStudents: StudentTaskDetail[];
+  paidFeeStudents: PaidFeeStudentDetail[];
+  unpaidFeeStudentsCount: number;
+  unpaidActiveStudents: StudentTaskDetail[];
+  unpaidTaskDetails: StudentTaskDetail[];
   clientHuntingAssignedStudents: StudentTaskDetail[];
   clientHuntingPendingStudents: StudentTaskDetail[];
+  studentWorkSummaries: StudentWorkSummary[];
   report: {
     totalStudents: number;
     submittedStudents: StudentTaskDetail[];
@@ -312,6 +351,16 @@ function getPakistanDayBounds(dateStr: string): { startIso: string; endIso: stri
   };
 }
 
+function getPakistanDateContext() {
+  const nowInPkt = new Date(Date.now() + 5 * 60 * 60 * 1000);
+  const year = nowInPkt.getUTCFullYear();
+  const month = String(nowInPkt.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(nowInPkt.getUTCDate()).padStart(2, "0");
+  return {
+    todayPktStr: `${year}-${month}-${day}`,
+  };
+}
+
 export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDashboardData> {
   await requireAdminOnly();
 
@@ -337,6 +386,44 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
   }
 
   const activeEnrollments = (enrollmentResult.data ?? []) as Enrollment[];
+  if (activeEnrollments.length === 0) {
+    const clientHuntingAssignedStudents = sortStudentTaskDetails(
+      ((clientHuntingProfileResult.data ?? []) as Profile[]).map(toClientHuntingTaskDetail),
+    );
+    const clientHuntingPendingStudents = sortStudentTaskDetails(
+      clientHuntingAssignedStudents.filter((detail) => detail.status === "pending"),
+    );
+
+    return {
+      totalActiveStudents: 0,
+      todaySubmittedCount: 0,
+      completedTasksCount: 0,
+      pendingStudentsCount: 0,
+      paidFeeStudentsCount: 0,
+      clientHuntingAssignedCount: uniqueCount(clientHuntingAssignedStudents.map((detail) => detail.studentId)),
+      clientHuntingPendingCount: uniqueCount(clientHuntingPendingStudents.map((detail) => detail.studentId)),
+      todaySubmittedStudents: [],
+      todayNotSubmittedStudents: [],
+      dailyPendingReportRows: [],
+      dailyUnpaidReportRows: [],
+      allTaskDetails: [],
+      pendingStudents: [],
+      activeStudents: [],
+      paidFeeStudents: [],
+      unpaidFeeStudentsCount: 0,
+      unpaidActiveStudents: [],
+      unpaidTaskDetails: [],
+      clientHuntingAssignedStudents,
+      clientHuntingPendingStudents,
+      studentWorkSummaries: [],
+      report: {
+        totalStudents: 0,
+        submittedStudents: [],
+        notSubmittedStudents: [],
+      },
+    };
+  }
+
   const clientHuntingAssignedStudents = sortStudentTaskDetails(
     ((clientHuntingProfileResult.data ?? []) as Profile[]).map(toClientHuntingTaskDetail),
   );
@@ -346,9 +433,11 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
   const activeStudentIds = Array.from(new Set(activeEnrollments.map((enrollment) => enrollment.student_id)));
   const courseIds = Array.from(new Set(activeEnrollments.map((enrollment) => enrollment.course_id)));
 
+  const { todayPktStr } = getPakistanDateContext();
+
   const { data: feeRecordsData, error: feeRecordsError } = await supabaseAdmin
     .from("student_fee_records")
-    .select("student_id,course_id,status,updated_at")
+    .select("student_id,course_id,month_key,amount_due,amount_paid,status,due_date,updated_at")
     .in("student_id", activeStudentIds)
     .in("course_id", courseIds)
     .order("updated_at", { ascending: false });
@@ -357,54 +446,47 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
     throw new Error(feeRecordsError.message);
   }
 
-  const latestFeeRecordByEnrollment = new Map<string, { student_id: string; course_id: string; status: string }>();
-  for (const feeRecord of (feeRecordsData ?? []) as Array<{ student_id: string; course_id: string; status: string }>) {
+  const { data: clientHuntLeadsData, error: clientHuntLeadsError } = await supabaseAdmin
+    .from("client_hunt_leads")
+    .select("student_id,status,updated_at")
+    .in("student_id", activeStudentIds);
+
+  if (clientHuntLeadsError) {
+    throw new Error(clientHuntLeadsError.message);
+  }
+
+  const latestFeeRecordByEnrollment = new Map<string, StudentFeeRecord>();
+  for (const feeRecord of (feeRecordsData ?? []) as StudentFeeRecord[]) {
     const key = `${feeRecord.student_id}:${feeRecord.course_id}`;
-    if (!latestFeeRecordByEnrollment.has(key)) {
+    const currentRecord = latestFeeRecordByEnrollment.get(key);
+    if (!currentRecord || feeRecord.updated_at > currentRecord.updated_at) {
       latestFeeRecordByEnrollment.set(key, feeRecord);
     }
   }
 
-  const paidStudentIds = new Set<string>();
-  for (const enrollment of activeEnrollments) {
-    const latestFeeRecord = latestFeeRecordByEnrollment.get(`${enrollment.student_id}:${enrollment.course_id}`);
-    if (latestFeeRecord?.status === "paid") {
-      paidStudentIds.add(enrollment.student_id);
-    }
-  }
+  const eligibleEnrollments = activeEnrollments.filter((enrollment) => {
+    const feeRecord = latestFeeRecordByEnrollment.get(`${enrollment.student_id}:${enrollment.course_id}`);
+    if (!feeRecord) return false;
+    if (feeRecord.status !== "paid" && feeRecord.status !== "waived") return false;
+    return true;
+  });
+  const unpaidEnrollments = activeEnrollments.filter((enrollment) => {
+    const feeRecord = latestFeeRecordByEnrollment.get(`${enrollment.student_id}:${enrollment.course_id}`);
+    return !feeRecord || (feeRecord.status !== "paid" && feeRecord.status !== "waived");
+  });
 
-  const paidActiveEnrollments = activeEnrollments.filter((enrollment) => paidStudentIds.has(enrollment.student_id));
-  const paidActiveStudentIds = Array.from(paidStudentIds);
-  const paidCourseIds = Array.from(new Set(paidActiveEnrollments.map((enrollment) => enrollment.course_id)));
+  const eligibleStudentIds = new Set(eligibleEnrollments.map((enrollment) => enrollment.student_id));
+  const paidActiveEnrollments = eligibleEnrollments;
+  const paidActiveStudentIds = Array.from(eligibleStudentIds);
 
-  if (paidActiveEnrollments.length === 0) {
-    return {
-      totalActiveStudents: 0,
-      todaySubmittedCount: 0,
-      pendingStudentsCount: 0,
-      clientHuntingAssignedCount: uniqueCount(clientHuntingAssignedStudents.map((detail) => detail.studentId)),
-      clientHuntingPendingCount: uniqueCount(clientHuntingPendingStudents.map((detail) => detail.studentId)),
-      todaySubmittedStudents: [],
-      todayNotSubmittedStudents: [],
-      dailyPendingReportRows: [],
-      allTaskDetails: [],
-      pendingStudents: [],
-      activeStudents: [],
-      clientHuntingAssignedStudents,
-      clientHuntingPendingStudents,
-      report: {
-        totalStudents: 0,
-        submittedStudents: [],
-        notSubmittedStudents: [],
-      },
-    };
-  }
+  const allActiveStudentIds = Array.from(new Set(activeEnrollments.map((enrollment) => enrollment.student_id)));
+  const allCourseIds = Array.from(new Set(activeEnrollments.map((enrollment) => enrollment.course_id)));
 
   const [studentResult, courseResult, taskResult, submissionResult] = await Promise.all([
-    supabaseAdmin.from("profiles").select("*").in("id", paidActiveStudentIds),
-    supabaseAdmin.from("courses").select("*").in("id", paidCourseIds),
-    supabaseAdmin.from("tasks").select("*").in("student_id", paidActiveStudentIds).in("course_id", paidCourseIds).order("created_at", { ascending: false }),
-    supabaseAdmin.from("submissions").select("*").in("student_id", paidActiveStudentIds).order("submitted_at", { ascending: false }),
+    supabaseAdmin.from("profiles").select("*").in("id", allActiveStudentIds),
+    supabaseAdmin.from("courses").select("*").in("id", allCourseIds),
+    supabaseAdmin.from("tasks").select("*").in("student_id", allActiveStudentIds).in("course_id", allCourseIds).order("created_at", { ascending: false }),
+    supabaseAdmin.from("submissions").select("*").in("student_id", allActiveStudentIds).order("submitted_at", { ascending: false }),
   ]);
 
   const error = studentResult.error ?? courseResult.error ?? taskResult.error ?? submissionResult.error;
@@ -415,13 +497,55 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
   const students = (studentResult.data ?? []) as Profile[];
   const courses = (courseResult.data ?? []) as Course[];
   const tasks = ((taskResult.data ?? []) as Task[]).filter((task) =>
-    paidActiveEnrollments.some((enrollment) => enrollment.student_id === task.student_id && enrollment.course_id === task.course_id),
+    activeEnrollments.some((enrollment) => enrollment.student_id === task.student_id && enrollment.course_id === task.course_id),
   );
   const activeTaskIds = new Set(tasks.map((task) => task.id));
   const submissions = ((submissionResult.data ?? []) as Submission[]).filter((submission) => activeTaskIds.has(submission.task_id));
+  const clientHuntLeads = (clientHuntLeadsData ?? []) as ClientHuntLead[];
 
   const studentById = new Map(students.map((student) => [student.id, student]));
   const courseById = new Map(courses.map((course) => [course.id, course]));
+  const latestPaidFeeByStudent = new Map<string, PaidFeeStudentDetail & { updatedAt: string }>();
+
+  for (const feeRecord of latestFeeRecordByEnrollment.values()) {
+    if (feeRecord.status !== "paid" && feeRecord.status !== "waived") continue;
+
+    const student = studentById.get(feeRecord.student_id);
+    const course = courseById.get(feeRecord.course_id);
+    const current = latestPaidFeeByStudent.get(feeRecord.student_id);
+
+    if (current && current.updatedAt >= feeRecord.updated_at) {
+      continue;
+    }
+
+    latestPaidFeeByStudent.set(feeRecord.student_id, {
+      studentId: feeRecord.student_id,
+      studentName: student?.full_name || "Unknown student",
+      email: student?.email || "",
+      courseId: feeRecord.course_id,
+      courseTitle: course?.title || "Unknown course",
+      monthKey: feeRecord.month_key,
+      amountDue: Number(feeRecord.amount_due ?? 0),
+      amountPaid: Number(feeRecord.amount_paid ?? 0),
+      status: feeRecord.status,
+      updatedAt: feeRecord.updated_at,
+    });
+  }
+
+  const paidFeeStudents = Array.from(latestPaidFeeByStudent.values())
+    .sort((first, second) => first.studentName.localeCompare(second.studentName))
+    .map((detail) => ({
+      studentId: detail.studentId,
+      studentName: detail.studentName,
+      email: detail.email,
+      courseId: detail.courseId,
+      courseTitle: detail.courseTitle,
+      monthKey: detail.monthKey,
+      amountDue: detail.amountDue,
+      amountPaid: detail.amountPaid,
+      status: detail.status,
+    }));
+
   const tasksByEnrollment = new Map<string, Task[]>();
   const latestSubmissionByTask = new Map<string, Submission>();
 
@@ -437,42 +561,74 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
     }
   }
 
-  const taskDetails: StudentTaskDetail[] = [];
-  const activeDetails: StudentTaskDetail[] = [];
+  function buildTaskDetailsForEnrollments(enrollments: Enrollment[]) {
+    const taskDetails: StudentTaskDetail[] = [];
+    const activeDetails: StudentTaskDetail[] = [];
 
-  for (const enrollment of paidActiveEnrollments) {
-    const key = `${enrollment.student_id}:${enrollment.course_id}`;
-    const enrollmentTasks = tasksByEnrollment.get(key) ?? [];
-    const student = studentById.get(enrollment.student_id);
-    const course = courseById.get(enrollment.course_id);
+    for (const enrollment of enrollments) {
+      const key = `${enrollment.student_id}:${enrollment.course_id}`;
+      const enrollmentTasks = tasksByEnrollment.get(key) ?? [];
+      const student = studentById.get(enrollment.student_id);
+      const course = courseById.get(enrollment.course_id);
+      let firstDetailForEnrollment: StudentTaskDetail | null = null;
 
-    if (enrollmentTasks.length === 0) {
-      activeDetails.push(toStudentTaskDetail({ student, course, enrollment, status: "pending" }));
-      continue;
+      if (enrollmentTasks.length === 0) {
+        activeDetails.push(toStudentTaskDetail({ student, course, enrollment, status: "pending" }));
+        continue;
+      }
+
+      for (const task of enrollmentTasks) {
+        const submission = latestSubmissionByTask.get(task.id);
+        const detail = toStudentTaskDetail({
+          student,
+          course,
+          enrollment,
+          task,
+          submission,
+          status: (submission || ["submitted", "reviewed", "rejected", "revision_required"].includes(task.status)) ? "submitted" : "pending",
+        });
+        if (!firstDetailForEnrollment) {
+          firstDetailForEnrollment = detail;
+        }
+        taskDetails.push(detail);
+      }
+
+      activeDetails.push(firstDetailForEnrollment ?? toStudentTaskDetail({ student, course, enrollment, status: "pending" }));
     }
 
-    for (const task of enrollmentTasks) {
-      const submission = latestSubmissionByTask.get(task.id);
-      const detail = toStudentTaskDetail({
-        student,
-        course,
-        enrollment,
-        task,
-        submission,
-        status: (submission || ["submitted", "reviewed", "rejected", "revision_required"].includes(task.status)) ? "submitted" : "pending",
-      });
-      taskDetails.push(detail);
-    }
-
-    activeDetails.push(taskDetails.find((detail) => detail.studentId === enrollment.student_id && detail.courseTitle === (course?.title || "Unknown course")) ?? toStudentTaskDetail({ student, course, enrollment, status: "pending" }));
+    return { taskDetails, activeDetails };
   }
 
-  // Get current date in Pakistan timezone (UTC+5)
-  const nowInPkt = new Date(new Date().getTime() + 5 * 60 * 60 * 1000);
-  const yearPkt = nowInPkt.getUTCFullYear();
-  const monthPkt = nowInPkt.getUTCMonth() + 1;
-  const dayPkt = nowInPkt.getUTCDate();
-  const todayPktStr = `${yearPkt}-${String(monthPkt).padStart(2, "0")}-${String(dayPkt).padStart(2, "0")}`;
+  const { taskDetails, activeDetails } = buildTaskDetailsForEnrollments(paidActiveEnrollments);
+  const { taskDetails: unpaidTaskDetails, activeDetails: unpaidActiveDetails } = buildTaskDetailsForEnrollments(unpaidEnrollments);
+
+  const paidFeeCountByStudent = new Map<string, number>();
+  for (const enrollment of paidActiveEnrollments) {
+    paidFeeCountByStudent.set(enrollment.student_id, (paidFeeCountByStudent.get(enrollment.student_id) ?? 0) + 1);
+  }
+
+  const reviewedTaskCountByStudent = new Map<string, number>();
+  for (const detail of taskDetails) {
+    if (detail.taskStatus !== "reviewed") continue;
+    reviewedTaskCountByStudent.set(detail.studentId, (reviewedTaskCountByStudent.get(detail.studentId) ?? 0) + 1);
+  }
+
+  const approvedClientHuntCountByStudent = new Map<string, number>();
+  for (const lead of clientHuntLeads) {
+    if (lead.status !== "approved") continue;
+    approvedClientHuntCountByStudent.set(lead.student_id, (approvedClientHuntCountByStudent.get(lead.student_id) ?? 0) + 1);
+  }
+
+  const studentWorkSummaries = paidFeeStudents
+    .map((student) => ({
+      studentId: student.studentId,
+      studentName: student.studentName,
+      email: student.email,
+      paidFeesCount: paidFeeCountByStudent.get(student.studentId) ?? 0,
+      tasksCompletedCount: reviewedTaskCountByStudent.get(student.studentId) ?? 0,
+      clientHuntsDoneCount: approvedClientHuntCountByStudent.get(student.studentId) ?? 0,
+    }))
+    .sort((first, second) => first.studentName.localeCompare(second.studentName));
 
   const { startIso: todayStartIso, endIso: tomorrowStartIso } = getPakistanDayBounds(todayPktStr);
 
@@ -541,20 +697,67 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
     }),
   );
 
+  const dailyUnpaidReportRows: DailyUnpaidReportRow[] = Array.from(new Map(unpaidActiveDetails.map((detail) => [detail.studentId, detail])).values())
+    .map((detail) => {
+      const todaysTaskTitles = unpaidTaskDetails
+        .filter((item) => item.studentId === detail.studentId)
+        .map((taskDetail) => {
+          const activeDate = taskDetail.reviewedAt ?? taskDetail.submittedAt;
+          if (!activeDate || activeDate < todayStartIso || activeDate >= tomorrowStartIso) return null;
+          return taskDetail.taskTitle?.trim() || null;
+        })
+        .filter((title): title is string => Boolean(title));
+      const todaysFeedback = unpaidTaskDetails
+        .filter((item) => item.studentId === detail.studentId)
+        .map((taskDetail) => {
+          const activeDate = taskDetail.reviewedAt ?? taskDetail.submittedAt;
+          if (!activeDate || activeDate < todayStartIso || activeDate >= tomorrowStartIso) return null;
+          return taskDetail.feedback?.trim() || null;
+        })
+        .filter((value): value is string => Boolean(value));
+      const courseTitles = Array.from(
+        new Set(
+          unpaidTaskDetails
+            .filter((item) => item.studentId === detail.studentId)
+            .map((taskDetail) => taskDetail.courseTitle)
+            .filter(Boolean),
+        ),
+      ).sort((first, second) => first.localeCompare(second));
+      const row = {
+        studentId: detail.studentId,
+        studentName: detail.studentName,
+        courseTitles: courseTitles.length > 0 ? courseTitles.join(", ") : detail.courseTitle,
+        taskTitles: todaysTaskTitles.length > 0 ? todaysTaskTitles.join(", ") : "Nothing Submitted",
+        feedback: todaysFeedback.length > 0 ? todaysFeedback.join("; ") : "No feedback",
+        feeStatus: "Unpaid",
+        status: todaysTaskTitles.length > 0 ? "submitted" : "pending",
+      } satisfies DailyUnpaidReportRow;
+      return row;
+    })
+    .sort((first, second) => first.studentName.localeCompare(second.studentName));
+
   return {
     totalActiveStudents: uniqueCount(paidActiveStudentIds),
     todaySubmittedCount: uniqueCount(todaySubmittedStudents.map((detail) => detail.studentId)),
+    completedTasksCount: taskDetails.filter((detail) => detail.taskStatus === "reviewed").length,
     pendingStudentsCount: uniqueCount(pendingStudents.map((detail) => detail.studentId)),
+    paidFeeStudentsCount: paidFeeStudents.length,
     clientHuntingAssignedCount: uniqueCount(clientHuntingAssignedStudents.map((detail) => detail.studentId)),
     clientHuntingPendingCount: uniqueCount(clientHuntingPendingStudents.map((detail) => detail.studentId)),
     todaySubmittedStudents,
     todayNotSubmittedStudents,
     dailyPendingReportRows,
+    dailyUnpaidReportRows,
     allTaskDetails: taskDetails,
     pendingStudents,
     activeStudents: activeDetailsByStudent,
+    paidFeeStudents,
+    unpaidFeeStudentsCount: uniqueCount(unpaidEnrollments.map((enrollment) => enrollment.student_id)),
+    unpaidActiveStudents: unpaidActiveDetails,
+    unpaidTaskDetails,
     clientHuntingAssignedStudents,
     clientHuntingPendingStudents,
+    studentWorkSummaries,
     report: {
       totalStudents: uniqueCount(paidActiveStudentIds),
       submittedStudents: submittedReportStudents,
@@ -2049,6 +2252,11 @@ export async function uploadBrandingLogo(formData: FormData): Promise<ActionResu
 
     if (file.size > 5 * 1024 * 1024) {
       throw new Error("Logo must be under 5 MB.");
+    }
+
+    const githubConfigured = Boolean(process.env.GITHUB_TOKEN && process.env.GITHUB_OWNER && process.env.GITHUB_REPO);
+    if (!githubConfigured) {
+      throw new Error("GitHub branding upload is not configured. Set GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO.");
     }
 
     const upload = await uploadGithubFile({

@@ -923,6 +923,32 @@ body {
     50% { transform: scale(1.03); }
   }
 
+  .company-suffix-blink {
+    animation: company-suffix-blink 1.8s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  @keyframes company-suffix-blink {
+    0%, 100% {
+      opacity: 0.68;
+      transform: scale(1);
+      text-shadow: 0 0 0 transparent;
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+      text-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .company-suffix-blink {
+      animation: none;
+      opacity: 1;
+      text-shadow: 0 0 10px currentColor;
+    }
+  }
+
   .bg-mesh-gradient {
     background-color: var(--wc-bg);
     background-image:
