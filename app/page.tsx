@@ -76,13 +76,13 @@ export default async function LandingPage() {
                   }}
                 />
                 <span
-                  className="inline-flex items-center justify-center rounded-[1.75rem] border px-5 py-3 leading-none shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-md"
+                  className="inline-flex h-[4.25rem] items-center justify-center rounded-[1.75rem] border px-5 py-0 leading-[0] shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-md sm:h-[4.75rem]"
                   style={{
                     borderColor: `color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 26%, transparent)`,
                     backgroundColor: "rgba(255,255,255,0.03)",
                   }}
                 >
-                <span className="inline-flex items-center justify-center bg-clip-text leading-none text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})` }}>
+                <span className="inline-flex h-full items-center justify-center bg-clip-text leading-[0] text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})` }}>
                     <TypingText
                       text={["Digital Products.", "Scalable Brands.", "AI-Powered Systems.", "Premium Experiences.", "Growth That Converts."]}
                       speed={72}
