@@ -88,7 +88,7 @@ export default async function LandingPage() {
                       speed={72}
                       startDelay={250}
                       holdDelay={2200}
-                      className="text-[clamp(1.2rem,5vw,3.1rem)] leading-[1.02] tracking-[-0.04em] sm:text-[clamp(1.4rem,3.7vw,3.1rem)] sm:leading-none"
+                      className="text-[clamp(1.1rem,4.4vw,2.6rem)] leading-[1.02] tracking-[-0.04em] sm:text-[clamp(1.25rem,3.2vw,2.6rem)] sm:leading-none"
                     />
                   </span>
                 </span>
