@@ -36,6 +36,26 @@ const predefinedFaqs = [
     answer: "The training is primarily online and portal-based, with resources, tasks, and mentorship managed through the student portal."
   },
   {
+    question: "What consultancy services do you offer?",
+    answer: "We provide consultancy for web and mobile product development, business process automation, AI solutions, digital strategy, and technology planning."
+  },
+  {
+    question: "How does the consultancy process work?",
+    answer: "We begin with a discovery call to understand your goals and challenges. Our team then recommends a practical solution, project scope, timeline, and implementation plan."
+  },
+  {
+    question: "Can you build a custom solution for my business?",
+    answer: "Yes. We design and develop custom websites, applications, automation systems, and AI-powered tools based on your business requirements."
+  },
+  {
+    question: "How much does consultancy cost?",
+    answer: "The cost depends on the scope, complexity, and duration of your project. Contact our team with your requirements to receive a tailored estimate."
+  },
+  {
+    question: "How can I book a consultation?",
+    answer: "You can book a consultation through our Contact page or use the Start a Project button. Share a brief overview of your needs and our team will get in touch."
+  },
+  {
     question: "Will I get certificates?",
     answer: "Yes, after completing the required tasks and course progress, eligible students can receive completion support and certificates."
   },
