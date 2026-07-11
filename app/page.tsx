@@ -68,7 +68,7 @@ export default async function LandingPage() {
             </div>
             <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.7vw,4.6rem)] font-black leading-[0.94] tracking-[-0.06em] sm:leading-[0.96]">
               <span className="block text-white/95 drop-shadow-[0_6px_24px_rgba(0,0,0,0.25)]">Transforming Ideas Into</span>
-              <span className="relative mt-5 inline-flex flex-wrap items-center justify-center gap-4">
+              <span className="relative mt-5 inline-flex flex-wrap items-center justify-center gap-4 leading-none">
                 <span
                   className="absolute inset-x-[-1.25rem] top-1/2 -z-10 h-[72%] -translate-y-1/2 rounded-full blur-3xl"
                   style={{
@@ -76,13 +76,13 @@ export default async function LandingPage() {
                   }}
                 />
                 <span
-                  className="rounded-[1.75rem] border px-5 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-md"
+                  className="inline-flex items-center justify-center rounded-[1.75rem] border px-5 py-3 leading-none shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-md"
                   style={{
                     borderColor: `color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 26%, transparent)`,
                     backgroundColor: "rgba(255,255,255,0.03)",
                   }}
                 >
-                <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})` }}>
+                <span className="inline-flex items-center justify-center bg-clip-text leading-none text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})` }}>
                     <TypingText
                       text={["Digital Products.", "Scalable Brands.", "AI-Powered Systems.", "Premium Experiences.", "Growth That Converts."]}
                       speed={72}
