@@ -61,9 +61,9 @@ export default async function LandingPage() {
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
                 <Icon name="code_blocks" className="text-[14px]" />
               </span>
-              <span className="text-inherit normal-case tracking-[0.18em]">
+              <span className="relative inline-block text-inherit normal-case tracking-[0.18em]">
                 We Connect Innovative Solutions
-                <span className="company-suffix-blink ml-1 text-[0.68em] font-black tracking-[0.08em] leading-none sm:text-[0.64em]">Pvt. Ltd</span>
+                <span className="company-suffix-blink text-[0.68em] font-black tracking-[0.08em] leading-none sm:text-[0.64em]">Pvt. Ltd</span>
               </span>
             </div>
             <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.7vw,4.6rem)] font-black leading-[0.94] tracking-[-0.06em] sm:leading-[0.96]">

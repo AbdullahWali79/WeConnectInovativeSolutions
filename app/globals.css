@@ -924,13 +924,15 @@ body {
   }
 
   .company-suffix-blink {
-    display: inline-flex;
+    position: absolute;
+    z-index: 2;
+    top: -1.75rem;
+    right: -3.9rem;
+    display: flex;
     width: 4.8rem;
     height: 2.35rem;
     align-items: center;
     justify-content: center;
-    vertical-align: super;
-    margin-top: -0.65rem;
     color: #03210f;
     background: linear-gradient(135deg, #86efac 0%, #22c55e 52%, #16a34a 100%);
     clip-path: polygon(50% 0%, 59% 16%, 74% 7%, 78% 25%, 96% 25%, 86% 42%, 100% 50%, 86% 58%, 96% 75%, 78% 75%, 74% 93%, 59% 84%, 50% 100%, 41% 84%, 26% 93%, 22% 75%, 4% 75%, 14% 58%, 0% 50%, 14% 42%, 4% 25%, 22% 25%, 26% 7%, 41% 16%);
