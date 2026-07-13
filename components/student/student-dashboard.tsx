@@ -366,15 +366,6 @@ export function StudentDashboard() {
       .map((link) => link.trim())
       .filter(Boolean);
 
-    if (proofLinks.length === 0) {
-      setToast({ type: "error", message: "Add at least one proof link." });
-      return;
-    }
-
-    if (dailyFiles.length === 0) {
-      setToast({ type: "error", message: "Please upload at least 1 screenshot from your device." });
-      return;
-    }
     if (dailyFiles.length > 5) {
       setToast({ type: "error", message: "You can upload up to 5 screenshots." });
       return;
@@ -459,13 +450,15 @@ export function StudentDashboard() {
         mime_type: item.mimeType,
       }));
 
-      const { error: insertError } = await supabase
-        .from("submission_screenshots")
-        .insert(screenshotRows);
+      if (screenshotRows.length > 0) {
+        const { error: insertError } = await supabase
+          .from("submission_screenshots")
+          .insert(screenshotRows);
 
-      if (insertError) throw insertError;
+        if (insertError) throw insertError;
+      }
 
-      setToast({ type: "success", message: "Daily task submitted for review with screenshots." });
+      setToast({ type: "success", message: "Daily task submitted for review." });
       setTaskForm({
         course_id: activeEnrollments[0]?.course_id ?? "",
         title: "",
@@ -722,7 +715,7 @@ export function StudentDashboard() {
           <div className="md:col-span-2 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4">
             <div className="mb-4">
               <p className="wc-label">Verification Links</p>
-              <p className="mt-1 text-xs text-on-surface-variant">Fill only the links you have. At least one proof link is required.</p>
+              <p className="mt-1 text-xs text-on-surface-variant">All verification links are optional while GitHub uploads are unavailable.</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <UrlInput label="GitHub Link" value={taskForm.github_url} onChange={(value) => updateTaskForm("github_url", value)} placeholder="https://github.com/..." />
@@ -731,16 +724,16 @@ export function StudentDashboard() {
               <UrlInput label="Image / Screenshot Link" value={taskForm.image_url} onChange={(value) => updateTaskForm("image_url", value)} placeholder="https://..." />
               <UrlInput label="YouTube Link" value={taskForm.youtube_url} onChange={(value) => updateTaskForm("youtube_url", value)} placeholder="https://www.youtube.com/watch?v=..." />
               <div className="md:col-span-2">
-                <UrlInput label="Primary Proof Link" value={taskForm.proof_url} required onChange={(value) => updateTaskForm("proof_url", value)} placeholder="https://..." />
+                <UrlInput label="Primary Proof Link (Optional)" value={taskForm.proof_url} onChange={(value) => updateTaskForm("proof_url", value)} placeholder="https://..." />
               </div>
             </div>
 
-            {/* Compulsory Screenshot Section */}
+            {/* Optional Screenshot Section */}
             <div className="md:col-span-2 rounded-2xl border border-outline-variant bg-surface-container-low p-5 space-y-4">
               <div>
-                <span className="wc-label block">Compulsory Screenshots *</span>
+                <span className="wc-label block">Screenshots (Optional)</span>
                 <span className="text-xs text-on-surface-variant block mt-1">
-                  Please upload between 1 to 5 screenshots of your work from your device. Supported formats: JPG, JPEG, PNG, WEBP (Max 5MB per image).
+                  You may upload up to 5 screenshots of your work. Supported formats: JPG, JPEG, PNG, WEBP (Max 5MB per image).
                 </span>
               </div>
 

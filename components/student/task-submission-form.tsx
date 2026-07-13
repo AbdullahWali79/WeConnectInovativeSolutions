@@ -131,20 +131,11 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
       setToast({ type: "error", message: "Explanation is required." });
       return;
     }
-    if (!form.proof_url.trim()) {
-      setToast({ type: "error", message: "A proof link is required before submission." });
-      return;
-    }
-
     if (submission && submission.status !== "revision_required") {
       setToast({ type: "error", message: "This task already has a final submission decision." });
       return;
     }
 
-    if (selectedFiles.length === 0) {
-      setToast({ type: "error", message: "Please upload at least 1 screenshot." });
-      return;
-    }
     if (selectedFiles.length > 5) {
       setToast({ type: "error", message: "You can upload up to 5 screenshots." });
       return;
@@ -207,35 +198,33 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
         throw new Error("Failed to retrieve task submission ID.");
       }
       
-      const { error: deleteError } = await supabase
-        .from("submission_screenshots")
-        .delete()
-        .eq("task_submission_id", submissionId);
-        
-      if (deleteError) {
-        throw deleteError;
+      if (uploadedScreenshots.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("submission_screenshots")
+          .delete()
+          .eq("task_submission_id", submissionId);
+
+        if (deleteError) throw deleteError;
+
+        const screenshotRows = uploadedScreenshots.map(item => ({
+          task_submission_id: submissionId,
+          student_id: user.id,
+          task_id: taskId,
+          github_url: item.githubUrl,
+          cdn_url: item.cdnUrl,
+          original_filename: item.originalFilename,
+          file_size: item.fileSize,
+          mime_type: item.mimeType,
+        }));
+
+        const { error: insertError } = await supabase
+          .from("submission_screenshots")
+          .insert(screenshotRows);
+
+        if (insertError) throw insertError;
       }
       
-      const screenshotRows = uploadedScreenshots.map(item => ({
-        task_submission_id: submissionId,
-        student_id: user.id,
-        task_id: taskId,
-        github_url: item.githubUrl,
-        cdn_url: item.cdnUrl,
-        original_filename: item.originalFilename,
-        file_size: item.fileSize,
-        mime_type: item.mimeType,
-      }));
-      
-      const { error: insertError } = await supabase
-        .from("submission_screenshots")
-        .insert(screenshotRows);
-        
-      if (insertError) {
-        throw insertError;
-      }
-      
-      setToast({ type: "success", message: "Task submitted successfully with screenshots." });
+      setToast({ type: "success", message: "Task submitted successfully." });
       router.push("/student");
       router.refresh();
       
@@ -320,17 +309,17 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
             <UrlInput label="Google Sheet Link" value={form.google_sheet_url} disabled={locked} onChange={(value) => updateField("google_sheet_url", value)} />
             <UrlInput label="Image / Proof URL" value={form.image_url} disabled={locked} onChange={(value) => updateField("image_url", value)} />
             <UrlInput label="YouTube Link" value={form.youtube_url} disabled={locked} onChange={(value) => updateField("youtube_url", value)} />
-            <UrlInput label="Primary Proof URL" value={form.proof_url} disabled={locked} required onChange={(value) => updateField("proof_url", value)} />
+            <UrlInput label="Primary Proof URL (Optional)" value={form.proof_url} disabled={locked} onChange={(value) => updateField("proof_url", value)} />
           </div>
 
-          {/* Compulsory Screenshot Section */}
+          {/* Optional Screenshot Section */}
           <div className="rounded-3xl border border-outline-variant/60 bg-gradient-to-b from-surface-container-low to-white p-6 space-y-5">
             <div>
               <span className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
-                <Icon name="image" className="text-primary text-lg" /> Compulsory Screenshots *
+                <Icon name="image" className="text-primary text-lg" /> Screenshots (Optional)
               </span>
               <span className="text-xs text-on-surface-variant block mt-1">
-                Please upload between 1 to 5 screenshots of your work. Supported formats: JPG, JPEG, PNG, WEBP (Max 5MB per image).
+                You may upload up to 5 screenshots of your work. Supported formats: JPG, JPEG, PNG, WEBP (Max 5MB per image).
               </span>
             </div>
 

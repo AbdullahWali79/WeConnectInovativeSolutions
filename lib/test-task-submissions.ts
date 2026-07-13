@@ -5,9 +5,6 @@ import * as assert from "assert";
 
 // Core logic functions to test
 export function validateScreenshotsCount(count: number): { valid: boolean; error?: string } {
-  if (count === 0) {
-    return { valid: false, error: "Please upload at least 1 screenshot." };
-  }
   if (count > 5) {
     return { valid: false, error: "You can upload up to 5 screenshots." };
   }
@@ -61,7 +58,7 @@ function runTests() {
 
   // 1. Screenshot count checks
   console.log("Testing screenshot count validation...");
-  assert.deepStrictEqual(validateScreenshotsCount(0), { valid: false, error: "Please upload at least 1 screenshot." });
+  assert.deepStrictEqual(validateScreenshotsCount(0), { valid: true });
   assert.deepStrictEqual(validateScreenshotsCount(1), { valid: true });
   assert.deepStrictEqual(validateScreenshotsCount(5), { valid: true });
   assert.deepStrictEqual(validateScreenshotsCount(6), { valid: false, error: "You can upload up to 5 screenshots." });
