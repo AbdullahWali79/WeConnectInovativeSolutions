@@ -211,7 +211,7 @@ export function BrandingSettings({ initialSettings }: { initialSettings: Brandin
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Shared logo</p>
                 <h2 className="mt-1 text-lg font-black text-on-surface">Upload once, use everywhere</h2>
-                <p className="mt-1 text-sm text-on-surface-variant">PNG or JPG under 5 MB. A square logo works best across sidebar and header layouts.</p>
+                <p className="mt-1 text-sm text-on-surface-variant">Stored directly in Supabase. PNG, JPG, WEBP, or GIF under 5 MB; a square logo works best.</p>
               </div>
             </div>
 
