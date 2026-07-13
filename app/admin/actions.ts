@@ -21,7 +21,6 @@ import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, C
 import { internshipLetterSchema, type InternshipLetterFormValues } from "@/lib/validations/internship-letter";
 import type { BrandingSettingsInput } from "@/lib/branding-settings";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
-import { uploadGithubFile } from "@/lib/github/github-storage";
 
 export interface CreateTeacherInput {
   fullName: string;
@@ -2246,28 +2245,36 @@ export async function uploadBrandingLogo(formData: FormData): Promise<ActionResu
       throw new Error("Please select an image file.");
     }
 
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Please upload an image file.");
-    }
+    const allowedLogoTypes: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+    };
+    const extension = allowedLogoTypes[file.type];
+    if (!extension) throw new Error("Please upload a PNG, JPG, WEBP, or GIF image.");
 
     if (file.size > 5 * 1024 * 1024) {
       throw new Error("Logo must be under 5 MB.");
     }
 
-    const githubConfigured = Boolean(process.env.GITHUB_TOKEN && process.env.GITHUB_OWNER && process.env.GITHUB_REPO);
-    if (!githubConfigured) {
-      throw new Error("GitHub branding upload is not configured. Set GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO.");
-    }
+    const supabaseAdmin = createSupabaseServiceClient();
+    const storagePath = `shared/logo-${Date.now()}.${extension}`;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from("branding-assets")
+      .upload(storagePath, bytes, {
+        contentType: file.type,
+        cacheControl: "3600",
+        upsert: false,
+      });
 
-    const upload = await uploadGithubFile({
-      file,
-      filename: file.name,
-      mime: file.type,
-      type: "branding",
-      githubPath: `uploads/branding/shared-logo.${file.name.split(".").pop() ?? "png"}`,
-    });
+    if (uploadError) throw new Error(uploadError.message || "Supabase logo upload failed.");
 
-    return { success: true, data: { publicUrl: upload.githubCdnUrl }, error: null };
+    const { data } = supabaseAdmin.storage.from("branding-assets").getPublicUrl(storagePath);
+    if (!data.publicUrl) throw new Error("Supabase did not return a public logo URL.");
+
+    return { success: true, data: { publicUrl: data.publicUrl }, error: null };
   } catch (error) {
     return { success: false, data: null, error: actionError(error, "Failed to upload branding logo.") };
   }
