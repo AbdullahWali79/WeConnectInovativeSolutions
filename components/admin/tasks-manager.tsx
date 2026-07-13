@@ -57,6 +57,10 @@ export function TasksManager({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submissionBusyId, setSubmissionBusyId] = useState<string | null>(null);
+  const [bulkReviewing, setBulkReviewing] = useState(false);
+  const [bulkReviewSelection, setBulkReviewSelection] = useState<string[]>([]);
+  const [bulkReviewScore, setBulkReviewScore] = useState("90");
+  const [bulkReviewFeedback, setBulkReviewFeedback] = useState("Very Good Work");
   const [toast, setToast] = useState<ToastState>(null);
   const [screenshots, setScreenshots] = useState<SubmissionScreenshot[]>([]);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -227,6 +231,16 @@ export function TasksManager({
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [filteredTasks, submissionByTaskId]);
+  const bulkReviewableTasks = useMemo(
+    () => visibleTasks.filter((task) => submissionByTaskId.get(task.id)?.status === "submitted"),
+    [submissionByTaskId, visibleTasks],
+  );
+  const bulkReviewableTaskIds = useMemo(() => new Set(bulkReviewableTasks.map((task) => task.id)), [bulkReviewableTasks]);
+  const selectedBulkReviewTaskIds = useMemo(
+    () => bulkReviewSelection.filter((taskId) => bulkReviewableTaskIds.has(taskId)),
+    [bulkReviewSelection, bulkReviewableTaskIds],
+  );
+  const allVisibleSubmittedSelected = bulkReviewableTasks.length > 0 && selectedBulkReviewTaskIds.length === bulkReviewableTasks.length;
   const assignedOnlyTasks = useMemo(() => {
     return tasks
       .filter((task) => task.workflow_type !== "daily")
@@ -255,6 +269,95 @@ export function TasksManager({
         ? current.filter((id) => id !== studentId)
         : [...current, studentId]
     ));
+  }
+
+  function toggleBulkReviewTask(taskId: string) {
+    setBulkReviewSelection((current) => (
+      current.includes(taskId)
+        ? current.filter((id) => id !== taskId)
+        : [...current, taskId]
+    ));
+  }
+
+  function toggleAllVisibleSubmitted() {
+    setBulkReviewSelection((current) => {
+      const visibleIds = bulkReviewableTasks.map((task) => task.id);
+      if (allVisibleSubmittedSelected) {
+        return current.filter((id) => !bulkReviewableTaskIds.has(id));
+      }
+      return Array.from(new Set([...current, ...visibleIds]));
+    });
+  }
+
+  async function acceptSelectedSubmissions() {
+    if (!canCreate) {
+      setToast({ type: "error", message: "You do not have permission to review submissions." });
+      return;
+    }
+
+    const selectedTasks = bulkReviewableTasks.filter((task) => selectedBulkReviewTaskIds.includes(task.id));
+    if (selectedTasks.length === 0) {
+      setToast({ type: "error", message: "Select at least one submitted task." });
+      return;
+    }
+
+    const score = Number(bulkReviewScore);
+    if (!Number.isFinite(score) || score < 0) {
+      setToast({ type: "error", message: "Enter valid marks of 0 or higher." });
+      return;
+    }
+
+    const taskWithLowerMax = selectedTasks.find((task) => score > task.max_score);
+    if (taskWithLowerMax) {
+      setToast({ type: "error", message: `Marks cannot exceed ${taskWithLowerMax.max_score} for ${taskWithLowerMax.title}.` });
+      return;
+    }
+
+    const selectedSubmissions = selectedTasks
+      .map((task) => submissionByTaskId.get(task.id))
+      .filter((submission): submission is Submission => Boolean(submission));
+    const reviewedAt = new Date().toISOString();
+
+    setBulkReviewing(true);
+    const { error: submissionError } = await supabase
+      .from("submissions")
+      .update({
+        status: "reviewed",
+        score,
+        feedback: bulkReviewFeedback.trim() || null,
+        reviewed_at: reviewedAt,
+      })
+      .in("id", selectedSubmissions.map((submission) => submission.id));
+
+    if (submissionError) {
+      setBulkReviewing(false);
+      setToast({ type: "error", message: submissionError.message });
+      return;
+    }
+
+    const { error: taskError } = await supabase
+      .from("tasks")
+      .update({ status: "reviewed" })
+      .in("id", selectedTasks.map((task) => task.id));
+
+    if (taskError) {
+      setBulkReviewing(false);
+      setToast({ type: "error", message: taskError.message });
+      return;
+    }
+
+    const progressTargets = Array.from(new Map(
+      selectedTasks.map((task) => [`${task.student_id}:${task.course_id}`, { studentId: task.student_id, courseId: task.course_id }]),
+    ).values());
+    await Promise.all(progressTargets.map((target) => supabase.rpc("refresh_student_progress", {
+      target_student_id: target.studentId,
+      target_course_id: target.courseId,
+    })));
+
+    setBulkReviewing(false);
+    setBulkReviewSelection([]);
+    setToast({ type: "success", message: `${selectedSubmissions.length} submissions accepted with ${score} marks.` });
+    await loadData();
   }
 
   async function saveSubmissionReview(submission: Submission, forcedStatus?: SubmissionStatus) {
@@ -627,6 +730,52 @@ export function TasksManager({
               </div>
             </div>
 
+            {canCreate ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+                  <label className="flex items-center gap-3 text-sm font-bold text-on-surface xl:min-w-48">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSubmittedSelected}
+                      disabled={bulkReviewableTasks.length === 0 || bulkReviewing}
+                      onChange={toggleAllVisibleSubmitted}
+                      className="h-5 w-5 rounded border-outline-variant text-emerald-600"
+                    />
+                    Select all submitted ({bulkReviewableTasks.length})
+                  </label>
+                  <label className="block xl:w-36">
+                    <span className="wc-label">Default marks</span>
+                    <input
+                      className="wc-input mt-2 bg-white"
+                      type="number"
+                      min="0"
+                      value={bulkReviewScore}
+                      onChange={(event) => setBulkReviewScore(event.target.value)}
+                    />
+                  </label>
+                  <label className="block min-w-0 flex-1">
+                    <span className="wc-label">Default feedback</span>
+                    <input
+                      className="wc-input mt-2 bg-white"
+                      value={bulkReviewFeedback}
+                      onChange={(event) => setBulkReviewFeedback(event.target.value)}
+                      placeholder="Very Good Work"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={selectedBulkReviewTaskIds.length === 0 || bulkReviewing}
+                    onClick={() => void acceptSelectedSubmissions()}
+                    className="wc-primary-btn whitespace-nowrap bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icon name={bulkReviewing ? "hourglass_empty" : "done_all"} />
+                    {bulkReviewing ? "Accepting..." : `Accept Selected (${selectedBulkReviewTaskIds.length})`}
+                  </button>
+                </div>
+                <p className="mt-3 text-xs text-emerald-800">Only currently submitted tasks can be selected. The marks and feedback above will be applied to every selected submission.</p>
+              </div>
+            ) : null}
+
             <div className="border-b border-outline-variant/70 bg-surface-container-low p-3">
               <div className="grid gap-3 md:grid-cols-12">
                 <input className="wc-input md:col-span-4" placeholder="Search task title" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -768,9 +917,23 @@ export function TasksManager({
                     score: String(taskSubmission.score ?? 0),
                     feedback: taskSubmission.feedback ?? "",
                   } : null;
+                  const canBulkReview = taskSubmission?.status === "submitted";
+                  const isBulkSelected = canBulkReview && selectedBulkReviewTaskIds.includes(task.id);
                   return (
                     <article key={task.id} className="p-4">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        {canCreate && canBulkReview ? (
+                          <label className="flex shrink-0 items-center gap-2 rounded-xl border border-outline-variant/70 bg-surface-container-low px-3 py-2 text-xs font-bold text-on-surface">
+                            <input
+                              type="checkbox"
+                              checked={isBulkSelected}
+                              disabled={bulkReviewing}
+                              onChange={() => toggleBulkReviewTask(task.id)}
+                              className="h-5 w-5 rounded border-outline-variant text-emerald-600"
+                            />
+                            Select
+                          </label>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
