@@ -501,7 +501,7 @@ export type ClientHuntScenario = {
   id: string;
   title: string;
   description: string | null;
-  specialization: ClientHuntSpecialization;
+  specialization: ClientHuntSpecialization | "all";
   target_count: number;
   instructions: string | null;
   scenario_date: string;
@@ -723,7 +723,7 @@ export type Database = {
       };
       client_hunt_scenarios: {
         Row: ClientHuntScenario;
-        Insert: Partial<ClientHuntScenario> & { title: string; specialization: ClientHuntSpecialization };
+        Insert: Partial<ClientHuntScenario> & { title: string; specialization: ClientHuntSpecialization | "all" };
         Update: Partial<ClientHuntScenario>;
         Relationships: [];
       };

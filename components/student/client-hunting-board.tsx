@@ -96,6 +96,11 @@ export function ClientHuntingBoard() {
     return matched ?? sharedScenario ?? scenarios[0] ?? null;
   }, [profile?.client_hunting_specialization, scenarios]);
 
+  const currentScenarioSpecialization: ClientHuntSpecialization =
+    currentScenario?.specialization === "all"
+      ? profile?.client_hunting_specialization ?? "web_development"
+      : currentScenario?.specialization ?? profile?.client_hunting_specialization ?? "web_development";
+
   useEffect(() => {
     if (profile?.client_hunting_specialization) {
       setForm((current) => (
@@ -114,9 +119,9 @@ export function ClientHuntingBoard() {
     setForm((current) => (
       current.targetAreas.length > 0
         ? current
-        : { ...current, targetAreas: [currentScenario.specialization] }
+        : { ...current, targetAreas: [currentScenarioSpecialization] }
     ));
-  }, [currentScenario]);
+  }, [currentScenario, currentScenarioSpecialization]);
 
   const currentLeads = useMemo(() => {
     if (!currentScenario) return [];
@@ -222,8 +227,8 @@ export function ClientHuntingBoard() {
     setToast({ type: "success", message: "Lead submitted for admin review." });
     setForm({
       ...emptyForm,
-      specialization: profile.client_hunting_specialization ?? currentScenario.specialization,
-      targetAreas: [currentScenario.specialization],
+      specialization: profile.client_hunting_specialization ?? currentScenarioSpecialization,
+      targetAreas: [currentScenarioSpecialization],
     });
     await loadData();
   }

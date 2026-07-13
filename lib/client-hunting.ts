@@ -32,6 +32,7 @@ export const CLIENT_HUNTING_PRIMARY_TARGET_OPTIONS = PRIMARY_TARGET_VALUES.filte
 
 export function getClientHuntSpecializationLabel(value: string | null | undefined) {
   if (!value) return "Unspecified";
+  if (value === "all") return "All Specializations";
   return clientHuntSpecializationLabelByValue.get(value as ClientHuntSpecialization) ?? value;
 }
 
