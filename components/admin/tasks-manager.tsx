@@ -73,10 +73,9 @@ export function TasksManager({
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showBulkTaskModal, setShowBulkTaskModal] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"assigned" | "reviews">("assigned");
+  const [activeView, setActiveView] = useState<"assigned" | "reviews" | "zero-marks">("assigned");
   const [bulkForm, setBulkForm] = useState(bulkTaskInitial);
   const [bulkSelectedStudentIds, setBulkSelectedStudentIds] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"tasks" | "reviews">("tasks");
   const clearToast = useCallback(() => setToast(null), []);
 
   const loadData = useCallback(async () => {
@@ -231,6 +230,16 @@ export function TasksManager({
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [filteredTasks, submissionByTaskId]);
+  const allZeroMarksTasks = useMemo(
+    () => tasks.filter((task) => {
+      const submission = submissionByTaskId.get(task.id);
+      return submission?.status === "reviewed" && Number(submission.score ?? 0) === 0;
+    }),
+    [submissionByTaskId, tasks],
+  );
+  const zeroMarksTaskIds = useMemo(() => new Set(allZeroMarksTasks.map((task) => task.id)), [allZeroMarksTasks]);
+  const zeroMarksTasks = useMemo(() => visibleTasks.filter((task) => zeroMarksTaskIds.has(task.id)), [visibleTasks, zeroMarksTaskIds]);
+  const reviewVisibleTasks = activeView === "zero-marks" ? zeroMarksTasks : visibleTasks;
   const bulkReviewableTasks = useMemo(
     () => visibleTasks.filter((task) => submissionByTaskId.get(task.id)?.status === "submitted"),
     [submissionByTaskId, visibleTasks],
@@ -715,6 +724,18 @@ export function TasksManager({
                 >
                   Submission Review
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView("zero-marks");
+                    setStatusFilter("all");
+                    setReviewedFilter("all");
+                  }}
+                  className={activeView === "zero-marks" ? "rounded-t-xl bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm" : "rounded-t-xl px-4 py-2 text-sm font-bold text-on-surface-variant"}
+                >
+                  Accepted with 0 Marks
+                  <span className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700">{allZeroMarksTasks.length}</span>
+                </button>
               </div>
             </div>
 
@@ -864,14 +885,19 @@ export function TasksManager({
             <div className="space-y-4 p-4">
             <div className="flex flex-col gap-4 border-b border-outline-variant/70 p-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-base font-black text-on-surface">Submission review</h2>
-                <p className="mt-1 text-sm text-on-surface-variant">Open submitted tasks, score them, and give feedback.</p>
+                <h2 className="text-base font-black text-on-surface">{activeView === "zero-marks" ? "Accepted submissions with zero marks" : "Submission review"}</h2>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  {activeView === "zero-marks"
+                    ? "These submissions were accepted but currently have 0 marks. Open one to correct its score."
+                    : "Open submitted tasks, score them, and give feedback."}
+                </p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs font-bold">
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">Total {taskStats.total}</span>
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">Pending {taskStats.pending}</span>
                 <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Submitted {taskStats.submitted}</span>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Reviewed {taskStats.reviewed}</span>
+                <span className="rounded-full bg-rose-100 px-3 py-1 text-rose-700">Zero marks {allZeroMarksTasks.length}</span>
                 <span className="rounded-full bg-rose-100 px-3 py-1 text-rose-700">Rejected {taskStats.rejected}</span>
               </div>
             </div>
@@ -906,9 +932,9 @@ export function TasksManager({
                 </div>
               </div>
             </div>
-            {visibleTasks.length === 0 ? <div className="p-4"><EmptyState title="No tasks matched" description="Adjust filters or create a task." icon="assignment" /></div> : (
+            {reviewVisibleTasks.length === 0 ? <div className="p-4"><EmptyState title={activeView === "zero-marks" ? "No accepted submissions with zero marks" : "No tasks matched"} description={activeView === "zero-marks" ? "All accepted submissions currently have marks greater than zero." : "Adjust filters or create a task."} icon={activeView === "zero-marks" ? "verified" : "assignment"} /></div> : (
               <div className="divide-y divide-outline-variant/70">
-                {visibleTasks.map((task) => {
+                {reviewVisibleTasks.map((task) => {
                   const taskResources = resources.filter((resource) => resource.task_id === task.id);
                   const isExpanded = expandedTaskId === task.id;
                   const taskSubmission = submissionByTaskId.get(task.id) ?? null;
