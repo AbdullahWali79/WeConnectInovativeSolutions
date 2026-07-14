@@ -12,7 +12,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { CLIENT_HUNTING_SPECIALIZATIONS, getClientHuntSpecializationLabel, type ClientHuntScenarioSpecialization, type ClientHuntSpecialization } from "@/lib/client-hunting";
 import { getMissingProfileLinks, isStudentProfileComplete, profileLinkFields } from "@/lib/profile-links";
-import type { ClientHuntLead, ClientHuntScenario, Profile } from "@/lib/supabase/types";
+import type { ClientHuntLead, ClientHuntScenario, Enrollment, Profile, StudentFeeRecord } from "@/lib/supabase/types";
 import type { PermissionKey } from "@/lib/admin-permissions";
 
 type ScenarioForm = {
@@ -68,6 +68,8 @@ export function ClientHuntingManager({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [scenarios, setScenarios] = useState<ClientHuntScenario[]>([]);
   const [leads, setLeads] = useState<ClientHuntLead[]>([]);
+  const [activeEnrollments, setActiveEnrollments] = useState<Enrollment[]>([]);
+  const [feeRecords, setFeeRecords] = useState<StudentFeeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -98,13 +100,15 @@ export function ClientHuntingManager({
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [profileResult, scenarioResult, leadResult] = await Promise.all([
+    const [profileResult, scenarioResult, leadResult, enrollmentResult, feeResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "student").eq("status", "approved").order("full_name"),
       supabase.from("client_hunt_scenarios").select("*").order("scenario_date", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("client_hunt_leads").select("*").order("submitted_at", { ascending: false }),
+      supabase.from("enrollments").select("*").eq("status", "active").order("created_at", { ascending: false }),
+      supabase.from("student_fee_records").select("*").order("updated_at", { ascending: false }),
     ]);
 
-    const error = profileResult.error ?? scenarioResult.error ?? leadResult.error;
+    const error = profileResult.error ?? scenarioResult.error ?? leadResult.error ?? enrollmentResult.error ?? feeResult.error;
     if (error) {
       setToast({ type: "error", message: error.message });
     }
@@ -112,6 +116,8 @@ export function ClientHuntingManager({
     setProfiles(profileResult.data ?? []);
     setScenarios(scenarioResult.data ?? []);
     setLeads(leadResult.data ?? []);
+    setActiveEnrollments((enrollmentResult.data ?? []) as Enrollment[]);
+    setFeeRecords((feeResult.data ?? []) as StudentFeeRecord[]);
     setLoading(false);
   }, [supabase]);
 
@@ -286,6 +292,22 @@ export function ClientHuntingManager({
     () => studentRows.filter((row) => row.todayApproved >= row.dailyTarget),
     [studentRows],
   );
+  const eligibleActiveStudentIds = useMemo(() => {
+    const latestFeeByEnrollment = new Map<string, StudentFeeRecord>();
+    for (const feeRecord of feeRecords) {
+      const key = `${feeRecord.student_id}:${feeRecord.course_id}`;
+      const current = latestFeeByEnrollment.get(key);
+      if (!current || feeRecord.updated_at > current.updated_at) latestFeeByEnrollment.set(key, feeRecord);
+    }
+    return new Set(
+      activeEnrollments
+        .filter((enrollment) => {
+          const feeRecord = latestFeeByEnrollment.get(`${enrollment.student_id}:${enrollment.course_id}`);
+          return feeRecord?.status === "paid" || feeRecord?.status === "waived";
+        })
+        .map((enrollment) => enrollment.student_id),
+    );
+  }, [activeEnrollments, feeRecords]);
   const todayClientHuntReportRows = useMemo(() => {
     const dateValue = pakistanDateValue();
     const { start, end } = pakistanDayBounds(dateValue);
@@ -295,13 +317,15 @@ export function ClientHuntingManager({
       countByStudent.set(lead.student_id, (countByStudent.get(lead.student_id) ?? 0) + 1);
     }
     return profiles
+      .filter((profile) => eligibleActiveStudentIds.has(profile.id))
       .map((profile) => ({
         studentId: profile.id,
         studentName: profile.full_name ?? profile.email ?? "Student",
         count: countByStudent.get(profile.id) ?? 0,
       }))
+      .filter((student) => student.count > 0)
       .sort((first, second) => first.studentName.localeCompare(second.studentName));
-  }, [leads, profiles]);
+  }, [eligibleActiveStudentIds, leads, profiles]);
 
   function downloadTodayClientHuntPng() {
     const rows = todayClientHuntReportRows;
@@ -342,7 +366,7 @@ export function ClientHuntingManager({
       context.fillRect(x, top, columnWidth, columnHeaderHeight);
       context.fillStyle = "#15558a";
       context.font = "700 18px Arial, sans-serif";
-      context.fillText("ACTIVE STUDENT", x + 20, top + 34);
+      context.fillText("STUDENT", x + 20, top + 34);
       context.textAlign = "right";
       context.fillText("CLIENT HUNTS", x + columnWidth - 20, top + 34);
       context.textAlign = "left";
@@ -384,7 +408,7 @@ export function ClientHuntingManager({
     const footerY = headerHeight + 28 + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight + 28;
     context.fillStyle = "#15558a";
     context.font = "700 22px Arial, sans-serif";
-    context.fillText(`Active Students: ${rows.length}`, padding, footerY + 28);
+    context.fillText(`Students Active Today: ${rows.length}`, padding, footerY + 28);
     context.textAlign = "right";
     context.fillText(`Total Client Hunts Today: ${rows.reduce((total, row) => total + row.count, 0)}`, width - padding, footerY + 28);
     context.textAlign = "left";
@@ -793,7 +817,7 @@ export function ClientHuntingManager({
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Today Client Hunt Report</p>
                 <h3 className="mt-1 text-xl font-black text-white">Student-wise client hunts</h3>
-                <p className="mt-1 text-sm text-blue-100">Client hunts submitted on {pakistanDateLabel()}.</p>
+                <p className="mt-1 text-sm text-blue-100">Only students who submitted client hunts on {pakistanDateLabel()}.</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -817,13 +841,13 @@ export function ClientHuntingManager({
             </div>
             <div className="max-h-[calc(90vh-105px)] overflow-auto p-5">
               {todayClientHuntReportRows.length === 0 ? (
-                <EmptyState title="No active students found" description="There are no approved students to display." icon="manage_search" />
+                <EmptyState title="No client hunts today" description="No active student has submitted a client hunt today." icon="manage_search" />
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-outline-variant/60">
                   <table className="w-full text-left">
                     <thead className="sticky top-0 bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-primary">
                       <tr>
-                        <th className="px-5 py-3">Active Student</th>
+                        <th className="px-5 py-3">Student</th>
                         <th className="px-5 py-3 text-center">Client Hunts Today</th>
                       </tr>
                     </thead>
@@ -844,7 +868,7 @@ export function ClientHuntingManager({
                     </tbody>
                     <tfoot className="bg-surface-container-low">
                       <tr>
-                        <td className="px-5 py-3 text-sm font-black text-on-surface">Total active students: {todayClientHuntReportRows.length}</td>
+                        <td className="px-5 py-3 text-sm font-black text-on-surface">Students active today: {todayClientHuntReportRows.length}</td>
                         <td className="px-5 py-3 text-center text-sm font-black text-primary">{todayClientHuntReportRows.reduce((total, row) => total + row.count, 0)}</td>
                       </tr>
                     </tfoot>
