@@ -1501,6 +1501,97 @@ export function TaskAnalyticsDashboard({
     }, 250);
   }
 
+  function downloadReportCardPng() {
+    const rowsPerColumn = Math.ceil(reportCardRows.length / 2);
+    const width = 1600;
+    const headerHeight = 190;
+    const columnHeaderHeight = 54;
+    const rowHeight = 58;
+    const footerHeight = 76;
+    const padding = 64;
+    const height = headerHeight + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight + footerHeight + padding;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    context.fillStyle = "#f8fafc";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "#15558a";
+    context.fillRect(0, 0, width, headerHeight);
+    context.fillStyle = "#bfdbfe";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText("REPORT CARD", padding, 52);
+    context.fillStyle = "#ffffff";
+    context.font = "700 42px Arial, sans-serif";
+    context.fillText("Active Students Reviewed Tasks", padding, 108);
+    context.fillStyle = "#dbeafe";
+    context.font = "24px Arial, sans-serif";
+    context.fillText(`Total reviewed tasks up to ${new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date())}`, padding, 153);
+
+    const gap = 36;
+    const columnWidth = (width - padding * 2 - gap) / 2;
+    const drawColumn = (columnRows: typeof reportCardRows, columnIndex: number, startNumber: number) => {
+      const x = padding + columnIndex * (columnWidth + gap);
+      const top = headerHeight + 28;
+      context.fillStyle = "#e8f0f7";
+      context.fillRect(x, top, columnWidth, columnHeaderHeight);
+      context.fillStyle = "#15558a";
+      context.font = "700 18px Arial, sans-serif";
+      context.fillText("ACTIVE STUDENT", x + 20, top + 34);
+      context.textAlign = "right";
+      context.fillText("REVIEWED", x + columnWidth - 20, top + 34);
+      context.textAlign = "left";
+
+      columnRows.forEach((row, rowIndex) => {
+        const y = top + columnHeaderHeight + rowIndex * rowHeight;
+        context.fillStyle = rowIndex % 2 === 0 ? "#ffffff" : "#f1f5f9";
+        context.fillRect(x, y, columnWidth, rowHeight);
+        context.strokeStyle = "#dbe3ec";
+        context.beginPath();
+        context.moveTo(x, y + rowHeight);
+        context.lineTo(x + columnWidth, y + rowHeight);
+        context.stroke();
+        context.fillStyle = "#15558a";
+        context.beginPath();
+        context.arc(x + 30, y + rowHeight / 2, 18, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#ffffff";
+        context.font = "700 15px Arial, sans-serif";
+        context.textAlign = "center";
+        context.fillText(String(startNumber + rowIndex), x + 30, y + rowHeight / 2 + 5);
+        context.textAlign = "left";
+        context.fillStyle = "#0f172a";
+        context.font = "700 20px Arial, sans-serif";
+        const maxNameWidth = columnWidth - 190;
+        let studentName = row.studentName;
+        while (context.measureText(studentName).width > maxNameWidth && studentName.length > 3) studentName = `${studentName.slice(0, -4)}...`;
+        context.fillText(studentName, x + 62, y + rowHeight / 2 + 7);
+        context.fillStyle = "#15558a";
+        context.font = "700 21px Arial, sans-serif";
+        context.textAlign = "right";
+        context.fillText(String(row.tasksCompletedCount), x + columnWidth - 30, y + rowHeight / 2 + 7);
+        context.textAlign = "left";
+      });
+    };
+
+    drawColumn(reportCardRows.slice(0, rowsPerColumn), 0, 1);
+    drawColumn(reportCardRows.slice(rowsPerColumn), 1, rowsPerColumn + 1);
+
+    const footerY = headerHeight + 28 + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight + 28;
+    context.fillStyle = "#15558a";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText(`Active Students: ${reportCardRows.length}`, padding, footerY + 28);
+    context.textAlign = "right";
+    context.fillText(`Total Reviewed Tasks: ${reportCardRows.reduce((total, row) => total + row.tasksCompletedCount, 0)}`, width - padding, footerY + 28);
+    context.textAlign = "left";
+
+    canvas.toBlob((blob) => {
+      if (blob) downloadBlob(blob, `active-students-report-card-${localDateInputValue()}.png`);
+    }, "image/png");
+  }
+
   function printReport() {
     setReportGeneratedAt((current) => current ?? new Date().toISOString());
     window.setTimeout(() => window.print(), 50);
@@ -2076,14 +2167,25 @@ export function TaskAnalyticsDashboard({
                   Total reviewed tasks up to {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date())}.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsReportCardOpen(false)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
-                aria-label="Close report card"
-              >
-                <Icon name="close" className="text-lg" />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={downloadReportCardPng}
+                  disabled={reportCardRows.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="download" className="text-base" />
+                  Download PNG
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsReportCardOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+                  aria-label="Close report card"
+                >
+                  <Icon name="close" className="text-lg" />
+                </button>
+              </div>
             </div>
 
             <div className="max-h-[calc(90vh-105px)] overflow-auto p-5">
