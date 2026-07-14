@@ -23,6 +23,21 @@ type DashboardData = {
   completed: CompletedStudent[];
 };
 
+type QuickAccessItem = { id: string; href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean };
+const defaultQuickAccessIds = ["fees", "tasks", "reports", "client-hunting"];
+const quickAccessCatalog: QuickAccessItem[] = [
+  { id: "fees", href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
+  { id: "tasks", href: "/admin/tasks", label: "Tasks", icon: "assignment_add", permission: "tasks.view" },
+  { id: "reports", href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
+  { id: "client-hunting", href: "/admin/client-hunting/details", label: "Client Hunting", icon: "manage_search", adminOnly: true },
+  { id: "courses", href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
+  { id: "students", href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
+  { id: "applications", href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
+  { id: "reviews", href: "/admin/submissions", label: "Reviews", icon: "rate_review", permission: "submissions.view" },
+  { id: "progress", href: "/admin/progress", label: "Progress", icon: "monitoring", permission: "progress.view" },
+  { id: "announcements", href: "/admin/announcements", label: "Announcements", icon: "campaign", permission: "announcements.view" },
+];
+
 export function AdminDashboard({
   currentRole,
   permissions = [],
@@ -38,6 +53,9 @@ export function AdminDashboard({
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedWhatsappTemplate, setSelectedWhatsappTemplate] = useState<WhatsappMessageTemplate>("default");
+  const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(false);
+  const [isManagingQuickAccess, setIsManagingQuickAccess] = useState(false);
+  const [quickAccessIds, setQuickAccessIds] = useState<string[]>(defaultQuickAccessIds);
   const [toast, setToast] = useState<ToastState>(null);
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -71,8 +89,25 @@ export function AdminDashboard({
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("admin-dashboard-quick-access");
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) setQuickAccessIds(parsed.filter((id): id is string => typeof id === "string"));
+    } catch {
+      localStorage.removeItem("admin-dashboard-quick-access");
+    }
+  }, []);
+
   const courseById = useMemo(() => new Map(data.courses.map((course) => [course.id, course])), [data.courses]);
   const isAdmin = currentRole === "admin";
+  const availableQuickAccessItems = quickAccessCatalog.filter((item) => {
+    if (isAdmin) return true;
+    if (item.adminOnly || !item.permission) return false;
+    return permissions.includes(item.permission);
+  });
+  const selectedQuickAccessItems = availableQuickAccessItems.filter((item) => quickAccessIds.includes(item.id));
   const shortcuts = [
     canUse("courses.view") ? { href: "/admin/courses", icon: "school", title: "Courses", description: "Create, edit, and organize active course content." } : null,
     canUse("students.view") ? { href: "/admin/students", icon: "groups", title: "Students", description: "View approved student profiles and enrollment context." } : null,
@@ -139,9 +174,85 @@ export function AdminDashboard({
       <PageHeader
         eyebrow={isAdmin ? "Admin Portal" : "Teacher Portal"}
         title="Operations dashboard"
-        description={isAdmin ? "Live Supabase stats for courses, applications, enrollments, tasks, and completions." : "Live workspace for courses, students, tasks, submissions, announcements, and progress tracking."}
-        action={canUse("tasks.view") ? <Link href="/admin/tasks" className="wc-primary-btn text-sm"><Icon name="assignment_add" /> Assign Task</Link> : undefined}
+        action={
+          <button type="button" onClick={() => setIsQuickAccessOpen(true)} className="wc-primary-btn text-sm">
+            <Icon name="apps" /> Quick Access
+          </button>
+        }
       />
+
+      {isQuickAccessOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Dashboard quick access"
+          onClick={() => setIsQuickAccessOpen(false)}
+        >
+          <div className="w-full max-w-2xl overflow-hidden rounded-[28px] bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-outline-variant/60 bg-primary px-5 py-4 text-on-primary">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Dashboard Shortcuts</p>
+                <h2 className="mt-1 text-xl font-black text-white">Quick Access</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsManagingQuickAccess((current) => !current)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-blue-50"
+                >
+                  <Icon name={isManagingQuickAccess ? "check" : "edit"} />
+                  {isManagingQuickAccess ? "Done" : "Manage"}
+                </button>
+                <button type="button" onClick={() => setIsQuickAccessOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25" aria-label="Close quick access">
+                  <Icon name="close" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5">
+              {isManagingQuickAccess ? (
+                <div>
+                  <p className="mb-3 text-sm text-on-surface-variant">Select the menus you want to see in Quick Access.</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {availableQuickAccessItems.map((item) => {
+                      const checked = quickAccessIds.includes(item.id);
+                      return (
+                        <label key={item.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${checked ? "border-primary bg-primary-container/50" : "border-outline-variant bg-surface"}`}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => {
+                              const next = event.target.checked ? [...quickAccessIds, item.id] : quickAccessIds.filter((id) => id !== item.id);
+                              setQuickAccessIds(next);
+                              localStorage.setItem("admin-dashboard-quick-access", JSON.stringify(next));
+                            }}
+                            className="rounded border-outline-variant text-primary focus:ring-primary"
+                          />
+                          <Icon name={item.icon} className="text-xl text-primary" />
+                          <span className="text-sm font-bold text-on-surface">{item.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : selectedQuickAccessItems.length === 0 ? (
+                <EmptyState title="No shortcuts selected" description="Use Manage to add menus to Quick Access." icon="apps" />
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {selectedQuickAccessItems.map((item) => (
+                    <Link key={item.id} href={item.href} onClick={() => setIsQuickAccessOpen(false)} className="group flex items-center gap-3 rounded-2xl border border-outline-variant/60 bg-surface-container-low p-4 transition hover:border-primary/40 hover:shadow-card">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white"><Icon name={item.icon} className="text-xl" /></span>
+                      <span className="flex-1 text-sm font-black text-on-surface">{item.label}</span>
+                      <Icon name="arrow_forward" className="text-on-surface-variant transition group-hover:translate-x-1 group-hover:text-primary" />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Stat Cards */}
       <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
