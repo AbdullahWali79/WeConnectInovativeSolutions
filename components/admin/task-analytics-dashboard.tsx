@@ -1404,18 +1404,18 @@ const reportCardPdfStyles = StyleSheet.create({
   footerText: { color: "#15558a", fontSize: 9, fontWeight: 700 },
 });
 
-function ReportCardPdf({ rows, reportDate }: { rows: StudentWorkSummary[]; reportDate: string }) {
+function ReportCardPdf({ rows, eyebrow = "REPORT CARD", title = "Active Students Reviewed Tasks", subtitle }: { rows: StudentWorkSummary[]; eyebrow?: string; title?: string; subtitle: string }) {
   const rowsPerColumn = Math.ceil(rows.length / 2);
   const columns = [rows.slice(0, rowsPerColumn), rows.slice(rowsPerColumn)];
   const totalReviewed = rows.reduce((total, row) => total + row.tasksCompletedCount, 0);
 
   return (
-    <Document title={`Active Students Report Card - ${reportDate}`} author="WeConnect Admin Panel">
+    <Document title={title} author="WeConnect Admin Panel">
       <PdfPage size="A4" orientation="landscape" style={reportCardPdfStyles.page} wrap={false}>
         <View style={reportCardPdfStyles.header}>
-          <Text style={reportCardPdfStyles.eyebrow}>REPORT CARD</Text>
-          <Text style={reportCardPdfStyles.title}>Active Students Reviewed Tasks</Text>
-          <Text style={reportCardPdfStyles.subtitle}>Total reviewed tasks up to {reportDate}</Text>
+          <Text style={reportCardPdfStyles.eyebrow}>{eyebrow}</Text>
+          <Text style={reportCardPdfStyles.title}>{title}</Text>
+          <Text style={reportCardPdfStyles.subtitle}>{subtitle}</Text>
         </View>
         <View style={reportCardPdfStyles.columns}>
           {columns.map((column, columnIndex) => (
@@ -1443,6 +1443,63 @@ function ReportCardPdf({ rows, reportDate }: { rows: StudentWorkSummary[]; repor
   );
 }
 
+type StudentFeedbackReportRow = {
+  taskTitle: string;
+  courseTitle: string;
+  reviewedAt: string | null;
+  feedback: string;
+};
+
+const studentReportPdfStyles = StyleSheet.create({
+  page: { padding: 30, backgroundColor: "#f8fafc", color: "#0f172a", fontFamily: "Helvetica", fontSize: 8 },
+  header: { borderRadius: 8, backgroundColor: "#15558a", padding: 18, marginBottom: 14 },
+  eyebrow: { color: "#bfdbfe", fontSize: 9, fontWeight: 700, letterSpacing: 1 },
+  title: { color: "#ffffff", fontSize: 20, fontWeight: 700, marginTop: 5 },
+  subtitle: { color: "#dbeafe", fontSize: 9, marginTop: 5 },
+  table: { borderWidth: 1, borderColor: "#dbe3ec", borderRadius: 6, overflow: "hidden" },
+  tableHeader: { flexDirection: "row", backgroundColor: "#e8f0f7", paddingVertical: 7, paddingHorizontal: 8 },
+  th: { color: "#15558a", fontSize: 7.5, fontWeight: 700 },
+  row: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "#e2e8f0", paddingVertical: 6, paddingHorizontal: 8 },
+  cell: { fontSize: 8, lineHeight: 1.3 },
+  footer: { flexDirection: "row", justifyContent: "space-between", marginTop: 12, color: "#15558a", fontSize: 8, fontWeight: 700 },
+});
+
+function StudentFeedbackPdf({ studentName, rows, generatedDate }: { studentName: string; rows: StudentFeedbackReportRow[]; generatedDate: string }) {
+  return (
+    <Document title={`${studentName} Task Feedback Report`} author="WeConnect Admin Panel">
+      <PdfPage size="A4" orientation="landscape" style={studentReportPdfStyles.page}>
+        <View style={studentReportPdfStyles.header}>
+          <Text style={studentReportPdfStyles.eyebrow}>STUDENT REPORT</Text>
+          <Text style={studentReportPdfStyles.title}>{studentName}</Text>
+          <Text style={studentReportPdfStyles.subtitle}>Reviewed tasks with feedback up to {generatedDate}</Text>
+        </View>
+        <View style={studentReportPdfStyles.table}>
+          <View style={studentReportPdfStyles.tableHeader} fixed>
+            <Text style={[studentReportPdfStyles.th, { width: "5%" }]}>#</Text>
+            <Text style={[studentReportPdfStyles.th, { width: "23%" }]}>TASK</Text>
+            <Text style={[studentReportPdfStyles.th, { width: "18%" }]}>COURSE</Text>
+            <Text style={[studentReportPdfStyles.th, { width: "14%" }]}>REVIEWED</Text>
+            <Text style={[studentReportPdfStyles.th, { width: "40%" }]}>FEEDBACK</Text>
+          </View>
+          {rows.map((row, index) => (
+            <View key={`${row.taskTitle}-${row.reviewedAt}-${index}`} style={studentReportPdfStyles.row} wrap={false}>
+              <Text style={[studentReportPdfStyles.cell, { width: "5%" }]}>{index + 1}</Text>
+              <Text style={[studentReportPdfStyles.cell, { width: "23%", fontWeight: 700 }]}>{row.taskTitle}</Text>
+              <Text style={[studentReportPdfStyles.cell, { width: "18%" }]}>{row.courseTitle}</Text>
+              <Text style={[studentReportPdfStyles.cell, { width: "14%" }]}>{row.reviewedAt ? formatDate(row.reviewedAt) : "-"}</Text>
+              <Text style={[studentReportPdfStyles.cell, { width: "40%" }]}>{row.feedback}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={studentReportPdfStyles.footer} fixed>
+          <Text>Total Reviewed Tasks: {rows.length}</Text>
+          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+        </View>
+      </PdfPage>
+    </Document>
+  );
+}
+
 export function TaskAnalyticsDashboard({
   data,
   adminName,
@@ -1457,6 +1514,9 @@ export function TaskAnalyticsDashboard({
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>("todayTasks");
   const [isDrilldownOpen, setIsDrilldownOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
+  const [isTodayReportOpen, setIsTodayReportOpen] = useState(false);
+  const [isStudentReportOpen, setIsStudentReportOpen] = useState(false);
+  const [selectedStudentReportId, setSelectedStudentReportId] = useState("");
   const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState<ReportType>("complete");
   const [reportDate, setReportDate] = useState(() => localDateInputValue());
@@ -1558,8 +1618,8 @@ export function TaskAnalyticsDashboard({
     }, 250);
   }
 
-  function downloadReportCardPng() {
-    const rowsPerColumn = Math.ceil(reportCardRows.length / 2);
+  function downloadCompactStudentReportPng(rows: StudentWorkSummary[], eyebrow: string, title: string, subtitle: string, filePrefix: string) {
+    const rowsPerColumn = Math.ceil(rows.length / 2);
     const width = 1600;
     const headerHeight = 190;
     const columnHeaderHeight = 54;
@@ -1579,17 +1639,17 @@ export function TaskAnalyticsDashboard({
     context.fillRect(0, 0, width, headerHeight);
     context.fillStyle = "#bfdbfe";
     context.font = "700 22px Arial, sans-serif";
-    context.fillText("REPORT CARD", padding, 52);
+    context.fillText(eyebrow, padding, 52);
     context.fillStyle = "#ffffff";
     context.font = "700 42px Arial, sans-serif";
-    context.fillText("Active Students Reviewed Tasks", padding, 108);
+    context.fillText(title, padding, 108);
     context.fillStyle = "#dbeafe";
     context.font = "24px Arial, sans-serif";
-    context.fillText(`Total reviewed tasks up to ${new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date())}`, padding, 153);
+    context.fillText(subtitle, padding, 153);
 
     const gap = 36;
     const columnWidth = (width - padding * 2 - gap) / 2;
-    const drawColumn = (columnRows: typeof reportCardRows, columnIndex: number, startNumber: number) => {
+    const drawColumn = (columnRows: StudentWorkSummary[], columnIndex: number, startNumber: number) => {
       const x = padding + columnIndex * (columnWidth + gap);
       const top = headerHeight + 28;
       context.fillStyle = "#e8f0f7";
@@ -1633,27 +1693,52 @@ export function TaskAnalyticsDashboard({
       });
     };
 
-    drawColumn(reportCardRows.slice(0, rowsPerColumn), 0, 1);
-    drawColumn(reportCardRows.slice(rowsPerColumn), 1, rowsPerColumn + 1);
+    drawColumn(rows.slice(0, rowsPerColumn), 0, 1);
+    drawColumn(rows.slice(rowsPerColumn), 1, rowsPerColumn + 1);
 
     const footerY = headerHeight + 28 + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight + 28;
     context.fillStyle = "#15558a";
     context.font = "700 22px Arial, sans-serif";
-    context.fillText(`Active Students: ${reportCardRows.length}`, padding, footerY + 28);
+    context.fillText(`Active Students: ${rows.length}`, padding, footerY + 28);
     context.textAlign = "right";
-    context.fillText(`Total Reviewed Tasks: ${reportCardRows.reduce((total, row) => total + row.tasksCompletedCount, 0)}`, width - padding, footerY + 28);
+    context.fillText(`Total Reviewed Tasks: ${rows.reduce((total, row) => total + row.tasksCompletedCount, 0)}`, width - padding, footerY + 28);
     context.textAlign = "left";
 
     canvas.toBlob((blob) => {
-      if (blob) downloadBlob(blob, `active-students-report-card-${localDateInputValue()}.png`);
+      if (blob) downloadBlob(blob, `${filePrefix}-${localDateInputValue()}.png`);
     }, "image/png");
+  }
+
+  function downloadReportCardPng() {
+    const displayDate = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+    downloadCompactStudentReportPng(reportCardRows, "REPORT CARD", "Active Students Reviewed Tasks", `Total reviewed tasks up to ${displayDate}`, "active-students-report-card");
   }
 
   async function downloadReportCardPdf() {
     if (reportCardRows.length === 0) return;
     const displayDate = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
-    const blob = await pdf(<ReportCardPdf rows={reportCardRows} reportDate={displayDate} />).toBlob();
+    const blob = await pdf(<ReportCardPdf rows={reportCardRows} subtitle={`Total reviewed tasks up to ${displayDate}`} />).toBlob();
     downloadBlob(blob, `active-students-report-card-${localDateInputValue()}.pdf`);
+  }
+
+  function downloadTodayReportPng() {
+    const displayDate = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+    downloadCompactStudentReportPng(todayReportRows, "TODAY REPORT", "Today Reviewed Tasks", `Tasks reviewed on ${displayDate}`, "today-reviewed-tasks-report");
+  }
+
+  async function downloadTodayReportPdf() {
+    if (todayReportRows.length === 0) return;
+    const displayDate = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+    const blob = await pdf(<ReportCardPdf rows={todayReportRows} eyebrow="TODAY REPORT" title="Today Reviewed Tasks" subtitle={`Tasks reviewed on ${displayDate}`} />).toBlob();
+    downloadBlob(blob, `today-reviewed-tasks-report-${localDateInputValue()}.pdf`);
+  }
+
+  async function downloadStudentFeedbackPdf() {
+    if (!selectedStudentReport || selectedStudentReportRows.length === 0) return;
+    const displayDate = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+    const blob = await pdf(<StudentFeedbackPdf studentName={selectedStudentReport.studentName} rows={selectedStudentReportRows} generatedDate={displayDate} />).toBlob();
+    const safeName = selectedStudentReport.studentName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    downloadBlob(blob, `${safeName || "student"}-task-feedback-report-${localDateInputValue()}.pdf`);
   }
 
   function printReport() {
@@ -1677,6 +1762,33 @@ export function TaskAnalyticsDashboard({
   const reportCardRows = useMemo(
     () => [...data.studentWorkSummaries].sort((first, second) => first.studentName.localeCompare(second.studentName)),
     [data.studentWorkSummaries],
+  );
+  const todayReportRows = useMemo(() => {
+    const { startIso, endIso } = getPakistanDayBounds(localDateInputValue());
+    const reviewedCountByStudent = new Map<string, number>();
+    for (const detail of data.allTaskDetails) {
+      if (detail.taskStatus !== "reviewed" || !detail.reviewedAt || detail.reviewedAt < startIso || detail.reviewedAt >= endIso) continue;
+      reviewedCountByStudent.set(detail.studentId, (reviewedCountByStudent.get(detail.studentId) ?? 0) + 1);
+    }
+    return data.studentWorkSummaries
+      .map((student) => ({ ...student, tasksCompletedCount: reviewedCountByStudent.get(student.studentId) ?? 0 }))
+      .sort((first, second) => first.studentName.localeCompare(second.studentName));
+  }, [data.allTaskDetails, data.studentWorkSummaries]);
+  const selectedStudentReport = useMemo(
+    () => reportCardRows.find((student) => student.studentId === selectedStudentReportId) ?? null,
+    [reportCardRows, selectedStudentReportId],
+  );
+  const selectedStudentReportRows = useMemo<StudentFeedbackReportRow[]>(
+    () => data.allTaskDetails
+      .filter((detail) => detail.studentId === selectedStudentReportId && detail.taskStatus === "reviewed")
+      .sort((first, second) => (second.reviewedAt ?? "").localeCompare(first.reviewedAt ?? ""))
+      .map((detail) => ({
+        taskTitle: detail.taskTitle?.trim() || "Untitled task",
+        courseTitle: detail.courseTitle || "-",
+        reviewedAt: detail.reviewedAt ?? null,
+        feedback: detail.feedback?.trim() || "No feedback provided",
+      })),
+    [data.allTaskDetails, selectedStudentReportId],
   );
 
   const selectedFeeStudent = useMemo(
@@ -2020,21 +2132,20 @@ export function TaskAnalyticsDashboard({
               <Icon name="assessment" className="text-base" />
               Report Card
             </button>
-            <button type="button" onClick={generateReport} className="wc-secondary-btn px-4 py-2 text-sm">
-              <Icon name="summarize" className="text-base" />
-              Generate Report
+            <button type="button" onClick={() => setIsTodayReportOpen(true)} className="wc-secondary-btn px-4 py-2 text-sm">
+              <Icon name="today" className="text-base" />
+              Today Report
             </button>
-            <button type="button" onClick={downloadDailyCompactPdfReport} disabled={exporting === "pdf"} className="wc-secondary-btn px-4 py-2 text-sm disabled:opacity-60">
-              <Icon name="picture_as_pdf" className="text-base" />
-              {exporting === "pdf" ? "Preparing Daily PDF..." : "Daily Compact PDF"}
-            </button>
-            <button type="button" onClick={downloadPdfReport} disabled={exporting === "pdf"} className="wc-secondary-btn px-4 py-2 text-sm disabled:opacity-60">
-              <Icon name="picture_as_pdf" className="text-base" />
-              {exporting === "pdf" ? "Preparing PDF..." : "Download PDF Report"}
-            </button>
-            <button type="button" onClick={downloadWorkbookReport} disabled={exporting === "csv"} className="wc-primary-btn px-4 py-2 text-sm disabled:opacity-60">
-              <Icon name="download" className="text-base" />
-              Download Excel/CSV Report
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStudentReportId((current) => current || reportCardRows[0]?.studentId || "");
+                setIsStudentReportOpen(true);
+              }}
+              className="wc-primary-btn px-4 py-2 text-sm"
+            >
+              <Icon name="person_search" className="text-base" />
+              Student Report
             </button>
           </div>
         }
@@ -2298,6 +2409,180 @@ export function TaskAnalyticsDashboard({
                         </td>
                       </tr>
                     </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isTodayReportOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Today reviewed tasks report"
+          onClick={() => setIsTodayReportOpen(false)}
+        >
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[28px] bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-outline-variant/60 bg-primary px-5 py-4 text-on-primary">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Today Report</p>
+                <h3 className="mt-1 text-xl font-black text-white">Today reviewed tasks</h3>
+                <p className="mt-1 text-sm text-blue-100">
+                  Tasks reviewed on {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date())}.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={downloadTodayReportPng}
+                  disabled={todayReportRows.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="download" className="text-base" />
+                  Download PNG
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadTodayReportPdf}
+                  disabled={todayReportRows.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="picture_as_pdf" className="text-base" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsTodayReportOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+                  aria-label="Close today report"
+                >
+                  <Icon name="close" className="text-lg" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[calc(90vh-105px)] overflow-auto p-5">
+              {todayReportRows.length === 0 ? (
+                <EmptyState title="No active students found" description="There are no active student records to display." icon="today" />
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-outline-variant/60">
+                  <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-primary">
+                      <tr>
+                        <th className="px-5 py-3">Active Student</th>
+                        <th className="px-5 py-3 text-center">Reviewed Today</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/40">
+                      {todayReportRows.map((row, index) => (
+                        <tr key={row.studentId} className="transition hover:bg-surface-container/40">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-container text-xs font-black text-on-primary-container">{index + 1}</span>
+                              <span className="font-bold text-on-surface">{row.studentName}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-center">
+                            <span className="inline-flex min-w-12 items-center justify-center rounded-full bg-primary px-3 py-1.5 text-sm font-black text-on-primary">
+                              {row.tasksCompletedCount}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-surface-container-low">
+                      <tr>
+                        <td className="px-5 py-3 text-sm font-black text-on-surface">Total active students: {todayReportRows.length}</td>
+                        <td className="px-5 py-3 text-center text-sm font-black text-primary">
+                          {todayReportRows.reduce((total, row) => total + row.tasksCompletedCount, 0)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isStudentReportOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Single student task feedback report"
+          onClick={() => setIsStudentReportOpen(false)}
+        >
+          <div className="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[28px] bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant/60 bg-primary px-5 py-4 text-on-primary">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Student Report</p>
+                <h3 className="mt-1 text-xl font-black text-white">Reviewed tasks and feedback</h3>
+                <p className="mt-1 text-sm text-blue-100">Select one active student and download their compact PDF report.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={downloadStudentFeedbackPdf}
+                  disabled={!selectedStudentReport || selectedStudentReportRows.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="picture_as_pdf" className="text-base" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsStudentReportOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+                  aria-label="Close student report"
+                >
+                  <Icon name="close" className="text-lg" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[calc(90vh-108px)] space-y-4 overflow-auto p-5">
+              <label className="block space-y-2">
+                <span className="wc-label">Select active student</span>
+                <select
+                  value={selectedStudentReportId}
+                  onChange={(event) => setSelectedStudentReportId(event.target.value)}
+                  className="wc-input w-full"
+                >
+                  <option value="">Select student</option>
+                  {reportCardRows.map((student) => <option key={student.studentId} value={student.studentId}>{student.studentName}</option>)}
+                </select>
+              </label>
+
+              {!selectedStudentReport ? (
+                <EmptyState title="Select a student" description="Choose an active student to preview reviewed tasks and feedback." icon="person_search" />
+              ) : selectedStudentReportRows.length === 0 ? (
+                <EmptyState title="No reviewed tasks" description={`${selectedStudentReport.studentName} has no reviewed task records yet.`} icon="fact_check" />
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-outline-variant/60">
+                  <table className="w-full min-w-[760px] text-left">
+                    <thead className="sticky top-0 bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-primary">
+                      <tr>
+                        <th className="px-4 py-3">Task</th>
+                        <th className="px-4 py-3">Course</th>
+                        <th className="px-4 py-3">Reviewed</th>
+                        <th className="px-4 py-3">Feedback</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/40">
+                      {selectedStudentReportRows.map((row, index) => (
+                        <tr key={`${row.taskTitle}-${row.reviewedAt}-${index}`} className="align-top hover:bg-surface-container/40">
+                          <td className="px-4 py-3 text-sm font-bold text-on-surface">{row.taskTitle}</td>
+                          <td className="px-4 py-3 text-sm text-on-surface-variant">{row.courseTitle}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-on-surface-variant">{row.reviewedAt ? formatDate(row.reviewedAt) : "-"}</td>
+                          <td className="max-w-md px-4 py-3 text-sm text-on-surface-variant">{row.feedback}</td>
+                        </tr>
+                      ))}
+                    </tbody>
                   </table>
                 </div>
               )}
