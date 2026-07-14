@@ -10,7 +10,7 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { TaskAnalyticsCard } from "@/components/admin/task-analytics-card";
 import { upsertStudentFeeRecord } from "@/app/admin/actions";
-import type { DailyPendingReportRow, PaidFeeStudentDetail, StudentTaskDetail, TaskAnalyticsDashboardData } from "@/app/admin/actions";
+import type { DailyPendingReportRow, PaidFeeStudentDetail, StudentTaskDetail, StudentWorkSummary, TaskAnalyticsDashboardData } from "@/app/admin/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { AdminSignatureSettings, Course, Enrollment, Profile, StudentFeeRecord } from "@/lib/supabase/types";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -1386,6 +1386,63 @@ function UnpaidDailyPdf({
   );
 }
 
+const reportCardPdfStyles = StyleSheet.create({
+  page: { padding: 28, backgroundColor: "#f8fafc", color: "#0f172a", fontFamily: "Helvetica" },
+  header: { borderRadius: 8, backgroundColor: "#15558a", padding: 18, marginBottom: 14 },
+  eyebrow: { color: "#bfdbfe", fontSize: 9, fontWeight: 700, letterSpacing: 1 },
+  title: { color: "#ffffff", fontSize: 20, fontWeight: 700, marginTop: 5 },
+  subtitle: { color: "#dbeafe", fontSize: 9, marginTop: 5 },
+  columns: { flexDirection: "row", gap: 12 },
+  column: { flex: 1, borderWidth: 1, borderColor: "#dbe3ec", borderRadius: 6, overflow: "hidden" },
+  tableHeader: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#e8f0f7", paddingVertical: 7, paddingHorizontal: 10 },
+  tableHeaderText: { color: "#15558a", fontSize: 8, fontWeight: 700 },
+  row: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: "#e2e8f0", minHeight: 22, paddingVertical: 4, paddingHorizontal: 8 },
+  number: { width: 20, color: "#15558a", fontSize: 8, fontWeight: 700 },
+  name: { flex: 1, fontSize: 8.5, fontWeight: 700 },
+  count: { width: 38, color: "#15558a", fontSize: 9, fontWeight: 700, textAlign: "right" },
+  footer: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#cbd5e1", marginTop: 14, paddingTop: 9 },
+  footerText: { color: "#15558a", fontSize: 9, fontWeight: 700 },
+});
+
+function ReportCardPdf({ rows, reportDate }: { rows: StudentWorkSummary[]; reportDate: string }) {
+  const rowsPerColumn = Math.ceil(rows.length / 2);
+  const columns = [rows.slice(0, rowsPerColumn), rows.slice(rowsPerColumn)];
+  const totalReviewed = rows.reduce((total, row) => total + row.tasksCompletedCount, 0);
+
+  return (
+    <Document title={`Active Students Report Card - ${reportDate}`} author="WeConnect Admin Panel">
+      <PdfPage size="A4" orientation="landscape" style={reportCardPdfStyles.page} wrap={false}>
+        <View style={reportCardPdfStyles.header}>
+          <Text style={reportCardPdfStyles.eyebrow}>REPORT CARD</Text>
+          <Text style={reportCardPdfStyles.title}>Active Students Reviewed Tasks</Text>
+          <Text style={reportCardPdfStyles.subtitle}>Total reviewed tasks up to {reportDate}</Text>
+        </View>
+        <View style={reportCardPdfStyles.columns}>
+          {columns.map((column, columnIndex) => (
+            <View key={`report-card-column-${columnIndex}`} style={reportCardPdfStyles.column}>
+              <View style={reportCardPdfStyles.tableHeader}>
+                <Text style={reportCardPdfStyles.tableHeaderText}>ACTIVE STUDENT</Text>
+                <Text style={reportCardPdfStyles.tableHeaderText}>REVIEWED</Text>
+              </View>
+              {column.map((row, rowIndex) => (
+                <View key={row.studentId} style={reportCardPdfStyles.row}>
+                  <Text style={reportCardPdfStyles.number}>{columnIndex * rowsPerColumn + rowIndex + 1}.</Text>
+                  <Text style={reportCardPdfStyles.name}>{row.studentName}</Text>
+                  <Text style={reportCardPdfStyles.count}>{row.tasksCompletedCount}</Text>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+        <View style={reportCardPdfStyles.footer}>
+          <Text style={reportCardPdfStyles.footerText}>Active Students: {rows.length}</Text>
+          <Text style={reportCardPdfStyles.footerText}>Total Reviewed Tasks: {totalReviewed}</Text>
+        </View>
+      </PdfPage>
+    </Document>
+  );
+}
+
 export function TaskAnalyticsDashboard({
   data,
   adminName,
@@ -1590,6 +1647,13 @@ export function TaskAnalyticsDashboard({
     canvas.toBlob((blob) => {
       if (blob) downloadBlob(blob, `active-students-report-card-${localDateInputValue()}.png`);
     }, "image/png");
+  }
+
+  async function downloadReportCardPdf() {
+    if (reportCardRows.length === 0) return;
+    const displayDate = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+    const blob = await pdf(<ReportCardPdf rows={reportCardRows} reportDate={displayDate} />).toBlob();
+    downloadBlob(blob, `active-students-report-card-${localDateInputValue()}.pdf`);
   }
 
   function printReport() {
@@ -2176,6 +2240,15 @@ export function TaskAnalyticsDashboard({
                 >
                   <Icon name="download" className="text-base" />
                   Download PNG
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadReportCardPdf}
+                  disabled={reportCardRows.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="picture_as_pdf" className="text-base" />
+                  Download PDF
                 </button>
                 <button
                   type="button"
