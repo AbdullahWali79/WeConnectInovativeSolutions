@@ -1399,6 +1399,7 @@ export function TaskAnalyticsDashboard({
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>("todayTasks");
   const [isDrilldownOpen, setIsDrilldownOpen] = useState(false);
+  const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState<ReportType>("complete");
   const [reportDate, setReportDate] = useState(() => localDateInputValue());
@@ -1516,6 +1517,10 @@ export function TaskAnalyticsDashboard({
       }
       return first.studentName.localeCompare(second.studentName);
     }),
+    [data.studentWorkSummaries],
+  );
+  const reportCardRows = useMemo(
+    () => [...data.studentWorkSummaries].sort((first, second) => first.studentName.localeCompare(second.studentName)),
     [data.studentWorkSummaries],
   );
 
@@ -1856,6 +1861,10 @@ export function TaskAnalyticsDashboard({
         description="View daily submission status, pending work, active enrollments, and Client Hunting progress from one admin-only dashboard."
         action={
           <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setIsReportCardOpen(true)} className="wc-secondary-btn px-4 py-2 text-sm">
+              <Icon name="assessment" className="text-base" />
+              Report Card
+            </button>
             <button type="button" onClick={generateReport} className="wc-secondary-btn px-4 py-2 text-sm">
               <Icon name="summarize" className="text-base" />
               Generate Report
@@ -2049,6 +2058,78 @@ export function TaskAnalyticsDashboard({
           </div>
         </div>
       </section>
+
+      {isReportCardOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Active students report card"
+          onClick={() => setIsReportCardOpen(false)}
+        >
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[28px] bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-outline-variant/60 bg-primary px-5 py-4 text-on-primary">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Report Card</p>
+                <h3 className="mt-1 text-xl font-black text-white">Active students reviewed tasks</h3>
+                <p className="mt-1 text-sm text-blue-100">
+                  Total reviewed tasks up to {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date())}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReportCardOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+                aria-label="Close report card"
+              >
+                <Icon name="close" className="text-lg" />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(90vh-105px)] overflow-auto p-5">
+              {reportCardRows.length === 0 ? (
+                <EmptyState title="No active students found" description="There are no active student task records to display." icon="assessment" />
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-outline-variant/60">
+                  <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-primary">
+                      <tr>
+                        <th className="px-5 py-3">Active Student</th>
+                        <th className="px-5 py-3 text-center">Reviewed Tasks</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/40">
+                      {reportCardRows.map((row, index) => (
+                        <tr key={row.studentId} className="transition hover:bg-surface-container/40">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-container text-xs font-black text-on-primary-container">{index + 1}</span>
+                              <span className="font-bold text-on-surface">{row.studentName}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-center">
+                            <span className="inline-flex min-w-12 items-center justify-center rounded-full bg-primary px-3 py-1.5 text-sm font-black text-on-primary">
+                              {row.tasksCompletedCount}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-surface-container-low">
+                      <tr>
+                        <td className="px-5 py-3 text-sm font-black text-on-surface">Total active students: {reportCardRows.length}</td>
+                        <td className="px-5 py-3 text-center text-sm font-black text-primary">
+                          {reportCardRows.reduce((total, row) => total + row.tasksCompletedCount, 0)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isDrilldownOpen ? (
         <div
