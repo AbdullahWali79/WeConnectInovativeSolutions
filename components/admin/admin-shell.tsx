@@ -14,35 +14,52 @@ import { brandingToCssVars } from "@/lib/branding-settings";
 import type { BrandingSettingsSnapshot } from "@/lib/supabase/types";
 import { useBranding } from "@/components/branding-provider";
 
-const nav: Array<{ href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean }> = [
-  { href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" },
-  { href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
-  { href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
-  { href: "/admin/tasks", label: "Tasks", icon: "assignment_add", permission: "tasks.view" },
-  { href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
-  { href: "/admin/client-hunting", label: "Client Hunting", icon: "manage_search", adminOnly: true },
-  { href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
-  { href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
-  { href: "/admin/team-members", label: "Team Members", icon: "groups", permission: "team_members.view" },
-  { href: "/admin/products", label: "Products", icon: "inventory_2", permission: "products.view" },
-  { href: "/admin/blogs", label: "Blogs", icon: "article", adminOnly: true },
-  { href: "/admin/trainees", label: "Trainees", icon: "school", permission: "trainees.view" },
-  { href: "/admin/submissions", label: "Reviews", icon: "rate_review", permission: "submissions.view" },
-  { href: "/admin/progress", label: "Progress", icon: "monitoring", permission: "progress.view" },
-  { href: "/admin/completions", label: "Completion", icon: "workspace_premium", adminOnly: true },
-  { href: "/admin/internship-letters", label: "Internship Letters", icon: "description", adminOnly: true },
-  { href: "/admin/manual-completions", label: "Manual Completion", icon: "workspace_premium", adminOnly: true },
-  { href: "/admin/manual-enrollments", label: "Manual Enrollments", icon: "how_to_reg", adminOnly: true },
-  { href: "/admin/software-houses", label: "Software Houses", icon: "add_business", adminOnly: true },
-  { href: "/admin/helping-videos", label: "Helping Videos", icon: "smart_display", adminOnly: true },
-  { href: "/admin/announcements", label: "Announcements", icon: "campaign", permission: "announcements.view" },
-  { href: "/admin/feedback", label: "Feedback", icon: "reviews", adminOnly: true },
-  { href: "/admin/subadmins", label: "Teachers / Sub-Admins", icon: "manage_accounts", adminOnly: true },
-  { href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
-  { href: "/admin/notification-settings", label: "WhatsApp Alerts", icon: "chat", adminOnly: true },
-  { href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
-  { href: "/admin/settings/signature", label: "Signature & Stamp", icon: "draw", adminOnly: true },
-  { href: "/admin/settings/branding", label: "Branding", icon: "palette", adminOnly: true },
+type NavItem = { href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean };
+type NavGroup = { id: string; label: string; icon: string; items: NavItem[] };
+
+const dashboardItem: NavItem = { href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" };
+const navGroups: NavGroup[] = [
+  { id: "academics", label: "Academics", icon: "school", items: [
+    { href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
+    { href: "/admin/tasks", label: "Tasks", icon: "assignment_add", permission: "tasks.view" },
+    { href: "/admin/submissions", label: "Reviews", icon: "rate_review", permission: "submissions.view" },
+    { href: "/admin/progress", label: "Progress", icon: "monitoring", permission: "progress.view" },
+    { href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
+    { href: "/admin/helping-videos", label: "Helping Videos", icon: "smart_display", adminOnly: true },
+  ]},
+  { id: "students", label: "Students", icon: "groups", items: [
+    { href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
+    { href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
+    { href: "/admin/trainees", label: "Trainees", icon: "school", permission: "trainees.view" },
+    { href: "/admin/manual-enrollments", label: "Manual Enrollments", icon: "how_to_reg", adminOnly: true },
+  ]},
+  { id: "finance", label: "Finance", icon: "payments", items: [
+    { href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
+    { href: "/admin/products", label: "Products", icon: "inventory_2", permission: "products.view" },
+    { href: "/admin/client-hunting", label: "Client Hunting", icon: "manage_search", adminOnly: true },
+    { href: "/admin/software-houses", label: "Software Houses", icon: "add_business", adminOnly: true },
+  ]},
+  { id: "communication", label: "Communication", icon: "campaign", items: [
+    { href: "/admin/announcements", label: "Announcements", icon: "campaign", permission: "announcements.view" },
+    { href: "/admin/feedback", label: "Feedback", icon: "reviews", adminOnly: true },
+    { href: "/admin/blogs", label: "Blogs", icon: "article", adminOnly: true },
+    { href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
+  ]},
+  { id: "certificates", label: "Certificates & Letters", icon: "workspace_premium", items: [
+    { href: "/admin/completions", label: "Completion", icon: "workspace_premium", adminOnly: true },
+    { href: "/admin/internship-letters", label: "Internship Letters", icon: "description", adminOnly: true },
+    { href: "/admin/manual-completions", label: "Manual Completion", icon: "workspace_premium", adminOnly: true },
+  ]},
+  { id: "team", label: "Team & Permissions", icon: "manage_accounts", items: [
+    { href: "/admin/team-members", label: "Team Members", icon: "groups", permission: "team_members.view" },
+    { href: "/admin/subadmins", label: "Teachers / Sub-Admins", icon: "manage_accounts", adminOnly: true },
+  ]},
+  { id: "settings", label: "Settings", icon: "settings", items: [
+    { href: "/admin/notification-settings", label: "WhatsApp Alerts", icon: "chat", adminOnly: true },
+    { href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
+    { href: "/admin/settings/signature", label: "Signature & Stamp", icon: "draw", adminOnly: true },
+    { href: "/admin/settings/branding", label: "Branding", icon: "palette", adminOnly: true },
+  ]},
 ];
 
 export function AdminShell({
@@ -64,12 +81,17 @@ export function AdminShell({
   const activeBrandingStyle = brandingToCssVars(activeBranding);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const visibleNav = nav.filter((item) => {
+  const canSeeItem = (item: NavItem) => {
     if (!profile) return item.adminOnly;
     if (profile.role === "admin") return true;
     if (item.adminOnly || !item.permission) return false;
     return permissions.includes(item.permission);
-  });
+  };
+  const visibleGroups = navGroups
+    .map((group) => ({ ...group, items: group.items.filter(canSeeItem) }))
+    .filter((group) => group.items.length > 0);
+  const activeGroupId = visibleGroups.find((group) => group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)))?.id ?? null;
+  const [openGroupId, setOpenGroupId] = useState<string | null>(activeGroupId);
   const portalTitle = profile?.role === "teacher" ? "Sub-Admin Portal" : "Admin Portal";
 
   // Load collapsed state from localStorage
@@ -82,6 +104,10 @@ export function AdminShell({
   useEffect(() => {
     localStorage.setItem("admin-sidebar-collapsed", String(collapsed));
   }, [collapsed]);
+
+  useEffect(() => {
+    setOpenGroupId(activeGroupId);
+  }, [activeGroupId, pathname]);
 
   async function logout() {
     await supabase.auth.signOut();
@@ -182,37 +208,52 @@ export function AdminShell({
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 flex flex-col overflow-y-auto space-y-1 px-3 py-4">
-            {visibleNav.map((item) => {
-              const active = pathname === item.href;
+          <nav className="flex-1 overflow-y-auto space-y-1 px-3 py-4">
+            {canSeeItem(dashboardItem) && (
+              <SidebarLink item={dashboardItem} active={pathname === "/admin"} collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
+            )}
+            {visibleGroups.map((group) => {
+              const isOpen = !collapsed && openGroupId === group.id;
+              const hasActiveItem = activeGroupId === group.id;
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200",
-                    active
-                      ? "bg-white text-primary shadow-lg"
-                      : "text-blue-100 hover:bg-white/10 hover:text-white"
-                  )}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center">
-                    <Icon
-                      name={item.icon}
-                      className={cn(
-                        "transition-transform duration-200",
-                        active ? "text-[20px]" : "text-[20px] group-hover:scale-110"
-                      )}
-                    />
-                  </span>
-                  {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
-                  {/* Active indicator dot for collapsed */}
-                  {collapsed && active && (
-                    <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-secondary" />
-                  )}
-                </Link>
+                <div key={group.id} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (collapsed) {
+                        setCollapsed(false);
+                        setOpenGroupId(group.id);
+                        return;
+                      }
+                      setOpenGroupId((current) => current === group.id ? null : group.id);
+                    }}
+                    className={cn(
+                      "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200",
+                      hasActiveItem ? "bg-white/15 text-white" : "text-blue-100 hover:bg-white/10 hover:text-white"
+                    )}
+                    title={collapsed ? group.label : undefined}
+                    aria-expanded={isOpen}
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center"><Icon name={group.icon} className="text-[20px]" /></span>
+                    {!collapsed && <><span className="min-w-0 flex-1 truncate text-left">{group.label}</span><motion.span animate={{ rotate: isOpen ? 180 : 0 }}><Icon name="expand_more" className="text-lg" /></motion.span></>}
+                    {collapsed && hasActiveItem && <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-secondary" />}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="ml-4 space-y-1 border-l border-white/15 py-1 pl-2">
+                          {group.items.map((item) => <SidebarLink key={item.href} item={item} active={pathname === item.href || pathname.startsWith(`${item.href}/`)} collapsed={false} nested onNavigate={() => setMobileOpen(false)} />)}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               );
             })}
           </nav>
@@ -248,5 +289,24 @@ export function AdminShell({
         {children}
       </main>
     </div>
+  );
+}
+
+function SidebarLink({ item, active, collapsed, nested = false, onNavigate }: { item: NavItem; active: boolean; collapsed: boolean; nested?: boolean; onNavigate: () => void }) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200",
+        nested && "py-2 text-[13px]",
+        active ? "bg-white text-primary shadow-lg" : "text-blue-100 hover:bg-white/10 hover:text-white"
+      )}
+      title={collapsed ? item.label : undefined}
+    >
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center"><Icon name={item.icon} className="text-[20px] transition-transform group-hover:scale-110" /></span>
+      {!collapsed && <span className="min-w-0 truncate">{item.label}</span>}
+      {collapsed && active && <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-secondary" />}
+    </Link>
   );
 }
