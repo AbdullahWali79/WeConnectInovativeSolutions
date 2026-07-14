@@ -39,6 +39,22 @@ const initialScenarioForm: ScenarioForm = {
   is_active: true,
 };
 
+function pakistanDateValue(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+function pakistanDateLabel(date = new Date()) {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
+function pakistanDayBounds(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  return {
+    start: new Date(Date.UTC(year, month - 1, day, -5)).toISOString(),
+    end: new Date(Date.UTC(year, month - 1, day + 1, -5)).toISOString(),
+  };
+}
+
 export function ClientHuntingManager({
   currentRole,
   permissions = [],
@@ -68,6 +84,7 @@ export function ClientHuntingManager({
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
   const [isScenarioListModalOpen, setIsScenarioListModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isTodayReportOpen, setIsTodayReportOpen] = useState(false);
   const [reviewForms, setReviewForms] = useState<Record<string, LeadReviewForm>>({});
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   const [globalTargetDraft, setGlobalTargetDraft] = useState("3");
@@ -269,6 +286,112 @@ export function ClientHuntingManager({
     () => studentRows.filter((row) => row.todayApproved >= row.dailyTarget),
     [studentRows],
   );
+  const todayClientHuntReportRows = useMemo(() => {
+    const dateValue = pakistanDateValue();
+    const { start, end } = pakistanDayBounds(dateValue);
+    const countByStudent = new Map<string, number>();
+    for (const lead of leads) {
+      if (lead.submitted_at < start || lead.submitted_at >= end) continue;
+      countByStudent.set(lead.student_id, (countByStudent.get(lead.student_id) ?? 0) + 1);
+    }
+    return profiles
+      .map((profile) => ({
+        studentId: profile.id,
+        studentName: profile.full_name ?? profile.email ?? "Student",
+        count: countByStudent.get(profile.id) ?? 0,
+      }))
+      .sort((first, second) => first.studentName.localeCompare(second.studentName));
+  }, [leads, profiles]);
+
+  function downloadTodayClientHuntPng() {
+    const rows = todayClientHuntReportRows;
+    const rowsPerColumn = Math.ceil(rows.length / 2);
+    const width = 1600;
+    const headerHeight = 190;
+    const columnHeaderHeight = 54;
+    const rowHeight = 58;
+    const footerHeight = 76;
+    const padding = 64;
+    const height = headerHeight + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight + footerHeight + padding;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    context.fillStyle = "#f8fafc";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "#15558a";
+    context.fillRect(0, 0, width, headerHeight);
+    context.fillStyle = "#bfdbfe";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText("TODAY CLIENT HUNT REPORT", padding, 52);
+    context.fillStyle = "#ffffff";
+    context.font = "700 42px Arial, sans-serif";
+    context.fillText("Student-wise Client Hunts", padding, 108);
+    context.fillStyle = "#dbeafe";
+    context.font = "24px Arial, sans-serif";
+    context.fillText(`Client hunts submitted on ${pakistanDateLabel()}`, padding, 153);
+
+    const gap = 36;
+    const columnWidth = (width - padding * 2 - gap) / 2;
+    const drawColumn = (columnRows: typeof rows, columnIndex: number, startNumber: number) => {
+      const x = padding + columnIndex * (columnWidth + gap);
+      const top = headerHeight + 28;
+      context.fillStyle = "#e8f0f7";
+      context.fillRect(x, top, columnWidth, columnHeaderHeight);
+      context.fillStyle = "#15558a";
+      context.font = "700 18px Arial, sans-serif";
+      context.fillText("ACTIVE STUDENT", x + 20, top + 34);
+      context.textAlign = "right";
+      context.fillText("CLIENT HUNTS", x + columnWidth - 20, top + 34);
+      context.textAlign = "left";
+
+      columnRows.forEach((row, rowIndex) => {
+        const y = top + columnHeaderHeight + rowIndex * rowHeight;
+        context.fillStyle = rowIndex % 2 === 0 ? "#ffffff" : "#f1f5f9";
+        context.fillRect(x, y, columnWidth, rowHeight);
+        context.strokeStyle = "#dbe3ec";
+        context.beginPath();
+        context.moveTo(x, y + rowHeight);
+        context.lineTo(x + columnWidth, y + rowHeight);
+        context.stroke();
+        context.fillStyle = "#15558a";
+        context.beginPath();
+        context.arc(x + 30, y + rowHeight / 2, 18, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#ffffff";
+        context.font = "700 15px Arial, sans-serif";
+        context.textAlign = "center";
+        context.fillText(String(startNumber + rowIndex), x + 30, y + rowHeight / 2 + 5);
+        context.textAlign = "left";
+        context.fillStyle = "#0f172a";
+        context.font = "700 20px Arial, sans-serif";
+        const maxNameWidth = columnWidth - 210;
+        let studentName = row.studentName;
+        while (context.measureText(studentName).width > maxNameWidth && studentName.length > 3) studentName = `${studentName.slice(0, -4)}...`;
+        context.fillText(studentName, x + 62, y + rowHeight / 2 + 7);
+        context.fillStyle = "#15558a";
+        context.font = "700 21px Arial, sans-serif";
+        context.textAlign = "right";
+        context.fillText(String(row.count), x + columnWidth - 30, y + rowHeight / 2 + 7);
+        context.textAlign = "left";
+      });
+    };
+
+    drawColumn(rows.slice(0, rowsPerColumn), 0, 1);
+    drawColumn(rows.slice(rowsPerColumn), 1, rowsPerColumn + 1);
+    const footerY = headerHeight + 28 + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight + 28;
+    context.fillStyle = "#15558a";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText(`Active Students: ${rows.length}`, padding, footerY + 28);
+    context.textAlign = "right";
+    context.fillText(`Total Client Hunts Today: ${rows.reduce((total, row) => total + row.count, 0)}`, width - padding, footerY + 28);
+    context.textAlign = "left";
+    canvas.toBlob((blob) => {
+      if (blob) downloadBlob(blob, `today-client-hunt-report-${pakistanDateValue()}.png`);
+    }, "image/png");
+  }
 
   function patchScenarioForm(patch: Partial<ScenarioForm>) {
     setScenarioForm((current) => ({ ...current, ...patch }));
@@ -647,20 +770,91 @@ export function ClientHuntingManager({
             </button>
             <button
               type="button"
-              onClick={() => void downloadAchievedTodayPdf()}
-              disabled={exportingAchievedPdf || studentRows.length === 0}
-              className="wc-secondary-btn text-sm disabled:opacity-60"
+              onClick={() => setIsTodayReportOpen(true)}
+              className="wc-secondary-btn text-sm"
             >
-              <Icon name="picture_as_pdf" />
-              {exportingAchievedPdf ? "Preparing PDF..." : "Target Achievers PDF"}
+              <Icon name="today" />
+              Today Client Hunt Report
             </button>
-            <button type="button" onClick={exportClientWise} className="wc-secondary-btn text-sm">Export Client Wise</button>
-            <button type="button" onClick={exportStudentWise} className="wc-secondary-btn text-sm">Export Student Wise</button>
-            <button type="button" onClick={exportSkillWise} className="wc-secondary-btn text-sm">Export Skill Wise</button>
-            <div className="rounded-full bg-primary px-4 py-2 text-sm font-bold text-white">{stats.todayLeads.length} leads today</div>
           </div>
         }
       />
+
+      {isTodayReportOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Today client hunt report"
+          onClick={() => setIsTodayReportOpen(false)}
+        >
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[28px] bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant/60 bg-primary px-5 py-4 text-on-primary">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Today Client Hunt Report</p>
+                <h3 className="mt-1 text-xl font-black text-white">Student-wise client hunts</h3>
+                <p className="mt-1 text-sm text-blue-100">Client hunts submitted on {pakistanDateLabel()}.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={downloadTodayClientHuntPng}
+                  disabled={todayClientHuntReportRows.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="download" />
+                  Download PNG
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsTodayReportOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+                  aria-label="Close today client hunt report"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[calc(90vh-105px)] overflow-auto p-5">
+              {todayClientHuntReportRows.length === 0 ? (
+                <EmptyState title="No active students found" description="There are no approved students to display." icon="manage_search" />
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-outline-variant/60">
+                  <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-primary">
+                      <tr>
+                        <th className="px-5 py-3">Active Student</th>
+                        <th className="px-5 py-3 text-center">Client Hunts Today</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/40">
+                      {todayClientHuntReportRows.map((row, index) => (
+                        <tr key={row.studentId} className="hover:bg-surface-container/40">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-container text-xs font-black text-on-primary-container">{index + 1}</span>
+                              <span className="font-bold text-on-surface">{row.studentName}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-center">
+                            <span className="inline-flex min-w-12 items-center justify-center rounded-full bg-primary px-3 py-1.5 text-sm font-black text-on-primary">{row.count}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-surface-container-low">
+                      <tr>
+                        <td className="px-5 py-3 text-sm font-black text-on-surface">Total active students: {todayClientHuntReportRows.length}</td>
+                        <td className="px-5 py-3 text-center text-sm font-black text-primary">{todayClientHuntReportRows.reduce((total, row) => total + row.count, 0)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Total leads" value={leads.length} icon="assignment" />
