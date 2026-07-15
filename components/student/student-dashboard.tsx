@@ -439,6 +439,13 @@ export function StudentDashboard() {
         task_title: taskForm.title.trim(),
         task_description: taskForm.description.trim() || null,
         submission_explanation: taskForm.description.trim() || null,
+        // Pass the complete current signature so PostgREST does not confuse it
+        // with older overloaded versions of submit_student_task.
+        submission_github_url: null,
+        submission_google_doc_url: null,
+        submission_google_sheet_url: null,
+        submission_image_url: null,
+        submission_youtube_url: null,
         submission_proof_url: taskForm.proof_url.trim(),
         submission_proof_links: taskForm.extra_proof_links.map((link) => link.trim()).filter(Boolean),
       });
@@ -496,7 +503,11 @@ export function StudentDashboard() {
       
       await loadData();
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : "Failed to submit task.";
+      const errMsg = err instanceof Error
+        ? err.message
+        : typeof err === "object" && err !== null && "message" in err && typeof err.message === "string"
+          ? err.message
+          : "Failed to submit task.";
       setToast({ type: "error", message: errMsg });
     } finally {
       setCreating(false);

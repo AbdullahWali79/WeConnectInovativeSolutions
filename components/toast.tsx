@@ -26,7 +26,7 @@ export function Toast({ toast, onClear }: { toast: ToastState; onClear: () => vo
   return (
     <div
       className={cn(
-        "fixed right-5 top-5 z-50 max-w-sm rounded-xl px-5 py-4 text-sm font-semibold shadow-2xl transition-all",
+        "fixed right-5 top-5 z-[100] max-w-sm rounded-xl px-5 py-4 text-sm font-semibold shadow-2xl transition-all",
         visible ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0",
         toast.type === "success" && "bg-green-600 text-white",
         toast.type === "error" && "bg-error text-white",
