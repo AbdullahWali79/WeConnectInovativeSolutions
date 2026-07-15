@@ -40,19 +40,16 @@ type TaskSubmissionRow = {
   courseTitle: string;
 };
 
-function getDefaultEndDate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getDefaultStartDate() {
-  const date = new Date();
-  date.setDate(date.getDate() - 6);
-  return date.toISOString().slice(0, 10);
-}
-
 function formatDateOnly(value: string | null | undefined) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value));
+}
+
+function getReportPeriod(dateFrom: string, dateTo: string) {
+  if (dateFrom && dateTo) return `${formatDateOnly(dateFrom)} to ${formatDateOnly(dateTo)}`;
+  if (dateFrom) return `From ${formatDateOnly(dateFrom)}`;
+  if (dateTo) return `Up to ${formatDateOnly(dateTo)}`;
+  return "Complete Report";
 }
 
 function toDateMs(value: string) {
@@ -78,74 +75,42 @@ function downloadBlob(blob: Blob, fileName: string) {
 
 const pdfStyles = StyleSheet.create({
   page: {
-    padding: 24,
-    fontSize: 9,
+    padding: 18,
+    fontSize: 8,
     color: "#0f172a",
     backgroundColor: "#ffffff",
     fontFamily: "Helvetica",
   },
   header: {
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 8,
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 6,
     backgroundColor: "#1d4ed8",
     color: "#ffffff",
   },
-  eyebrow: {
-    fontSize: 9,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    color: "#bfdbfe",
-    marginBottom: 4,
-    fontWeight: 700,
-  },
   title: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: 700,
     color: "#ffffff",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 10,
+    fontSize: 8,
     color: "#dbeafe",
   },
   metaRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 10,
+    gap: 5,
+    marginTop: 6,
   },
   metaChip: {
     backgroundColor: "#3b82f6",
     color: "#ffffff",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    fontSize: 9,
-  },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  summaryCard: {
-    width: "23%",
-    backgroundColor: "#2563eb",
-    borderRadius: 8,
-    padding: 8,
-  },
-  summaryLabel: {
-    fontSize: 8,
-    color: "#bfdbfe",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: 700,
-    color: "#ffffff",
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    fontSize: 7.5,
   },
   table: {
     borderWidth: 1,
@@ -159,9 +124,9 @@ const pdfStyles = StyleSheet.create({
     color: "#ffffff",
   },
   tableHeaderCell: {
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    fontSize: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+    fontSize: 7.5,
     fontWeight: 700,
   },
   tableRow: {
@@ -170,9 +135,9 @@ const pdfStyles = StyleSheet.create({
     borderTopColor: "#e2e8f0",
   },
   tableCell: {
-    paddingVertical: 7,
-    paddingHorizontal: 6,
-    fontSize: 8.5,
+    paddingVertical: 4,
+    paddingHorizontal: 5,
+    fontSize: 7.5,
     color: "#0f172a",
   },
   muted: { color: "#64748b" },
@@ -188,13 +153,11 @@ const pdfStyles = StyleSheet.create({
 });
 
 function DateWiseProgressReportPdf({
-  reportTitle,
   dateFrom,
   dateTo,
   rows,
   summary,
 }: {
-  reportTitle: string;
   dateFrom: string;
   dateTo: string;
   rows: DateWiseReportRow[];
@@ -209,32 +172,13 @@ function DateWiseProgressReportPdf({
     <Document>
       <Page size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.header}>
-          <Text style={pdfStyles.eyebrow}>WeConnect Student Progress</Text>
-          <Text style={pdfStyles.title}>Date Wise Progress Report</Text>
-          <Text style={pdfStyles.subtitle}>{reportTitle} - {formatDateOnly(dateFrom)} to {formatDateOnly(dateTo)}</Text>
+          <Text style={pdfStyles.title}>We Connect Innovative Solutions</Text>
+          <Text style={pdfStyles.subtitle}>{getReportPeriod(dateFrom, dateTo)}</Text>
           <View style={pdfStyles.metaRow}>
             <Text style={pdfStyles.metaChip}>Courses: {summary.courses}</Text>
             <Text style={pdfStyles.metaChip}>Tasks: {summary.tasks}</Text>
             <Text style={pdfStyles.metaChip}>Reviewed: {summary.reviewed}</Text>
             <Text style={pdfStyles.metaChip}>Avg Score: {summary.averageScore}</Text>
-          </View>
-          <View style={pdfStyles.summaryGrid}>
-          <View style={pdfStyles.summaryCard}>
-            <Text style={pdfStyles.summaryLabel}>Courses</Text>
-            <Text style={pdfStyles.summaryValue}>{summary.courses}</Text>
-          </View>
-          <View style={pdfStyles.summaryCard}>
-            <Text style={pdfStyles.summaryLabel}>Tasks</Text>
-            <Text style={pdfStyles.summaryValue}>{summary.tasks}</Text>
-          </View>
-          <View style={pdfStyles.summaryCard}>
-            <Text style={pdfStyles.summaryLabel}>Reviewed</Text>
-            <Text style={pdfStyles.summaryValue}>{summary.reviewed}</Text>
-          </View>
-          <View style={pdfStyles.summaryCard}>
-            <Text style={pdfStyles.summaryLabel}>Average Score</Text>
-            <Text style={pdfStyles.summaryValue}>{summary.averageScore}</Text>
-          </View>
           </View>
         </View>
 
@@ -272,8 +216,8 @@ export function StudentProgress() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reportStart, setReportStart] = useState(getDefaultStartDate());
-  const [reportEnd, setReportEnd] = useState(getDefaultEndDate());
+  const [reportStart, setReportStart] = useState("");
+  const [reportEnd, setReportEnd] = useState("");
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
   const loadData = useCallback(async () => {
@@ -391,12 +335,13 @@ export function StudentProgress() {
     setExporting(format);
 
     try {
-      const fileBase = `date-wise-progress-report-${reportStart || "from-start"}-to-${reportEnd || "to-end"}`;
+      const fileBase = reportStart || reportEnd
+        ? `progress-report-${reportStart || "start"}-to-${reportEnd || "latest"}`
+        : "complete-progress-report";
 
       if (format === "pdf") {
         const blob = await pdf(
           <DateWiseProgressReportPdf
-            reportTitle="Student Progress"
             dateFrom={reportStart}
             dateTo={reportEnd}
             rows={reportRows}
@@ -409,9 +354,8 @@ export function StudentProgress() {
 
       const workbook = XLSX.utils.book_new();
       const summarySheet = XLSX.utils.aoa_to_sheet([
-        ["Date Wise Progress Report"],
-        ["Date From", formatDateOnly(reportStart)],
-        ["Date To", formatDateOnly(reportEnd)],
+        ["We Connect Innovative Solutions"],
+        ["Report Period", getReportPeriod(reportStart, reportEnd)],
         ["Courses", reportSummary.courses],
         ["Tasks", reportSummary.tasks],
         ["Reviewed", reportSummary.reviewed],
