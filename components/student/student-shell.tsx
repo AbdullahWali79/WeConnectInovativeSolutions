@@ -64,7 +64,7 @@ export function StudentShell({ profile, branding, children }: { profile: Profile
           })}
         </nav>
         <div className="hidden px-6 py-6 lg:absolute lg:bottom-0 lg:block lg:w-full">
-          <Link href="/student/tasks#add-task-form" className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-secondary-container py-3 font-bold text-on-secondary-fixed">
+          <Link href="/student/tasks?addTask=1" onClick={() => window.dispatchEvent(new Event("open-add-task"))} className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-secondary-container py-3 font-bold text-on-secondary-fixed">
             <Icon name="add_task" /> Add Task
           </Link>
           <div className="rounded-xl bg-white/10 p-4">

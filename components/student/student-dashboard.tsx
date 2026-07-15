@@ -13,6 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Announcement, ClientHuntLead, Course, Enrollment, Profile, ProgressReport, Submission, Task, TaskResource } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/utils";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
+import { getProofLinkError } from "@/lib/proof-links";
 
 export function StudentDashboard() {
   const supabase = createSupabaseBrowserClient();
@@ -31,17 +32,14 @@ export function StudentDashboard() {
   const [assignedTasksOpen, setAssignedTasksOpen] = useState(false);
   const [acceptedTasksOpen, setAcceptedTasksOpen] = useState(false);
   const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [screenshotsOpen, setScreenshotsOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({
     course_id: "",
     title: "",
     description: "",
-    github_url: "",
-    google_doc_url: "",
-    google_sheet_url: "",
-    image_url: "",
-    youtube_url: "",
     proof_url: "",
-    extra_proof_links: [""],
+    extra_proof_links: [] as string[],
   });
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -126,6 +124,29 @@ export function StudentDashboard() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("addTask") === "1") {
+      setAddTaskOpen(true);
+    }
+    const openAddTask = () => setAddTaskOpen(true);
+    window.addEventListener("open-add-task", openAddTask);
+    return () => window.removeEventListener("open-add-task", openAddTask);
+  }, []);
+
+  useEffect(() => {
+    if (!addTaskOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !creating) setAddTaskOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [addTaskOpen, creating]);
 
   useEffect(() => {
     if (editingTask) {
@@ -337,13 +358,10 @@ export function StudentDashboard() {
   }
 
   function removeExtraProofLink(index: number) {
-    setTaskForm((current) => {
-      const nextLinks = current.extra_proof_links.filter((_, itemIndex) => itemIndex !== index);
-      return {
-        ...current,
-        extra_proof_links: nextLinks.length > 0 ? nextLinks : [""],
-      };
-    });
+    setTaskForm((current) => ({
+      ...current,
+      extra_proof_links: current.extra_proof_links.filter((_, itemIndex) => itemIndex !== index),
+    }));
   }
 
   async function createTask(event: React.FormEvent<HTMLFormElement>) {
@@ -359,12 +377,20 @@ export function StudentDashboard() {
       return;
     }
 
-    const proofLinks = [
-      taskForm.proof_url,
-      ...taskForm.extra_proof_links,
-    ]
-      .map((link) => link.trim())
-      .filter(Boolean);
+    const proofLinkError = getProofLinkError(taskForm.proof_url);
+    if (proofLinkError) {
+      setToast({ type: "error", message: proofLinkError });
+      return;
+    }
+
+    for (const extraLink of taskForm.extra_proof_links) {
+      if (!extraLink.trim()) continue;
+      const extraLinkError = getProofLinkError(extraLink);
+      if (extraLinkError) {
+        setToast({ type: "error", message: `Additional proof link: ${extraLinkError}` });
+        return;
+      }
+    }
 
     if (dailyFiles.length > 5) {
       setToast({ type: "error", message: "You can upload up to 5 screenshots." });
@@ -413,13 +439,8 @@ export function StudentDashboard() {
         task_title: taskForm.title.trim(),
         task_description: taskForm.description.trim() || null,
         submission_explanation: taskForm.description.trim() || null,
-        submission_github_url: taskForm.github_url.trim() || null,
-        submission_google_doc_url: taskForm.google_doc_url.trim() || null,
-        submission_google_sheet_url: taskForm.google_sheet_url.trim() || null,
-        submission_image_url: taskForm.image_url.trim() || null,
-        submission_youtube_url: taskForm.youtube_url.trim() || null,
-        submission_proof_url: proofLinks[0] ?? null,
-        submission_proof_links: proofLinks.slice(1),
+        submission_proof_url: taskForm.proof_url.trim(),
+        submission_proof_links: taskForm.extra_proof_links.map((link) => link.trim()).filter(Boolean),
       });
 
       if (submitError) {
@@ -463,14 +484,11 @@ export function StudentDashboard() {
         course_id: activeEnrollments[0]?.course_id ?? "",
         title: "",
         description: "",
-        github_url: "",
-        google_doc_url: "",
-        google_sheet_url: "",
-        image_url: "",
-        youtube_url: "",
         proof_url: "",
-        extra_proof_links: [""],
+        extra_proof_links: [],
       });
+      setAddTaskOpen(false);
+      setScreenshotsOpen(false);
       
       dailyPreviews.forEach(url => URL.revokeObjectURL(url));
       setDailyFiles([]);
@@ -497,9 +515,9 @@ export function StudentDashboard() {
         description="Create new tasks for review, open resources, and submit proof. RLS limits this page to your own rows."
         action={
           <div className="flex flex-wrap gap-2">
-            <Link href="/student/tasks#add-task-form" className="wc-primary-btn">
+            <button type="button" onClick={() => setAddTaskOpen(true)} className="wc-primary-btn">
               <Icon name="add_task" /> Daily Task
-            </Link>
+            </button>
             <Link href="/student/client-hunting" className="wc-primary-btn">Client Hunting</Link>
             <Link href="/student/progress" className="wc-secondary-btn">View Progress</Link>
           </div>
@@ -679,21 +697,26 @@ export function StudentDashboard() {
         </div>
       </div>
 
-      <div id="add-task-form" className="mb-6 wc-card p-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      {addTaskOpen ? (
+      <div className="fixed inset-0 z-[80] flex justify-end bg-slate-950/55 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="add-task-title" onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !creating) setAddTaskOpen(false);
+      }}>
+      <div className="flex h-full w-full flex-col bg-white shadow-2xl sm:max-w-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-outline-variant/60 px-5 py-4 sm:px-6">
           <div>
             <p className="text-label-sm uppercase tracking-widest text-primary">Daily Task</p>
-            <h2 className="mt-1 text-title-lg text-on-surface">Submit a daily task for admin review</h2>
-            <p className="mt-2 max-w-3xl text-body-md text-on-surface-variant">
-              Add a title, description, and proof links. Admin will review the submission and either accept it or request revision.
+            <h2 id="add-task-title" className="mt-1 text-title-lg text-on-surface">Add task</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              Add the task details and a compulsory proof link.
             </p>
           </div>
-          <div className="rounded-2xl bg-surface-container px-4 py-3 text-sm text-on-surface-variant">
-            Default target: <span className="font-black text-primary">100</span> tasks
-          </div>
+          <button type="button" onClick={() => setAddTaskOpen(false)} disabled={creating} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50" aria-label="Close add task form">
+            <Icon name="close" className="text-xl" />
+          </button>
         </div>
-        <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={createTask}>
-          <label className="block md:col-span-2">
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={createTask}>
+        <div className="grid flex-1 gap-4 overflow-y-auto px-5 py-5 sm:grid-cols-2 sm:px-6">
+          <label className="block">
             <span className="wc-label">Course</span>
             <select className="wc-input mt-2" value={taskForm.course_id} onChange={(event) => updateTaskForm("course_id", event.target.value)} required>
               <option value="">Choose an active course</option>
@@ -704,40 +727,28 @@ export function StudentDashboard() {
               ))}
             </select>
           </label>
-          <label className="block md:col-span-2">
+          <label className="block">
             <span className="wc-label">Task Title</span>
             <input className="wc-input mt-2" value={taskForm.title} onChange={(event) => updateTaskForm("title", event.target.value)} placeholder="Enter your task title" required />
           </label>
-          <label className="block md:col-span-2">
+          <label className="block sm:col-span-2">
             <span className="wc-label">Description</span>
-            <textarea className="wc-input mt-2 min-h-28" value={taskForm.description} onChange={(event) => updateTaskForm("description", event.target.value)} placeholder="Explain what you made, how to verify it, and any notes for admin." />
+            <textarea className="wc-input mt-2 min-h-20" value={taskForm.description} onChange={(event) => updateTaskForm("description", event.target.value)} placeholder="Briefly explain what you made and how to verify it." />
           </label>
-          <div className="md:col-span-2 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4">
-            <div className="mb-4">
-              <p className="wc-label">Verification Links</p>
-              <p className="mt-1 text-xs text-on-surface-variant">All verification links are optional while GitHub uploads are unavailable.</p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <UrlInput label="GitHub Link" value={taskForm.github_url} onChange={(value) => updateTaskForm("github_url", value)} placeholder="https://github.com/..." />
-              <UrlInput label="Google Docs Link" value={taskForm.google_doc_url} onChange={(value) => updateTaskForm("google_doc_url", value)} placeholder="https://docs.google.com/..." />
-              <UrlInput label="Google Sheet Link" value={taskForm.google_sheet_url} onChange={(value) => updateTaskForm("google_sheet_url", value)} placeholder="https://docs.google.com/spreadsheets/..." />
-              <UrlInput label="Image / Screenshot Link" value={taskForm.image_url} onChange={(value) => updateTaskForm("image_url", value)} placeholder="https://..." />
-              <UrlInput label="YouTube Link" value={taskForm.youtube_url} onChange={(value) => updateTaskForm("youtube_url", value)} placeholder="https://www.youtube.com/watch?v=..." />
-              <div className="md:col-span-2">
-                <UrlInput label="Primary Proof Link (Optional)" value={taskForm.proof_url} onChange={(value) => updateTaskForm("proof_url", value)} placeholder="https://..." />
-              </div>
-            </div>
+          <div className="sm:col-span-2 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4">
+            <UrlInput label="Proof Link" value={taskForm.proof_url} onChange={(value) => updateTaskForm("proof_url", value)} placeholder="https://..." required />
 
-            {/* Optional Screenshot Section */}
-            <div className="md:col-span-2 rounded-2xl border border-outline-variant bg-surface-container-low p-5 space-y-4">
-              <div>
-                <span className="wc-label block">Screenshots (Optional)</span>
-                <span className="text-xs text-on-surface-variant block mt-1">
-                  You may upload up to 5 screenshots of your work. Supported formats: JPG, JPEG, PNG, WEBP (Max 5MB per image).
+            <div className="mt-4 rounded-2xl border border-outline-variant bg-white/70 p-4">
+              <button type="button" onClick={() => setScreenshotsOpen((current) => !current)} className="flex w-full items-center justify-between gap-3 text-left" aria-expanded={screenshotsOpen}>
+                <span>
+                  <span className="wc-label block">Screenshots (Optional)</span>
+                  <span className="mt-1 block text-xs text-on-surface-variant">Up to 5 images, maximum 5MB each.</span>
                 </span>
-              </div>
+                <Icon name={screenshotsOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"} className="text-xl text-primary" />
+              </button>
 
-              <div className="relative border-2 border-dashed border-outline-variant hover:border-primary rounded-2xl p-6 transition flex flex-col items-center justify-center bg-white/50 cursor-pointer">
+              {screenshotsOpen ? <div className="mt-4 space-y-4">
+              <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant bg-white/50 p-4 transition hover:border-primary">
                 <input
                   type="file"
                   multiple
@@ -750,7 +761,7 @@ export function StudentDashboard() {
                 <span className="text-xs text-on-surface-variant mt-1">Drag and drop or click to choose files</span>
               </div>
 
-              {dailyPreviews.length > 0 && (
+              {dailyPreviews.length > 0 ? (
                 <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                   {dailyPreviews.map((preview, index) => (
                     <div key={`preview-${index}`} className="relative group rounded-xl border border-outline-variant overflow-hidden aspect-video bg-surface-container-lowest">
@@ -765,14 +776,15 @@ export function StudentDashboard() {
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
+              </div> : null}
             </div>
 
             <div className="mt-5 rounded-2xl bg-white/70 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="wc-label">Additional Proof Links</p>
-                  <p className="mt-1 text-xs text-on-surface-variant">Add any extra URLs you want admin to open.</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">Add extra URLs only when needed.</p>
                 </div>
                 <button type="button" onClick={addExtraProofLink} className="wc-secondary-btn px-3 py-2 text-xs">
                   <Icon name="add" /> Add Link
@@ -781,42 +793,32 @@ export function StudentDashboard() {
               <div className="mt-4 grid gap-3">
                 {taskForm.extra_proof_links.map((link, index) => (
                   <div key={`extra-proof-${index}`} className="flex gap-3">
-                    <div className="flex-1">
-                      <input
-                        className="wc-input"
-                        type="text"
-                        value={link}
-                        onChange={(event) => updateExtraProofLink(index, event.target.value)}
-                        placeholder={`Extra proof link ${index + 1}`}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeExtraProofLink(index)}
-                      className="wc-secondary-btn px-3 py-2 text-xs"
-                      disabled={taskForm.extra_proof_links.length === 1}
-                    >
+                    <input
+                      className="wc-input flex-1"
+                      type="url"
+                      value={link}
+                      onChange={(event) => updateExtraProofLink(index, event.target.value)}
+                      placeholder={`Extra proof link ${index + 1}`}
+                    />
+                    <button type="button" onClick={() => removeExtraProofLink(index)} className="wc-secondary-btn px-3 py-2 text-xs">
                       Remove
                     </button>
                   </div>
                 ))}
               </div>
             </div>
+
           </div>
-          <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
+        </div>
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-outline-variant/60 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
             <button
               type="button"
               onClick={() => setTaskForm({
                 course_id: activeEnrollments[0]?.course_id ?? "",
                 title: "",
                 description: "",
-                github_url: "",
-                google_doc_url: "",
-                google_sheet_url: "",
-                image_url: "",
-                youtube_url: "",
                 proof_url: "",
-                extra_proof_links: [""],
+                extra_proof_links: [],
               })}
               className="wc-secondary-btn"
               disabled={creating}
@@ -829,6 +831,8 @@ export function StudentDashboard() {
           </div>
         </form>
       </div>
+      </div>
+      ) : null}
 
       <div className="mb-6 grid gap-4 md:grid-cols-5">
         <Stat label="Overall Progress" value={`${progress}%`} icon="donut_large" dark />

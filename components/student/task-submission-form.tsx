@@ -12,6 +12,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Submission, Task, TaskResource } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/utils";
+import { getProofLinkError } from "@/lib/proof-links";
 
 type SubmissionScreenshot = {
   id: string;
@@ -26,7 +27,7 @@ type SubmissionScreenshot = {
   created_at: string;
 };
 
-const initialForm = { explanation: "", github_url: "", google_doc_url: "", google_sheet_url: "", image_url: "", youtube_url: "", proof_url: "" };
+const initialForm = { explanation: "", proof_url: "" };
 
 export function TaskSubmissionForm({ taskId }: { taskId: string }) {
   const supabase = createSupabaseBrowserClient();
@@ -61,11 +62,6 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
     if (existing) {
       setForm({
         explanation: existing.explanation ?? "",
-        github_url: existing.github_url ?? "",
-        google_doc_url: existing.google_doc_url ?? "",
-        google_sheet_url: existing.google_sheet_url ?? "",
-        image_url: existing.image_url ?? "",
-        youtube_url: (existing as typeof existing & { youtube_url?: string | null }).youtube_url ?? "",
         proof_url: existing.proof_url ?? "",
       });
 
@@ -131,6 +127,11 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
       setToast({ type: "error", message: "Explanation is required." });
       return;
     }
+    const proofLinkError = getProofLinkError(form.proof_url);
+    if (proofLinkError) {
+      setToast({ type: "error", message: proofLinkError });
+      return;
+    }
     if (submission && submission.status !== "revision_required") {
       setToast({ type: "error", message: "This task already has a final submission decision." });
       return;
@@ -182,12 +183,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
       const { data: submissionId, error: submitError } = await supabase.rpc("submit_task", {
         target_task_id: taskId,
         submission_explanation: form.explanation.trim(),
-        submission_github_url: form.github_url.trim() || null,
-        submission_google_doc_url: form.google_doc_url.trim() || null,
-        submission_google_sheet_url: form.google_sheet_url.trim() || null,
-        submission_image_url: form.image_url.trim() || null,
-        submission_youtube_url: form.youtube_url.trim() || null,
-        submission_proof_url: form.proof_url.trim() || null,
+        submission_proof_url: form.proof_url.trim(),
       });
       
       if (submitError) {
@@ -303,14 +299,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
             </div>
           </label>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <UrlInput label="GitHub Link" value={form.github_url} disabled={locked} onChange={(value) => updateField("github_url", value)} />
-            <UrlInput label="Google Docs Link" value={form.google_doc_url} disabled={locked} onChange={(value) => updateField("google_doc_url", value)} />
-            <UrlInput label="Google Sheet Link" value={form.google_sheet_url} disabled={locked} onChange={(value) => updateField("google_sheet_url", value)} />
-            <UrlInput label="Image / Proof URL" value={form.image_url} disabled={locked} onChange={(value) => updateField("image_url", value)} />
-            <UrlInput label="YouTube Link" value={form.youtube_url} disabled={locked} onChange={(value) => updateField("youtube_url", value)} />
-            <UrlInput label="Primary Proof URL (Optional)" value={form.proof_url} disabled={locked} onChange={(value) => updateField("proof_url", value)} />
-          </div>
+          <UrlInput label="Proof Link" value={form.proof_url} disabled={locked} onChange={(value) => updateField("proof_url", value)} required />
 
           {/* Optional Screenshot Section */}
           <div className="rounded-3xl border border-outline-variant/60 bg-gradient-to-b from-surface-container-low to-white p-6 space-y-5">
