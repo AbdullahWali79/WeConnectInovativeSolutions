@@ -502,6 +502,53 @@ export function StudentProgress() {
         <EmptyState title="No enrollments yet" description="Your enrollments will appear after admin approval." icon="monitoring" />
       ) : (
       <div className="space-y-8">
+          {enrollments.map((enrollment) => {
+            const report = reports.find((item) => item.course_id === enrollment.course_id);
+            const courseTasks = tasks.filter((task) => task.course_id === enrollment.course_id && task.workflow_type !== "daily");
+            const targetTasks = report?.target_tasks ?? enrollment.target_tasks ?? 100;
+            const progress = report?.progress_percentage ?? enrollment.progress_percentage;
+            const averageScore = profileComplete ? (report?.average_score ?? enrollment.final_score) : "Pending";
+            return (
+              <section key={enrollment.id} className="wc-card">
+                <div className="sticky top-0 z-20 rounded-t-2xl bg-primary p-6 text-white shadow-lg">
+                  <p className="text-label-sm uppercase tracking-widest text-blue-100">{enrollment.status}</p>
+                  <h2 className="mt-2 text-3xl font-extrabold">{courseById.get(enrollment.course_id)?.title ?? "Course"}</h2>
+                  <div className="mt-6 grid gap-4 md:grid-cols-4">
+                    <Metric label="Progress" value={`${progress}%`} />
+                    <Metric label="Target Tasks" value={targetTasks} />
+                    <Metric label="Reviewed" value={report?.completed_tasks ?? courseTasks.filter((task) => task.status === "reviewed").length} />
+                    <Metric label="Average Score" value={averageScore} />
+                  </div>
+                  <div className="mt-6 h-3 rounded-full bg-white/20"><div className="h-3 rounded-full bg-secondary-container" style={{ width: `${progress}%` }} /></div>
+                  <p className="mt-2 text-sm text-blue-100">Reviewed {report?.completed_tasks ?? 0} of {targetTasks} target tasks</p>
+                </div>
+
+                <div className="overflow-hidden rounded-b-2xl divide-y divide-outline-variant/70">
+                  {taskSubmissionRows.filter((row) => row.task.course_id === enrollment.course_id).length === 0 ? (
+                    <p className="p-6 text-body-md text-on-surface-variant">No submitted tasks for this course yet.</p>
+                  ) : (
+                    taskSubmissionRows
+                      .filter((row) => row.task.course_id === enrollment.course_id)
+                      .map(({ task, submission }) => {
+                      return (
+                        <div key={submission?.id ?? task.id} className="grid gap-4 p-6 md:grid-cols-[1fr_180px_180px_180px] md:items-center">
+                          <div className="min-w-0">
+                            <p className="font-bold text-on-surface">{task.title}</p>
+                            <p className="text-body-sm text-on-surface-variant">Deadline {formatDateTime(task.deadline)}</p>
+                          </div>
+                          <StatusPill value={submission?.status ?? task.status} />
+                          <p className="text-body-sm text-on-surface-variant">{formatDateTime(submission?.submitted_at ?? task.created_at)}</p>
+                          <p className="text-body-sm text-on-surface-variant">Score {submission?.score ?? 0}/{task.max_score ?? 100}</p>
+                          <TaskFeedback feedback={submission?.feedback} />
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            );
+          })}
+
           <section className="wc-card overflow-hidden">
             <div className="bg-surface-container-low p-6">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">All submissions</p>
@@ -516,67 +563,33 @@ export function StudentProgress() {
               ) : (
                 submissionRows.map(({ submission, task, courseTitle }) => (
                   <div key={submission.id} className="grid gap-4 p-6 md:grid-cols-[1fr_180px_180px_180px] md:items-center">
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-bold text-on-surface">{task?.title ?? "Unknown task"}</p>
                       <p className="text-body-sm text-on-surface-variant">{courseTitle}</p>
                     </div>
                     <StatusPill value={submission.status} />
                     <p className="text-body-sm text-on-surface-variant">{formatDateTime(submission.submitted_at)}</p>
                     <p className="text-body-sm text-on-surface-variant">Score {submission.score ?? 0}/{task?.max_score ?? 100}</p>
+                    <TaskFeedback feedback={submission.feedback} />
                   </div>
                 ))
               )}
             </div>
           </section>
-
-          {enrollments.map((enrollment) => {
-            const report = reports.find((item) => item.course_id === enrollment.course_id);
-            const courseTasks = tasks.filter((task) => task.course_id === enrollment.course_id && task.workflow_type !== "daily");
-            const targetTasks = report?.target_tasks ?? enrollment.target_tasks ?? 100;
-            const progress = report?.progress_percentage ?? enrollment.progress_percentage;
-            const averageScore = profileComplete ? (report?.average_score ?? enrollment.final_score) : "Pending";
-            return (
-              <section key={enrollment.id} className="wc-card overflow-hidden">
-                <div className="bg-primary p-6 text-white">
-                  <p className="text-label-sm uppercase tracking-widest text-blue-100">{enrollment.status}</p>
-                  <h2 className="mt-2 text-3xl font-extrabold">{courseById.get(enrollment.course_id)?.title ?? "Course"}</h2>
-                  <div className="mt-6 grid gap-4 md:grid-cols-4">
-                    <Metric label="Progress" value={`${progress}%`} />
-                    <Metric label="Target Tasks" value={targetTasks} />
-                    <Metric label="Reviewed" value={report?.completed_tasks ?? courseTasks.filter((task) => task.status === "reviewed").length} />
-                    <Metric label="Average Score" value={averageScore} />
-                  </div>
-                  <div className="mt-6 h-3 rounded-full bg-white/20"><div className="h-3 rounded-full bg-secondary-container" style={{ width: `${progress}%` }} /></div>
-                  <p className="mt-2 text-sm text-blue-100">Reviewed {report?.completed_tasks ?? 0} of {targetTasks} target tasks</p>
-                </div>
-
-                <div className="divide-y divide-outline-variant/70">
-                  {taskSubmissionRows.filter((row) => row.task.course_id === enrollment.course_id).length === 0 ? (
-                    <p className="p-6 text-body-md text-on-surface-variant">No submitted tasks for this course yet.</p>
-                  ) : (
-                    taskSubmissionRows
-                      .filter((row) => row.task.course_id === enrollment.course_id)
-                      .map(({ task, submission }) => {
-                      return (
-                        <div key={submission?.id ?? task.id} className="grid gap-4 p-6 md:grid-cols-[1fr_180px_180px_180px] md:items-center">
-                          <div>
-                            <p className="font-bold text-on-surface">{task.title}</p>
-                            <p className="text-body-sm text-on-surface-variant">Deadline {formatDateTime(task.deadline)}</p>
-                          </div>
-                          <StatusPill value={submission?.status ?? task.status} />
-                          <p className="text-body-sm text-on-surface-variant">{formatDateTime(submission?.submitted_at ?? task.created_at)}</p>
-                          <p className="text-body-sm text-on-surface-variant">Score {submission?.score ?? 0}/{task.max_score ?? 100}</p>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
-            );
-          })}
         </div>
       )}
     </>
+  );
+}
+
+function TaskFeedback({ feedback }: { feedback: string | null | undefined }) {
+  return (
+    <div className="rounded-xl border border-outline-variant/60 bg-surface-container-low px-4 py-3 md:col-span-4">
+      <p className="text-[10px] font-black uppercase tracking-wider text-primary">Admin feedback</p>
+      <p className="mt-1 text-sm leading-5 text-on-surface-variant">
+        {feedback?.trim() || "No feedback yet."}
+      </p>
+    </div>
   );
 }
 
