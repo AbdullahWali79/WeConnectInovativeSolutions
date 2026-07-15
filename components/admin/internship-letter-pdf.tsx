@@ -11,11 +11,11 @@ import type { AdminSignatureSettings, BrandingSettingsSnapshot, SoftwareHouse } 
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 33,
+    paddingTop: 24,
     paddingRight: 32,
-    paddingBottom: 24,
+    paddingBottom: 18,
     paddingLeft: 32,
-    fontSize: 11,
+    fontSize: 9.5,
     fontFamily: "Times-Roman",
     color: "#111111",
   },
@@ -23,50 +23,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#111111",
-    paddingBottom: 11,
-    marginBottom: 15,
+    paddingBottom: 6,
+    marginBottom: 9,
   },
   logo: {
-    width: 84,
-    height: 64,
+    width: 60,
+    height: 42,
     objectFit: "contain",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   companyName: {
     fontFamily: "Times-Bold",
-    fontSize: 32,
+    fontSize: 22,
     textAlign: "center",
   },
   tagline: {
-    marginTop: 3,
-    fontSize: 12,
+    marginTop: 1,
+    fontSize: 9.5,
     textAlign: "center",
   },
   metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 18,
+    marginBottom: 10,
   },
   metaText: {
     fontFamily: "Times-Bold",
   },
   title: {
     fontFamily: "Times-Bold",
-    fontSize: 14.5,
+    fontSize: 11.5,
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 6,
     textDecoration: "underline",
   },
   paragraph: {
-    marginBottom: 7,
-    lineHeight: 1.30,
+    marginBottom: 4,
+    lineHeight: 1.18,
     textAlign: "justify",
   },
   sectionTitle: {
-    marginTop: 10,
-    marginBottom: 7,
+    marginTop: 5,
+    marginBottom: 4,
     fontFamily: "Times-Bold",
-    fontSize: 11.5,
+    fontSize: 10,
   },
   table: {
     borderWidth: 1,
@@ -85,25 +85,25 @@ const styles = StyleSheet.create({
   },
   cellSerial: {
     width: "14%",
-    paddingVertical: 4,
+    paddingVertical: 3,
     paddingHorizontal: 6,
     borderRightWidth: 1,
     borderRightColor: "#111111",
   },
   cellComponent: {
     width: "58%",
-    paddingVertical: 4,
+    paddingVertical: 3,
     paddingHorizontal: 6,
     borderRightWidth: 1,
     borderRightColor: "#111111",
   },
   cellRemarks: {
     width: "28%",
-    paddingVertical: 4,
+    paddingVertical: 3,
     paddingHorizontal: 6,
   },
   signatures: {
-    marginTop: 32,
+    marginTop: 16,
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
@@ -116,18 +116,18 @@ const styles = StyleSheet.create({
     width: "100%",
     borderBottomWidth: 1,
     borderBottomColor: "#111111",
-    paddingBottom: 3,
+    paddingBottom: 2,
     textAlign: "center",
     fontFamily: "Times-Bold",
   },
   signatureLabel: {
-    marginTop: 4,
-    fontSize: 8,
+    marginTop: 3,
+    fontSize: 7.5,
     textAlign: "center",
   },
   stamp: {
-    width: 78,
-    height: 42,
+    width: 64,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -139,13 +139,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   contact: {
-    marginTop: 24,
-    paddingTop: 5,
+    marginTop: 12,
+    paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: "#111111",
     textAlign: "center",
-    fontSize: 8,
-    lineHeight: 1.25,
+    fontSize: 7.5,
+    lineHeight: 1.2,
   },
 });
 
@@ -234,16 +234,16 @@ export function InternshipLetterPDF({
           </View>
         </View>
 
-        <View style={styles.signatures}>
+        <View style={styles.signatures} wrap={false}>
           <View style={styles.signatureBlock}>
             {sigSettings?.hr_signature_url ? (
-              <Image src={sigSettings.hr_signature_url} style={{ width: 80, height: 40, objectFit: "contain", marginBottom: 4 }} />
+              <Image src={sigSettings.hr_signature_url} style={{ width: 72, height: 32, objectFit: "contain", marginBottom: 3 }} />
             ) : null}
             <Text style={[styles.signatureLine, { borderBottomColor: color1 }]}>{data.hr_manager_name || "HR Manager"}</Text>
             <Text style={styles.signatureLabel}>HR Manager Signature</Text>
           </View>
           {sigSettings?.stamp_url ? (
-            <Image src={sigSettings.stamp_url} style={{ width: 78, height: 42, objectFit: "contain" }} />
+            <Image src={sigSettings.stamp_url} style={{ width: 64, height: 34, objectFit: "contain" }} />
           ) : (
             <View style={[styles.stamp, { borderColor: color1 }]}>
               <Text style={styles.stampText}>Company</Text>
@@ -252,14 +252,14 @@ export function InternshipLetterPDF({
           )}
           <View style={styles.signatureBlock}>
             {sigSettings?.signature_url ? (
-              <Image src={sigSettings.signature_url} style={{ width: 80, height: 40, objectFit: "contain", marginBottom: 4 }} />
+              <Image src={sigSettings.signature_url} style={{ width: 72, height: 32, objectFit: "contain", marginBottom: 3 }} />
             ) : null}
             <Text style={[styles.signatureLine, { borderBottomColor: color1 }]}>{data.ceo_name || "CEO"}</Text>
             <Text style={styles.signatureLabel}>CEO Signature</Text>
           </View>
         </View>
 
-        <Text style={[styles.contact, { borderTopColor: color1 }]}>
+        <Text style={[styles.contact, { borderTopColor: color1 }]} wrap={false}>
           {phone}{email ? ` | ${email}` : ""}
           {"\n"}
           {address}
