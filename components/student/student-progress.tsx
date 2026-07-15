@@ -19,6 +19,7 @@ type DateWiseReportRow = {
   date: string;
   course: string;
   task: string;
+  feedback: string;
   status: string;
   deadline: string;
   submitted_at: string;
@@ -58,6 +59,14 @@ function toDateMs(value: string) {
   return new Date(value).getTime();
 }
 
+function formatReportStatus(status: string) {
+  if (status === "reviewed") return "Accepted";
+  if (status === "revision_required") return "Revision Required";
+  if (status === "rejected") return "Rejected";
+  if (status === "submitted") return "Submitted";
+  return status.replaceAll("_", " ");
+}
+
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -69,35 +78,36 @@ function downloadBlob(blob: Blob, fileName: string) {
 
 const pdfStyles = StyleSheet.create({
   page: {
-    padding: 28,
-    fontSize: 10,
+    padding: 24,
+    fontSize: 9,
     color: "#0f172a",
     backgroundColor: "#ffffff",
     fontFamily: "Helvetica",
   },
   header: {
-    marginBottom: 16,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#dbe4ff",
+    marginBottom: 12,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: "#1d4ed8",
+    color: "#ffffff",
   },
   eyebrow: {
     fontSize: 9,
     textTransform: "uppercase",
     letterSpacing: 1,
-    color: "#1d4ed8",
+    color: "#bfdbfe",
     marginBottom: 4,
     fontWeight: 700,
   },
   title: {
     fontSize: 20,
     fontWeight: 700,
-    color: "#082f75",
+    color: "#ffffff",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 10,
-    color: "#475569",
+    color: "#dbeafe",
   },
   metaRow: {
     flexDirection: "row",
@@ -106,8 +116,8 @@ const pdfStyles = StyleSheet.create({
     marginTop: 10,
   },
   metaChip: {
-    backgroundColor: "#eff6ff",
-    color: "#1e3a8a",
+    backgroundColor: "#3b82f6",
+    color: "#ffffff",
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
@@ -117,19 +127,17 @@ const pdfStyles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 12,
+    marginTop: 12,
   },
   summaryCard: {
-    width: "24%",
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#dbe4ff",
+    width: "23%",
+    backgroundColor: "#2563eb",
     borderRadius: 8,
     padding: 8,
   },
   summaryLabel: {
     fontSize: 8,
-    color: "#64748b",
+    color: "#bfdbfe",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -137,7 +145,7 @@ const pdfStyles = StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     fontWeight: 700,
-    color: "#0f172a",
+    color: "#ffffff",
   },
   table: {
     borderWidth: 1,
@@ -210,9 +218,7 @@ function DateWiseProgressReportPdf({
             <Text style={pdfStyles.metaChip}>Reviewed: {summary.reviewed}</Text>
             <Text style={pdfStyles.metaChip}>Avg Score: {summary.averageScore}</Text>
           </View>
-        </View>
-
-        <View style={pdfStyles.summaryGrid}>
+          <View style={pdfStyles.summaryGrid}>
           <View style={pdfStyles.summaryCard}>
             <Text style={pdfStyles.summaryLabel}>Courses</Text>
             <Text style={pdfStyles.summaryValue}>{summary.courses}</Text>
@@ -229,6 +235,7 @@ function DateWiseProgressReportPdf({
             <Text style={pdfStyles.summaryLabel}>Average Score</Text>
             <Text style={pdfStyles.summaryValue}>{summary.averageScore}</Text>
           </View>
+          </View>
         </View>
 
         {rows.length === 0 ? (
@@ -236,23 +243,17 @@ function DateWiseProgressReportPdf({
         ) : (
           <View style={pdfStyles.table}>
             <View style={pdfStyles.tableHeader}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "12%" }]}>Date</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "18%" }]}>Course</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "24%" }]}>Task</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "12%" }]}>Status</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "12%" }]}>Submitted</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "12%" }]}>Reviewed</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "10%" }]}>Score</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: "27%" }]}>Task</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: "41%" }]}>Admin Feedback</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: "14%" }]}>Score</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: "18%" }]}>Status</Text>
             </View>
             {rows.map((row, index) => (
-              <View key={`${row.date}-${row.task}-${index}`} style={pdfStyles.tableRow}>
-                <Text style={[pdfStyles.tableCell, { width: "12%" }]}>{row.date}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "18%" }]}>{row.course}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "24%" }]}>{row.task}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "12%" }]}>{row.status}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "12%" }]}>{row.submitted_at}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "12%" }]}>{row.reviewed_at}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "10%" }]}>{row.score}/{row.max_score}</Text>
+              <View key={`${row.date}-${row.task}-${index}`} style={pdfStyles.tableRow} wrap={false}>
+                <Text style={[pdfStyles.tableCell, { width: "27%" }]}>{row.task}{"\n"}<Text style={pdfStyles.muted}>{row.course} - {row.date}</Text></Text>
+                <Text style={[pdfStyles.tableCell, { width: "41%" }]}>{row.feedback}</Text>
+                <Text style={[pdfStyles.tableCell, { width: "14%" }]}>{row.score}/{row.max_score}</Text>
+                <Text style={[pdfStyles.tableCell, { width: "18%" }]}>{row.status}</Text>
               </View>
             ))}
           </View>
@@ -357,7 +358,8 @@ export function StudentProgress() {
         date: formatDateOnly(submission.submitted_at),
         course: courseTitle,
         task: task?.title ?? "Unknown task",
-        status: submission.status,
+        feedback: submission.feedback?.trim() || "No feedback yet.",
+        status: formatReportStatus(submission.status),
         deadline: formatDateOnly(task?.deadline),
         submitted_at: formatDateOnly(submission.submitted_at),
         reviewed_at: formatDateOnly(submission.reviewed_at),
@@ -369,7 +371,7 @@ export function StudentProgress() {
 
   const reportSummary = useMemo(() => {
     const uniqueCourses = new Set(reportRows.map((row) => row.course));
-    const reviewedCount = reportRows.filter((row) => row.status === "reviewed").length;
+    const reviewedCount = reportRows.filter((row) => row.status === "Accepted").length;
     const reviewedScores = reportRows
       .filter((row) => Number(row.score) > 0)
       .map((row) => Number(row.score));
@@ -418,26 +420,28 @@ export function StudentProgress() {
       summarySheet["!cols"] = [{ wch: 22 }, { wch: 28 }];
 
       const detailSheet = XLSX.utils.json_to_sheet(reportRows.map((row) => ({
-        Date: row.date,
-        Course: row.course,
         Task: row.task,
+        Feedback: row.feedback,
+        Score: row.score,
+        "Max Score": row.max_score,
         Status: row.status,
+        Course: row.course,
+        Date: row.date,
         Deadline: row.deadline,
         Submitted: row.submitted_at,
         Reviewed: row.reviewed_at,
-        Score: row.score,
-        "Max Score": row.max_score,
       })));
       detailSheet["!cols"] = [
-        { wch: 14 },
-        { wch: 28 },
         { wch: 34 },
-        { wch: 16 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
+        { wch: 52 },
         { wch: 10 },
         { wch: 12 },
+        { wch: 18 },
+        { wch: 28 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 14 },
       ];
 
       XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
