@@ -168,6 +168,8 @@ export function FeeManagement() {
   const [toast, setToast] = useState<ToastState>(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [reminderTab, setReminderTab] = useState<ReminderTab>("all");
+  const [remindersExpanded, setRemindersExpanded] = useState(true);
+  const [feeRecordsExpanded, setFeeRecordsExpanded] = useState(true);
   const [query, setQuery] = useState("");
   const [isQuickFeesOpen, setIsQuickFeesOpen] = useState(false);
   const [expandedFeeId, setExpandedFeeId] = useState<string | null>(null);
@@ -584,6 +586,17 @@ export function FeeManagement() {
       />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
+        <div className="wc-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider text-primary">Fee management</p>
+            <p className="mt-1 text-sm text-on-surface-variant">Add a payment without scrolling through the records.</p>
+          </div>
+          <button type="button" onClick={() => setIsQuickFeesOpen(true)} className="wc-primary-btn whitespace-nowrap">
+            <Icon name="add_card" className="text-lg" />
+            Quick Fees Entry
+          </button>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <FeeStat icon="receipt_long" label="Month records" value={stats.total} />
           <FeeStat icon="paid" label="Current date paid students" value={stats.paid} tone="success" />
@@ -601,8 +614,8 @@ export function FeeManagement() {
                   Based only on the latest paid payment, or a partial payment with an amount greater than zero.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {([
+              <div className="flex flex-wrap items-center gap-2">
+                {remindersExpanded ? ([
                   ["all", "All due soon", reminderCounts.all],
                   ["month_1", "1st month", reminderCounts.month_1],
                   ["month_2", "2nd month", reminderCounts.month_2],
@@ -620,13 +633,22 @@ export function FeeManagement() {
                   >
                     {label} ({count})
                   </button>
-                ))}
+                )) : null}
+                <button
+                  type="button"
+                  onClick={() => setRemindersExpanded((current) => !current)}
+                  className="wc-secondary-btn whitespace-nowrap px-4 py-2 text-sm"
+                  aria-expanded={remindersExpanded}
+                >
+                  <Icon name={remindersExpanded ? "expand_less" : "expand_more"} className="text-lg" />
+                  {remindersExpanded ? "Collapse" : `Expand (${reminderCounts.all})`}
+                </button>
               </div>
             </div>
           </div>
 
-          {filteredReminders.length === 0 ? (
-            <div className="p-5">
+          {remindersExpanded ? filteredReminders.length === 0 ? (
+            <div className="px-5 py-6">
               <EmptyState title="No fee reminders in this tab" description="No paid or amount-paid partial records reach their next monthly date within the 7-day reminder window." icon="event_available" />
             </div>
           ) : (
@@ -683,22 +705,9 @@ export function FeeManagement() {
                 </tbody>
               </table>
             </div>
-          )}
+          ) : null}
         </section>
 
-        <section className="wc-card overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-outline-variant/70 bg-surface-container-low p-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-primary">Quick fee entry</p>
-              <h3 className="mt-1 text-xl font-black text-on-surface">Open fee entry popup</h3>
-              <p className="mt-1 text-sm text-on-surface-variant">Click the button and add fee details in a popup box.</p>
-            </div>
-            <button type="button" onClick={() => setIsQuickFeesOpen(true)} className="wc-primary-btn">
-              <Icon name="add_card" className="text-lg" />
-              Quick Fees Entry
-            </button>
-          </div>
-        </section>
         {isQuickFeesOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
             <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-[28px] bg-surface shadow-2xl">
@@ -827,6 +836,23 @@ export function FeeManagement() {
         ) : null}
 
         <section className="wc-card overflow-hidden">
+          <div className={`flex items-center justify-between gap-4 bg-surface-container-low p-4 ${feeRecordsExpanded ? "border-b border-outline-variant/70" : ""}`}>
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-primary">All fee records</p>
+              <h3 className="mt-1 text-xl font-black text-on-surface">Search and manage student fees</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFeeRecordsExpanded((current) => !current)}
+              className="wc-secondary-btn whitespace-nowrap px-4 py-2 text-sm"
+              aria-expanded={feeRecordsExpanded}
+            >
+              <Icon name={feeRecordsExpanded ? "expand_less" : "expand_more"} className="text-lg" />
+              {feeRecordsExpanded ? "Collapse" : `Expand (${fees.length})`}
+            </button>
+          </div>
+
+          {feeRecordsExpanded ? <>
           <div className="grid gap-3 border-b border-outline-variant/70 bg-surface-container-low p-4 md:grid-cols-3">
             <input className="wc-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search student, email, phone, course" />
             <select className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
@@ -976,6 +1002,7 @@ export function FeeManagement() {
               </table>
             </div>
           )}
+          </> : null}
         </section>
 
       </motion.div>
