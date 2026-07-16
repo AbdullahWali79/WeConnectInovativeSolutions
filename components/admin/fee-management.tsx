@@ -45,8 +45,8 @@ type FeeDueReminder = {
   student: Profile;
   course: Course;
   monthNumber: number;
-  lastPaymentDate: Date;
-  lastPaymentStatus: "paid" | "partial";
+  lastFeeDate: Date;
+  lastFeeStatus: "paid" | "partial";
   dueDate: Date;
   dueDateKey: string;
   monthKey: string;
@@ -91,6 +91,12 @@ function reminderTimingLabel(daysUntilDue: number) {
   if (daysUntilDue > 1) return `${daysUntilDue} days remaining`;
   if (daysUntilDue === -1) return "1 day overdue";
   return `${Math.abs(daysUntilDue)} days overdue`;
+}
+
+function feeCycleEndDate(fee: StudentFeeRecord) {
+  if (fee.paid_at) return localDateOnly(fee.paid_at);
+  if (fee.due_date) return addClampedMonths(localDateOnly(fee.due_date), 1);
+  return null;
 }
 
 function currentMonthKey() {
@@ -180,6 +186,7 @@ export function FeeManagement() {
   const [quickAmountDue, setQuickAmountDue] = useState("0");
   const [quickAmountPaid, setQuickAmountPaid] = useState("0");
   const [quickDueDate, setQuickDueDate] = useState("");
+  const [quickEndDate, setQuickEndDate] = useState("");
   const [forms, setForms] = useState<EditableFee>({});
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -264,6 +271,7 @@ export function FeeManagement() {
           (row.status === "paid" || (row.status === "partial" && Number(row.amount_paid) > 0)),
         )
         .sort((a, b) => {
+          if (a.month_key !== b.month_key) return b.month_key.localeCompare(a.month_key);
           const aDate = a.paid_at ?? a.created_at;
           const bDate = b.paid_at ?? b.created_at;
           return bDate.localeCompare(aDate);
@@ -272,8 +280,8 @@ export function FeeManagement() {
       const latestPayment = payments[0];
       if (!latestPayment) continue;
 
-      const lastPaymentDate = localDateOnly(latestPayment.paid_at ?? latestPayment.created_at);
-      const dueDate = addClampedMonths(lastPaymentDate, 1);
+      const lastFeeDate = localDateOnly(latestPayment.due_date ?? latestPayment.paid_at ?? latestPayment.created_at);
+      const dueDate = addClampedMonths(lastFeeDate, 1);
       const daysUntilDue = dayDifference(dueDate, today);
       if (daysUntilDue < -REMINDER_WINDOW_DAYS || daysUntilDue > REMINDER_WINDOW_DAYS) continue;
 
@@ -289,8 +297,8 @@ export function FeeManagement() {
         student,
         course,
         monthNumber: new Set(payments.map((row) => row.month_key)).size,
-        lastPaymentDate,
-        lastPaymentStatus: latestPayment.status as "paid" | "partial",
+        lastFeeDate,
+        lastFeeStatus: latestPayment.status as "paid" | "partial",
         dueDate,
         dueDateKey: dateKey(dueDate),
         monthKey,
@@ -455,6 +463,7 @@ export function FeeManagement() {
     setQuickCourseId(courseId);
     setQuickMonth(courseId ? getSuggestedFeeMonth(fees, studentId, courseId) : currentMonthKey());
     setQuickDueDate("");
+    setQuickEndDate("");
     setQuickAmountDue("0");
     setQuickAmountPaid("0");
   }
@@ -465,8 +474,25 @@ export function FeeManagement() {
     setQuickCourseId(reminder.course.id);
     setQuickMonth(reminder.monthKey);
     setQuickDueDate(reminder.dueDateKey);
+    setQuickEndDate(dateKey(addClampedMonths(reminder.dueDate, 1)));
     setQuickAmountDue(String(reminder.nextFee?.amount_due ?? 0));
     setQuickAmountPaid(String(reminder.nextFee?.amount_paid ?? 0));
+    setIsQuickFeesOpen(true);
+  }
+
+  function openNextMonthFeeEntry(fee: StudentFeeRecord) {
+    const student = studentById.get(fee.student_id);
+    const cycleEnd = feeCycleEndDate(fee) ?? addClampedMonths(localDateOnly(new Date()), 1);
+    const nextEnd = addClampedMonths(cycleEnd, 1);
+
+    setSelectedStudentId(fee.student_id);
+    setStudentSearch(student?.full_name ?? student?.email ?? student?.phone ?? "");
+    setQuickCourseId(fee.course_id);
+    setQuickMonth(getNextMonthKey(fee.month_key));
+    setQuickDueDate(dateKey(cycleEnd));
+    setQuickEndDate(dateKey(nextEnd));
+    setQuickAmountDue(String(fee.amount_due ?? 0));
+    setQuickAmountPaid("0");
     setIsQuickFeesOpen(true);
   }
 
@@ -522,6 +548,7 @@ export function FeeManagement() {
       amount_due: amountDue,
       amount_paid: amountPaid,
       due_date: quickDueDate || null,
+      paid_at: quickEndDate || null,
       status: quickStatus,
     });
     setBusyId(null);
@@ -611,7 +638,7 @@ export function FeeManagement() {
                 <p className="text-xs font-black uppercase tracking-wider text-primary">Fee due reminders</p>
                 <h3 className="mt-1 text-xl font-black text-on-surface">Students completing a month</h3>
                 <p className="mt-1 text-sm text-on-surface-variant">
-                  Based only on the latest paid payment, or a partial payment with an amount greater than zero.
+                  Based on the latest paid fee cycle, or a partial fee with an amount greater than zero.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -658,7 +685,7 @@ export function FeeManagement() {
                   <tr className="bg-surface-container-low text-left text-[11px] font-black uppercase tracking-wider text-on-surface-variant">
                     <th className="px-4 py-3">Student</th>
                     <th className="px-4 py-3">Course</th>
-                    <th className="px-4 py-3">Last payment</th>
+                    <th className="px-4 py-3">Last fee date</th>
                     <th className="px-4 py-3">Completing</th>
                     <th className="px-4 py-3">Due date</th>
                     <th className="px-4 py-3">Reminder</th>
@@ -674,8 +701,8 @@ export function FeeManagement() {
                       </td>
                       <td className="px-4 py-4 font-semibold text-primary">{reminder.course.title}</td>
                       <td className="px-4 py-4">
-                        <p className="text-sm text-on-surface-variant">{formatReminderDate(reminder.lastPaymentDate)}</p>
-                        <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-primary">{reminder.lastPaymentStatus}</p>
+                        <p className="text-sm text-on-surface-variant">{formatReminderDate(reminder.lastFeeDate)}</p>
+                        <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-primary">{reminder.lastFeeStatus}</p>
                       </td>
                       <td className="px-4 py-4">
                         <span className="inline-flex rounded-full bg-primary-container px-3 py-1 text-xs font-black text-on-primary-container">
@@ -820,8 +847,20 @@ export function FeeManagement() {
                       <option value="">Select course</option>
                       {selectedStudentCourseOptions.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
                     </select>
-                    <input className="wc-input" type="month" value={quickMonth} onChange={(event) => setQuickMonth(event.target.value)} />
-                    <input className="wc-input" type="date" value={quickDueDate} onChange={(event) => setQuickDueDate(event.target.value)} aria-label="Fee due date" />
+                    <label className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Fee month</span>
+                      <input className="wc-input" type="month" value={quickMonth} onChange={(event) => setQuickMonth(event.target.value)} />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Month start date</span>
+                        <input className="wc-input" type="date" value={quickDueDate} onChange={(event) => setQuickDueDate(event.target.value)} />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Month end date</span>
+                        <input className="wc-input" type="date" value={quickEndDate} onChange={(event) => setQuickEndDate(event.target.value)} />
+                      </label>
+                    </div>
                     <input className="wc-input" type="number" min="0" value={quickAmountDue} onChange={(event) => setQuickAmountDue(event.target.value)} placeholder="Amount due" />
                     <input className="wc-input" type="number" min="0" value={quickAmountPaid} onChange={(event) => setQuickAmountPaid(event.target.value)} placeholder="Amount paid" />
                     <button type="button" disabled={busyId === "quick-save"} onClick={saveQuickFee} className="wc-primary-btn w-full">
@@ -903,10 +942,16 @@ export function FeeManagement() {
                     const blocked = Boolean(student?.is_fee_blocked || fee.blocked);
                     const isExpanded = expandedFeeId === fee.id;
                     const statusTone = blocked ? "blocked" : fee.status;
+                    const cycleEnd = feeCycleEndDate(fee);
+                    const monthComplete = Boolean(cycleEnd && cycleEnd.getTime() <= localDateOnly(new Date()).getTime());
 
                     return (
                       <Fragment key={fee.id}>
-                        <tr key={fee.id} className="border-b border-outline-variant/60 align-top hover:bg-surface-container/40">
+                        <tr key={fee.id} className={`border-b align-top transition ${
+                          monthComplete
+                            ? "border-red-200 bg-red-50/80 hover:bg-red-100/80"
+                            : "border-outline-variant/60 hover:bg-surface-container/40"
+                        }`}>
                         <td className="px-4 py-4 align-middle">
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
@@ -922,6 +967,11 @@ export function FeeManagement() {
                               <span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wider ring-1 ${getFeeStatusTone(statusTone)}`}>
                                 {blocked ? "Blocked" : getFeeStatusLabel(fee.status)}
                               </span>
+                              {monthComplete ? (
+                                <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-white">
+                                  Month complete
+                                </span>
+                              ) : null}
                             </div>
                             <span className="truncate text-xs text-on-surface-variant">{student?.email ?? 'No email'} · {student?.phone ?? 'No phone'}</span>
                           </div>
@@ -960,7 +1010,7 @@ export function FeeManagement() {
                         </td>
                       </tr>
                         {isExpanded ? (
-                          <tr className="bg-surface-container/30">
+                          <tr className={monthComplete ? "bg-red-50/60" : "bg-surface-container/30"}>
                             <td colSpan={6} className="px-4 pb-4">
                               <div className="grid gap-3 rounded-2xl border border-outline-variant/70 bg-surface p-4 lg:grid-cols-4">
                                 <input className="wc-input h-10" type="number" min="0" value={form?.amount_due ?? fee.amount_due ?? 0} onChange={(event) => updateForm(fee.id, { amount_due: event.target.value })} placeholder="Due amount" />
@@ -973,8 +1023,14 @@ export function FeeManagement() {
                                   <option value="waived">Waived</option>
                                 </select>
                                 <input className="wc-input h-10" value={form?.payment_method ?? fee.payment_method ?? ""} onChange={(event) => updateForm(fee.id, { payment_method: event.target.value })} placeholder="Payment method" />
-                                <input className="wc-input h-10" type="date" value={form?.due_date ?? fee.due_date ?? ""} onChange={(event) => updateForm(fee.id, { due_date: event.target.value })} />
-                                <input className="wc-input h-10" type="date" value={form?.paid_at ?? fee.paid_at ?? ""} onChange={(event) => updateForm(fee.id, { paid_at: event.target.value })} />
+                                <label className="space-y-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Month start date</span>
+                                  <input className="wc-input h-10" type="date" value={form?.due_date ?? fee.due_date ?? ""} onChange={(event) => updateForm(fee.id, { due_date: event.target.value })} />
+                                </label>
+                                <label className="space-y-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Month end date</span>
+                                  <input className="wc-input h-10" type="date" value={form?.paid_at ?? fee.paid_at ?? ""} onChange={(event) => updateForm(fee.id, { paid_at: event.target.value })} />
+                                </label>
                                 <textarea className="wc-input min-h-24 lg:col-span-2" value={form?.notes ?? fee.notes ?? ""} onChange={(event) => updateForm(fee.id, { notes: event.target.value })} placeholder="Notes" />
                                 <div className="lg:col-span-2 rounded-xl bg-surface-container p-3">
                                   <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Block reason</p>
@@ -983,6 +1039,10 @@ export function FeeManagement() {
                                 <div className="lg:col-span-4 flex flex-wrap gap-2 pt-2">
                                   <button type="button" disabled={busyId === fee.id} onClick={() => saveFee(fee)} className="wc-primary-btn whitespace-nowrap px-4 py-2 text-sm">
                                     {busyId === fee.id ? "Saving..." : "Save changes"}
+                                  </button>
+                                  <button type="button" onClick={() => openNextMonthFeeEntry(fee)} className="wc-secondary-btn whitespace-nowrap px-4 py-2 text-sm">
+                                    <Icon name="add_card" className="text-base" />
+                                    Add next month fee
                                   </button>
                                   <button type="button" disabled={busyId === ('block-' + fee.id)} onClick={() => setBlocked(fee, !blocked)} className={blocked ? "wc-secondary-btn whitespace-nowrap px-4 py-2 text-sm" : "rounded-xl bg-error-container px-4 py-2 text-sm font-bold text-error"}>
                                     {blocked ? "Unblock" : "Block"}
