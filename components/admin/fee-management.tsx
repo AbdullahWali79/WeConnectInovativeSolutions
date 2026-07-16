@@ -38,6 +38,59 @@ type StudentFeeView = StudentFeeSummary & {
   latestFeeLabel: string;
 };
 
+type ReminderTab = "all" | "month_1" | "month_2" | "month_3_plus";
+
+type FeeDueReminder = {
+  enrollment: Enrollment;
+  student: Profile;
+  course: Course;
+  monthNumber: number;
+  dueDate: Date;
+  dueDateKey: string;
+  monthKey: string;
+  daysUntilDue: number;
+  fee: StudentFeeRecord | null;
+};
+
+const REMINDER_WINDOW_DAYS = 7;
+
+function localDateOnly(value: Date | string) {
+  const date = typeof value === "string" ? new Date(value) : new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function dateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function monthKeyFromDate(date: Date) {
+  return dateKey(date).slice(0, 7);
+}
+
+function addClampedMonths(date: Date, monthsToAdd: number) {
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + monthsToAdd + 1, 0).getDate();
+  return new Date(date.getFullYear(), date.getMonth() + monthsToAdd, Math.min(date.getDate(), lastDay));
+}
+
+function dayDifference(later: Date, earlier: Date) {
+  return Math.round((later.getTime() - earlier.getTime()) / 86_400_000);
+}
+
+function formatReminderDate(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
+function reminderTimingLabel(daysUntilDue: number) {
+  if (daysUntilDue === 0) return "Due today";
+  if (daysUntilDue === 1) return "Due tomorrow";
+  if (daysUntilDue > 1) return `${daysUntilDue} days remaining`;
+  if (daysUntilDue === -1) return "1 day overdue";
+  return `${Math.abs(daysUntilDue)} days overdue`;
+}
+
 function currentMonthKey() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -112,6 +165,7 @@ export function FeeManagement() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [reminderTab, setReminderTab] = useState<ReminderTab>("all");
   const [query, setQuery] = useState("");
   const [isQuickFeesOpen, setIsQuickFeesOpen] = useState(false);
   const [expandedFeeId, setExpandedFeeId] = useState<string | null>(null);
@@ -120,6 +174,8 @@ export function FeeManagement() {
   const [quickCourseId, setQuickCourseId] = useState("");
   const [quickMonth, setQuickMonth] = useState(currentMonthKey());
   const [quickAmountDue, setQuickAmountDue] = useState("0");
+  const [quickAmountPaid, setQuickAmountPaid] = useState("0");
+  const [quickDueDate, setQuickDueDate] = useState("");
   const [forms, setForms] = useState<EditableFee>({});
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -187,6 +243,63 @@ export function FeeManagement() {
     return ids;
   }, [activeEnrollments, latestFeeByEnrollment]);
   const selectedStudent = selectedStudentId ? studentById.get(selectedStudentId) ?? null : null;
+
+  const feeDueReminders = useMemo<FeeDueReminder[]>(() => {
+    const today = localDateOnly(new Date());
+    const rows: FeeDueReminder[] = [];
+
+    for (const enrollment of activeEnrollments) {
+      const student = studentById.get(enrollment.student_id);
+      const course = courseById.get(enrollment.course_id);
+      if (!student || !course) continue;
+
+      const joined = localDateOnly(enrollment.created_at);
+      const approximateMonths = (today.getFullYear() - joined.getFullYear()) * 12 + today.getMonth() - joined.getMonth();
+
+      for (let monthNumber = Math.max(1, approximateMonths - 1); monthNumber <= approximateMonths + 2; monthNumber += 1) {
+        const dueDate = addClampedMonths(joined, monthNumber);
+        const daysUntilDue = dayDifference(dueDate, today);
+        if (daysUntilDue < -REMINDER_WINDOW_DAYS || daysUntilDue > REMINDER_WINDOW_DAYS) continue;
+
+        const monthKey = monthKeyFromDate(dueDate);
+        const fee = fees.find((row) =>
+          row.student_id === enrollment.student_id &&
+          row.course_id === enrollment.course_id &&
+          row.month_key === monthKey,
+        ) ?? null;
+
+        if (fee?.status === "paid" || fee?.status === "waived") continue;
+
+        rows.push({
+          enrollment,
+          student,
+          course,
+          monthNumber,
+          dueDate,
+          dueDateKey: dateKey(dueDate),
+          monthKey,
+          daysUntilDue,
+          fee,
+        });
+      }
+    }
+
+    return rows.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime() || (a.student.full_name ?? "").localeCompare(b.student.full_name ?? ""));
+  }, [activeEnrollments, courseById, fees, studentById]);
+
+  const reminderCounts = useMemo(() => ({
+    all: feeDueReminders.length,
+    month_1: feeDueReminders.filter((row) => row.monthNumber === 1).length,
+    month_2: feeDueReminders.filter((row) => row.monthNumber === 2).length,
+    month_3_plus: feeDueReminders.filter((row) => row.monthNumber >= 3).length,
+  }), [feeDueReminders]);
+
+  const filteredReminders = useMemo(() => feeDueReminders.filter((row) => {
+    if (reminderTab === "month_1") return row.monthNumber === 1;
+    if (reminderTab === "month_2") return row.monthNumber === 2;
+    if (reminderTab === "month_3_plus") return row.monthNumber >= 3;
+    return true;
+  }), [feeDueReminders, reminderTab]);
 
   const selectedStudentEnrollments = useMemo(() => {
     if (!selectedStudentId) return [];
@@ -280,7 +393,6 @@ export function FeeManagement() {
 
   const selectedStudentPaidMonths = selectedStudentFees.filter((fee) => fee.status === "paid").length;
   const selectedStudentTotalMonths = selectedStudentFees.length;
-  const selectedStudentPrimaryCourse = selectedStudentCourseOptions[0] ?? null;
   const selectedStudentFeeView = useMemo(() => {
     const summary = studentFeeViews.find((item) => item.student.id === selectedStudentId) ?? null;
     if (!summary) return null;
@@ -322,18 +434,26 @@ export function FeeManagement() {
 
     setSelectedStudentId(studentId);
     setStudentSearch(student.full_name ?? student.email ?? student.phone ?? "");
+    const enrollment = enrollments.find((row) => row.student_id === studentId && row.status === "active")
+      ?? enrollments.find((row) => row.student_id === studentId);
+    const courseId = enrollment?.course_id ?? courses[0]?.id ?? "";
+    setQuickCourseId(courseId);
+    setQuickMonth(courseId ? getSuggestedFeeMonth(fees, studentId, courseId) : currentMonthKey());
+    setQuickDueDate("");
+    setQuickAmountDue("0");
+    setQuickAmountPaid("0");
   }
 
-  useEffect(() => {
-    if (!selectedStudentId) return;
-
-    const activeEnrollment = selectedStudentEnrollments[0] ?? null;
-    const suggestedCourseId = activeEnrollment?.course_id ?? courses[0]?.id ?? "";
-    const suggestedMonth = suggestedCourseId ? getSuggestedFeeMonth(fees, selectedStudentId, suggestedCourseId) : currentMonthKey();
-
-    setQuickCourseId(suggestedCourseId);
-    setQuickMonth(suggestedMonth);
-  }, [courses, fees, selectedStudentEnrollments, selectedStudentId]);
+  function openReminderFeeEntry(reminder: FeeDueReminder) {
+    setSelectedStudentId(reminder.student.id);
+    setStudentSearch(reminder.student.full_name ?? reminder.student.email ?? reminder.student.phone ?? "");
+    setQuickCourseId(reminder.course.id);
+    setQuickMonth(reminder.monthKey);
+    setQuickDueDate(reminder.dueDateKey);
+    setQuickAmountDue(String(reminder.fee?.amount_due ?? 0));
+    setQuickAmountPaid(String(reminder.fee?.amount_paid ?? 0));
+    setIsQuickFeesOpen(true);
+  }
 
   async function saveFee(fee: StudentFeeRecord) {
     const form = forms[fee.id];
@@ -375,14 +495,19 @@ export function FeeManagement() {
       return;
     }
 
+    const amountDue = Number(quickAmountDue || 0);
+    const amountPaid = Number(quickAmountPaid || 0);
+    const quickStatus: StudentFeeStatus = amountPaid <= 0 ? "pending" : amountPaid < amountDue ? "partial" : "paid";
+
     setBusyId("quick-save");
     const result = await upsertStudentFeeRecord({
       student_id: selectedStudentId,
       course_id: quickCourseId,
       month_key: quickMonth,
-      amount_due: Number(quickAmountDue || 0),
-      amount_paid: 0,
-      status: "pending",
+      amount_due: amountDue,
+      amount_paid: amountPaid,
+      due_date: quickDueDate || null,
+      status: quickStatus,
     });
     setBusyId(null);
 
@@ -452,6 +577,98 @@ export function FeeManagement() {
           <FeeStat icon="schedule" label="Pending Fee" value={stats.pending} tone="gold" />
           <FeeStat icon="block" label="Blocked" value={stats.blocked} tone="error" />
         </div>
+
+        <section className="wc-card overflow-hidden">
+          <div className="border-b border-outline-variant/70 bg-surface-container-low p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-primary">Fee due reminders</p>
+                <h3 className="mt-1 text-xl font-black text-on-surface">Students completing a month</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Active enrollments due within 7 days, including the previous 7 days. Paid and waived months are excluded.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ["all", "All due soon", reminderCounts.all],
+                  ["month_1", "1st month", reminderCounts.month_1],
+                  ["month_2", "2nd month", reminderCounts.month_2],
+                  ["month_3_plus", "3rd+ month", reminderCounts.month_3_plus],
+                ] as Array<[ReminderTab, string, number]>).map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setReminderTab(value)}
+                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                      reminderTab === value
+                        ? "bg-primary text-on-primary shadow-sm"
+                        : "bg-surface text-on-surface-variant ring-1 ring-outline-variant hover:text-primary"
+                    }`}
+                  >
+                    {label} ({count})
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {filteredReminders.length === 0 ? (
+            <div className="p-5">
+              <EmptyState title="No fee reminders in this tab" description="There are no unpaid active students completing this month within the 7-day reminder window." icon="event_available" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[900px] w-full">
+                <thead>
+                  <tr className="bg-surface-container-low text-left text-[11px] font-black uppercase tracking-wider text-on-surface-variant">
+                    <th className="px-4 py-3">Student</th>
+                    <th className="px-4 py-3">Course</th>
+                    <th className="px-4 py-3">Joining date</th>
+                    <th className="px-4 py-3">Completing</th>
+                    <th className="px-4 py-3">Due date</th>
+                    <th className="px-4 py-3">Reminder</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReminders.map((reminder) => (
+                    <tr key={`${reminder.enrollment.id}:${reminder.monthNumber}`} className="border-t border-outline-variant/60 hover:bg-surface-container/40">
+                      <td className="px-4 py-4">
+                        <p className="font-bold text-on-surface">{reminder.student.full_name ?? "Unnamed student"}</p>
+                        <p className="mt-1 text-xs text-on-surface-variant">{reminder.student.phone ?? reminder.student.email ?? "No contact details"}</p>
+                      </td>
+                      <td className="px-4 py-4 font-semibold text-primary">{reminder.course.title}</td>
+                      <td className="px-4 py-4 text-sm text-on-surface-variant">{formatReminderDate(localDateOnly(reminder.enrollment.created_at))}</td>
+                      <td className="px-4 py-4">
+                        <span className="inline-flex rounded-full bg-primary-container px-3 py-1 text-xs font-black text-on-primary-container">
+                          Month {reminder.monthNumber}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm font-semibold text-on-surface">{formatReminderDate(reminder.dueDate)}</td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                          reminder.daysUntilDue < 0
+                            ? "bg-error-container text-error"
+                            : reminder.daysUntilDue === 0
+                              ? "bg-secondary-container text-on-secondary-fixed"
+                              : "bg-green-50 text-green-700"
+                        }`}>
+                          {reminderTimingLabel(reminder.daysUntilDue)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <button type="button" onClick={() => openReminderFeeEntry(reminder)} className="wc-primary-btn whitespace-nowrap px-4 py-2 text-sm">
+                          <Icon name="add_card" className="text-base" />
+                          {reminder.fee ? "Update fee" : "Add fee"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         <section className="wc-card overflow-hidden">
           <div className="flex flex-col gap-4 border-b border-outline-variant/70 bg-surface-container-low p-4 md:flex-row md:items-center md:justify-between">
@@ -564,9 +781,24 @@ export function FeeManagement() {
                   ) : null}
 
                   <div className="grid gap-3">
-                    <input className="wc-input bg-surface-container text-on-surface-variant" value={selectedStudentPrimaryCourse?.title ?? "Auto course pending"} disabled />
+                    <select
+                      className="wc-input"
+                      value={quickCourseId}
+                      onChange={(event) => {
+                        const courseId = event.target.value;
+                        setQuickCourseId(courseId);
+                        setQuickMonth(courseId && selectedStudentId ? getSuggestedFeeMonth(fees, selectedStudentId, courseId) : currentMonthKey());
+                        setQuickDueDate("");
+                      }}
+                      disabled={!selectedStudent}
+                    >
+                      <option value="">Select course</option>
+                      {selectedStudentCourseOptions.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
+                    </select>
                     <input className="wc-input" type="month" value={quickMonth} onChange={(event) => setQuickMonth(event.target.value)} />
+                    <input className="wc-input" type="date" value={quickDueDate} onChange={(event) => setQuickDueDate(event.target.value)} aria-label="Fee due date" />
                     <input className="wc-input" type="number" min="0" value={quickAmountDue} onChange={(event) => setQuickAmountDue(event.target.value)} placeholder="Amount due" />
+                    <input className="wc-input" type="number" min="0" value={quickAmountPaid} onChange={(event) => setQuickAmountPaid(event.target.value)} placeholder="Amount paid" />
                     <button type="button" disabled={busyId === "quick-save"} onClick={saveQuickFee} className="wc-primary-btn w-full">
                       <Icon name="add_card" className="text-lg" />
                       {busyId === "quick-save" ? "Saving..." : "Add Fee Record"}
