@@ -424,6 +424,9 @@ export function TasksManager({
             ? "Submission rejected."
             : "Revision requested.",
     });
+    setExpandedTaskId((currentTaskId) =>
+      currentTaskId === submission.task_id ? null : currentTaskId,
+    );
     await loadData();
   }
 
