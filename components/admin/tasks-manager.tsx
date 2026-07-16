@@ -975,7 +975,10 @@ export function TasksManager({
                             </div>
                             <p className="truncate text-sm text-on-surface-variant">{task.description ?? "No description"}</p>
                             <p className="mt-2 text-xs text-on-surface-variant">
-                              {studentById.get(task.student_id)?.full_name ?? "Unknown student"} · {courseById.get(task.course_id)?.title ?? "Unknown course"} · Deadline {formatDateTime(task.deadline)}
+                              <span className="font-black text-slate-950">
+                                {studentById.get(task.student_id)?.full_name ?? "Unknown student"}
+                              </span>{" "}
+                              · {courseById.get(task.course_id)?.title ?? "Unknown course"} · Deadline {formatDateTime(task.deadline)}
                             </p>
                             <p className="mt-2 text-xs font-semibold text-on-surface-variant">
                               Submission:{" "}
