@@ -45,11 +45,13 @@ type FeeDueReminder = {
   student: Profile;
   course: Course;
   monthNumber: number;
+  lastPaymentDate: Date;
+  lastPaymentStatus: "paid" | "partial";
   dueDate: Date;
   dueDateKey: string;
   monthKey: string;
   daysUntilDue: number;
-  fee: StudentFeeRecord | null;
+  nextFee: StudentFeeRecord | null;
 };
 
 const REMINDER_WINDOW_DAYS = 7;
@@ -253,35 +255,46 @@ export function FeeManagement() {
       const course = courseById.get(enrollment.course_id);
       if (!student || !course) continue;
 
-      const joined = localDateOnly(enrollment.created_at);
-      const approximateMonths = (today.getFullYear() - joined.getFullYear()) * 12 + today.getMonth() - joined.getMonth();
-
-      for (let monthNumber = Math.max(1, approximateMonths - 1); monthNumber <= approximateMonths + 2; monthNumber += 1) {
-        const dueDate = addClampedMonths(joined, monthNumber);
-        const daysUntilDue = dayDifference(dueDate, today);
-        if (daysUntilDue < -REMINDER_WINDOW_DAYS || daysUntilDue > REMINDER_WINDOW_DAYS) continue;
-
-        const monthKey = monthKeyFromDate(dueDate);
-        const fee = fees.find((row) =>
+      const payments = fees
+        .filter((row) =>
           row.student_id === enrollment.student_id &&
           row.course_id === enrollment.course_id &&
-          row.month_key === monthKey,
-        ) ?? null;
-
-        if (fee?.status === "paid" || fee?.status === "waived") continue;
-
-        rows.push({
-          enrollment,
-          student,
-          course,
-          monthNumber,
-          dueDate,
-          dueDateKey: dateKey(dueDate),
-          monthKey,
-          daysUntilDue,
-          fee,
+          (row.status === "paid" || (row.status === "partial" && Number(row.amount_paid) > 0)),
+        )
+        .sort((a, b) => {
+          const aDate = a.paid_at ?? a.created_at;
+          const bDate = b.paid_at ?? b.created_at;
+          return bDate.localeCompare(aDate);
         });
-      }
+
+      const latestPayment = payments[0];
+      if (!latestPayment) continue;
+
+      const lastPaymentDate = localDateOnly(latestPayment.paid_at ?? latestPayment.created_at);
+      const dueDate = addClampedMonths(lastPaymentDate, 1);
+      const daysUntilDue = dayDifference(dueDate, today);
+      if (daysUntilDue < -REMINDER_WINDOW_DAYS || daysUntilDue > REMINDER_WINDOW_DAYS) continue;
+
+      const monthKey = monthKeyFromDate(dueDate);
+      const nextFee = fees.find((row) =>
+        row.student_id === enrollment.student_id &&
+        row.course_id === enrollment.course_id &&
+        row.month_key === monthKey,
+      ) ?? null;
+
+      rows.push({
+        enrollment,
+        student,
+        course,
+        monthNumber: new Set(payments.map((row) => row.month_key)).size,
+        lastPaymentDate,
+        lastPaymentStatus: latestPayment.status as "paid" | "partial",
+        dueDate,
+        dueDateKey: dateKey(dueDate),
+        monthKey,
+        daysUntilDue,
+        nextFee,
+      });
     }
 
     return rows.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime() || (a.student.full_name ?? "").localeCompare(b.student.full_name ?? ""));
@@ -450,8 +463,8 @@ export function FeeManagement() {
     setQuickCourseId(reminder.course.id);
     setQuickMonth(reminder.monthKey);
     setQuickDueDate(reminder.dueDateKey);
-    setQuickAmountDue(String(reminder.fee?.amount_due ?? 0));
-    setQuickAmountPaid(String(reminder.fee?.amount_paid ?? 0));
+    setQuickAmountDue(String(reminder.nextFee?.amount_due ?? 0));
+    setQuickAmountPaid(String(reminder.nextFee?.amount_paid ?? 0));
     setIsQuickFeesOpen(true);
   }
 
@@ -585,7 +598,7 @@ export function FeeManagement() {
                 <p className="text-xs font-black uppercase tracking-wider text-primary">Fee due reminders</p>
                 <h3 className="mt-1 text-xl font-black text-on-surface">Students completing a month</h3>
                 <p className="mt-1 text-sm text-on-surface-variant">
-                  Active enrollments due within 7 days, including the previous 7 days. Paid and waived months are excluded.
+                  Based only on the latest paid payment, or a partial payment with an amount greater than zero.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -614,7 +627,7 @@ export function FeeManagement() {
 
           {filteredReminders.length === 0 ? (
             <div className="p-5">
-              <EmptyState title="No fee reminders in this tab" description="There are no unpaid active students completing this month within the 7-day reminder window." icon="event_available" />
+              <EmptyState title="No fee reminders in this tab" description="No paid or amount-paid partial records reach their next monthly date within the 7-day reminder window." icon="event_available" />
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -623,7 +636,7 @@ export function FeeManagement() {
                   <tr className="bg-surface-container-low text-left text-[11px] font-black uppercase tracking-wider text-on-surface-variant">
                     <th className="px-4 py-3">Student</th>
                     <th className="px-4 py-3">Course</th>
-                    <th className="px-4 py-3">Joining date</th>
+                    <th className="px-4 py-3">Last payment</th>
                     <th className="px-4 py-3">Completing</th>
                     <th className="px-4 py-3">Due date</th>
                     <th className="px-4 py-3">Reminder</th>
@@ -638,7 +651,10 @@ export function FeeManagement() {
                         <p className="mt-1 text-xs text-on-surface-variant">{reminder.student.phone ?? reminder.student.email ?? "No contact details"}</p>
                       </td>
                       <td className="px-4 py-4 font-semibold text-primary">{reminder.course.title}</td>
-                      <td className="px-4 py-4 text-sm text-on-surface-variant">{formatReminderDate(localDateOnly(reminder.enrollment.created_at))}</td>
+                      <td className="px-4 py-4">
+                        <p className="text-sm text-on-surface-variant">{formatReminderDate(reminder.lastPaymentDate)}</p>
+                        <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-primary">{reminder.lastPaymentStatus}</p>
+                      </td>
                       <td className="px-4 py-4">
                         <span className="inline-flex rounded-full bg-primary-container px-3 py-1 text-xs font-black text-on-primary-container">
                           Month {reminder.monthNumber}
@@ -659,7 +675,7 @@ export function FeeManagement() {
                       <td className="px-4 py-4 text-right">
                         <button type="button" onClick={() => openReminderFeeEntry(reminder)} className="wc-primary-btn whitespace-nowrap px-4 py-2 text-sm">
                           <Icon name="add_card" className="text-base" />
-                          {reminder.fee ? "Update fee" : "Add fee"}
+                          {reminder.nextFee ? "Update fee" : "Add fee"}
                         </button>
                       </td>
                     </tr>
