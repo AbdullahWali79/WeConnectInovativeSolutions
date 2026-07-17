@@ -211,14 +211,13 @@ export function PublicHeader() {
               <div key={cat.label} className="flex flex-col">
                 <button 
                   onClick={() => toggleMobileCategory(cat.label)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left font-bold"
-                  style={{ color: "var(--wc-on-surface)" }}
+                  className="public-mobile-category-button"
                 >
                   {cat.label}
                   <Icon name={isExpanded ? "expand_less" : "expand_more"} />
                 </button>
                 {isExpanded && (
-                  <div className="mb-2 ml-4 flex flex-col gap-1 border-l-2 pl-2" style={{ borderColor: "color-mix(in srgb, var(--wc-primary) 12%, var(--wc-surface-lowest))" }}>
+                  <div className="public-mobile-submenu">
                     {cat.items.map((item) => {
                       const active = currentPath === item.path;
                       return (
@@ -227,12 +226,7 @@ export function PublicHeader() {
                           href={item.href}
                           prefetch
                           onClick={() => handleNavigate(item.path)}
-                          className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${pendingPath === item.path ? "opacity-50" : ""}`}
-                          style={
-                            active
-                              ? { backgroundColor: "color-mix(in srgb, var(--wc-primary) 10%, var(--wc-surface-lowest))", color: "var(--wc-primary)" }
-                              : { color: "var(--wc-on-surface-variant)" }
-                          }
+                          className={`public-mobile-submenu-link ${active ? "is-active" : ""} ${pendingPath === item.path ? "opacity-50" : ""}`}
                         >
                           <span>{item.label}</span>
                           {active && <Icon name="arrow_forward" className="text-[16px]" />}
