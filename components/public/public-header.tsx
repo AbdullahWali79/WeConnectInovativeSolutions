@@ -109,6 +109,13 @@ export function PublicHeader() {
     setOpenMobileCategory(openMobileCategory === label ? null : label);
   }
 
+  const bottomNavItems = [
+    { href: "/#overview", path: "/", label: "Home", icon: "home" },
+    { href: "/#portfolio", path: "/#portfolio", label: "Work", icon: "work" },
+    { href: "/contact", path: "/contact", label: "Contact", icon: "chat" },
+    { href: "/apply", path: "/apply", label: "Apply", icon: "send" },
+  ];
+
   return (
     <header className={`public-header ${scrolled ? "is-scrolled" : ""}`}>
       <div className={`public-header-progress ${pendingPath ? "is-visible" : ""}`} />
@@ -258,6 +265,45 @@ export function PublicHeader() {
           </Link>
         </div>
       </div>
+
+      <nav
+        className={`public-bottom-nav ${scrolled ? "is-visible" : ""}`}
+        aria-label="Quick mobile navigation"
+      >
+        <div className="public-bottom-nav-shell">
+          {bottomNavItems.map((item) => {
+            const isActive = item.path === "/"
+              ? currentPath === "/"
+              : item.path === "/#portfolio"
+                ? false
+                : currentPath === item.path;
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => item.path === "/#portfolio" ? setMenuOpen(false) : handleNavigate(item.path)}
+                className={`public-bottom-nav-item ${isActive ? "is-active" : ""}`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <Icon name={item.icon} className="public-bottom-nav-icon" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            className={`public-bottom-nav-item ${menuOpen ? "is-active" : ""}`}
+            onClick={() => setMenuOpen((current) => !current)}
+            aria-label={menuOpen ? "Close full menu" : "Open full menu"}
+            aria-expanded={menuOpen}
+            aria-controls="public-mobile-menu"
+          >
+            <Icon name={menuOpen ? "close" : "menu"} className="public-bottom-nav-icon" />
+            <span>Menu</span>
+          </button>
+        </div>
+      </nav>
     </header>
   );
 }

@@ -141,7 +141,7 @@ export function Chatbot() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] text-[#030B1C] shadow-[0_0_30px_rgba(255,210,74,0.4)] transition-shadow"
+            className="public-chatbot-button fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] text-[#030B1C] shadow-[0_0_30px_rgba(255,210,74,0.4)] transition-all"
           >
             <Icon name="chat" className="text-3xl" />
           </motion.button>
@@ -156,7 +156,7 @@ export function Chatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-6 right-6 z-50 flex h-[600px] max-h-[85vh] w-[380px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#030B1C] shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+            className="public-chatbot-panel fixed bottom-6 right-6 z-50 flex h-[600px] max-h-[85vh] w-[380px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#030B1C] shadow-[0_0_50px_rgba(0,0,0,0.8)]"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/10 bg-[#061A3D] p-4 backdrop-blur-md">
