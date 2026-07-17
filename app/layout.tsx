@@ -5,8 +5,8 @@ import { BrandingProvider } from "@/components/branding-provider";
 import { brandingToCssVars, getDefaultBrandingSettingsMap, loadBrandingSettingsMap } from "@/lib/branding-settings";
 
 export const metadata: Metadata = {
-  title: "WeConnect-Inovation Training Portal",
-  description: "Professional software engineering training portal powered by Supabase.",
+  title: "We Connect Innovative Solutions Pvt. Ltd.",
+  description: "Digital products, intelligent automation, AI solutions, and scalable experiences built for business growth.",
   icons: {
     icon: "/icon.jpeg",
     shortcut: "/icon.jpeg",

@@ -34,7 +34,7 @@ export default async function LandingPage() {
 
       {/* Agency Vision Hero */}
       <section
-        className="relative isolate overflow-hidden pt-24 pb-32 sm:pt-32 sm:pb-40"
+        className="relative isolate overflow-hidden pb-24 pt-24 sm:pb-28 sm:pt-28"
         style={{
           backgroundColor: landing?.background_color ?? "var(--wc-bg)",
           color: "var(--wc-on-bg)",
@@ -51,7 +51,7 @@ export default async function LandingPage() {
         <div className="homepage-wide-container relative z-10 text-center">
           <FadeIn>
             <div
-              className="mb-6 mx-auto inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-[0.28em] uppercase shadow-[0_0_30px_rgba(255,210,74,0.08)] transition-transform duration-300 hover:scale-[1.03]"
+              className="mb-6 mx-auto inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-[0.2em] uppercase shadow-[0_0_30px_rgba(255,210,74,0.08)] transition-transform duration-300 hover:scale-[1.03]"
               style={{
                 border: `1px solid color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 34%, transparent)`,
                 backgroundColor: `color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 12%, transparent)`,
@@ -61,14 +61,14 @@ export default async function LandingPage() {
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
                 <Icon name="code_blocks" className="text-[14px]" />
               </span>
-              <span className="relative inline-block text-inherit normal-case tracking-[0.18em]">
+              <span className="inline-flex items-center gap-2 text-inherit normal-case tracking-[0.14em]">
                 We Connect Innovative Solutions
-                <span className="company-suffix-blink text-[0.68em] font-black tracking-[0.08em] leading-none sm:text-[0.64em]">Pvt. Ltd</span>
+                <span className="company-suffix-blink text-[0.68em] font-black tracking-[0.06em] leading-none sm:text-[0.64em]">Pvt. Ltd.</span>
               </span>
             </div>
-            <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.7vw,4.6rem)] font-black leading-[0.94] tracking-[-0.06em] sm:leading-[0.96]">
-              <span className="block text-white/95 drop-shadow-[0_6px_24px_rgba(0,0,0,0.25)]">Transforming Ideas Into</span>
-              <span className="relative mt-5 inline-flex flex-wrap items-center justify-center gap-4 leading-none">
+            <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.5vw,4.35rem)] font-black leading-[0.96] tracking-[-0.055em]">
+              <span className="block text-white/95 drop-shadow-[0_6px_24px_rgba(0,0,0,0.25)]">Digital Products Built to</span>
+              <span className="relative mt-4 inline-flex flex-wrap items-center justify-center gap-4 leading-none">
                 <span
                   className="absolute inset-x-[-1.25rem] top-1/2 -z-10 h-[72%] -translate-y-1/2 rounded-full blur-3xl"
                   style={{
@@ -84,7 +84,7 @@ export default async function LandingPage() {
                 >
                 <span className="inline-flex h-full items-center justify-center bg-clip-text leading-[0] text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})` }}>
                     <TypingText
-                      text={["Digital Products.", "Scalable Brands.", "AI-Powered Systems.", "Premium Experiences.", "Growth That Converts."]}
+                      text={["Grow Your Business.", "Scale With Confidence.", "Convert More Customers.", "Automate Your Operations.", "Move Your Brand Forward."]}
                       speed={72}
                       startDelay={250}
                       holdDelay={2200}
@@ -95,7 +95,7 @@ export default async function LandingPage() {
               </span>
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-pretty text-lg leading-8 sm:text-xl sm:leading-9" style={{ color: "var(--wc-on-surface-variant)" }}>
-              We build high-conversion products, automation systems, and polished digital experiences that feel modern, move fast, and scale cleanly.
+              From strategy to launch, we create high-conversion platforms, intelligent automation, and polished digital experiences engineered for measurable growth.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Link
@@ -107,11 +107,23 @@ export default async function LandingPage() {
                   boxShadow: `0 0 40px color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 30%, transparent)`,
                 }}
               >
-                Start a Project <Icon name="arrow_forward" className="text-xl" />
+                Discuss Your Project <Icon name="arrow_forward" className="text-xl" />
               </Link>
               <Link href="#portfolio" className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-8 py-4 text-base font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/10">
-                View Our Work
+                Explore Our Work
               </Link>
+            </div>
+            <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left backdrop-blur-sm sm:grid-cols-3 sm:text-center">
+              {[
+                ["lightbulb", "Strategy-led solutions"],
+                ["rocket_launch", "Built to scale cleanly"],
+                ["handshake", "Client-first delivery"],
+              ].map(([icon, label]) => (
+                <div key={label} className="flex items-center justify-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold text-white/75">
+                  <Icon name={icon} className="text-[19px] text-[var(--wc-secondary)]" />
+                  <span>{label}</span>
+                </div>
+              ))}
             </div>
           </FadeIn>
         </div>
@@ -164,13 +176,13 @@ export default async function LandingPage() {
       {/* Standard Footer for Agency */}
       <footer className="border-t py-12" style={{ backgroundColor: landing?.background_color ?? "var(--wc-bg)", color: "var(--wc-on-surface-variant)", borderColor: "color-mix(in srgb, var(--wc-on-bg) 5%, transparent)" }}>
         <div className="homepage-wide-container flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="font-bold text-xl" style={{ color: "var(--wc-on-bg)" }}>WeConnect-Innovation</div>
+          <div className="text-xl font-bold" style={{ color: "var(--wc-on-bg)" }}>We Connect Innovative Solutions Pvt. Ltd.</div>
           <div className="flex gap-6 text-sm">
             <Link href="/internships" className="transition-colors hover:text-[var(--wc-secondary)]">Looking for Internships?</Link>
             <Link href="/contact" className="transition-colors hover:text-[var(--wc-secondary)]">Contact Us</Link>
           </div>
           <p className="text-sm">
-            &copy; 2026 WeConnect-Innovation. All rights reserved.{" "}
+            &copy; 2026 We Connect Innovative Solutions Pvt. Ltd. All rights reserved.{" "}
             <a href={CONTACT_EMAIL_HREF} className="hover:underline" style={{ color: "var(--wc-secondary)" }}>{CONTACT_EMAIL}</a>
           </p>
         </div>

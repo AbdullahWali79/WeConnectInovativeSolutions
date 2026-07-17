@@ -120,7 +120,7 @@ export function PublicHeader() {
     <header className={`public-header ${scrolled ? "is-scrolled" : ""}`}>
       <div className={`public-header-progress ${pendingPath ? "is-visible" : ""}`} />
       <div className="public-header-shell">
-        <Link href="/#overview" className="public-header-logo" aria-label="WeConnect-Innovation home" onClick={handleLogoClick}>
+        <Link href="/#overview" className="public-header-logo" aria-label="We Connect Innovative Solutions home" onClick={handleLogoClick}>
           <span className="public-header-logo-mark">
             <motion.span
               className="absolute inset-0 block"
@@ -135,6 +135,10 @@ export function PublicHeader() {
                 unoptimized
               />
             </motion.span>
+          </span>
+          <span className="public-header-brand-name">
+            We Connect
+            <small>Innovative Solutions</small>
           </span>
         </Link>
 
@@ -180,7 +184,7 @@ export function PublicHeader() {
 
         <div className="public-header-actions">
           <Link href="/testimonials" prefetch onClick={() => handleNavigate("/testimonials")} className="public-header-feedback public-header-feedback-action">
-            Feedbacks
+            Client Reviews
           </Link>
           <Link href="/login" prefetch onClick={() => handleNavigate("/login")} className="public-header-login">
             Login
@@ -245,7 +249,7 @@ export function PublicHeader() {
             onClick={() => handleNavigate("/testimonials")}
             className={`public-mobile-link ${currentPath.startsWith("/feedback") || currentPath.startsWith("/testimonials") ? "is-active" : ""} ${pendingPath === "/testimonials" ? "is-pending" : ""}`}
           >
-            <span>Feedbacks</span>
+            <span>Client Reviews</span>
             <Icon name="reviews" className="public-mobile-link-icon" />
           </Link>
         </nav>
