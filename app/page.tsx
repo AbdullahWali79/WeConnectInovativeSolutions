@@ -132,7 +132,7 @@ export default async function LandingPage() {
       {/* How To Get Products Built (Process) */}
       <section className="bg-white py-24 sm:py-32 overflow-hidden">
         <div className="homepage-wide-container">
-          <div className="mx-auto max-w-3xl text-center mb-24">
+          <div className="mx-auto mb-14 max-w-3xl text-center sm:mb-16">
             <FadeIn>
               <div className="wc-section-label mb-4">
                 <Icon name="model_training" className="text-sm" /> Our Process
