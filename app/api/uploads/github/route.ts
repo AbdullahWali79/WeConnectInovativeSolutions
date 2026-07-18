@@ -1,7 +1,58 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { uploadGithubFile } from "@/lib/github/github-storage";
 import { sanitizeFilename } from "@/lib/media/url";
+
+const blogImageTypes: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+async function uploadBlogImage(file: File) {
+  const extension = blogImageTypes[file.type];
+  if (!extension) {
+    throw new Error("Blog cover image must be a JPG, PNG, WEBP, or GIF file.");
+  }
+
+  const maxBytes = 5 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error("Blog cover image must be under 5 MB.");
+  }
+
+  const filename = sanitizeFilename(file.name);
+  const storagePath = `blogs/${Date.now()}-${crypto.randomUUID()}-${filename.replace(/\.[^.]+$/, "")}.${extension}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const supabaseAdmin = createSupabaseServiceClient();
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from("branding-assets")
+    .upload(storagePath, bytes, {
+      contentType: file.type,
+      cacheControl: "31536000",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message || "Blog image upload failed.");
+  }
+
+  const { data } = supabaseAdmin.storage.from("branding-assets").getPublicUrl(storagePath);
+  if (!data.publicUrl) {
+    throw new Error("Image uploaded, but its public URL could not be generated.");
+  }
+
+  // Keep the existing response keys so current admin forms remain compatible.
+  return {
+    filename,
+    githubPath: storagePath,
+    githubUrl: data.publicUrl,
+    githubCdnUrl: data.publicUrl,
+    mime: file.type,
+    size: file.size,
+  };
+}
 
 const adminTypes = new Set([
   "course",
@@ -77,14 +128,16 @@ export async function POST(request: Request) {
       githubPath = `task-screenshots/${entityId ?? user.id}/${taskId ?? "daily"}/${dateStr}/${uniqueFilename}`;
     }
 
-    const result = await uploadGithubFile({
-      file,
-      filename: file.name,
-      mime: file.type || "application/octet-stream",
-      type,
-      userId: entityId ?? user.id,
-      githubPath,
-    });
+    const result = type === "blog" || type === "blogs"
+      ? await uploadBlogImage(file)
+      : await uploadGithubFile({
+          file,
+          filename: file.name,
+          mime: file.type || "application/octet-stream",
+          type,
+          userId: entityId ?? user.id,
+          githubPath,
+        });
 
     return NextResponse.json(result);
   } catch (error) {

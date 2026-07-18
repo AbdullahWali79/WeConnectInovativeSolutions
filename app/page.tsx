@@ -130,9 +130,9 @@ export default async function LandingPage() {
       </section>
 
       {/* How To Get Products Built (Process) */}
-      <section className="bg-white py-24 sm:py-32 overflow-hidden">
+      <section className="overflow-hidden bg-white py-14 sm:py-16 lg:py-20">
         <div className="homepage-wide-container">
-          <div className="mx-auto mb-14 max-w-3xl text-center sm:mb-16">
+          <div className="mx-auto mb-9 max-w-3xl text-center sm:mb-10">
             <FadeIn>
               <div className="wc-section-label mb-4">
                 <Icon name="model_training" className="text-sm" /> Our Process
@@ -140,7 +140,7 @@ export default async function LandingPage() {
               <h2 className="text-3xl font-extrabold sm:text-4xl lg:text-5xl" style={{ color: "var(--wc-on-surface)" }}>
                 How We Build Your Product
               </h2>
-              <p className="mt-4 text-lg text-on-surface-variant">
+              <p className="mt-3 text-base text-on-surface-variant sm:text-lg">
                 A streamlined, transparent process from your first idea to a successfully launched product.
               </p>
             </FadeIn>

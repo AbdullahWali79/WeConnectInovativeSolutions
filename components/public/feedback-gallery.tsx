@@ -127,7 +127,7 @@ export function FeedbackGallery({
 
   const chipBase =
     "group inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent";
-  const chipIdle = "border border-outline-variant bg-white text-on-surface-variant hover:border-primary/25 hover:bg-primary/5 hover:text-primary hover:shadow-sm";
+  const chipIdle = "border border-outline-variant bg-white !text-[#17335F] hover:border-[#0A2A72]/30 hover:bg-[#EEF4FF] hover:!text-[#062B7F] hover:shadow-sm";
   const chipActive = "border-transparent bg-primary text-white shadow-sm";
   const countBase = "inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums";
   const countIdle = "bg-surface-container-high text-on-surface-variant group-hover:bg-white/70";

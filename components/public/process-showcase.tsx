@@ -11,42 +11,51 @@ const processSteps = [
 
 export function ProcessShowcase() {
   return (
-    <div className="relative">
+    <div className="relative pb-2 md:pb-12">
       <div className="absolute bottom-12 left-8 top-12 w-px bg-[#DCE4F0] md:hidden" />
-      <div className="grid gap-5 md:grid-cols-3 md:gap-6 lg:gap-8">
+      <div className="grid gap-4 md:grid-cols-3 md:gap-7 lg:gap-10">
         {processSteps.map((feature, index) => (
           <motion.article
             key={feature.step}
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.35 }}
-            transition={{ duration: 0.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="group relative ml-4 rounded-lg border border-[#DCE4F0] bg-white p-6 shadow-[0_12px_35px_rgba(7,26,59,0.07)] transition-all duration-300 hover:-translate-y-1 hover:border-[#B8C6DA] hover:shadow-[0_18px_45px_rgba(7,26,59,0.12)] md:ml-0 md:p-7 lg:p-8"
-            style={{ borderTopColor: feature.color, borderTopWidth: 3 }}
+            transition={{ duration: 0.6, delay: index * 0.16, ease: [0.22, 1, 0.36, 1] }}
+            whileHover={{ y: index * 30 - 7, scale: 1.015 }}
+            className="group relative ml-4 rounded-lg border border-[#DCE4F0] bg-white p-5 shadow-[0_12px_35px_rgba(7,26,59,0.07)] md:ml-0 md:p-6"
+            style={{
+              borderLeftColor: feature.color,
+              borderLeftWidth: 3,
+              y: index * 30,
+            }}
           >
             <div className="absolute -left-4 top-8 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white text-[11px] font-extrabold text-white shadow-sm md:hidden" style={{ backgroundColor: feature.color }}>
               {feature.step}
             </div>
 
             {index < processSteps.length - 1 ? (
-              <div className="absolute -right-[29px] top-12 z-10 hidden h-9 w-9 items-center justify-center rounded-full border border-[#DCE4F0] bg-white text-[#7183A3] shadow-sm md:flex lg:-right-[35px]">
-                <Icon name="arrow_forward" className="text-[18px]" />
-              </div>
+              <motion.div
+                className="absolute -right-[31px] top-1/2 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-[#DCE4F0] bg-white text-[#7183A3] shadow-sm md:flex lg:-right-[38px]"
+                animate={{ x: [0, 3, 0], y: [0, 3, 0] }}
+                transition={{ duration: 1.6, repeat: Infinity, delay: index * 0.35, ease: "easeInOut" }}
+              >
+                <Icon name="arrow_downward" className="rotate-[-45deg] text-[17px]" />
+              </motion.div>
             ) : null}
 
-            <div className="mb-7 flex items-start justify-between gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-105" style={{ backgroundColor: feature.tint, color: feature.color }}>
-                <Icon name={feature.icon} className="text-[29px]" />
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:rotate-3 group-hover:scale-110" style={{ backgroundColor: feature.tint, color: feature.color }}>
+                <Icon name={feature.icon} className="text-[25px]" />
               </div>
-              <span className="hidden text-5xl font-black leading-none text-[#E9EEF6] md:block">{feature.step}</span>
+              <span className="text-4xl font-black leading-none text-[#E9EEF6]">{feature.step}</span>
             </div>
 
             <div className="mb-3 flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.16em]" style={{ color: feature.color }}>
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: feature.color }} />
               {feature.eyebrow}
             </div>
-            <h3 className="mb-3 text-xl font-extrabold text-[#071A3B] lg:text-2xl">{feature.title}</h3>
-            <p className="text-sm leading-7 text-[#5B6B88] lg:text-base">{feature.desc}</p>
+            <h3 className="mb-2 text-xl font-extrabold text-[#071A3B]">{feature.title}</h3>
+            <p className="text-sm leading-6 text-[#5B6B88]">{feature.desc}</p>
           </motion.article>
         ))}
       </div>
