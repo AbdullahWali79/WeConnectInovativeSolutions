@@ -26,16 +26,35 @@ type DashboardData = {
 type QuickAccessItem = { id: string; href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean };
 const defaultQuickAccessIds = ["fees", "tasks", "reports", "client-hunting"];
 const quickAccessCatalog: QuickAccessItem[] = [
-  { id: "fees", href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
-  { id: "tasks", href: "/admin/tasks", label: "Tasks", icon: "assignment_add", permission: "tasks.view" },
-  { id: "reports", href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
-  { id: "client-hunting", href: "/admin/client-hunting/details", label: "Client Hunting", icon: "manage_search", adminOnly: true },
+  { id: "dashboard", href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" },
   { id: "courses", href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
-  { id: "students", href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
-  { id: "applications", href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
+  { id: "tasks", href: "/admin/tasks", label: "Tasks", icon: "assignment_add", permission: "tasks.view" },
   { id: "reviews", href: "/admin/submissions", label: "Reviews", icon: "rate_review", permission: "submissions.view" },
   { id: "progress", href: "/admin/progress", label: "Progress", icon: "monitoring", permission: "progress.view" },
+  { id: "reports", href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
+  { id: "helping-videos", href: "/admin/helping-videos", label: "Helping Videos", icon: "smart_display", adminOnly: true },
+  { id: "applications", href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
+  { id: "students", href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
+  { id: "trainees", href: "/admin/trainees", label: "Trainees", icon: "school", permission: "trainees.view" },
+  { id: "manual-enrollments", href: "/admin/manual-enrollments", label: "Manual Enrollments", icon: "how_to_reg", adminOnly: true },
+  { id: "fees", href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
+  { id: "products", href: "/admin/products", label: "Products", icon: "inventory_2", permission: "products.view" },
+  { id: "client-hunting", href: "/admin/client-hunting", label: "Client Hunting", icon: "manage_search", adminOnly: true },
+  { id: "software-houses", href: "/admin/software-houses", label: "Software Houses", icon: "add_business", adminOnly: true },
   { id: "announcements", href: "/admin/announcements", label: "Announcements", icon: "campaign", permission: "announcements.view" },
+  { id: "feedback", href: "/admin/feedback", label: "Feedback", icon: "reviews", adminOnly: true },
+  { id: "blogs", href: "/admin/blogs", label: "Blogs", icon: "article", adminOnly: true },
+  { id: "social-media", href: "/admin/social-media", label: "Social Media", icon: "share", adminOnly: true },
+  { id: "promotions", href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
+  { id: "completion", href: "/admin/completions", label: "Completion", icon: "workspace_premium", adminOnly: true },
+  { id: "internship-letters", href: "/admin/internship-letters", label: "Internship Letters", icon: "description", adminOnly: true },
+  { id: "manual-completion", href: "/admin/manual-completions", label: "Manual Completion", icon: "workspace_premium", adminOnly: true },
+  { id: "team-members", href: "/admin/team-members", label: "Team Members", icon: "groups", permission: "team_members.view" },
+  { id: "subadmins", href: "/admin/subadmins", label: "Teachers / Sub-Admins", icon: "manage_accounts", adminOnly: true },
+  { id: "whatsapp-alerts", href: "/admin/notification-settings", label: "WhatsApp Alerts", icon: "chat", adminOnly: true },
+  { id: "email-notifications", href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
+  { id: "signature", href: "/admin/settings/signature", label: "Signature & Stamp", icon: "draw", adminOnly: true },
+  { id: "branding", href: "/admin/settings/branding", label: "Branding", icon: "palette", adminOnly: true },
 ];
 
 export function AdminDashboard({
@@ -189,7 +208,7 @@ export function AdminDashboard({
           aria-label="Dashboard quick access"
           onClick={() => setIsQuickAccessOpen(false)}
         >
-          <div className="w-full max-w-2xl overflow-hidden rounded-[28px] bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4 border-b border-outline-variant/60 bg-primary px-5 py-4 text-on-primary">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Dashboard Shortcuts</p>
@@ -210,11 +229,11 @@ export function AdminDashboard({
               </div>
             </div>
 
-            <div className="p-5">
+            <div className="overflow-y-auto p-5">
               {isManagingQuickAccess ? (
                 <div>
                   <p className="mb-3 text-sm text-on-surface-variant">Select the menus you want to see in Quick Access.</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {availableQuickAccessItems.map((item) => {
                       const checked = quickAccessIds.includes(item.id);
                       return (
