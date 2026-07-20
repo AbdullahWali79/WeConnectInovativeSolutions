@@ -36,7 +36,7 @@ export function SocialTodayReportButton({ rows, target }: { rows: SocialTodayRep
     context.fillText("TODAY SOCIAL MEDIA REPORT", padding, 48);
     context.fillStyle = "#ffffff";
     context.font = "700 40px Arial, sans-serif";
-    context.fillText("Active Students Weekly Progress", padding, 103);
+    context.fillText("Paid Active Students Weekly Progress", padding, 103);
     context.fillStyle = "#dbeafe";
     context.font = "22px Arial, sans-serif";
     context.fillText(`${reportDate}  |  Target: ${target} posts  |  Active: ${rows.length}  |  Achieved: ${achieved}  |  Incomplete: ${incomplete}`, padding, 150);

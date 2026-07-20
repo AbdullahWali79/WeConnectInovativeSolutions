@@ -6,7 +6,7 @@ import { SocialTodayReportButton } from "@/components/social-media/social-today-
 import { SocialFeed } from "@/components/social-media/social-feed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPakistanWeekRange, type SocialMediaPost, type SocialMediaReaction } from "@/lib/social-media";
-import type { Profile } from "@/lib/supabase/types";
+import type { Profile, StudentFeeRecord } from "@/lib/supabase/types";
 
 export default async function AdminSocialMediaPage() {
   const supabase = await createSupabaseServerClient();
@@ -18,12 +18,35 @@ export default async function AdminSocialMediaPage() {
     supabase.from("social_media_posts").select("*").order("submitted_at", { ascending: false }).limit(200),
     supabase.from("social_media_reactions").select("*"),
     supabase.from("profiles").select("id,full_name,email,client_hunting_specialization").eq("role", "student").eq("status", "approved"),
-    supabase.from("enrollments").select("student_id").eq("status", "active"),
+    supabase.from("enrollments").select("student_id,course_id").eq("status", "active"),
   ]);
   const target = settings?.weekly_target ?? 3;
   const allPosts = (posts ?? []) as SocialMediaPost[];
-  const activeStudentIds = new Set((activeEnrollments ?? []).map((enrollment) => enrollment.student_id));
-  const activeStudents = ((students ?? []) as Pick<Profile, "id" | "full_name" | "email" | "client_hunting_specialization">[]).filter((student) => activeStudentIds.has(student.id));
+  const activeStudentIdsForFees = Array.from(new Set((activeEnrollments ?? []).map((enrollment) => enrollment.student_id)));
+  const activeCourseIds = Array.from(new Set((activeEnrollments ?? []).map((enrollment) => enrollment.course_id)));
+  const feeResult = activeStudentIdsForFees.length && activeCourseIds.length
+    ? await supabase
+        .from("student_fee_records")
+        .select("student_id,course_id,status,updated_at")
+        .in("student_id", activeStudentIdsForFees)
+        .in("course_id", activeCourseIds)
+        .order("updated_at", { ascending: false })
+    : { data: [], error: null };
+  if (feeResult.error) throw new Error(feeResult.error.message);
+  const latestFeeByEnrollment = new Map<string, Pick<StudentFeeRecord, "student_id" | "course_id" | "status" | "updated_at">>();
+  for (const fee of (feeResult.data ?? []) as Pick<StudentFeeRecord, "student_id" | "course_id" | "status" | "updated_at">[]) {
+    const key = `${fee.student_id}:${fee.course_id}`;
+    if (!latestFeeByEnrollment.has(key)) latestFeeByEnrollment.set(key, fee);
+  }
+  const paidActiveStudentIds = new Set(
+    (activeEnrollments ?? [])
+      .filter((enrollment) => {
+        const fee = latestFeeByEnrollment.get(`${enrollment.student_id}:${enrollment.course_id}`);
+        return fee?.status === "paid" || fee?.status === "waived";
+      })
+      .map((enrollment) => enrollment.student_id),
+  );
+  const activeStudents = ((students ?? []) as Pick<Profile, "id" | "full_name" | "email" | "client_hunting_specialization">[]).filter((student) => paidActiveStudentIds.has(student.id));
   const counts = new Map<string, number>();
   for (const post of allPosts) if (new Date(post.submitted_at) >= start && new Date(post.submitted_at) <= end) counts.set(post.student_id, (counts.get(post.student_id) ?? 0) + 1);
   const statusRows = activeStudents.map((student) => ({ ...student, submitted: counts.get(student.id) ?? 0 })).sort((a, b) => a.submitted - b.submitted);
@@ -54,7 +77,7 @@ export default async function AdminSocialMediaPage() {
         <SocialTodayReportButton rows={reportRows} target={target} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Active students" value={statusRows.length} icon="groups" />
+        <Stat label="Paid active students" value={statusRows.length} icon="groups" />
         <Stat label="Target achieved" value={achieved} icon="verified" tone="green" />
         <Stat label="Target incomplete" value={incomplete} icon="warning" tone="amber" />
         <Stat label="No posts" value={notStarted} icon="block" tone="red" />
