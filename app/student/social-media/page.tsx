@@ -3,6 +3,7 @@ import { Icon } from "@/components/icon";
 import { SocialFeed } from "@/components/social-media/social-feed";
 import { SocialSubmitForm } from "@/components/social-media/social-submit-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getPakistanWeekRange, type SocialMediaPost, type SocialMediaReaction } from "@/lib/social-media";
 import type { Profile } from "@/lib/supabase/types";
 
@@ -10,19 +11,20 @@ export default async function StudentSocialMediaPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
+  const supabaseAdmin = createSupabaseServiceClient();
   const { start, end } = getPakistanWeekRange();
   const [{ data: settings }, { data: posts }, { data: reactions }, { data: profiles }] = await Promise.all([
     supabase.from("social_media_settings").select("weekly_target").eq("id", true).maybeSingle(),
     supabase.from("social_media_posts").select("*").order("submitted_at", { ascending: false }).limit(100),
     supabase.from("social_media_reactions").select("*"),
-    supabase.from("profiles").select("id,full_name,email").eq("role", "student"),
+    supabaseAdmin.from("profiles").select("id,full_name").eq("role", "student").eq("status", "approved"),
   ]);
   const weeklyTarget = settings?.weekly_target ?? 3;
   const allPosts = (posts ?? []) as SocialMediaPost[];
   const weeklyCount = allPosts.filter((post) => post.student_id === user.id && new Date(post.submitted_at) >= start && new Date(post.submitted_at) <= end).length;
   const remaining = Math.max(weeklyTarget - weeklyCount, 0);
   const percent = Math.min(Math.round((weeklyCount / weeklyTarget) * 100), 100);
-  const profileMap = new Map((profiles ?? []).map((profile) => [profile.id, (profile as Pick<Profile, "id" | "full_name" | "email">).full_name ?? profile.email ?? "Student"]));
+  const profileMap = new Map((profiles ?? []).map((profile) => [profile.id, (profile as Pick<Profile, "id" | "full_name">).full_name ?? "Student"]));
   const feedPosts = allPosts.map((post) => ({ ...post, authorName: profileMap.get(post.student_id) ?? "Student" }));
 
   return (

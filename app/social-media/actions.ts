@@ -82,6 +82,60 @@ async function fetchPostMetadata(initialUrl: URL) {
   throw new Error("The post URL redirected too many times.");
 }
 
+async function cacheFeaturedImage(imageUrl: string | null, studentId: string) {
+  if (!imageUrl) return null;
+  try {
+    let url = new URL(imageUrl);
+    let response: Response | null = null;
+    for (let redirects = 0; redirects <= 3; redirects += 1) {
+      await assertPublicUrl(url);
+      response = await fetch(url, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; WeConnectPostPreview/1.0)",
+          Accept: "image/avif,image/webp,image/png,image/jpeg,image/*",
+          Referer: `${url.protocol}//${url.hostname}/`,
+        },
+        cache: "no-store",
+      });
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location) return null;
+        url = new URL(location, url);
+        response = null;
+        continue;
+      }
+      break;
+    }
+    if (!response) return null;
+    if (!response.ok) return null;
+    const contentType = (response.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
+    const extensions: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+      "image/avif": "avif",
+    };
+    const extension = extensions[contentType];
+    if (!extension) return null;
+    const buffer = new Uint8Array(await response.arrayBuffer());
+    if (!buffer.length || buffer.byteLength > 5 * 1024 * 1024) return null;
+    const storagePath = `social-posts/${studentId}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    const supabaseAdmin = createSupabaseServiceClient();
+    const { error } = await supabaseAdmin.storage.from("branding-assets").upload(storagePath, buffer, {
+      contentType,
+      cacheControl: "31536000",
+      upsert: false,
+    });
+    if (error) return null;
+    return supabaseAdmin.storage.from("branding-assets").getPublicUrl(storagePath).data.publicUrl || null;
+  } catch {
+    return null;
+  }
+}
+
 async function requireApprovedUser() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -102,6 +156,7 @@ export async function submitSocialPost(formData: FormData) {
     if (!allowedPlatforms.has(platform)) throw new Error("Submit a LinkedIn, Facebook, Instagram, X, Threads, or TikTok post URL.");
     await assertPublicUrl(url);
     const metadata = await fetchPostMetadata(url).catch(() => ({ title: null, description: null, imageUrl: null, siteName: null }));
+    const cachedImageUrl = await cacheFeaturedImage(metadata.imageUrl, profile.id);
     const supabaseAdmin = createSupabaseServiceClient();
     const { error } = await supabaseAdmin.from("social_media_posts").insert({
       student_id: profile.id,
@@ -109,7 +164,7 @@ export async function submitSocialPost(formData: FormData) {
       platform,
       title: metadata.title,
       description: metadata.description,
-      image_url: metadata.imageUrl,
+      image_url: cachedImageUrl ?? metadata.imageUrl,
       site_name: metadata.siteName,
     });
     if (error) {
@@ -177,5 +232,33 @@ export async function deleteSocialPost(postId: string) {
     return { success: true, error: null };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Post could not be removed." };
+  }
+}
+
+export async function refreshSocialPostPreview(postId: string) {
+  try {
+    const profile = await requireApprovedUser();
+    const supabaseAdmin = createSupabaseServiceClient();
+    let query = supabaseAdmin.from("social_media_posts").select("id,student_id,url").eq("id", postId);
+    if (profile.role === "student") query = query.eq("student_id", profile.id);
+    else if (profile.role !== "admin") throw new Error("You cannot refresh this post.");
+    const { data: post, error: postError } = await query.maybeSingle();
+    if (postError || !post) throw new Error(postError?.message ?? "Post not found.");
+    const url = new URL(post.url);
+    const metadata = await fetchPostMetadata(url);
+    const cachedImageUrl = await cacheFeaturedImage(metadata.imageUrl, post.student_id);
+    const { error } = await supabaseAdmin.from("social_media_posts").update({
+      title: metadata.title,
+      description: metadata.description,
+      image_url: cachedImageUrl ?? metadata.imageUrl,
+      site_name: metadata.siteName,
+    }).eq("id", post.id);
+    if (error) throw new Error(error.message);
+    revalidatePath("/student/social-media");
+    revalidatePath("/admin/social-media");
+    revalidatePath(`/admin/social-media/${post.student_id}`);
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Preview could not be refreshed." };
   }
 }

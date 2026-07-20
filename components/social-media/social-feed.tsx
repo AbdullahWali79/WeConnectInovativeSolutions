@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Icon } from "@/components/icon";
-import { deleteSocialPost, toggleSocialReaction } from "@/app/social-media/actions";
+import { deleteSocialPost, refreshSocialPostPreview, toggleSocialReaction } from "@/app/social-media/actions";
 import { reactionOptions, type SocialMediaPost, type SocialMediaReaction, type SocialReactionType } from "@/lib/social-media";
 
 type FeedPost = SocialMediaPost & { authorName: string };
@@ -62,7 +62,14 @@ export function SocialFeed({ posts, reactions, currentUserId, canDelete = false 
                 <div className="flex items-center gap-2">
                   <span className="text-on-surface-variant">{new Date(post.submitted_at).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}</span>
                   {canDelete ? (
-                    <button type="button" title="Remove post" disabled={pending} onClick={() => {
+                    <><button type="button" title="Fetch featured image again" disabled={pending} onClick={() => {
+                      startTransition(async () => {
+                        const result = await refreshSocialPostPreview(post.id);
+                        if (result.success) window.location.reload();
+                      });
+                    }} className="flex h-7 w-7 items-center justify-center rounded-full text-primary hover:bg-[#EEF4FF]">
+                      <Icon name="refresh" className="text-base" />
+                    </button><button type="button" title="Remove post" disabled={pending} onClick={() => {
                       if (!confirm("Remove this social post from the tracker and feed?")) return;
                       startTransition(async () => {
                         const result = await deleteSocialPost(post.id);
@@ -70,7 +77,7 @@ export function SocialFeed({ posts, reactions, currentUserId, canDelete = false 
                       });
                     }} className="flex h-7 w-7 items-center justify-center rounded-full text-error hover:bg-error-container">
                       <Icon name="delete" className="text-base" />
-                    </button>
+                    </button></>
                   ) : null}
                 </div>
               </div>
