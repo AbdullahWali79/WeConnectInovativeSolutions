@@ -24,6 +24,7 @@ export type ClientHuntSpecialization =
   | "ecommerce"
   | "other";
 export type ClientHuntLeadStatus = "pending" | "approved" | "rejected" | "duplicate";
+export type SocialReactionType = "support" | "insightful" | "celebrate";
 
 export type Profile = {
   id: string;
@@ -45,6 +46,34 @@ export type Profile = {
   is_fee_blocked?: boolean;
   fee_block_reason?: string | null;
   fee_blocked_at?: string | null;
+  created_at: string;
+};
+
+export type SocialMediaSetting = {
+  id: boolean;
+  weekly_target: number;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+export type SocialMediaPost = {
+  id: string;
+  student_id: string;
+  url: string;
+  platform: string;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
+  site_name: string | null;
+  submitted_at: string;
+  created_at: string;
+};
+
+export type SocialMediaReaction = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  reaction_type: SocialReactionType;
   created_at: string;
 };
 
@@ -737,6 +766,24 @@ export type Database = {
             business_name: string;
           };
         Update: Partial<ClientHuntLead>;
+        Relationships: [];
+      };
+      social_media_settings: {
+        Row: SocialMediaSetting;
+        Insert: Partial<SocialMediaSetting>;
+        Update: Partial<SocialMediaSetting>;
+        Relationships: [];
+      };
+      social_media_posts: {
+        Row: SocialMediaPost;
+        Insert: Partial<SocialMediaPost> & { student_id: string; url: string; platform: string };
+        Update: Partial<SocialMediaPost>;
+        Relationships: [];
+      };
+      social_media_reactions: {
+        Row: SocialMediaReaction;
+        Insert: Partial<SocialMediaReaction> & { post_id: string; user_id: string; reaction_type: SocialReactionType };
+        Update: Partial<SocialMediaReaction>;
         Relationships: [];
       };
       internship_letters: {

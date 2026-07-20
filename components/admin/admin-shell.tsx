@@ -43,6 +43,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/announcements", label: "Announcements", icon: "campaign", permission: "announcements.view" },
     { href: "/admin/feedback", label: "Feedback", icon: "reviews", adminOnly: true },
     { href: "/admin/blogs", label: "Blogs", icon: "article", adminOnly: true },
+    { href: "/admin/social-media", label: "Social Media", icon: "share", adminOnly: true },
     { href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
   ]},
   { id: "certificates", label: "Certificates & Letters", icon: "workspace_premium", items: [
