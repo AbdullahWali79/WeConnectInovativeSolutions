@@ -46,13 +46,16 @@ export function SocialFeed({ posts, reactions, currentUserId, canDelete = false 
         const mine = postReactions.find((item) => item.user_id === currentUserId)?.reaction_type;
         return (
           <article key={post.id} className="overflow-hidden rounded-lg border border-outline-variant bg-white shadow-card">
-            {post.image_url ? (
-              <div className="aspect-[16/9] bg-cover bg-center" style={{ backgroundImage: `url(${JSON.stringify(post.image_url).slice(1, -1)})` }} role="img" aria-label={post.title ?? `${post.platform} post preview`} />
-            ) : (
-              <div className="flex aspect-[16/9] items-center justify-center bg-[linear-gradient(135deg,#071A3B,#174EA6)] text-white">
-                <div className="text-center"><Icon name="share" className="text-4xl" /><p className="mt-2 text-sm font-black">{post.platform}</p></div>
-              </div>
-            )}
+            <a href={post.url} target="_blank" rel="noopener noreferrer" className="group/preview relative block" aria-label={`Open ${post.platform} post by ${post.authorName}`}>
+              {post.image_url ? (
+                <div className="aspect-[16/9] bg-cover bg-center transition-transform duration-300 group-hover/preview:scale-[1.02]" style={{ backgroundImage: `url(${JSON.stringify(post.image_url).slice(1, -1)})` }} role="img" aria-label={post.title ?? `${post.platform} post preview`} />
+              ) : (
+                <div className="flex aspect-[16/9] items-center justify-center bg-[linear-gradient(135deg,#071A3B,#174EA6)] text-white">
+                  <div className="text-center"><Icon name="share" className="text-4xl" /><p className="mt-2 text-sm font-black">{post.platform}</p></div>
+                </div>
+              )}
+              <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary opacity-0 shadow-lg transition group-hover/preview:opacity-100"><Icon name="open_in_new" className="text-lg" /></span>
+            </a>
             <div className="p-5">
               <div className="flex items-center justify-between gap-3 text-xs">
                 <span className="font-black uppercase tracking-wider text-primary">{post.platform}</span>
