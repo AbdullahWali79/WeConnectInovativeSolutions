@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/page-header";
 import { Icon } from "@/components/icon";
 import Link from "next/link";
 import { AdminSocialTarget } from "@/components/social-media/admin-social-target";
+import { SocialTodayReportButton } from "@/components/social-media/social-today-report";
 import { SocialFeed } from "@/components/social-media/social-feed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPakistanWeekRange, type SocialMediaPost, type SocialMediaReaction } from "@/lib/social-media";
@@ -12,15 +13,17 @@ export default async function AdminSocialMediaPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { start, end } = getPakistanWeekRange();
-  const [{ data: settings }, { data: posts }, { data: reactions }, { data: students }] = await Promise.all([
+  const [{ data: settings }, { data: posts }, { data: reactions }, { data: students }, { data: activeEnrollments }] = await Promise.all([
     supabase.from("social_media_settings").select("weekly_target").eq("id", true).maybeSingle(),
     supabase.from("social_media_posts").select("*").order("submitted_at", { ascending: false }).limit(200),
     supabase.from("social_media_reactions").select("*"),
     supabase.from("profiles").select("id,full_name,email,client_hunting_specialization").eq("role", "student").eq("status", "approved"),
+    supabase.from("enrollments").select("student_id").eq("status", "active"),
   ]);
   const target = settings?.weekly_target ?? 3;
   const allPosts = (posts ?? []) as SocialMediaPost[];
-  const activeStudents = (students ?? []) as Pick<Profile, "id" | "full_name" | "email" | "client_hunting_specialization">[];
+  const activeStudentIds = new Set((activeEnrollments ?? []).map((enrollment) => enrollment.student_id));
+  const activeStudents = ((students ?? []) as Pick<Profile, "id" | "full_name" | "email" | "client_hunting_specialization">[]).filter((student) => activeStudentIds.has(student.id));
   const counts = new Map<string, number>();
   for (const post of allPosts) if (new Date(post.submitted_at) >= start && new Date(post.submitted_at) <= end) counts.set(post.student_id, (counts.get(post.student_id) ?? 0) + 1);
   const statusRows = activeStudents.map((student) => ({ ...student, submitted: counts.get(student.id) ?? 0 })).sort((a, b) => a.submitted - b.submitted);
@@ -29,6 +32,7 @@ export default async function AdminSocialMediaPage() {
   const notStarted = statusRows.filter((row) => row.submitted === 0).length;
   const profileMap = new Map(activeStudents.map((profile) => [profile.id, profile.full_name ?? profile.email ?? "Student"]));
   const feedPosts = allPosts.map((post) => ({ ...post, authorName: profileMap.get(post.student_id) ?? "Student" }));
+  const reportRows = statusRows.map((row) => ({ name: row.full_name ?? row.email ?? "Student", submitted: row.submitted }));
 
   return (
     <div className="space-y-6">
@@ -45,7 +49,10 @@ export default async function AdminSocialMediaPage() {
           <SocialFeed posts={feedPosts} reactions={(reactions ?? []) as SocialMediaReaction[]} currentUserId={user.id} canDelete />
         </div>
       </details>
-      <AdminSocialTarget initialTarget={target} />
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-stretch">
+        <div className="min-w-0 flex-1"><AdminSocialTarget initialTarget={target} /></div>
+        <SocialTodayReportButton rows={reportRows} target={target} />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Active students" value={statusRows.length} icon="groups" />
         <Stat label="Target achieved" value={achieved} icon="verified" tone="green" />
