@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
+import { ScenarioDescription } from "@/components/scenario-description";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
@@ -273,7 +274,9 @@ export function ClientHuntingBoard() {
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">{getClientHuntSpecializationLabel(currentScenario.specialization)}</p>
               <h2 className="mt-1 text-2xl font-black text-on-surface">{currentScenario.title}</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-on-surface-variant">{currentScenario.description ?? "No description provided."}</p>
+              <div className="mt-4 max-w-5xl">
+                <ScenarioDescription value={currentScenario.description} />
+              </div>
               {currentScenario.instructions ? <p className="mt-3 rounded-2xl bg-white/80 p-3 text-sm text-on-surface">{currentScenario.instructions}</p> : null}
             </div>
             <div className="rounded-2xl bg-white p-4 shadow-sm">

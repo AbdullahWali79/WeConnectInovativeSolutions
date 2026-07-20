@@ -5,6 +5,7 @@ import { Document, Page, pdf, StyleSheet, Text, View } from "@react-pdf/renderer
 import * as XLSX from "xlsx";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
+import { ScenarioDescription } from "@/components/scenario-description";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
@@ -1363,8 +1364,20 @@ export function ClientHuntingManager({
               </div>
               <label className="block">
                 <span className="wc-label">Description</span>
-                <textarea className="wc-input mt-2 min-h-24" value={scenarioForm.description} onChange={(event) => patchScenarioForm({ description: event.target.value })} />
+                <textarea
+                  className="wc-input mt-2 min-h-32 font-mono text-sm"
+                  placeholder={"Paste a table here (tabs, CSV, or Markdown)\nSkill\tKeyword\tBest Country\tWhy"}
+                  value={scenarioForm.description}
+                  onChange={(event) => patchScenarioForm({ description: event.target.value })}
+                />
+                <span className="mt-2 block text-xs text-on-surface-variant">Copy the complete table from ChatGPT, Gemini, Excel, or Google Sheets and paste it here.</span>
               </label>
+              {scenarioForm.description.trim() ? (
+                <div>
+                  <span className="wc-label mb-2 block">Student preview</span>
+                  <ScenarioDescription value={scenarioForm.description} compact />
+                </div>
+              ) : null}
               <label className="block">
                 <span className="wc-label">Instructions</span>
                 <textarea className="wc-input mt-2 min-h-28" value={scenarioForm.instructions} onChange={(event) => patchScenarioForm({ instructions: event.target.value })} />
