@@ -641,11 +641,11 @@ export function StudentDashboard() {
             <div className="mt-5 rounded-2xl bg-white/70 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="wc-label">Additional Proof Links</p>
-                  <p className="mt-1 text-xs text-on-surface-variant">Add extra URLs only when needed.</p>
+                  <p className="wc-label">Image Google Drive URLs</p>
+                  <p className="mt-1 max-w-xl text-xs leading-5 text-on-surface-variant">Upload each image to Google Drive, set access to &quot;Anyone with the link&quot;, then add one public URL per image. Use Add Image URL for multiple images.</p>
                 </div>
                 <button type="button" onClick={addExtraProofLink} className="wc-secondary-btn px-3 py-2 text-xs">
-                  <Icon name="add" /> Add Link
+                  <Icon name="add" /> Add Image URL
                 </button>
               </div>
               <div className="mt-4 grid gap-3">
@@ -656,7 +656,7 @@ export function StudentDashboard() {
                       type="url"
                       value={link}
                       onChange={(event) => updateExtraProofLink(index, event.target.value)}
-                      placeholder={`Extra proof link ${index + 1}`}
+                      placeholder={`Public Google Drive image URL ${index + 1}`}
                     />
                     <button type="button" onClick={() => removeExtraProofLink(index)} className="wc-secondary-btn px-3 py-2 text-xs">
                       Remove
