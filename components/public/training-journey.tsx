@@ -31,7 +31,7 @@ export function TrainingJourney() {
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center border-t lg:border-t-0 lg:border-l border-white/10 animate-step step-2 hover-lift">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center border-t lg:border-t-0 lg:border-l border-[var(--wc-outline-variant)] animate-step step-2 hover-lift">
               <div className="mb-4 text-blue-600/80 bg-blue-50/50 p-4 rounded-2xl">
                 <Icon name="verified_user" className="text-4xl" />
               </div>
@@ -42,7 +42,7 @@ export function TrainingJourney() {
               <Icon name="arrow_forward_ios" className="hidden lg:block animate-arrow" />
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center border-t lg:border-t-0 lg:border-l border-white/10 animate-step step-3 hover-lift">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center border-t lg:border-t-0 lg:border-l border-[var(--wc-outline-variant)] animate-step step-3 hover-lift">
               <div className="mb-4 text-emerald-600/80 bg-emerald-50/50 p-4 rounded-2xl">
                 <Icon name="account_balance_wallet" className="text-4xl" />
               </div>
@@ -53,7 +53,7 @@ export function TrainingJourney() {
               <Icon name="arrow_forward_ios" className="hidden lg:block animate-arrow" />
             </div>
 
-            <div className="flex-[1.3] flex flex-col items-center justify-center p-8 bg-navy-premium text-white relative group animate-step step-4">
+            <div className="flex-[1.3] flex flex-col items-center justify-center p-8 bg-navy-premium text-on-surface relative group animate-step step-4">
               <div className="absolute inset-0 bg-blue-500/8 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               <div className="mb-4 text-blue-400 relative z-10">
                 <Icon name="task_alt" className="text-5xl" />

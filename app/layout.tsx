@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/components/branding-provider";
-import { brandingToCssVars, getDefaultBrandingSettingsMap, loadBrandingSettingsMap } from "@/lib/branding-settings";
+import { brandingToCssVars, getDefaultBrandingSettingsMap, loadBrandingSettingsMap, LOGO_LANDING_SETTINGS } from "@/lib/branding-settings";
 
 export const metadata: Metadata = {
   title: "We Connect Innovative Solutions Pvt. Ltd.",
@@ -33,7 +33,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning style={brandingToCssVars(initialBranding.landing)}>
+      <body suppressHydrationWarning style={brandingToCssVars(LOGO_LANDING_SETTINGS)}>
         <ThemeProvider>
           <BrandingProvider initialSettings={initialBranding}>
             {children}

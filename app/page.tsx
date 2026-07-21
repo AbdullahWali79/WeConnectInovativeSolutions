@@ -44,7 +44,7 @@ export default async function LandingPage() {
             background: "linear-gradient(135deg, color-mix(in srgb, var(--wc-primary) 20%, transparent), color-mix(in srgb, var(--wc-secondary) 10%, transparent))",
           }}
         />
-        
+
         <div className="homepage-wide-container relative z-10 text-center">
           <FadeIn>
             <div
@@ -55,7 +55,7 @@ export default async function LandingPage() {
                 color: "var(--wc-secondary)",
               }}
             >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--wc-surface-low)] ring-1 ring-inset ring-white/10">
                 <Icon name="code_blocks" className="text-[14px]" />
               </span>
               <span className="inline-flex items-center gap-2 text-inherit normal-case tracking-[0.14em]">

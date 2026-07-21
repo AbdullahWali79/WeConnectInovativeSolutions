@@ -68,7 +68,7 @@ export default async function TestimonialsPage({ searchParams }: { searchParams?
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
               <Icon name="favorite" className="text-sm" /> Approved Stories
             </div>
-            <Link href="/feedback" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-card transition hover:opacity-95">
+            <Link href="/feedback" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-surface shadow-card transition hover:opacity-95">
               <Icon name="send" className="text-sm" /> Share feedback
             </Link>
           </div>

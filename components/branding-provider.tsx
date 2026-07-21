@@ -2,25 +2,11 @@
 
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { brandingToCssVars, getBrandingScopeFromPathname } from "@/lib/branding-settings";
+import { brandingToCssVars, getBrandingScopeFromPathname, LOGO_LANDING_SETTINGS } from "@/lib/branding-settings";
 import type { BrandingScope, BrandingSettingsSnapshot } from "@/lib/supabase/types";
 
 type BrandingMap = Record<BrandingScope, BrandingSettingsSnapshot>;
 export type LandingPalette = "logo" | "classic";
-
-const LOGO_LANDING_SETTINGS: BrandingSettingsSnapshot = {
-  id: null,
-  scope: "landing",
-  logo_url: null,
-  background_color: "#f7fbff",
-  surface_color: "#ffffff",
-  primary_color: "#1246c8",
-  secondary_color: "#08bfe3",
-  accent_color: "#1685f8",
-  updated_by: null,
-  updated_at: "2026-07-21T00:00:00.000Z",
-  created_at: "2026-07-21T00:00:00.000Z",
-};
 
 type BrandingContextValue = {
   scope: BrandingScope;

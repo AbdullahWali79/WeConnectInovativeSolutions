@@ -44,27 +44,27 @@ export function ContactQueryForm() {
   return (
     <>
       <Toast toast={toast} onClear={() => setToast(null)} />
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#91A3C7]">
-        Send your query to <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold text-white underline underline-offset-2">{CONTACT_EMAIL}</a>
+      <div className="rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-4 text-sm text-[var(--wc-on-surface-variant)]">
+        Send your query to <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold text-on-surface underline underline-offset-2">{CONTACT_EMAIL}</a>
       </div>
       <form onSubmit={submit} className="mt-6 space-y-5">
         <label className="block">
-          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Your Name</span>
+          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Your Name</span>
           <input
             value={form.full_name}
             onChange={(event) => updateField("full_name", event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all"
+            className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
             placeholder="Your full name"
             required
           />
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Email</span>
+          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Email</span>
           <input
             value={form.email}
             onChange={(event) => updateField("email", event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all"
+            className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
             placeholder="you@example.com"
             type="email"
             required
@@ -72,11 +72,11 @@ export function ContactQueryForm() {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Query</span>
+          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Query</span>
           <textarea
             value={form.message}
             onChange={(event) => updateField("message", event.target.value)}
-            className="min-h-40 w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all"
+            className="min-h-40 w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
             placeholder="Write your question or request here"
             required
           />
@@ -84,7 +84,7 @@ export function ContactQueryForm() {
 
         <button
           disabled={loading}
-          className="w-full rounded-xl bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] py-4 text-sm font-black text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(255,210,74,0.5)] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
+          className="w-full rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] py-4 text-sm font-black text-on-primary shadow-glow transition-all hover:scale-[1.02] hover:shadow-glow-lg disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
         >
           {loading ? "SENDING..." : "SEND QUERY"}
         </button>

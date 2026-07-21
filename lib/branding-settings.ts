@@ -4,6 +4,20 @@ import type { BrandingScope, BrandingSettings, BrandingSettingsSnapshot } from "
 
 export const BRANDING_SCOPES: BrandingScope[] = ["landing", "admin", "student"];
 
+export const LOGO_LANDING_SETTINGS: BrandingSettingsSnapshot = {
+  id: null,
+  scope: "landing",
+  logo_url: null,
+  background_color: "#f7fbff",
+  surface_color: "#ffffff",
+  primary_color: "#1246c8",
+  secondary_color: "#08bfe3",
+  accent_color: "#1685f8",
+  updated_by: null,
+  updated_at: "2026-07-21T00:00:00.000Z",
+  created_at: "2026-07-21T00:00:00.000Z",
+};
+
 const DEFAULTS: Record<BrandingScope, BrandingSettingsSnapshot> = {
   landing: {
     id: null,

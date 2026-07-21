@@ -2,18 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { normalizeImageUrl } from "@/lib/image-url";
 import type { Product } from "@/lib/supabase/types";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/public/animations";
 
 const badgeTone: Record<string, string> = {
-  premium: "bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] text-[#030B1C]",
-  hot: "bg-gradient-to-r from-red-500 to-rose-600 text-white",
-  new: "bg-gradient-to-r from-[#4379FF] to-blue-600 text-white",
-  free: "bg-gradient-to-r from-emerald-400 to-emerald-600 text-white",
-  paid: "bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white",
+  premium: "bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] text-on-primary",
+  hot: "bg-gradient-to-r from-red-500 to-rose-600 text-on-surface",
+  new: "bg-gradient-to-r from-[#4379FF] to-blue-600 text-on-surface",
+  free: "bg-gradient-to-r from-emerald-400 to-emerald-600 text-on-surface",
+  paid: "bg-gradient-to-r from-violet-500 to-fuchsia-600 text-on-surface",
 };
 
 export const fallbackProducts: Product[] = [
@@ -65,48 +64,48 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
   }), [products, query, category]);
 
   return (
-    <section className="min-h-screen bg-[#030B1C] text-white pt-32 pb-24 relative overflow-hidden">
+    <section className="min-h-screen bg-[var(--wc-bg)] text-on-surface pt-32 pb-24 relative overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),transparent)] pointer-events-none"></div>
-      
+
       <div className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
         <FadeIn>
           <div className="mb-12 max-w-3xl text-center mx-auto">
-            <div className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-[#FFD24A]/30 bg-[#FFD24A]/10 px-4 py-2 text-xs font-bold tracking-widest text-[#FFD24A] uppercase">
+            <div className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-2 text-xs font-bold tracking-widest text-[var(--wc-secondary)] uppercase">
               <Icon name="diamond" className="text-sm" /> Digital Products
             </div>
-            <h1 className="text-4xl font-black md:text-5xl lg:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-white to-[#91A3C7] mb-6">
+            <h1 className="mb-6 bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] bg-clip-text text-4xl font-black text-transparent md:text-5xl lg:text-6xl">
               Explore Our Premium Assets
             </h1>
-            <p className="text-lg text-[#91A3C7]">
+            <p className="text-lg text-[var(--wc-on-surface-variant)]">
               Discover robust tools, high-end templates, and complete software solutions engineered by our expert team.
             </p>
           </div>
         </FadeIn>
 
         <FadeIn>
-          <div className="mb-10 grid gap-4 md:grid-cols-[1fr_auto] items-center bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4">
+          <div className="mb-10 grid gap-4 md:grid-cols-[1fr_auto] items-center bg-[var(--wc-surface-low)] backdrop-blur-md border border-[var(--wc-outline-variant)] rounded-2xl p-4">
             <div className="relative">
-              <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-[#91A3C7]" />
-              <input 
-                className="w-full bg-transparent pl-12 pr-4 py-3 text-white placeholder-[#5B6B88] focus:outline-none focus:ring-2 focus:ring-[#FFD24A]/50 rounded-xl transition-all" 
-                value={query} 
-                onChange={(event) => setQuery(event.target.value)} 
-                placeholder="Search tools, templates, or assets..." 
+              <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]" />
+              <input
+                className="w-full bg-transparent pl-12 pr-4 py-3 text-on-surface placeholder-[#5B6B88] focus:outline-none focus:ring-2 focus:ring-[var(--wc-secondary)]/50 rounded-xl transition-all"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search tools, templates, or assets..."
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <button 
-                onClick={() => setCategory("all")} 
-                className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all ${category === "all" ? "bg-[#FFD24A] text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)]" : "bg-white/5 border border-white/10 text-[#91A3C7] hover:bg-white/10"}`}
+              <button
+                onClick={() => setCategory("all")}
+                className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all ${category === "all" ? "bg-[var(--wc-secondary)] text-on-primary shadow-glow" : "bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] text-[var(--wc-on-surface-variant)] hover:bg-[var(--wc-surface-low)]"}`}
               >
                 All
               </button>
               {categories.map((item) => (
-                <button 
-                  key={item} 
-                  onClick={() => setCategory(item)} 
-                  className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all ${category === item ? "bg-[#FFD24A] text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)]" : "bg-white/5 border border-white/10 text-[#91A3C7] hover:bg-white/10"}`}
+                <button
+                  key={item}
+                  onClick={() => setCategory(item)}
+                  className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all ${category === item ? "bg-[var(--wc-secondary)] text-on-primary shadow-glow" : "bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] text-[var(--wc-on-surface-variant)] hover:bg-[var(--wc-surface-low)]"}`}
                 >
                   {item}
                 </button>
@@ -117,23 +116,23 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
 
         {filtered.length === 0 ? (
           <FadeIn>
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center">
+            <div className="bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] rounded-3xl p-12 text-center">
               <Icon name="inventory_2" className="text-6xl text-[#5B6B88] mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-2">No products found</h3>
-              <p className="text-[#91A3C7]">Try a different category or search term.</p>
+              <h3 className="text-2xl font-bold text-on-surface mb-2">No products found</h3>
+              <p className="text-[var(--wc-on-surface-variant)]">Try a different category or search term.</p>
             </div>
           </FadeIn>
         ) : (
           <StaggerContainer className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.05}>
             {filtered.map((product) => (
               <StaggerItem key={product.id}>
-                <article className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white/5 border border-white/10 transition-all duration-300 hover:-translate-y-2 hover:bg-white/10 hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-                  <div className="relative h-48 w-full bg-[#061A3D] overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#030B1C] to-transparent z-10 opacity-60"></div>
+                <article className="group flex h-full flex-col overflow-hidden rounded-3xl bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] transition-all duration-300 hover:-translate-y-2 hover:bg-[var(--wc-surface-low)] hover:border-[var(--wc-outline-variant)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+                  <div className="relative h-48 w-full bg-[var(--wc-surface-lowest)] overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--wc-bg)] to-transparent z-10 opacity-60"></div>
                     {(product.image_cdn_url ?? product.image_url) ? (
                       <Image src={normalizeImageUrl(product.image_cdn_url ?? product.image_url ?? "") ?? product.image_cdn_url ?? product.image_url ?? ""} alt={product.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" unoptimized className="object-contain transition-transform duration-700 group-hover:scale-110" />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-[#91A3C7]"><Icon name="code_blocks" className="text-6xl opacity-20" /></div>
+                      <div className="flex h-full items-center justify-center text-[var(--wc-on-surface-variant)]"><Icon name="code_blocks" className="text-6xl opacity-20" /></div>
                     )}
                     <div className="absolute top-4 right-4 z-20">
                       <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider shadow-lg ${badgeTone[product.badge] ?? "bg-slate-800 text-slate-300 border border-slate-700"}`}>
@@ -143,13 +142,13 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
                   </div>
                   <div className="flex flex-1 flex-col p-6">
                     <div className="mb-3">
-                      <span className="rounded-md bg-[#062B7F]/50 border border-[#062B7F] px-2.5 py-1 text-[10px] font-bold text-[#91A3C7] uppercase tracking-wider">
+                      <span className="rounded-md bg-[var(--wc-primary)]/50 border border-[var(--wc-primary)] px-2.5 py-1 text-[10px] font-bold text-[var(--wc-on-surface-variant)] uppercase tracking-wider">
                         {product.category}
                       </span>
                     </div>
-                    <h3 className="mb-3 text-xl font-bold text-white transition-colors group-hover:text-[#FFD24A] line-clamp-2">{product.name}</h3>
-                    <p className="mb-6 line-clamp-3 text-sm text-[#91A3C7] flex-1">{product.short_description ?? "No description available for this premium asset."}</p>
-                    <button onClick={() => setSelected(product)} className="w-full rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition-all hover:bg-[#FFD24A] hover:text-[#030B1C]">
+                    <h3 className="mb-3 text-xl font-bold text-on-surface transition-colors group-hover:text-[var(--wc-secondary)] line-clamp-2">{product.name}</h3>
+                    <p className="mb-6 line-clamp-3 text-sm text-[var(--wc-on-surface-variant)] flex-1">{product.short_description ?? "No description available for this premium asset."}</p>
+                    <button onClick={() => setSelected(product)} className="w-full rounded-xl bg-[var(--wc-surface-low)] py-3 text-sm font-bold text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary">
                       View Details
                     </button>
                   </div>
@@ -161,16 +160,16 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
 
         {/* Product Modal */}
         {selected && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#030B1C]/80 backdrop-blur-md p-4 sm:p-6" onClick={() => setSelected(null)}>
-            <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#061A3D] shadow-[0_0_80px_rgba(0,0,0,0.8)]" onClick={(event) => event.stopPropagation()}>
-              
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--wc-bg)]/80 backdrop-blur-md p-4 sm:p-6" onClick={() => setSelected(null)}>
+            <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] shadow-[0_0_80px_rgba(0,0,0,0.8)]" onClick={(event) => event.stopPropagation()}>
+
               {/* Header / Sticky Close */}
-              <div className="flex items-center justify-between border-b border-white/10 bg-[#061A3D]/90 p-6 backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/90 p-6 backdrop-blur-xl">
                 <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[#FFD24A] uppercase mb-1">{selected.category}</p>
-                  <h2 className="text-2xl font-black text-white line-clamp-1">{selected.name}</h2>
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--wc-secondary)] uppercase mb-1">{selected.category}</p>
+                  <h2 className="text-2xl font-black text-on-surface line-clamp-1">{selected.name}</h2>
                 </div>
-                <button onClick={() => setSelected(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-[#FFD24A] hover:text-[#030B1C] hover:scale-110">
+                <button onClick={() => setSelected(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110">
                   <Icon name="close" />
                 </button>
               </div>
@@ -178,37 +177,37 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {(selected.image_cdn_url ?? selected.image_url) && (
-                  <div className="relative mb-10 h-64 sm:h-80 w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                  <div className="relative mb-10 h-64 sm:h-80 w-full overflow-hidden rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)]">
                     <Image src={normalizeImageUrl(selected.image_cdn_url ?? selected.image_url ?? "") ?? selected.image_cdn_url ?? selected.image_url ?? ""} alt={selected.name} fill sizes="min(100vw, 896px)" unoptimized className="object-contain" />
                   </div>
                 )}
-                
+
                 <div className="mb-10">
-                  <h3 className="text-xl font-black text-white mb-4">Overview</h3>
-                  <p className="text-base text-[#91A3C7] leading-relaxed">{selected.full_description ?? selected.short_description ?? "No detailed overview available."}</p>
+                  <h3 className="text-xl font-black text-on-surface mb-4">Overview</h3>
+                  <p className="text-base text-[var(--wc-on-surface-variant)] leading-relaxed">{selected.full_description ?? selected.short_description ?? "No detailed overview available."}</p>
                 </div>
 
                 <div className="mb-10 grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition-colors">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#91A3C7]">Access / Pricing</p>
-                    <p className="mt-2 text-xl font-black text-white">{selected.price_or_access_type ?? "Not specified"}</p>
+                  <div className="rounded-2xl bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] p-6 hover:bg-[var(--wc-surface-low)] transition-colors">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">Access / Pricing</p>
+                    <p className="mt-2 text-xl font-black text-on-surface">{selected.price_or_access_type ?? "Not specified"}</p>
                   </div>
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition-colors">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#91A3C7]">Availability</p>
-                    <p className="mt-2 text-xl font-black text-white capitalize">{selected.status}</p>
+                  <div className="rounded-2xl bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] p-6 hover:bg-[var(--wc-surface-low)] transition-colors">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">Availability</p>
+                    <p className="mt-2 text-xl font-black text-on-surface capitalize">{selected.status}</p>
                   </div>
                 </div>
 
                 <div className="mb-10">
-                  <h3 className="text-xl font-black text-white mb-5">Key Features</h3>
+                  <h3 className="text-xl font-black text-on-surface mb-5">Key Features</h3>
                   <ul className="grid gap-3 sm:grid-cols-2">
                     {(selected.features ?? []).length > 0 ? (
                       (selected.features ?? []).map((feature) => (
-                        <li key={feature} className="flex items-start gap-3 rounded-xl bg-white/5 border border-white/5 p-4 hover:border-white/10 transition-colors">
-                          <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#FFD24A]/20 text-[#FFD24A]">
+                        <li key={feature} className="flex items-start gap-3 rounded-xl bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] p-4 hover:border-[var(--wc-outline-variant)] transition-colors">
+                          <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--wc-secondary)]/20 text-[var(--wc-secondary)]">
                             <Icon name="check" className="text-sm" />
                           </div>
-                          <span className="text-sm font-bold text-[#91A3C7]">{feature}</span>
+                          <span className="text-sm font-bold text-[var(--wc-on-surface-variant)]">{feature}</span>
                         </li>
                       ))
                     ) : (
@@ -218,8 +217,8 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
                 </div>
 
                 {selected.product_link && (
-                  <div className="mt-10 border-t border-white/10 pt-8 pb-4 text-center">
-                    <a href={selected.product_link} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] px-10 py-4 text-base font-black text-[#030B1C] transition-transform hover:scale-[1.02] shadow-[0_0_30px_rgba(255,210,74,0.3)]">
+                  <div className="mt-10 border-t border-[var(--wc-outline-variant)] pt-8 pb-4 text-center">
+                    <a href={selected.product_link} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] px-10 py-4 text-base font-black text-on-primary transition-transform hover:scale-[1.02] shadow-[0_0_30px_rgba(var(--landing-accent-rgb),0.3)]">
                       ACCESS PRODUCT <Icon name="open_in_new" className="text-lg" />
                     </a>
                   </div>

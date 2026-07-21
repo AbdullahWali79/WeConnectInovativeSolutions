@@ -40,7 +40,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
     <div className="w-full bg-[var(--wc-surface-low)] py-20 relative overflow-hidden">
       {/* Background radial glow */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_0%,rgba(6,43,127,0.3),transparent)] pointer-events-none"></div>
-      
+
       {/* Grid Pattern overlay for tech aesthetic */}
       <div className="absolute inset-0 z-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
 
@@ -61,11 +61,11 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
 
       {/* 3D Carousel Container */}
       <div className="relative z-10 w-full h-[500px] sm:h-[550px] md:h-[600px] flex items-center justify-center px-5">
-        
+
         {/* Left Navigation Button - Absolute Left */}
-        <button 
+        <button
           onClick={handlePrev}
-          className="absolute left-4 md:left-12 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all hover:bg-[#FFD24A] hover:text-[#030B1C] hover:scale-110 shadow-lg backdrop-blur-md"
+          className="absolute left-4 md:left-12 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
         >
           <Icon name="arrow_back" className="text-2xl" />
         </button>
@@ -74,7 +74,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
           {products.map((product, index) => {
             // Calculate distance from active index
             let diff = index - activeIndex;
-            
+
             // Handle wrap-around for infinite feel
             if (diff > Math.floor(products.length / 2)) {
               diff -= products.length;
@@ -142,7 +142,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
             const isActive = diff === 0;
 
             return (
-              <div 
+              <div
                 key={product.id}
                 className="absolute w-[300px] sm:w-[350px] md:w-[400px] h-[450px] sm:h-[500px] transition-all duration-700 ease-in-out cursor-pointer"
                 style={{
@@ -154,31 +154,31 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
                 onClick={() => setActiveIndex(index)}
               >
                 <article className={`flex h-full flex-col overflow-hidden rounded-3xl border bg-[var(--wc-surface-lowest)] transition-all duration-500 ${isActive ? 'border-[var(--wc-secondary)] shadow-glow-lg' : 'border-[var(--wc-outline-variant)] opacity-90 shadow-xl'}`}>
-                  <div className="relative h-[220px] w-full shrink-0 overflow-hidden bg-white/5">
+                  <div className="relative h-[220px] w-full shrink-0 overflow-hidden bg-[var(--wc-surface-low)]">
                     {(product.image_cdn_url ?? product.image_url) ? (
-                      <Image 
-                        src={normalizeImageUrl(product.image_cdn_url ?? product.image_url ?? "") ?? product.image_cdn_url ?? product.image_url ?? ""} 
-                        alt={product.name} 
-                        fill 
-                        className="object-cover transition-transform duration-700 hover:scale-110" 
-                        unoptimized 
+                      <Image
+                        src={normalizeImageUrl(product.image_cdn_url ?? product.image_url ?? "") ?? product.image_cdn_url ?? product.image_url ?? ""}
+                        alt={product.name}
+                        fill
+                        className="object-cover transition-transform duration-700 hover:scale-110"
+                        unoptimized
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-[#91A3C7] opacity-50">
+                      <div className="flex h-full items-center justify-center text-[var(--wc-on-surface-variant)] opacity-50">
                         <Icon name="image" className="text-6xl" />
                       </div>
                     )}
-                    
+
                     {/* Overlay gradient for text readability if needed */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#061A3D] to-transparent opacity-80" />
-                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--wc-surface-lowest)] to-transparent opacity-80" />
+
                     <div className="absolute left-4 bottom-4 flex gap-2 flex-wrap">
-                      <span className="rounded-full border border-white/20 bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)] backdrop-blur-md">
+                      <span className="rounded-full border border-[var(--wc-outline-variant)] bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)] backdrop-blur-md">
                         {product.category}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="relative z-10 flex flex-1 flex-col bg-[var(--wc-surface-lowest)] p-6">
                     <h3 className="mb-3 line-clamp-2 text-2xl font-black text-on-surface transition-colors">
                       {product.name}
@@ -186,10 +186,10 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
                     <p className="mb-6 line-clamp-3 flex-1 text-sm leading-relaxed text-on-surface-variant">
                       {product.short_description || product.full_description || "No description available."}
                     </p>
-                    
+
                     <div className="mt-auto">
-                      <Link 
-                        href="/products" 
+                      <Link
+                        href="/products"
                         onClick={(e) => { if(!isActive) e.preventDefault(); }}
                         className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 text-sm font-black transition-all ${isActive ? 'bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] text-on-primary shadow-glow hover:scale-[1.02]' : 'border border-[var(--wc-outline-variant)] text-[var(--wc-primary)] hover:bg-[var(--wc-surface-low)]'}`}
                       >
@@ -204,15 +204,15 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
         </div>
 
         {/* Right Navigation Button - Absolute Right */}
-        <button 
+        <button
           onClick={handleNext}
-          className="absolute right-4 md:right-12 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all hover:bg-[#FFD24A] hover:text-[#030B1C] hover:scale-110 shadow-lg backdrop-blur-md"
+          className="absolute right-4 md:right-12 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
         >
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
 
       </div>
-      
+
       {/* Pagination Dots */}
       <div className="flex justify-center gap-2 mt-8 relative z-10">
         {products.map((_, idx) => (

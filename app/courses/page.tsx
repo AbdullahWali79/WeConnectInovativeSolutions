@@ -23,18 +23,18 @@ export default async function CoursesPage() {
     <main className="bg-background text-on-background">
       <PublicHeader />
 
-      <section className="relative overflow-hidden bg-[#030B1C] py-16 md:py-24">
+      <section className="relative overflow-hidden bg-[var(--wc-bg)] py-16 md:py-24">
         {/* Background glow effects */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),transparent)] pointer-events-none"></div>
-        
+
         <div className="relative z-10 mx-auto max-w-container-max px-5 md:px-margin-page text-center md:text-left">
           <FadeIn>
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD24A]/30 bg-[#FFD24A]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFD24A] mb-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)] mb-6">
                 <Icon name="school" className="text-sm" /> Course Library
               </div>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight text-white">All Courses</h1>
-              <p className="mt-6 text-lg leading-relaxed text-[#91A3C7]">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight text-on-surface">All Courses</h1>
+              <p className="mt-6 text-lg leading-relaxed text-[var(--wc-on-surface-variant)]">
                 Browse all active courses, filter by the details that matter, and choose the pathway that matches your goals.
               </p>
             </div>
@@ -42,7 +42,7 @@ export default async function CoursesPage() {
         </div>
       </section>
 
-      <section className="relative bg-[#030B1C] py-12 md:py-16">
+      <section className="relative bg-[var(--wc-bg)] py-12 md:py-16">
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page">
           {courses.length > 0 ? (
             <CourseBrowser courses={courses} categories={categories} />

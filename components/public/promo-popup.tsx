@@ -84,7 +84,7 @@ export function PromoPopup({ context }: PromoPopupProps) {
             {/* Close button */}
             <button
               onClick={dismiss}
-              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/40"
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--wc-surface-lowest)] text-on-surface backdrop-blur-sm transition hover:bg-black/40"
             >
               <span className="material-symbols-outlined text-lg">close</span>
             </button>
@@ -136,7 +136,7 @@ export function PromoPopup({ context }: PromoPopupProps) {
               >
                 <button
                   onClick={dismiss}
-                  className="rounded-xl bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/30 transition hover:scale-105 hover:shadow-xl dark:bg-blue-500"
+                  className="rounded-xl bg-primary px-8 py-3 text-sm font-bold text-on-surface shadow-lg shadow-primary/30 transition hover:scale-105 hover:shadow-xl dark:bg-blue-500"
                 >
                   Got it!
                 </button>
@@ -158,7 +158,7 @@ function formatMessage(message: string) {
 
   let processed = message;
   const symbols = ["✅", "🎯", "•", "✔", "➖", "✨", "⭐", "🔹", "▪", "📌"];
-  
+
   // Cleanly split and rejoin to add newlines before symbols
   symbols.forEach((sym) => {
     processed = processed

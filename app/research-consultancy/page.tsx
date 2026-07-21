@@ -44,39 +44,39 @@ const processSteps = [
 
 export default function ResearchConsultancyPage() {
   return (
-    <main className="overflow-x-clip bg-[#030B1C] text-white min-h-screen">
+    <main className="overflow-x-clip bg-[var(--wc-bg)] text-on-surface min-h-screen">
       <ScrollProgress />
       <PublicHeader />
 
       <section className="relative isolate overflow-hidden pt-24 pb-20 sm:pt-32 sm:pb-28">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.45),rgba(3,11,28,1))]" />
-        <div className="absolute left-1/2 top-0 -z-10 h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,210,74,0.18),transparent_70%)] blur-3xl" />
+        <div className="absolute left-1/2 top-0 -z-10 h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(var(--landing-accent-rgb),0.18),transparent_70%)] blur-3xl" />
 
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page text-center">
           <FadeIn>
-            <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[#FFD24A]/25 bg-[#FFD24A]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFD24A]">
+            <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/25 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
               <Icon name="school" className="text-sm" />
               Research Consultancy for BS, MS & PhD Students
             </div>
 
-            <h1 className="mx-auto max-w-5xl text-4xl font-black leading-tight text-white sm:text-5xl md:text-6xl">
+            <h1 className="mx-auto max-w-5xl text-4xl font-black leading-tight text-on-surface sm:text-5xl md:text-6xl">
               Research support that helps students move from topic idea to final submission.
             </h1>
 
-            <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-[#91A3C7]">
+            <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-[var(--wc-on-surface-variant)]">
               WeConnect-Innovation helps students with academic research planning, writing structure, data analysis, and presentation-ready outputs. Use this page as a starting point for real support around thesis work, project reports, and defense preparation.
             </p>
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/contact?topic=research-consultancy"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] px-8 py-4 text-sm font-black text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)] transition-transform hover:scale-[1.02] sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] px-8 py-4 text-sm font-black text-on-primary shadow-[0_0_20px_rgba(var(--landing-accent-rgb),0.3)] transition-transform hover:scale-[1.02] sm:w-auto"
               >
                 Apply for Research Consultancy <Icon name="send" className="text-lg" />
               </Link>
               <Link
                 href="#services"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-8 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-8 py-4 text-sm font-bold text-on-surface transition-colors hover:bg-[var(--wc-surface-low)] sm:w-auto"
               >
                 Explore Services
               </Link>
@@ -89,7 +89,7 @@ export default function ResearchConsultancyPage() {
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page">
           <FadeIn>
             <div className="mb-12 text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#91A3C7]">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">
                 <Icon name="workspace_premium" className="text-sm" /> What students usually need
               </div>
               <h2 className="text-3xl font-black sm:text-4xl">Common research support areas</h2>
@@ -98,12 +98,12 @@ export default function ResearchConsultancyPage() {
 
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {supportAreas.map(([icon, title, text]) => (
-              <div key={title} className="rounded-3xl border border-white/10 bg-[#061A3D]/60 p-7 shadow-[0_0_30px_rgba(0,0,0,0.3)] backdrop-blur-xl">
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFD24A]/10 text-[#FFD24A]">
+              <div key={title} className="rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-7 shadow-[0_0_30px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--wc-secondary)]/10 text-[var(--wc-secondary)]">
                   <Icon name={icon} className="text-2xl" />
                 </div>
-                <h3 className="text-xl font-black text-white">{title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#91A3C7]">{text}</p>
+                <h3 className="text-xl font-black text-on-surface">{title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[var(--wc-on-surface-variant)]">{text}</p>
               </div>
             ))}
           </div>
@@ -129,7 +129,7 @@ export default function ResearchConsultancyPage() {
                 <ul className="mt-5 space-y-3 text-sm leading-6 text-[#2B3D67]">
                   {card.points.map((point) => (
                     <li key={point} className="flex gap-3">
-                      <span className="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#FFD24A]/20 text-[#00216e]">✓</span>
+                      <span className="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--wc-secondary)]/20 text-[#00216e]">✓</span>
                       <span>{point}</span>
                     </li>
                   ))}
@@ -144,7 +144,7 @@ export default function ResearchConsultancyPage() {
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page">
           <FadeIn>
             <div className="mb-12 text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#91A3C7]">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">
                 <Icon name="route" className="text-sm" /> How it works
               </div>
               <h2 className="text-3xl font-black sm:text-4xl">Simple consultation flow</h2>
@@ -153,10 +153,10 @@ export default function ResearchConsultancyPage() {
 
           <div className="grid gap-6 lg:grid-cols-4">
             {processSteps.map(([step, title, text]) => (
-              <div key={step} className="rounded-3xl border border-white/10 bg-[#061A3D]/50 p-7">
-                <div className="text-sm font-black uppercase tracking-widest text-[#FFD24A]">{step}</div>
+              <div key={step} className="rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/50 p-7">
+                <div className="text-sm font-black uppercase tracking-widest text-[var(--wc-secondary)]">{step}</div>
                 <h3 className="mt-3 text-xl font-black">{title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#91A3C7]">{text}</p>
+                <p className="mt-3 text-sm leading-7 text-[var(--wc-on-surface-variant)]">{text}</p>
               </div>
             ))}
           </div>
@@ -166,24 +166,24 @@ export default function ResearchConsultancyPage() {
       <section className="py-20 sm:py-28">
         <div className="mx-auto max-w-4xl px-5 md:px-margin-page text-center">
           <FadeIn>
-            <div className="rounded-[2rem] border border-[#FFD24A]/20 bg-[#061A3D]/70 p-8 shadow-[0_0_60px_rgba(0,0,0,0.35)] sm:p-12">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD24A]/25 bg-[#FFD24A]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFD24A]">
+            <div className="rounded-[2rem] border border-[var(--wc-secondary)]/20 bg-[var(--wc-surface-lowest)]/70 p-8 shadow-[0_0_60px_rgba(0,0,0,0.35)] sm:p-12">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/25 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
                 <Icon name="send" className="text-sm" /> Direct apply
               </div>
               <h2 className="mt-5 text-3xl font-black sm:text-4xl">Need research consultancy now?</h2>
-              <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-[#91A3C7]">
+              <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-[var(--wc-on-surface-variant)]">
                 Students can directly request research guidance for BS projects, MS theses, or PhD work using the application path below.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
                   href="/contact?topic=research-consultancy"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] px-8 py-4 text-sm font-black text-[#030B1B] transition-transform hover:scale-[1.02] sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] px-8 py-4 text-sm font-black text-[#030B1B] transition-transform hover:scale-[1.02] sm:w-auto"
                 >
                   Apply Now <Icon name="arrow_forward" className="text-lg" />
                 </Link>
                 <Link
                   href="mailto:info@weconnect-innovation.com?subject=Research%20Consultancy%20Application"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-8 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-8 py-4 text-sm font-bold text-on-surface transition-colors hover:bg-[var(--wc-surface-low)] sm:w-auto"
                 >
                   Email Application
                 </Link>

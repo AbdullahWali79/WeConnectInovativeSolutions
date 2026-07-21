@@ -350,7 +350,7 @@ export function CertificatePageClient({
                   transition={{ delay: i * 0.05 }}
                   className="flex gap-4 py-5"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-black text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-black text-on-surface">
                     {c.commenter_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -442,7 +442,7 @@ export function CertificatePageClient({
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:opacity-60"
+                      className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-on-surface shadow-sm transition disabled:opacity-60"
                       style={{ backgroundColor: branding.primary_color }}
                     >
                       <Icon name={submitting ? "hourglass_empty" : "send"} className="text-base" />

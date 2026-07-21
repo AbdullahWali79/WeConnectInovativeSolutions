@@ -33,7 +33,7 @@ export default async function TraineesPage() {
   const enrollments = (enrollmentResult.data ?? []) as Enrollment[];
 
   return (
-    <main className="min-h-screen bg-[#030B1C] text-white">
+    <main className="min-h-screen bg-[var(--wc-bg)] text-on-surface">
       <PublicHeader />
       <TraineesBoard
         initialTrainees={trainees}

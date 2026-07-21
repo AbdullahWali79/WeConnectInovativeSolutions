@@ -27,10 +27,10 @@ export function InteractiveDashboard() {
       <div className="flex min-w-0 items-center justify-between gap-3 border-b border-[#DDE6F5] pb-4">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#5B6B88]">Interactive Demo</p>
-          <h3 className="text-lg font-black text-[#062B7F]">Student Login Benefits</h3>
+          <h3 className="text-lg font-black text-[var(--wc-primary)]">Student Login Benefits</h3>
         </div>
-        <div className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#DFF3FF] px-2.5 py-1 text-[10px] font-bold text-[#062B7F] min-[380px]:px-3 min-[380px]:text-xs">
-          <span className="h-2 w-2 rounded-full bg-[#062B7F] animate-pulse" />
+        <div className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#DFF3FF] px-2.5 py-1 text-[10px] font-bold text-[var(--wc-primary)] min-[380px]:px-3 min-[380px]:text-xs">
+          <span className="h-2 w-2 rounded-full bg-[var(--wc-primary)] animate-pulse" />
           <span>Active Session</span>
         </div>
       </div>
@@ -49,11 +49,11 @@ export function InteractiveDashboard() {
                 key={benefit.title}
                 className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${
                   index === 0
-                    ? "border-[#062B7F]/30 bg-[#EEF4FF]/60"
+                    ? "border-[var(--wc-primary)]/30 bg-[#EEF4FF]/60"
                     : "border-[#DDE6F5] bg-white"
                 }`}
               >
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#062B7F] shadow-inner-light">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[var(--wc-primary)] shadow-inner-light">
                   <Icon name={benefit.icon} className="text-lg" />
                 </span>
                 <div className="min-w-0">
@@ -69,13 +69,13 @@ export function InteractiveDashboard() {
         <div className="mt-5 pt-4 border-t border-[#DDE6F5] flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <a
             href="/apply"
-            className="inline-flex w-full items-center justify-center rounded-xl bg-[#062B7F] py-2.5 text-xs font-bold text-white shadow hover:bg-[#071A3B] transition sm:w-auto px-4"
+            className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--wc-primary)] py-2.5 text-xs font-bold text-on-surface shadow hover:bg-[#071A3B] transition sm:w-auto px-4"
           >
             Apply Now
           </a>
           <a
             href="/login"
-            className="text-center text-xs font-bold text-[#062B7F] hover:underline"
+            className="text-center text-xs font-bold text-[var(--wc-primary)] hover:underline"
           >
             Login Preview
           </a>

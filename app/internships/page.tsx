@@ -2,7 +2,6 @@ import Link from "next/link";
 import { PublicHeader } from "@/components/public/public-header";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { CourseCarousel } from "@/components/public/course-carousel";
-import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { ClientsPortfolio } from "@/components/public/clients-portfolio";
 import { FAQSection } from "@/components/public/faq-section";
@@ -94,40 +93,40 @@ export default async function InternshipsPage() {
   ];
 
   return (
-    <main className="overflow-x-clip bg-[#030B1C] text-white min-h-screen relative">
+    <main className="overflow-x-clip bg-[var(--wc-bg)] text-on-surface min-h-screen relative">
       <ScrollProgress />
       <PromoPopup context="landing" />
       <PublicHeader />
 
       {/* Hero Section */}
-      <section id="overview" className="relative isolate overflow-hidden bg-[#030B1C] pt-24 pb-20 lg:pt-32 lg:pb-28 text-center">
+      <section id="overview" className="relative isolate overflow-hidden bg-[var(--wc-bg)] pt-24 pb-20 lg:pt-32 lg:pb-28 text-center">
         {/* Background glow effects */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),transparent)] pointer-events-none"></div>
         <FloatingOrbs />
-        
+
         <div className="relative z-10 mx-auto max-w-4xl px-5 md:px-margin-page">
           <FadeIn>
-            <div className="mb-6 inline-flex items-center justify-center gap-2 rounded-full border border-[#FFD24A]/30 bg-[#FFD24A]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFD24A]">
+            <div className="mb-6 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
               3-6 Month Training Pathway to Internship & Job Readiness
             </div>
 
-            <h1 className="mx-auto mt-6 max-w-4xl text-3xl font-black leading-[1.1] tracking-tight text-white sm:text-4xl md:text-5xl lg:text-[3.5rem] mb-6">
+            <h1 className="mx-auto mt-6 max-w-4xl text-3xl font-black leading-[1.1] tracking-tight text-on-surface sm:text-4xl md:text-5xl lg:text-[3.5rem] mb-6">
               Learn Tech Skills. Build Real Projects. Connect with Industry.
             </h1>
 
-            <p className="mx-auto max-w-2xl text-lg leading-relaxed text-[#91A3C7] mb-10">
+            <p className="mx-auto max-w-2xl text-lg leading-relaxed text-[var(--wc-on-surface-variant)] mb-10">
               WeConnect-Innovation bridges the gap between learning and employment through industry partnerships, mentor-guided projects, internships, and software house collaborations.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/apply" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] px-10 py-4 text-sm font-black text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)] transition-transform hover:scale-[1.02]">
+              <Link href="/apply" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] px-10 py-4 text-sm font-black text-on-primary shadow-[0_0_20px_rgba(var(--landing-accent-rgb),0.3)] transition-transform hover:scale-[1.02]">
                 Apply Now
               </Link>
-              <Link href="#courses" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-10 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 hover:border-[#FFD24A]/30">
+              <Link href="#courses" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-10 py-4 text-sm font-bold text-on-surface transition-colors hover:bg-[var(--wc-surface-low)] hover:border-[var(--wc-secondary)]/30">
                 Explore Programs
               </Link>
             </div>
-            
+
             <p className="mt-8 text-xs font-bold uppercase tracking-widest text-[#5B6B88]">
               Students, software developers, and industry partners collaborate here.
             </p>
@@ -136,13 +135,13 @@ export default async function InternshipsPage() {
       </section>
 
       {/* Stats / Trust Bar */}
-      <section className="relative overflow-hidden py-16 md:py-24 bg-[#061A3D]/40 border-y border-white/5">
-        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,210,74,0.05),transparent_50%)] pointer-events-none" />
+      <section className="relative overflow-hidden py-16 md:py-24 bg-[var(--wc-surface-lowest)]/40 border-y border-[var(--wc-outline-variant)]">
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_70%_30%,rgba(var(--landing-accent-rgb),0.05),transparent_50%)] pointer-events-none" />
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
           <FadeIn>
             <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#FFD24A] mb-2">Our Impact</p>
-              <h2 className="text-3xl md:text-4xl font-black text-white">Trusted by learners and industry partners</h2>
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)] mb-2">Our Impact</p>
+              <h2 className="text-3xl md:text-4xl font-black text-on-surface">Trusted by learners and industry partners</h2>
             </div>
           </FadeIn>
 
@@ -150,20 +149,20 @@ export default async function InternshipsPage() {
             {impactStats.map((stat) => {
               const cardContent = (
                 <>
-                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFD24A]/10 border border-[#FFD24A]/20 text-[#FFD24A] transition-all duration-300 group-hover:bg-[#FFD24A] group-hover:text-[#030B1C] group-hover:scale-110">
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--wc-secondary)]/10 border border-[var(--wc-secondary)]/20 text-[var(--wc-secondary)] transition-all duration-300 group-hover:bg-[var(--wc-secondary)] group-hover:text-on-primary group-hover:scale-110">
                     <Icon name={stat.icon} className="text-2xl" />
                   </div>
                   <div>
-                    <div className="text-4xl font-black text-white mb-2">
+                    <div className="text-4xl font-black text-on-surface mb-2">
                       <AnimatedCounter value={stat.value} suffix={stat.suffix} />
                     </div>
-                    <p className="font-bold text-[#91A3C7] mb-1">{stat.label}</p>
+                    <p className="font-bold text-[var(--wc-on-surface-variant)] mb-1">{stat.label}</p>
                     <p className="text-xs text-[#5B6B88]">{stat.description}</p>
                   </div>
                 </>
               );
 
-              const cardClassName = "group flex flex-col items-center justify-center text-center rounded-3xl border border-white/10 bg-[#061A3D]/60 p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all duration-300 hover:-translate-y-2 hover:border-[#FFD24A]/30 hover:bg-[#061A3D]/80";
+              const cardClassName = "group flex flex-col items-center justify-center text-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all duration-300 hover:-translate-y-2 hover:border-[var(--wc-secondary)]/30 hover:bg-[var(--wc-surface-lowest)]/80";
 
               return stat.href ? (
                 <StaggerItem key={stat.label}>
@@ -187,14 +186,14 @@ export default async function InternshipsPage() {
       <ClientsPortfolio />
 
       {/* Features Section */}
-      <section className="py-20 md:py-32 bg-[#030B1C]">
+      <section className="py-20 md:py-32 bg-[var(--wc-bg)]">
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page">
           <FadeIn>
             <div className="mb-16 text-center max-w-3xl mx-auto">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#91A3C7]">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">
                 <Icon name="auto_awesome" className="text-sm" /> Why Choose WeConnect-Innovation?
               </div>
-              <h2 className="text-4xl md:text-5xl font-black text-white">What Makes Us Different?</h2>
+              <h2 className="text-4xl md:text-5xl font-black text-on-surface">What Makes Us Different?</h2>
             </div>
           </FadeIn>
 
@@ -208,12 +207,12 @@ export default async function InternshipsPage() {
               ["support_agent", "Career Mentorship", "Receive guidance, interview prep, and professional growth support."],
             ].map(([icon, title, text]) => (
               <StaggerItem key={title}>
-                <div className="group h-full rounded-3xl border border-white/10 bg-[#061A3D]/60 p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all duration-500 hover:-translate-y-2 hover:border-[#FFD24A]/30 hover:bg-[#061A3D]/80 hover:shadow-[0_0_40px_rgba(255,210,74,0.15)]">
-                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-[#FFD24A] transition-all duration-300 group-hover:bg-[#FFD24A]/10 group-hover:border-[#FFD24A]/30 group-hover:scale-110">
+                <div className="group h-full rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all duration-500 hover:-translate-y-2 hover:border-[var(--wc-secondary)]/30 hover:bg-[var(--wc-surface-lowest)]/80 hover:shadow-[0_0_40px_rgba(var(--landing-accent-rgb),0.15)]">
+                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] text-[var(--wc-secondary)] transition-all duration-300 group-hover:bg-[var(--wc-secondary)]/10 group-hover:border-[var(--wc-secondary)]/30 group-hover:scale-110">
                     <Icon name={icon} className="text-3xl" />
                   </div>
-                  <h3 className="text-xl font-black text-white transition-colors group-hover:text-[#FFD24A] mb-3">{title}</h3>
-                  <p className="text-sm leading-relaxed text-[#91A3C7]">{text}</p>
+                  <h3 className="text-xl font-black text-on-surface transition-colors group-hover:text-[var(--wc-secondary)] mb-3">{title}</h3>
+                  <p className="text-sm leading-relaxed text-[var(--wc-on-surface-variant)]">{text}</p>
                 </div>
               </StaggerItem>
             ))}
@@ -222,25 +221,25 @@ export default async function InternshipsPage() {
       </section>
 
       {/* Audience Section */}
-      <section className="py-20 md:py-32 bg-[#061A3D]/30 border-t border-white/5">
+      <section className="py-20 md:py-32 bg-[var(--wc-surface-lowest)]/30 border-t border-[var(--wc-outline-variant)]">
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page">
           <FadeIn>
             <div className="mb-16 text-center max-w-3xl mx-auto">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#91A3C7]">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">
                 <Icon name="groups" className="text-sm" /> Who This Is For
               </div>
-              <h2 className="text-4xl md:text-5xl font-black text-white">Built for learners who want practical outcomes</h2>
+              <h2 className="text-4xl md:text-5xl font-black text-on-surface">Built for learners who want practical outcomes</h2>
             </div>
           </FadeIn>
 
           <div className="grid gap-6 md:grid-cols-3">
             {audienceGroups.map(([icon, title, text]) => (
-              <div key={title} className="rounded-3xl border border-white/10 bg-[#061A3D]/40 p-8 backdrop-blur-md transition-transform hover:-translate-y-1">
-                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFD24A]/10 border border-[#FFD24A]/20 text-[#FFD24A]">
+              <div key={title} className="rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/40 p-8 backdrop-blur-md transition-transform hover:-translate-y-1">
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--wc-secondary)]/10 border border-[var(--wc-secondary)]/20 text-[var(--wc-secondary)]">
                   <Icon name={icon} className="text-2xl" />
                 </div>
-                <h3 className="text-2xl font-black text-white mb-3">{title}</h3>
-                <p className="text-sm leading-relaxed text-[#91A3C7]">{text}</p>
+                <h3 className="text-2xl font-black text-on-surface mb-3">{title}</h3>
+                <p className="text-sm leading-relaxed text-[var(--wc-on-surface-variant)]">{text}</p>
               </div>
             ))}
           </div>
@@ -248,21 +247,21 @@ export default async function InternshipsPage() {
       </section>
 
       {/* Courses Section */}
-      <section id="courses" className="relative bg-[#030B1C] py-20 md:py-32 border-t border-white/5">
+      <section id="courses" className="relative bg-[var(--wc-bg)] py-20 md:py-32 border-t border-[var(--wc-outline-variant)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(6,43,127,0.3),transparent_50%)] pointer-events-none" />
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
           <FadeIn>
             <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#91A3C7]">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">
                   <Icon name="school" className="text-sm" /> Course Catalog
                 </div>
-                <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Choose your pathway</h2>
-                <p className="text-lg text-[#91A3C7]">
+                <h2 className="text-4xl md:text-5xl font-black text-on-surface mb-4">Choose your pathway</h2>
+                <p className="text-lg text-[var(--wc-on-surface-variant)]">
                   Explore active training pathways designed around practical assignments, mentor review, and portfolio-ready outcomes.
                 </p>
               </div>
-              <Link href="/courses" className="inline-flex items-center gap-2 shrink-0 rounded-xl bg-white/10 border border-white/20 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[#FFD24A] hover:border-[#FFD24A] hover:text-[#030B1C]">
+              <Link href="/courses" className="inline-flex items-center gap-2 shrink-0 rounded-xl bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] px-6 py-3 text-sm font-bold text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:border-[var(--wc-secondary)] hover:text-on-primary">
                 View All Courses <Icon name="arrow_forward" className="text-sm" />
               </Link>
             </div>
@@ -272,10 +271,10 @@ export default async function InternshipsPage() {
             <CourseCarousel courses={activeCourses} />
           ) : (
             <FadeIn>
-              <div className="rounded-3xl border border-dashed border-white/20 bg-white/5 p-12 text-center backdrop-blur-md">
-                <Icon name="school" className="mx-auto text-5xl text-[#91A3C7] mb-4" />
-                <h3 className="text-2xl font-black text-white mb-2">No active courses yet</h3>
-                <p className="text-[#91A3C7]">New training pathways will appear here as they become available.</p>
+              <div className="rounded-3xl border border-dashed border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-12 text-center backdrop-blur-md">
+                <Icon name="school" className="mx-auto text-5xl text-[var(--wc-on-surface-variant)] mb-4" />
+                <h3 className="text-2xl font-black text-on-surface mb-2">No active courses yet</h3>
+                <p className="text-[var(--wc-on-surface-variant)]">New training pathways will appear here as they become available.</p>
               </div>
             </FadeIn>
           )}
@@ -289,28 +288,28 @@ export default async function InternshipsPage() {
       <FAQSection />
 
       {/* Final CTA Section */}
-      <section className="py-20 md:py-24 bg-[#061A3D]/40 border-t border-white/5">
+      <section className="py-20 md:py-24 bg-[var(--wc-surface-lowest)]/40 border-t border-[var(--wc-outline-variant)]">
         <div className="mx-auto max-w-4xl px-5 md:px-margin-page text-center">
-          <div className="relative overflow-hidden rounded-[40px] bg-gradient-to-br from-[#061A3D] to-[#062B7F] border border-[#4379FF]/30 p-10 sm:p-16 shadow-[0_0_60px_rgba(6,43,127,0.5)]">
+          <div className="relative overflow-hidden rounded-[40px] bg-gradient-to-br from-[var(--wc-surface-lowest)] to-[var(--wc-primary)] border border-[#4379FF]/30 p-10 sm:p-16 shadow-[0_0_60px_rgba(6,43,127,0.5)]">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,210,74,0.15),transparent_50%)]"></div>
-            
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(var(--landing-accent-rgb),0.15),transparent_50%)]"></div>
+
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-5xl font-black text-white mb-6">Ready to Start Your Training Journey?</h2>
-              <p className="text-lg text-[#91A3C7] max-w-2xl mx-auto mb-10">
+              <h2 className="text-3xl md:text-5xl font-black text-on-surface mb-6">Ready to Start Your Training Journey?</h2>
+              <p className="text-lg text-[var(--wc-on-surface-variant)] max-w-2xl mx-auto mb-10">
                 Apply now and take the first step toward practical learning, mentor feedback, internship readiness, and career growth. Limited seats available for the next batch.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/apply" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] px-10 py-4 text-sm font-black text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)] transition-transform hover:scale-[1.02]">
+                <Link href="/apply" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] px-10 py-4 text-sm font-black text-on-primary shadow-[0_0_20px_rgba(var(--landing-accent-rgb),0.3)] transition-transform hover:scale-[1.02]">
                   Apply Now
                 </Link>
-                <Link href="/contact" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-10 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 hover:border-[#FFD24A]/30">
+                <Link href="/contact" className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-10 py-4 text-sm font-bold text-on-surface transition-colors hover:bg-[var(--wc-surface-low)] hover:border-[var(--wc-secondary)]/30">
                   Talk to Advisor
                 </Link>
               </div>
-              <p className="mt-8 text-xs font-bold uppercase tracking-widest text-[#FFD24A]/70">
-                Email: <a href={CONTACT_EMAIL_HREF} className="hover:text-white">{CONTACT_EMAIL}</a>
+              <p className="mt-8 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]/70">
+                Email: <a href={CONTACT_EMAIL_HREF} className="hover:text-on-surface">{CONTACT_EMAIL}</a>
               </p>
             </div>
           </div>
@@ -318,16 +317,16 @@ export default async function InternshipsPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative overflow-hidden bg-[linear-gradient(135deg,#030B1C_0%,#061A3D_100%)] pt-16 pb-8 border-t border-white/10 text-white">
+      <footer className="relative overflow-hidden bg-[linear-gradient(135deg,var(--wc-bg)_0%,var(--wc-surface-lowest)_100%)] pt-16 pb-8 border-t border-[var(--wc-outline-variant)] text-on-surface">
         <div className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
-          <div className="border-t border-white/10 pt-8">
+          <div className="border-t border-[var(--wc-outline-variant)] pt-8">
             <div className="flex flex-col gap-4 text-sm text-[#5B6B88] md:flex-row md:items-center md:justify-between font-bold">
               <p>&copy; 2026 WeConnect-Innovation Training Portal. All rights reserved.</p>
               <div className="flex flex-wrap gap-6">
-                <Link href="/privacy-policy" className="transition-colors hover:text-[#FFD24A]">Privacy Policy</Link>
-                <Link href="/terms" className="transition-colors hover:text-[#FFD24A]">Terms</Link>
-                <Link href="/apply" className="transition-colors hover:text-[#FFD24A]">Apply</Link>
-                <a href={CONTACT_EMAIL_HREF} className="transition-colors hover:text-[#FFD24A]">{CONTACT_EMAIL}</a>
+                <Link href="/privacy-policy" className="transition-colors hover:text-[var(--wc-secondary)]">Privacy Policy</Link>
+                <Link href="/terms" className="transition-colors hover:text-[var(--wc-secondary)]">Terms</Link>
+                <Link href="/apply" className="transition-colors hover:text-[var(--wc-secondary)]">Apply</Link>
+                <a href={CONTACT_EMAIL_HREF} className="transition-colors hover:text-[var(--wc-secondary)]">{CONTACT_EMAIL}</a>
               </div>
             </div>
           </div>

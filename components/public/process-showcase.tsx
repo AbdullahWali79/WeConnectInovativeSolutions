@@ -29,7 +29,7 @@ export function ProcessShowcase() {
               y: index * 30,
             }}
           >
-            <div className="absolute -left-4 top-8 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white text-[11px] font-extrabold text-white shadow-sm md:hidden" style={{ backgroundColor: feature.color }}>
+            <div className="absolute -left-4 top-8 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white text-[11px] font-extrabold text-on-surface shadow-sm md:hidden" style={{ backgroundColor: feature.color }}>
               {feature.step}
             </div>
 

@@ -11,7 +11,7 @@ import { DEFAULT_TARGET_TASKS, deriveStudentProgressStatus, getCourseSignals, ge
 const statusTone: Record<string, string> = {
   active: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
   completed: "bg-green-500/20 text-green-300 border border-green-500/30",
-  pending: "bg-[#FFD24A]/20 text-[#FFD24A] border border-[#FFD24A]/30",
+  pending: "bg-[var(--wc-secondary)]/20 text-[var(--wc-secondary)] border border-[var(--wc-secondary)]/30",
   dropped: "bg-red-500/20 text-red-300 border border-red-500/30",
 };
 
@@ -300,18 +300,18 @@ export function TraineesBoard({
             <stop offset="100%" stop-color="#0b2458"/>
           </linearGradient>
           <linearGradient id="bar" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stop-color="#FFD24A"/>
-            <stop offset="100%" stop-color="#FFA03A"/>
+            <stop offset="0%" stop-color="var(--wc-secondary)"/>
+            <stop offset="100%" stop-color="var(--wc-brand-accent)"/>
           </linearGradient>
         </defs>
         <rect width="${width}" height="${height}" rx="34" fill="url(#bg)"/>
-        <rect x="26" y="26" width="${width - 52}" height="${height - 108}" rx="30" fill="#061A3D" stroke="rgba(255,255,255,0.10)"/>
+        <rect x="26" y="26" width="${width - 52}" height="${height - 108}" rx="30" fill="var(--wc-surface-lowest)" stroke="rgba(255,255,255,0.10)"/>
         <circle cx="100" cy="104" r="34" fill="#ffffff"/>
         <text x="170" y="108" fill="#ffffff" font-family="Arial, sans-serif" font-size="34" font-weight="700">${safeName}</text>
-        <text x="170" y="150" fill="#91A3C7" font-family="Arial, sans-serif" font-size="22" font-weight="600">${safeEmail}</text>
+        <text x="170" y="150" fill="var(--wc-on-surface-variant)" font-family="Arial, sans-serif" font-size="22" font-weight="600">${safeEmail}</text>
         <text x="170" y="190" fill="#ffffff" font-family="Arial, sans-serif" font-size="22">Course: <tspan font-weight="700">${safeCourse}</tspan></text>
-        ${safeUniversity ? `<rect x="170" y="220" rx="18" ry="18" width="${Math.max(140, safeUniversity.length * 11)}" height="34" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/><text x="188" y="243" fill="#91A3C7" font-family="Arial, sans-serif" font-size="16" font-weight="700">${safeUniversity}</text>` : ""}
-        ${safeDuration ? `<rect x="${safeUniversity ? 170 + Math.max(140, safeUniversity.length * 11) + 14 : 170}" y="220" rx="18" ry="18" width="${Math.max(120, safeDuration.length * 10)}" height="34" fill="rgba(255,210,74,0.10)" stroke="rgba(255,210,74,0.20)"/><text x="${safeUniversity ? 188 + Math.max(140, safeUniversity.length * 11) + 14 : 188}" y="243" fill="#FFD24A" font-family="Arial, sans-serif" font-size="16" font-weight="700">${safeDuration}</text>` : ""}
+        ${safeUniversity ? `<rect x="170" y="220" rx="18" ry="18" width="${Math.max(140, safeUniversity.length * 11)}" height="34" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/><text x="188" y="243" fill="var(--wc-on-surface-variant)" font-family="Arial, sans-serif" font-size="16" font-weight="700">${safeUniversity}</text>` : ""}
+        ${safeDuration ? `<rect x="${safeUniversity ? 170 + Math.max(140, safeUniversity.length * 11) + 14 : 170}" y="220" rx="18" ry="18" width="${Math.max(120, safeDuration.length * 10)}" height="34" fill="rgba(var(--landing-accent-rgb),0.10)" stroke="rgba(var(--landing-accent-rgb),0.20)"/><text x="${safeUniversity ? 188 + Math.max(140, safeUniversity.length * 11) + 14 : 188}" y="243" fill="var(--wc-secondary)" font-family="Arial, sans-serif" font-size="16" font-weight="700">${safeDuration}</text>` : ""}
         <rect x="90" y="320" width="1020" height="170" rx="24" fill="rgba(0,0,0,0.18)" stroke="rgba(255,255,255,0.05)"/>
         <text x="190" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle">ASSIGNED</text>
         <text x="190" y="424" fill="#ffffff" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">${trainee.assigned_tasks}</text>
@@ -320,15 +320,15 @@ export function TraineesBoard({
         <text x="550" y="424" fill="#22c55e" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">${trainee.completed_tasks}</text>
         <line x1="760" y1="348" x2="760" y2="460" stroke="rgba(255,255,255,0.08)"/>
         <text x="930" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle">PENDING</text>
-        <text x="930" y="424" fill="#FFD24A" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">${trainee.pending_tasks}</text>
+        <text x="930" y="424" fill="var(--wc-secondary)" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">${trainee.pending_tasks}</text>
         <text x="90" y="540" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="700">Progress</text>
-        <text x="1110" y="540" fill="#FFD24A" font-family="Arial, sans-serif" font-size="22" font-weight="700" text-anchor="end">${trainee.progress_percentage}%</text>
+        <text x="1110" y="540" fill="var(--wc-secondary)" font-family="Arial, sans-serif" font-size="22" font-weight="700" text-anchor="end">${trainee.progress_percentage}%</text>
         <rect x="90" y="558" width="1020" height="18" rx="9" fill="rgba(0,0,0,0.45)"/>
         <rect x="90" y="558" width="${progressWidth}" height="18" rx="9" fill="url(#bar)"/>
         <text x="90" y="650" fill="#5B6B88" font-family="Arial, sans-serif" font-size="18" font-weight="700">Enrolled: ${formatDate(trainee.created_at)}</text>
         <rect x="26" y="${height - 72}" width="${width - 52}" height="46" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)"/>
         <text x="${width / 2}" y="${height - 43}" fill="#ffffff" font-family="Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle">We Connect Innovations Solutions · ${safeWebsite}</text>
-        <text x="${width / 2}" y="${height - 20}" fill="#91A3C7" font-family="Arial, sans-serif" font-size="14" font-weight="600" text-anchor="middle">Download generated from trainee progress card</text>
+        <text x="${width / 2}" y="${height - 20}" fill="var(--wc-on-surface-variant)" font-family="Arial, sans-serif" font-size="14" font-weight="600" text-anchor="middle">Download generated from trainee progress card</text>
       </svg>
     `;
 
@@ -344,47 +344,47 @@ export function TraineesBoard({
   }
 
   if (loading) return (
-    <div className="flex h-[60vh] w-full items-center justify-center bg-[#030B1C]">
+    <div className="flex h-[60vh] w-full items-center justify-center bg-[var(--wc-bg)]">
       <LoadingState label="Loading trainees..." />
     </div>
   );
 
   return (
-    <section className="relative overflow-hidden bg-[#030B1C] py-20 lg:py-24">
+    <section className="relative overflow-hidden bg-[var(--wc-bg)] py-20 lg:py-24">
       {/* Background radial glow */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),transparent)] pointer-events-none"></div>
 
       <div className="relative z-10 mx-auto max-w-container-max px-5 md:px-margin-page">
         <FadeIn>
           <div className="mb-12">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD24A]/30 bg-[#FFD24A]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFD24A] mb-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)] mb-4">
               <Icon name="school" className="text-sm" /> Trainees
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white leading-tight">Trainee Progress Overview</h1>
-            <p className="mt-4 max-w-3xl text-lg text-[#91A3C7]">Track trainee activity, assigned tasks, completion rates, and current status.</p>
+            <h1 className="text-4xl md:text-5xl font-black text-on-surface leading-tight">Trainee Progress Overview</h1>
+            <p className="mt-4 max-w-3xl text-lg text-[var(--wc-on-surface-variant)]">Track trainee activity, assigned tasks, completion rates, and current status.</p>
           </div>
 
-          <div className="mb-10 grid gap-4 md:grid-cols-4 bg-[#061A3D]/40 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+          <div className="mb-10 grid gap-4 md:grid-cols-4 bg-[var(--wc-surface-lowest)]/40 backdrop-blur-md p-6 rounded-3xl border border-[var(--wc-outline-variant)] shadow-[0_0_50px_rgba(0,0,0,0.5)]">
             <div className="relative md:col-span-2">
               <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#7D8BA6]" />
-              <input 
-                className="w-full rounded-xl border border-white/10 bg-black/20 pl-11 pr-4 py-3 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" 
-                value={query} 
-                onChange={(event) => setQuery(event.target.value)} 
-                placeholder="Search by name or email" 
+              <input
+                className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] pl-11 pr-4 py-3 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search by name or email"
               />
             </div>
-            <select 
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" 
-              value={courseFilter} 
+            <select
+              className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-4 py-3 text-on-surface focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
+              value={courseFilter}
               onChange={(event) => setCourseFilter(event.target.value)}
             >
               <option value="all" className="text-black">All Courses</option>
               {enrolledCourses.map((course) => <option key={course.id} value={course.id} className="text-black">{course.title}</option>)}
             </select>
-            <select 
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" 
-              value={statusFilter} 
+            <select
+              className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-4 py-3 text-on-surface focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
+              value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
               <option value="all" className="text-black">All Statuses</option>
@@ -395,22 +395,22 @@ export function TraineesBoard({
 
         {filtered.length === 0 ? (
           <FadeIn>
-            <div className="rounded-3xl border border-dashed border-white/20 bg-white/5 p-12 text-center backdrop-blur-md">
-              <Icon name="monitoring" className="mx-auto text-5xl text-[#91A3C7]" />
-              <h3 className="mt-5 text-2xl font-black text-white">No trainees found</h3>
-              <p className="mt-2 text-[#91A3C7]">Trainees matching your criteria will appear here.</p>
+            <div className="rounded-3xl border border-dashed border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-12 text-center backdrop-blur-md">
+              <Icon name="monitoring" className="mx-auto text-5xl text-[var(--wc-on-surface-variant)]" />
+              <h3 className="mt-5 text-2xl font-black text-on-surface">No trainees found</h3>
+              <p className="mt-2 text-[var(--wc-on-surface-variant)]">Trainees matching your criteria will appear here.</p>
             </div>
           </FadeIn>
         ) : (
           <StaggerContainer className="grid gap-6 lg:grid-cols-2" staggerDelay={0.05}>
             {filtered.map((trainee) => (
               <StaggerItem key={trainee.id}>
-                <article className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#061A3D]/60 p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all hover:-translate-y-1 hover:border-[#FFD24A]/30 hover:bg-[#061A3D]/80">
+                <article className="group relative overflow-hidden rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all hover:-translate-y-1 hover:border-[var(--wc-secondary)]/30 hover:bg-[var(--wc-surface-lowest)]/80">
                   <div className="mb-5 flex justify-end">
                     <button
                       type="button"
                       onClick={() => downloadTraineeCard(trainee)}
-                      className="inline-flex items-center gap-2 rounded-full border border-[#FFD24A]/30 bg-[#FFD24A]/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#FFD24A] transition hover:bg-[#FFD24A]/15"
+                      className="inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)] transition hover:bg-[var(--wc-secondary)]/15"
                     >
                       <Icon name="download" className="text-sm" />
                       Download Card
@@ -418,50 +418,50 @@ export function TraineesBoard({
                   </div>
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-2xl font-black text-white group-hover:text-[#FFD24A] transition-colors">{trainee.name}</h3>
-                      <p className="text-sm font-bold text-[#91A3C7] mb-2">{trainee.email}</p>
-                      <p className="text-sm text-[#91A3C7] mb-4">Course: <strong className="text-white">{trainee.course_id ? (courseById.get(trainee.course_id)?.title ?? "Unknown") : "Not assigned"}</strong></p>
+                      <h3 className="text-2xl font-black text-on-surface group-hover:text-[var(--wc-secondary)] transition-colors">{trainee.name}</h3>
+                      <p className="text-sm font-bold text-[var(--wc-on-surface-variant)] mb-2">{trainee.email}</p>
+                      <p className="text-sm text-[var(--wc-on-surface-variant)] mb-4">Course: <strong className="text-on-surface">{trainee.course_id ? (courseById.get(trainee.course_id)?.title ?? "Unknown") : "Not assigned"}</strong></p>
 
                       <div className="flex flex-wrap gap-2">
-                        {trainee.university ? <span className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#91A3C7]">{trainee.university}</span> : null}
-                        {trainee.training_duration ? <span className="rounded-full bg-[#FFD24A]/10 border border-[#FFD24A]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#FFD24A]">{trainee.training_duration}</span> : null}
+                        {trainee.university ? <span className="rounded-full bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">{trainee.university}</span> : null}
+                        {trainee.training_duration ? <span className="rounded-full bg-[var(--wc-secondary)]/10 border border-[var(--wc-secondary)]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)]">{trainee.training_duration}</span> : null}
                       </div>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-bold ${statusTone[trainee.displayStatus] ?? "bg-white/10 text-white border border-white/20"}`}>
+                    <span className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-bold ${statusTone[trainee.displayStatus] ?? "bg-[var(--wc-surface-low)] text-on-surface border border-[var(--wc-outline-variant)]"}`}>
                       {trainee.displayStatus}
                     </span>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-black/20 p-4 text-center border border-white/5">
+                  <div className="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-[var(--wc-surface-lowest)] p-4 text-center border border-[var(--wc-outline-variant)]">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Assigned</p>
-                      <strong className="text-xl font-black text-white">{trainee.assigned_tasks}</strong>
+                      <strong className="text-xl font-black text-on-surface">{trainee.assigned_tasks}</strong>
                     </div>
-                    <div className="border-l border-white/5">
+                    <div className="border-l border-[var(--wc-outline-variant)]">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Completed</p>
                       <strong className="text-xl font-black text-green-400">{trainee.completed_tasks}</strong>
                     </div>
-                    <div className="border-l border-white/5">
+                    <div className="border-l border-[var(--wc-outline-variant)]">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Pending</p>
-                      <strong className="text-xl font-black text-[#FFD24A]">{trainee.pending_tasks}</strong>
+                      <strong className="text-xl font-black text-[var(--wc-secondary)]">{trainee.pending_tasks}</strong>
                     </div>
                   </div>
 
                   <div className="mt-6">
-                    <div className="mb-2 flex items-center justify-between text-xs font-bold text-white">
+                    <div className="mb-2 flex items-center justify-between text-xs font-bold text-on-surface">
                       <span>Progress</span>
-                      <span className="text-[#FFD24A]">{trainee.progress_percentage}%</span>
+                      <span className="text-[var(--wc-secondary)]">{trainee.progress_percentage}%</span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-black/40 border border-white/5">
-                      <div 
-                        className="h-full rounded-full bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] shadow-[0_0_10px_rgba(255,210,74,0.5)] transition-all duration-1000 ease-out" 
-                        style={{ width: `${trainee.progress_percentage}%` }} 
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-black/40 border border-[var(--wc-outline-variant)]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] shadow-[0_0_10px_rgba(var(--landing-accent-rgb),0.5)] transition-all duration-1000 ease-out"
+                        style={{ width: `${trainee.progress_percentage}%` }}
                       />
                     </div>
                   </div>
 
                   <p className="mt-6 text-[11px] font-bold uppercase tracking-widest text-[#5B6B88]">
-                    Enrolled: <span className="text-[#91A3C7]">{formatDate(trainee.created_at)}</span>
+                    Enrolled: <span className="text-[var(--wc-on-surface-variant)]">{formatDate(trainee.created_at)}</span>
                   </p>
                 </article>
               </StaggerItem>

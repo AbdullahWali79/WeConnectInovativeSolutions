@@ -46,14 +46,14 @@ export function FAQSection() {
     <section className="relative overflow-hidden py-16 md:py-24 bg-gradient-to-b from-white to-[#F0F3FF]">
       {/* Dynamic Background Gradients */}
       <div className="absolute top-1/2 left-1/2 -z-10 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/30 blur-[120px]" />
-      
+
       <div className="homepage-wide-container">
         {/* Header */}
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <div className="wc-section-label mb-4">
             <Icon name="help" className="text-sm" /> FAQ Accordion
           </div>
-          <h2 className="text-3xl font-extrabold text-[#062B7F] sm:text-4xl">
+          <h2 className="text-3xl font-extrabold text-[var(--wc-primary)] sm:text-4xl">
             Frequently Asked Questions
           </h2>
           <p className="mt-3 text-sm text-on-surface-variant sm:text-base">
@@ -67,7 +67,7 @@ export function FAQSection() {
               placeholder="Search questions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-[#DDE6F5] bg-white px-5 py-3.5 pl-12 text-sm shadow-sm transition-all focus:border-[#062B7F] focus:outline-none focus:ring-4 focus:ring-[#062B7F]/5"
+              className="w-full rounded-2xl border border-[#DDE6F5] bg-white px-5 py-3.5 pl-12 text-sm shadow-sm transition-all focus:border-[var(--wc-primary)] focus:outline-none focus:ring-4 focus:ring-[var(--wc-primary)]/5"
             />
             <Icon
               name="search"
@@ -76,7 +76,7 @@ export function FAQSection() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-[#062B7F]"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--wc-primary)]"
               >
                 Clear
               </button>
@@ -98,8 +98,8 @@ export function FAQSection() {
                     exit={{ opacity: 0, y: -10 }}
                     className={`overflow-hidden rounded-2xl border transition-all duration-300 ${
                       isOpen
-                        ? "border-[#062B7F]/30 bg-white shadow-md ring-4 ring-[#062B7F]/5"
-                        : "border-[#DDE6F5] bg-white/70 backdrop-blur-md hover:border-[#062B7F]/20 hover:shadow-sm"
+                        ? "border-[var(--wc-primary)]/30 bg-white shadow-md ring-4 ring-[var(--wc-primary)]/5"
+                        : "border-[#DDE6F5] bg-[var(--wc-surface-low)] backdrop-blur-md hover:border-[var(--wc-primary)]/20 hover:shadow-sm"
                     }`}
                   >
                     <button
@@ -112,8 +112,8 @@ export function FAQSection() {
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform duration-300 ${
                           isOpen
-                            ? "bg-[#062B7F] text-white"
-                            : "bg-[#EEF4FF] text-[#062B7F]"
+                            ? "bg-[var(--wc-primary)] text-on-surface"
+                            : "bg-[#EEF4FF] text-[var(--wc-primary)]"
                         }`}
                       >
                         <Icon
@@ -143,7 +143,7 @@ export function FAQSection() {
                 );
               })
             ) : (
-              <div className="text-center py-10 bg-white/50 backdrop-blur-sm rounded-2xl border border-dashed border-[#DDE6F5]">
+              <div className="text-center py-10 bg-[var(--wc-surface-low)] backdrop-blur-sm rounded-2xl border border-dashed border-[#DDE6F5]">
                 <Icon name="search_off" className="text-4xl text-[#5B6B88] mb-2" />
                 <p className="text-sm font-semibold text-[#071A3B]">No questions found matching &quot;{searchQuery}&quot;</p>
               </div>

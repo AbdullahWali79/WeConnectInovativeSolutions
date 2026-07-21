@@ -31,9 +31,9 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
   return (
     <div className="relative w-full h-[550px] md:h-[600px] flex items-center justify-center mt-12 mb-8">
       {/* Left Nav Button */}
-      <button 
+      <button
         onClick={handlePrev}
-        className="absolute left-0 md:left-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all hover:bg-[#FFD24A] hover:text-[#030B1C] hover:scale-110 shadow-lg backdrop-blur-md"
+        className="absolute left-0 md:left-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
       >
         <Icon name="arrow_back" className="text-2xl" />
       </button>
@@ -41,7 +41,7 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
       <div className="relative w-full max-w-5xl h-full flex justify-center items-center perspective-1000">
         {courses.map((course, index) => {
           let diff = index - activeIndex;
-          
+
           if (diff > Math.floor(courses.length / 2)) {
             diff -= courses.length;
           } else if (diff < -Math.floor(courses.length / 2)) {
@@ -101,7 +101,7 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
           const isActive = diff === 0;
 
           return (
-            <div 
+            <div
               key={course.id}
               className="absolute w-[300px] sm:w-[350px] md:w-[380px] h-[480px] sm:h-[500px] transition-all duration-700 ease-in-out cursor-pointer [perspective:1000px]"
               style={{
@@ -116,36 +116,36 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
               }}
             >
               <article
-                className={`flex h-full w-full flex-col overflow-hidden rounded-[28px] border transition-all duration-500 bg-[#061A3D] p-6 text-left ${
-                  isActive 
-                    ? 'border-[#FFD24A]/50 shadow-[0_0_60px_rgba(255,210,74,0.2)] bg-gradient-to-br from-[#061A3D] to-[#062B7F]' 
-                    : 'border-white/10 shadow-xl'
+                className={`flex h-full w-full flex-col overflow-hidden rounded-[28px] border transition-all duration-500 bg-[var(--wc-surface-lowest)] p-6 text-left ${
+                  isActive
+                    ? 'border-[var(--wc-secondary)]/50 shadow-glow-lg bg-gradient-to-br from-[var(--wc-surface-lowest)] to-[var(--wc-primary)]'
+                    : 'border-[var(--wc-outline-variant)] shadow-xl'
                 }`}
               >
                 {/* Glow effect for active card */}
                 {isActive && (
-                  <div className="absolute -inset-px rounded-[28px] bg-gradient-to-b from-[#FFD24A]/20 to-transparent blur-sm pointer-events-none" />
+                  <div className="absolute -inset-px rounded-[28px] bg-gradient-to-b from-[var(--wc-secondary)]/20 to-transparent blur-sm pointer-events-none" />
                 )}
 
                 <div className="flex flex-1 flex-col relative z-10">
                   <div className="mb-6 flex items-start justify-between gap-2">
                     <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors duration-500 ${
-                      isActive ? 'bg-[#FFD24A] text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.4)]' : 'bg-white/10 text-white'
+                      isActive ? 'bg-[var(--wc-secondary)] text-on-primary shadow-[0_0_20px_rgba(var(--landing-accent-rgb),0.4)]' : 'bg-[var(--wc-surface-low)] text-on-surface'
                     }`}>
                       <Icon name="school" className="text-2xl" />
                     </div>
                     <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-right transition-colors duration-500 ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-[#FFD24A]/10 text-[#FFD24A]'
+                      isActive ? 'bg-[var(--wc-surface-low)] text-on-surface' : 'bg-[var(--wc-secondary)]/10 text-[var(--wc-secondary)]'
                     }`}>
                       {course.level ?? "Open"}
                     </span>
                   </div>
 
-                  <h3 className={`text-2xl font-black transition-colors duration-500 line-clamp-2 ${isActive ? 'text-white' : 'text-[#91A3C7]'}`}>
+                  <h3 className={`text-2xl font-black transition-colors duration-500 line-clamp-2 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
                     {course.title}
                   </h3>
-                  
-                  <p className="mt-4 flex-1 text-sm leading-relaxed text-[#91A3C7] line-clamp-4">
+
+                  <p className="mt-4 flex-1 text-sm leading-relaxed text-[var(--wc-on-surface-variant)] line-clamp-4">
                     {course.description ?? "A practical WeConnect-Innovation course with guided tasks and mentor review."}
                   </p>
 
@@ -153,7 +153,7 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
                     <span className="flex items-center gap-1.5">
                       <Icon name="schedule" className="text-sm" /> {course.duration ?? "Self paced"}
                     </span>
-                    <span className="flex items-center gap-1.5 text-[#FFD24A]">
+                    <span className="flex items-center gap-1.5 text-[var(--wc-secondary)]">
                       <Icon name="verified" className="text-sm" /> Certificate
                     </span>
                   </div>
@@ -162,12 +162,12 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
                     {isActive ? (
                       <Link
                         href={`/apply?course=${course.id}`}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFD24A] py-3.5 text-sm font-bold text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)] transition-transform hover:scale-[1.02]"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-secondary)] py-3.5 text-sm font-bold text-on-primary shadow-glow transition-transform hover:scale-[1.02]"
                       >
                         Apply Now <Icon name="arrow_forward" className="text-[16px]" />
                       </Link>
                     ) : (
-                      <button className="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-white/10">
+                      <button className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] py-3.5 text-sm font-bold text-on-surface transition-colors hover:bg-[var(--wc-surface-low)]">
                         View Details
                       </button>
                     )}
@@ -180,9 +180,9 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
       </div>
 
       {/* Right Nav Button */}
-      <button 
+      <button
         onClick={handleNext}
-        className="absolute right-0 md:right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all hover:bg-[#FFD24A] hover:text-[#030B1C] hover:scale-110 shadow-lg backdrop-blur-md"
+        className="absolute right-0 md:right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
       >
         <Icon name="arrow_forward" className="text-2xl" />
       </button>
@@ -193,7 +193,7 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
           <button
             key={idx}
             onClick={() => setActiveIndex(idx)}
-            className={`h-2 transition-all rounded-full ${idx === activeIndex ? 'w-8 bg-[#FFD24A]' : 'w-2 bg-white/20 hover:bg-white/50'}`}
+            className={`h-2 transition-all rounded-full ${idx === activeIndex ? 'w-8 bg-[var(--wc-secondary)]' : 'w-2 bg-[var(--wc-surface-low)] hover:bg-[var(--wc-surface-low)]'}`}
             aria-label={`Go to slide ${idx + 1}`}
           />
         ))}

@@ -79,12 +79,12 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
     <>
       <Toast toast={toast} onClear={clearToast} />
       <form onSubmit={submit} className="space-y-6">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#91A3C7]">
-          Need help? Email us at <a href={CONTACT_EMAIL_HREF} className="font-bold text-white underline underline-offset-2">{CONTACT_EMAIL}</a>
+        <div className="rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-4 text-sm text-[var(--wc-on-surface-variant)]">
+          Need help? Email us at <a href={CONTACT_EMAIL_HREF} className="font-bold text-on-surface underline underline-offset-2">{CONTACT_EMAIL}</a>
         </div>
         <div>
-          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Selected Course</label>
-          <select value={form.course_id} onChange={(event) => updateField("course_id", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" required>
+          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Selected Course</label>
+          <select value={form.course_id} onChange={(event) => updateField("course_id", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" required>
             <option value="" disabled className="text-gray-500">
               Choose a course
             </option>
@@ -94,44 +94,44 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
               </option>
             ))}
           </select>
-          {selectedCourse?.description ? <p className="mt-2 text-sm text-[#91A3C7]">{selectedCourse.description}</p> : null}
+          {selectedCourse?.description ? <p className="mt-2 text-sm text-[var(--wc-on-surface-variant)]">{selectedCourse.description}</p> : null}
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Full Name</span>
-            <input value={form.full_name} onChange={(event) => updateField("full_name", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" placeholder="Your full name" required />
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Full Name</span>
+            <input value={form.full_name} onChange={(event) => updateField("full_name", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" placeholder="Your full name" required />
           </label>
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Email</span>
-            <input value={form.email} onChange={(event) => updateField("email", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" placeholder="you@example.com" type="email" required />
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Email</span>
+            <input value={form.email} onChange={(event) => updateField("email", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" placeholder="you@example.com" type="email" required />
           </label>
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Phone / WhatsApp</span>
-            <input value={form.phone} onChange={(event) => updateField("phone", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" placeholder="+92 300 0000000" required />
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Phone / WhatsApp</span>
+            <input value={form.phone} onChange={(event) => updateField("phone", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" placeholder="+92 300 0000000" required />
           </label>
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Message</span>
-            <input value={form.message} onChange={(event) => updateField("message", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" placeholder="Tell us your goal" />
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Message</span>
+            <input value={form.message} onChange={(event) => updateField("message", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" placeholder="Tell us your goal" />
           </label>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2 rounded-2xl border border-white/5 bg-white/5 p-5">
+        <div className="grid gap-5 md:grid-cols-2 rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-5">
           <div className="md:col-span-2">
-            <p className="text-sm font-bold text-[#FFD24A]">Set up your login password</p>
-            <p className="mt-1 text-xs text-[#91A3C7]">You will use this password to log in after admin approves your application.</p>
+            <p className="text-sm font-bold text-[var(--wc-secondary)]">Set up your login password</p>
+            <p className="mt-1 text-xs text-[var(--wc-on-surface-variant)]">You will use this password to log in after admin approves your application.</p>
           </div>
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Password</span>
-            <input value={form.password} onChange={(event) => updateField("password", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" type="password" minLength={6} placeholder="••••••••" required />
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Password</span>
+            <input value={form.password} onChange={(event) => updateField("password", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" type="password" minLength={6} placeholder="••••••••" required />
           </label>
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#91A3C7]">Confirm Password</span>
-            <input value={form.confirm_password} onChange={(event) => updateField("confirm_password", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder-[#5B6B88] focus:border-[#FFD24A] focus:outline-none focus:ring-1 focus:ring-[#FFD24A] transition-all" type="password" minLength={6} placeholder="••••••••" required />
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Confirm Password</span>
+            <input value={form.confirm_password} onChange={(event) => updateField("confirm_password", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" type="password" minLength={6} placeholder="••••••••" required />
           </label>
         </div>
 
-        <button disabled={loading || courses.length === 0} className="w-full rounded-xl bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] py-4 text-sm font-black text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(255,210,74,0.5)] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100">
+        <button disabled={loading || courses.length === 0} className="w-full rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] py-4 text-sm font-black text-on-primary shadow-glow transition-all hover:scale-[1.02] hover:shadow-glow-lg disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100">
           {loading ? "SUBMITTING..." : "SEND APPLICATION INTEREST"}
         </button>
       </form>

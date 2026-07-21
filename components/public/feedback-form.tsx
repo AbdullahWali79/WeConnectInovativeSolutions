@@ -172,7 +172,7 @@ export function FeedbackForm() {
                   type="button"
                   onClick={() => updateField("rating", rating)}
                   className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${
-                    form.rating >= rating ? "border-[#FFD24A] bg-[#FFD24A]/10 text-[#D98700]" : "border-outline-variant bg-white text-on-surface-variant"
+                    form.rating >= rating ? "border-[var(--wc-secondary)] bg-[var(--wc-secondary)]/10 text-[#D98700]" : "border-outline-variant bg-white text-on-surface-variant"
                   }`}
                   aria-label={`${rating} stars`}
                 >
