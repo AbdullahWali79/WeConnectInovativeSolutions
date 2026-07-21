@@ -141,7 +141,7 @@ export function Chatbot() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsOpen(true)}
-            className="public-chatbot-button fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] text-[#030B1C] shadow-[0_0_30px_rgba(255,210,74,0.4)] transition-all"
+            className="public-chatbot-button fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full text-on-primary transition-all"
           >
             <Icon name="chat" className="text-3xl" />
           </motion.button>

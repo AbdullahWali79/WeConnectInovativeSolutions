@@ -74,6 +74,42 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+:root {
+  --landing-hero-panel: rgba(255, 255, 255, 0.04);
+}
+
+html[data-branding-scope="landing"][data-landing-palette="logo"] {
+  --landing-hero-panel: rgba(255, 255, 255, 0.82);
+}
+
+.landing-hero-backdrop {
+  background: radial-gradient(ellipse 80% 80% at 50% -20%, color-mix(in srgb, var(--wc-primary) 34%, transparent), var(--wc-bg));
+}
+
+.landing-hero-title {
+  color: var(--wc-on-bg);
+  text-shadow: 0 6px 24px color-mix(in srgb, var(--wc-primary) 18%, transparent);
+}
+
+.landing-hero-secondary {
+  border-color: color-mix(in srgb, var(--wc-primary) 24%, transparent);
+  background: color-mix(in srgb, var(--wc-surface-lowest) 72%, transparent);
+  color: var(--wc-primary);
+}
+
+.landing-hero-secondary:hover {
+  background: var(--wc-surface-lowest);
+}
+
+.landing-hero-features {
+  border-color: color-mix(in srgb, var(--wc-primary) 12%, transparent);
+  background: color-mix(in srgb, var(--wc-surface-lowest) 68%, transparent);
+}
+
+.landing-hero-feature {
+  color: var(--wc-on-surface-variant);
+}
+
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined";
   font-weight: normal;
@@ -494,6 +530,27 @@ body {
     transition: min-width 0.24s ease;
   }
 
+  .public-header-palette {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--wc-secondary) 32%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--wc-secondary) 10%, transparent);
+    color: var(--wc-secondary);
+    font-size: 12px;
+    font-weight: 900;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .public-header-palette:hover {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--wc-secondary) 18%, transparent);
+  }
+
   .public-header.is-scrolled .public-header-actions {
     min-width: 192px;
   }
@@ -547,7 +604,7 @@ body {
     font-size: 14px;
     font-weight: 900;
     text-decoration: none;
-    box-shadow: 0 10px 20px rgba(255, 210, 74, 0.2);
+    box-shadow: 0 10px 20px color-mix(in srgb, var(--wc-secondary) 20%, transparent);
     transition: all 0.22s ease;
   }
 
@@ -560,7 +617,7 @@ body {
   .public-header-cta:hover {
     transform: translateY(-2px);
     background: color-mix(in srgb, var(--wc-secondary) 84%, black);
-    box-shadow: 0 14px 28px rgba(255, 210, 74, 0.35);
+    box-shadow: 0 14px 28px color-mix(in srgb, var(--wc-secondary) 35%, transparent);
   }
 
   .public-header.is-scrolled .public-header-cta:hover {
@@ -752,6 +809,20 @@ body {
     margin-top: 14px;
     padding-top: 14px;
     border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .public-mobile-palette {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid color-mix(in srgb, var(--wc-secondary) 28%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--wc-secondary) 10%, transparent);
+    color: var(--wc-primary);
+    font-size: 13px;
+    font-weight: 900;
   }
 
   .public-mobile-login,
@@ -1123,11 +1194,16 @@ body {
     align-items: center;
     justify-content: center;
     padding: 0.34rem 0.5rem;
-    border: 1px solid rgba(255, 210, 74, 0.35);
+    border: 1px solid color-mix(in srgb, var(--wc-secondary) 35%, transparent);
     border-radius: 999px;
-    color: #ffe27a;
-    background: rgba(255, 210, 74, 0.1);
-    box-shadow: 0 0 18px rgba(255, 210, 74, 0.08);
+    color: var(--wc-secondary);
+    background: color-mix(in srgb, var(--wc-secondary) 10%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--wc-secondary) 8%, transparent);
+  }
+
+  .public-chatbot-button {
+    background: linear-gradient(135deg, var(--wc-primary), var(--wc-secondary));
+    box-shadow: 0 0 30px color-mix(in srgb, var(--wc-secondary) 36%, transparent);
   }
 
   @media (prefers-reduced-motion: reduce) {

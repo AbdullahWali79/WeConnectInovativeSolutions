@@ -37,7 +37,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
   if (!products || products.length === 0) return null;
 
   return (
-    <div className="w-full bg-[#030B1C] py-20 relative overflow-hidden">
+    <div className="w-full bg-[var(--wc-surface-low)] py-20 relative overflow-hidden">
       {/* Background radial glow */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_0%,rgba(6,43,127,0.3),transparent)] pointer-events-none"></div>
       
@@ -45,16 +45,16 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
       <div className="absolute inset-0 z-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
 
       <div className="homepage-wide-container mb-12 text-center relative z-10 px-5 md:px-margin-page mx-auto max-w-container-max">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD24A]/30 bg-[#FFD24A]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFD24A] mb-4">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--wc-secondary)_30%,transparent)] bg-[color-mix(in_srgb,var(--wc-secondary)_10%,transparent)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
           <Icon name="rocket_launch" className="text-sm" /> Innovation Showcase
         </div>
-        <h2 className="flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-white md:text-5xl">
+        <h2 className="flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-on-surface md:text-5xl">
           <span>Featured Digital Products</span>
-          <span className="inline-flex min-w-[3.25rem] items-center justify-center rounded-full border border-[#FFD24A]/30 bg-[#FFD24A]/10 px-3 py-1 text-xl font-black text-[#FFD24A] tabular-nums md:text-2xl">
+          <span className="inline-flex min-w-[3.25rem] items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wc-secondary)_30%,transparent)] bg-[color-mix(in_srgb,var(--wc-secondary)_10%,transparent)] px-3 py-1 text-xl font-black text-[var(--wc-secondary)] tabular-nums md:text-2xl">
             <AnimatedCounter value={totalCount ?? products.length} />
           </span>
         </h2>
-        <p className="mt-4 max-w-2xl mx-auto text-lg leading-relaxed text-[#91A3C7]">
+        <p className="mt-4 max-w-2xl mx-auto text-lg leading-relaxed text-on-surface-variant">
           Explore tools, templates, and projects developed by our talented community and mentors.
         </p>
       </div>
@@ -153,7 +153,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
                 }}
                 onClick={() => setActiveIndex(index)}
               >
-                <article className={`flex h-full flex-col overflow-hidden rounded-3xl border transition-all duration-500 ${isActive ? 'border-[#FFD24A]/50 bg-[#061A3D] shadow-[0_0_60px_rgba(255,210,74,0.2)]' : 'border-white/10 bg-[#061A3D]/80 backdrop-blur-xl shadow-xl'}`}>
+                <article className={`flex h-full flex-col overflow-hidden rounded-3xl border bg-[var(--wc-surface-lowest)] transition-all duration-500 ${isActive ? 'border-[var(--wc-secondary)] shadow-glow-lg' : 'border-[var(--wc-outline-variant)] opacity-90 shadow-xl'}`}>
                   <div className="relative h-[220px] w-full shrink-0 overflow-hidden bg-white/5">
                     {(product.image_cdn_url ?? product.image_url) ? (
                       <Image 
@@ -173,17 +173,17 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
                     <div className="absolute inset-0 bg-gradient-to-t from-[#061A3D] to-transparent opacity-80" />
                     
                     <div className="absolute left-4 bottom-4 flex gap-2 flex-wrap">
-                      <span className="rounded-full border border-white/20 bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#FFD24A] backdrop-blur-md">
+                      <span className="rounded-full border border-white/20 bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)] backdrop-blur-md">
                         {product.category}
                       </span>
                     </div>
                   </div>
                   
-                  <div className="flex flex-1 flex-col p-6 relative z-10 bg-[#061A3D]">
-                    <h3 className={`mb-3 text-2xl font-black line-clamp-2 transition-colors ${isActive ? 'text-white' : 'text-[#91A3C7]'}`}>
+                  <div className="relative z-10 flex flex-1 flex-col bg-[var(--wc-surface-lowest)] p-6">
+                    <h3 className="mb-3 line-clamp-2 text-2xl font-black text-on-surface transition-colors">
                       {product.name}
                     </h3>
-                    <p className="mb-6 line-clamp-3 text-sm leading-relaxed text-[#91A3C7] flex-1">
+                    <p className="mb-6 line-clamp-3 flex-1 text-sm leading-relaxed text-on-surface-variant">
                       {product.short_description || product.full_description || "No description available."}
                     </p>
                     
@@ -191,7 +191,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
                       <Link 
                         href="/products" 
                         onClick={(e) => { if(!isActive) e.preventDefault(); }}
-                        className={`w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-black transition-all ${isActive ? 'bg-gradient-to-r from-[#FFD24A] to-[#FFA03A] text-[#030B1C] shadow-[0_0_20px_rgba(255,210,74,0.3)] hover:scale-[1.02]' : 'border border-white/20 text-white hover:bg-white/5'}`}
+                        className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 text-sm font-black transition-all ${isActive ? 'bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] text-on-primary shadow-glow hover:scale-[1.02]' : 'border border-[var(--wc-outline-variant)] text-[var(--wc-primary)] hover:bg-[var(--wc-surface-low)]'}`}
                       >
                         <Icon name="visibility" className="text-lg" /> VIEW DETAILS
                       </Link>
@@ -219,7 +219,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
           <button
             key={idx}
             onClick={() => setActiveIndex(idx)}
-            className={`h-2 transition-all rounded-full ${idx === activeIndex ? 'w-8 bg-[#FFD24A]' : 'w-2 bg-white/20 hover:bg-white/50'}`}
+            className={`h-2 rounded-full transition-all ${idx === activeIndex ? 'w-8 bg-[var(--wc-secondary)]' : 'w-2 bg-[var(--wc-outline-variant)] hover:bg-[var(--wc-outline)]'}`}
             aria-label={`Go to slide ${idx + 1}`}
           />
         ))}

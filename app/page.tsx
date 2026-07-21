@@ -7,13 +7,10 @@ import { TypingText } from "@/components/public/typing-text";
 import { ProcessShowcase } from "@/components/public/process-showcase";
 import { FadeIn, ScrollProgress } from "@/components/public/animations";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
-import { loadBrandingSettingsMap } from "@/lib/branding-settings";
 
 export const revalidate = 300;
 
 export default async function LandingPage() {
-  const branding = await loadBrandingSettingsMap().catch(() => null);
-  const landing = branding?.landing;
   const supabase = createSupabasePublicClient();
   const [{ data: featuredProducts }, { count: totalProductsCount }] = await Promise.all([
     supabase
@@ -36,26 +33,26 @@ export default async function LandingPage() {
       <section
         className="relative isolate overflow-hidden pb-24 pt-24 sm:pb-28 sm:pt-28"
         style={{
-          backgroundColor: landing?.background_color ?? "var(--wc-bg)",
+          backgroundColor: "var(--wc-bg)",
           color: "var(--wc-on-bg)",
         }}
       >
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),rgba(3,11,28,1))]"></div>
+        <div className="landing-hero-backdrop absolute inset-0 -z-10"></div>
         <div
           className="absolute right-0 top-0 -z-10 h-[800px] w-[800px] rounded-full blur-[120px] translate-x-1/3 -translate-y-1/3"
           style={{
-            background: `linear-gradient(135deg, color-mix(in srgb, ${landing?.primary_color ?? "var(--wc-primary)"} 20%, transparent), color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 10%, transparent))`,
+            background: "linear-gradient(135deg, color-mix(in srgb, var(--wc-primary) 20%, transparent), color-mix(in srgb, var(--wc-secondary) 10%, transparent))",
           }}
         />
         
         <div className="homepage-wide-container relative z-10 text-center">
           <FadeIn>
             <div
-              className="mb-6 mx-auto inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-[0.2em] uppercase shadow-[0_0_30px_rgba(255,210,74,0.08)] transition-transform duration-300 hover:scale-[1.03]"
+              className="mb-6 mx-auto inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-[0.2em] uppercase transition-transform duration-300 hover:scale-[1.03]"
               style={{
-                border: `1px solid color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 34%, transparent)`,
-                backgroundColor: `color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 12%, transparent)`,
-                color: landing?.secondary_color ?? "var(--wc-secondary)",
+                border: "1px solid color-mix(in srgb, var(--wc-secondary) 34%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--wc-secondary) 12%, transparent)",
+                color: "var(--wc-secondary)",
               }}
             >
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
@@ -67,22 +64,22 @@ export default async function LandingPage() {
               </span>
             </div>
             <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.5vw,4.35rem)] font-black leading-[0.96] tracking-[-0.055em]">
-              <span className="block text-white/95 drop-shadow-[0_6px_24px_rgba(0,0,0,0.25)]">Digital Products Built to</span>
+              <span className="landing-hero-title block">Digital Products Built to</span>
               <span className="relative mt-4 inline-flex flex-wrap items-center justify-center gap-4 leading-none">
                 <span
                   className="absolute inset-x-[-1.25rem] top-1/2 -z-10 h-[72%] -translate-y-1/2 rounded-full blur-3xl"
                   style={{
-                    background: `radial-gradient(circle, color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 24%, transparent) 0%, transparent 72%)`,
+                    background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary) 24%, transparent) 0%, transparent 72%)",
                   }}
                 />
                 <span
                   className="inline-flex h-[4.25rem] items-center justify-center rounded-[1.75rem] border px-5 py-0 leading-[0] shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-md sm:h-[4.75rem]"
                   style={{
-                    borderColor: `color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 26%, transparent)`,
-                    backgroundColor: "rgba(255,255,255,0.03)",
+                    borderColor: "color-mix(in srgb, var(--wc-secondary) 26%, transparent)",
+                    backgroundColor: "var(--landing-hero-panel)",
                   }}
                 >
-                <span className="inline-flex h-full items-center justify-center bg-clip-text leading-[0] text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${landing?.secondary_color ?? "var(--wc-secondary)"}, ${landing?.accent_color ?? "#ffa03a"})` }}>
+                <span className="inline-flex h-full items-center justify-center bg-clip-text leading-[0] text-transparent" style={{ backgroundImage: "linear-gradient(90deg, var(--wc-primary), var(--wc-secondary))" }}>
                     <TypingText
                       text={["Grow Your Business.", "Scale With Confidence.", "Convert More Customers.", "Automate Your Operations.", "Move Your Brand Forward."]}
                       speed={72}
@@ -102,24 +99,24 @@ export default async function LandingPage() {
                 href="/contact"
                 className="inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 text-base font-bold transition-all hover:scale-105"
                 style={{
-                  backgroundColor: landing?.secondary_color ?? "var(--wc-secondary)",
-                  color: "var(--wc-on-secondary)",
-                  boxShadow: `0 0 40px color-mix(in srgb, ${landing?.secondary_color ?? "var(--wc-secondary)"} 30%, transparent)`,
+                  backgroundColor: "var(--wc-primary)",
+                  color: "var(--wc-on-primary)",
+                  boxShadow: "0 0 40px color-mix(in srgb, var(--wc-secondary) 30%, transparent)",
                 }}
               >
                 Discuss Your Project <Icon name="arrow_forward" className="text-xl" />
               </Link>
-              <Link href="#portfolio" className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-8 py-4 text-base font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/10">
+              <Link href="#portfolio" className="landing-hero-secondary inline-flex items-center justify-center rounded-xl border px-8 py-4 text-base font-bold backdrop-blur-sm transition-colors">
                 Explore Our Work
               </Link>
             </div>
-            <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left backdrop-blur-sm sm:grid-cols-3 sm:text-center">
+            <div className="landing-hero-features mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border p-3 text-left backdrop-blur-sm sm:grid-cols-3 sm:text-center">
               {[
                 ["lightbulb", "Strategy-led solutions"],
                 ["rocket_launch", "Built to scale cleanly"],
                 ["handshake", "Client-first delivery"],
               ].map(([icon, label]) => (
-                <div key={label} className="flex items-center justify-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold text-white/75">
+                <div key={label} className="landing-hero-feature flex items-center justify-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold">
                   <Icon name={icon} className="text-[19px] text-[var(--wc-secondary)]" />
                   <span>{label}</span>
                 </div>
@@ -130,7 +127,7 @@ export default async function LandingPage() {
       </section>
 
       {/* How To Get Products Built (Process) */}
-      <section className="overflow-hidden bg-white py-14 sm:py-16 lg:py-20">
+      <section className="overflow-hidden bg-[var(--wc-surface-lowest)] py-14 sm:py-16 lg:py-20">
         <div className="homepage-wide-container">
           <div className="mx-auto mb-9 max-w-3xl text-center sm:mb-10">
             <FadeIn>
@@ -158,7 +155,7 @@ export default async function LandingPage() {
       </div>
 
       {/* Final Agency CTA */}
-      <section className="relative overflow-hidden py-24 text-center" style={{ backgroundColor: landing?.surface_color ?? "var(--wc-surface)", color: "var(--wc-on-surface)" }}>
+      <section className="relative overflow-hidden py-24 text-center" style={{ backgroundColor: "var(--wc-surface)", color: "var(--wc-on-surface)" }}>
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.8)_0%,transparent_100%)] bg-[length:24px_24px] [background-image:radial-gradient(#ffffff_1px,transparent_1px)]"></div>
         <div className="homepage-wide-container relative z-10">
           <FadeIn>
@@ -174,7 +171,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Standard Footer for Agency */}
-      <footer className="border-t py-12" style={{ backgroundColor: landing?.background_color ?? "var(--wc-bg)", color: "var(--wc-on-surface-variant)", borderColor: "color-mix(in srgb, var(--wc-on-bg) 5%, transparent)" }}>
+      <footer className="border-t py-12" style={{ backgroundColor: "var(--wc-bg)", color: "var(--wc-on-surface-variant)", borderColor: "color-mix(in srgb, var(--wc-on-bg) 5%, transparent)" }}>
         <div className="homepage-wide-container flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-xl font-bold" style={{ color: "var(--wc-on-bg)" }}>We Connect Innovative Solutions Pvt. Ltd.</div>
           <div className="flex gap-6 text-sm">

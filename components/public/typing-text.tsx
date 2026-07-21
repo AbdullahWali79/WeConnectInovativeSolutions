@@ -8,7 +8,7 @@ export function TypingText({
   speed = 90,
   startDelay = 200,
   holdDelay = 3000,
-  cursorClassName = "bg-[#FFD24A]",
+  cursorClassName = "bg-[var(--wc-secondary)]",
 }: {
   text: string | string[];
   className?: string;
