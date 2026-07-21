@@ -1,12 +1,11 @@
-import { unstable_cache } from "next/cache";
 import { ProductsCatalog, fallbackProducts } from "@/components/public/products-catalog";
 import { PublicHeader } from "@/components/public/public-header";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-const getProducts = unstable_cache(
-  async () => {
+async function getProducts() {
     try {
       const supabase = createSupabasePublicClient();
       const { data, error } = await supabase
@@ -23,10 +22,7 @@ const getProducts = unstable_cache(
       console.error("Error fetching products:", err);
       return fallbackProducts;
     }
-  },
-  ["public-products"],
-  { revalidate },
-);
+}
 
 export default async function ProductsPage() {
   const products = await getProducts();
