@@ -436,6 +436,17 @@ export function FeeManagement() {
         (statusFilter === "blocked" && (student?.is_fee_blocked || fee.blocked));
       const queryMatch = !search || text.includes(search);
       return statusMatch && queryMatch;
+    }).sort((a, b) => {
+      const aStudent = studentById.get(a.student_id)?.full_name ?? "";
+      const bStudent = studentById.get(b.student_id)?.full_name ?? "";
+      const studentOrder = aStudent.localeCompare(bStudent);
+      if (studentOrder !== 0) return studentOrder;
+
+      const aCourse = courseById.get(a.course_id)?.title ?? "";
+      const bCourse = courseById.get(b.course_id)?.title ?? "";
+      const courseOrder = aCourse.localeCompare(bCourse);
+      if (courseOrder !== 0) return courseOrder;
+      return b.month_key.localeCompare(a.month_key);
     });
   }, [courseById, fees, query, statusFilter, studentById]);
 
@@ -949,8 +960,6 @@ export function FeeManagement() {
                     const blocked = Boolean(student?.is_fee_blocked || fee.blocked);
                     const isExpanded = expandedFeeId === fee.id;
                     const statusTone = blocked ? "blocked" : fee.status;
-                    const cycleEnd = feeCycleEndDate(fee);
-                    const monthComplete = Boolean(cycleEnd && cycleEnd.getTime() <= localDateOnly(new Date()).getTime());
                     const courseHistory = fees
                       .filter((row) => row.student_id === fee.student_id && row.course_id === fee.course_id)
                       .sort((a, b) => a.month_key.localeCompare(b.month_key));
@@ -958,11 +967,14 @@ export function FeeManagement() {
                     const totalPaid = courseHistory.reduce((sum, row) => sum + Number(row.amount_paid ?? 0), 0);
                     const previousFee = historyIndex > 0 ? courseHistory[historyIndex - 1] : null;
                     const nextFee = historyIndex >= 0 && historyIndex < courseHistory.length - 1 ? courseHistory[historyIndex + 1] : null;
+                    const cycleEnd = feeCycleEndDate(fee);
+                    const cycleEnded = Boolean(cycleEnd && cycleEnd.getTime() <= localDateOnly(new Date()).getTime());
+                    const needsNextCycle = cycleEnded && !nextFee;
 
                     return (
                       <Fragment key={fee.id}>
                         <tr key={fee.id} className={`border-b align-top transition ${
-                          monthComplete
+                          needsNextCycle
                             ? "border-red-200 bg-red-50/80 hover:bg-red-100/80"
                             : "border-outline-variant/60 hover:bg-surface-container/40"
                         }`}>
@@ -981,9 +993,9 @@ export function FeeManagement() {
                               <span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wider ring-1 ${getFeeStatusTone(statusTone)}`}>
                                 {blocked ? "Blocked" : getFeeStatusLabel(fee.status)}
                               </span>
-                              {monthComplete ? (
+                              {needsNextCycle ? (
                                 <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-white">
-                                  Month complete
+                                  Next cycle required
                                 </span>
                               ) : null}
                             </div>
@@ -1024,7 +1036,7 @@ export function FeeManagement() {
                         </td>
                       </tr>
                         {isExpanded ? (
-                          <tr className={monthComplete ? "bg-red-50/60" : "bg-surface-container/30"}>
+                          <tr className={needsNextCycle ? "bg-red-50/60" : "bg-surface-container/30"}>
                             <td colSpan={6} className="px-4 pb-4">
                               <div className="grid gap-3 rounded-2xl border border-outline-variant/70 bg-surface p-4 lg:grid-cols-4">
                                 <div className="rounded-xl bg-primary-container/50 p-3 lg:col-span-4">
@@ -1033,6 +1045,27 @@ export function FeeManagement() {
                                     <div><p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Previous cycle</p><p className="mt-1 font-bold text-on-surface">{previousFee ? `${previousFee.month_key} · Paid ${previousFee.amount_paid}` : "First saved cycle"}</p></div>
                                     <div><p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Next saved cycle</p><p className="mt-1 font-bold text-on-surface">{nextFee ? `${nextFee.month_key} · Due ${nextFee.amount_due}` : `${getNextMonthKey(fee.month_key)} · Not added`}</p></div>
                                     <div><p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Course fee history</p><p className="mt-1 font-black text-primary">{courseHistory.length} records · Paid {totalPaid}</p></div>
+                                  </div>
+                                </div>
+                                <div className="lg:col-span-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Monthly records</p>
+                                  <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                                    {[...courseHistory].reverse().map((historyFee) => (
+                                      <button
+                                        key={historyFee.id}
+                                        type="button"
+                                        onClick={() => setExpandedFeeId(historyFee.id)}
+                                        className={`min-w-40 rounded-lg border px-3 py-2 text-left transition ${
+                                          historyFee.id === fee.id
+                                            ? "border-primary bg-primary text-on-primary"
+                                            : "border-outline-variant bg-surface hover:border-primary"
+                                        }`}
+                                      >
+                                        <span className="block text-xs font-black">{historyFee.month_key}</span>
+                                        <span className="mt-1 block text-xs">Paid {historyFee.amount_paid} / Due {historyFee.amount_due}</span>
+                                        <span className="mt-1 block text-[10px] font-bold uppercase">{getFeeStatusLabel(historyFee.status)}{historyFee.id === fee.id ? " · Editing" : " · Edit"}</span>
+                                      </button>
+                                    ))}
                                   </div>
                                 </div>
                                 <input className="wc-input min-h-12" type="number" min="0" value={form?.amount_due ?? fee.amount_due ?? 0} onChange={(event) => updateForm(fee.id, { amount_due: event.target.value })} placeholder="Due amount" />
