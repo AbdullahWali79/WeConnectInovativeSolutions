@@ -14,15 +14,21 @@ const emptyForm = { title: "", category: "", short_description: "", full_descrip
 export function StudentProjectsBoard() {
   const supabase = createSupabaseBrowserClient();
   const [rows, setRows] = useState<StudentProject[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.from("student_projects").select("*").order("created_at", { ascending: false });
+    const [projectsResult, productsResult] = await Promise.all([
+      supabase.from("student_projects").select("*").order("created_at", { ascending: false }),
+      supabase.from("products").select("category").eq("status", "active").order("category"),
+    ]);
+    const error = projectsResult.error ?? productsResult.error;
     if (error) setToast({ type: "error", message: error.message });
-    setRows((data ?? []) as StudentProject[]);
+    setRows((projectsResult.data ?? []) as StudentProject[]);
+    setCategories(Array.from(new Set((productsResult.data ?? []).map((product) => product.category.trim()).filter(Boolean))));
     setLoading(false);
   }, [supabase]);
 
@@ -59,7 +65,21 @@ export function StudentProjectsBoard() {
     <PageHeader eyebrow="Portfolio" title="My Projects" description="Submit completed projects with GitHub, live demo, and public Google Drive screenshots." />
     <form onSubmit={submit} className="wc-card grid gap-4 p-5 md:grid-cols-2">
       <input className="wc-input" required placeholder="Project title" value={form.title} onChange={(e) => setForm({...form,title:e.target.value})} />
-      <input className="wc-input" required placeholder="Category (Web App, Mobile App...)" value={form.category} onChange={(e) => setForm({...form,category:e.target.value})} />
+      <div>
+        <label className="wc-label" htmlFor="project-category">Category</label>
+        <select
+          id="project-category"
+          className="wc-input mt-2"
+          required
+          value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value })}
+          disabled={!categories.length}
+        >
+          <option value="">{categories.length ? "Select a product category" : "No product categories available"}</option>
+          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+        </select>
+        {!categories.length ? <p className="mt-2 text-xs font-semibold text-error">Ask admin to add an active product category first.</p> : null}
+      </div>
       <input className="wc-input md:col-span-2" required type="url" placeholder="GitHub project URL" value={form.github_url} onChange={(e) => setForm({...form,github_url:e.target.value})} />
       <input className="wc-input md:col-span-2" type="url" placeholder="Live demo URL (optional)" value={form.live_url} onChange={(e) => setForm({...form,live_url:e.target.value})} />
       <input className="wc-input md:col-span-2" placeholder="Technologies, comma separated" value={form.technologies} onChange={(e) => setForm({...form,technologies:e.target.value})} />
@@ -83,7 +103,7 @@ export function StudentProjectsBoard() {
       </div>
       <button disabled={saving} className="wc-primary-btn md:col-span-2"><Icon name="send"/> {saving ? "Submitting..." : "Submit Project"}</button>
     </form>
-    <section className="wc-card overflow-hidden"><div className="border-b border-outline-variant p-4"><h2 className="text-lg font-black">Submission history</h2></div><div className="divide-y divide-outline-variant">{rows.length?rows.map(row=><article key={row.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between"><div><h3 className="font-black">{row.title}</h3><p className="text-sm text-on-surface-variant">{row.category} · {row.image_urls.length} images</p>{row.admin_feedback?<p className="mt-2 text-sm">{row.admin_feedback}</p>:null}</div><div className="flex items-center gap-2"><StatusPill value={row.status}/>{row.promoted_product_id?<span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Published as product</span>:null}</div></article>):<p className="p-6 text-sm text-on-surface-variant">No projects submitted yet.</p>}</div></section>
+    <section className="wc-card overflow-hidden"><div className="border-b border-outline-variant p-4"><h2 className="text-lg font-black">Submission history</h2></div><div className="divide-y divide-outline-variant">{rows.length?rows.map(row=><article key={row.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between"><div><h3 className="font-black">{row.title}</h3><p className="text-sm text-on-surface-variant">{row.category} &middot; {row.image_urls.length} images</p>{row.admin_feedback?<p className="mt-2 text-sm">{row.admin_feedback}</p>:null}</div><div className="flex items-center gap-2"><StatusPill value={row.status}/>{row.promoted_product_id?<span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Published as product</span>:null}</div></article>):<p className="p-6 text-sm text-on-surface-variant">No projects submitted yet.</p>}</div></section>
     <Toast toast={toast} onClear={()=>setToast(null)} />
   </div>;
 }
