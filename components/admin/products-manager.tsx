@@ -8,13 +8,11 @@ import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
-import { uploadFileToGithubCdn } from "@/lib/media/client-upload";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Product, Profile } from "@/lib/supabase/types";
 import { normalizeImageUrl } from "@/lib/image-url";
 import { formatDate } from "@/lib/utils";
-type GithubUploadResult = Awaited<ReturnType<typeof uploadFileToGithubCdn>>;
 
 
 const defaultForm = {
@@ -50,6 +48,7 @@ export function ProductsManager({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -87,6 +86,7 @@ export function ProductsManager({
       return;
     }
     setEditingId(row.id);
+    setFormOpen(true);
     setForm({
       name: row.name,
       category: row.category,
@@ -108,47 +108,15 @@ export function ProductsManager({
   function resetForm() {
     setEditingId(null);
     setForm(defaultForm);
+    setFormOpen(false);
   }
 
-  async function saveImageToEditingProduct(upload: GithubUploadResult) {
-    if (!editingId) return false;
-
-    const imageFields = {
-      image_url: upload.githubCdnUrl,
-      image_github_path: upload.githubPath,
-      image_github_url: upload.githubUrl,
-      image_cdn_url: upload.githubCdnUrl,
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error } = await supabase.from("products").update(imageFields).eq("id", editingId);
-    if (error) {
-      const migrationMissing = /image_github_path|image_github_url|image_cdn_url|column/i.test(error.message);
-      if (!migrationMissing) throw error;
-      const { error: fallbackError } = await supabase.from("products").update({ image_url: upload.githubCdnUrl, updated_at: imageFields.updated_at }).eq("id", editingId);
-      if (fallbackError) throw fallbackError;
-    }
-
-    setRows((current) => current.map((row) => row.id === editingId ? { ...row, ...imageFields } : row));
-    return true;
+  function startCreate() {
+    setEditingId(null);
+    setForm(defaultForm);
+    setFormOpen(true);
   }
 
-  async function onPickImage(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setSaving(true);
-    try {
-      const upload = await uploadFileToGithubCdn(file, "product");
-      setForm((current) => ({ ...current, image_url: upload.githubCdnUrl, image_github_path: upload.githubPath, image_github_url: upload.githubUrl, image_cdn_url: upload.githubCdnUrl }));
-      const saved = await saveImageToEditingProduct(upload);
-      setToast({ type: "success", message: saved ? "Product image uploaded and saved to this product." : "Product image uploaded. Fill the product form and click Create to save it." });
-    } catch (error) {
-      setToast({ type: "error", message: error instanceof Error ? error.message : "Product image upload failed." });
-    } finally {
-      setSaving(false);
-      event.target.value = "";
-    }
-  }
   async function saveRow(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const canSave = editingId ? canEdit : canCreate;
@@ -222,10 +190,6 @@ export function ProductsManager({
 
   if (loading) return <LoadingState label="Loading products..." />;
 
-  const productAccessMessage = canEdit || canDelete
-    ? "Use the action buttons in the table to manage products enabled for this account."
-    : "You can view products, but edit and delete actions are not enabled for this account.";
-
   return (
     <>
       <Toast toast={toast} onClear={clearToast} />
@@ -233,54 +197,13 @@ export function ProductsManager({
         eyebrow="Products"
         title="Manage products"
         description="Create and maintain digital products shown in the public Products catalog."
-        action={<Link href="/products" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Products</Link>}
+        action={<div className="flex flex-wrap gap-2">
+          {canCreate ? <button type="button" onClick={startCreate} className="wc-primary-btn text-sm"><Icon name="add" /> Add Product</button> : null}
+          <Link href="/products" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Products</Link>
+        </div>}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-        {(canCreate || editingId) ? <form onSubmit={saveRow} className="wc-card space-y-3 p-4">
-          <h2 className="text-base font-bold text-on-surface">{editingId ? "Edit Product" : "Add Product"}</h2>
-          <input className="wc-input" placeholder="Product name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
-          <input className="wc-input" list="product-category-options" placeholder="Category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} required />
-          <datalist id="product-category-options">
-            {categories.map((category) => <option key={category} value={category} />)}
-          </datalist>
-          <input className="wc-input" placeholder="Image/Banner URL or Google Drive share link" value={form.image_url} onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))} />
-          <p className="text-xs leading-5 text-on-surface-variant">Paste a normal image URL or a Google Drive share link. Drive links are converted automatically when saved.</p>
-          <input className="wc-input" type="file" accept="image/*" onChange={onPickImage} />
-          <input className="wc-input" placeholder="Short description" value={form.short_description} onChange={(event) => setForm((current) => ({ ...current, short_description: event.target.value }))} />
-          <textarea className="wc-input min-h-24" placeholder="Full description" value={form.full_description} onChange={(event) => setForm((current) => ({ ...current, full_description: event.target.value }))} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input className="wc-input" placeholder="Price / access type" value={form.price_or_access_type} onChange={(event) => setForm((current) => ({ ...current, price_or_access_type: event.target.value }))} />
-            <input className="wc-input" placeholder="Product link / download URL" value={form.product_link} onChange={(event) => setForm((current) => ({ ...current, product_link: event.target.value }))} />
-          </div>
-          <input className="wc-input" placeholder="Features (comma separated)" value={form.features} onChange={(event) => setForm((current) => ({ ...current, features: event.target.value }))} />
-          <div className="grid gap-2 sm:grid-cols-3">
-            <select className="wc-input" value={form.badge} onChange={(event) => setForm((current) => ({ ...current, badge: event.target.value }))}>
-              <option value="premium">Premium</option>
-              <option value="hot">Hot</option>
-              <option value="new">New</option>
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
-            </select>
-            <select className="wc-input" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <input className="wc-input" type="number" placeholder="Display order" value={form.display_order} onChange={(event) => setForm((current) => ({ ...current, display_order: event.target.value }))} />
-          </div>
-
-          <div className="flex gap-2">
-            <button disabled={saving} className="wc-primary-btn flex-1">{saving ? "Saving..." : editingId ? "Update" : "Create"}</button>
-            {editingId ? <button type="button" onClick={resetForm} className="wc-secondary-btn">Cancel</button> : null}
-          </div>
-        </form> : (
-          <section className="wc-card p-4">
-            <h2 className="text-base font-bold text-on-surface">{canEdit || canDelete ? "Product actions" : "Read-only product access"}</h2>
-            <p className="mt-2 text-sm leading-6 text-on-surface-variant">{productAccessMessage}</p>
-          </section>
-        )}
-
-        <section className="wc-card overflow-hidden">
+      <section className="wc-card overflow-hidden">
           <div className="grid gap-2 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-4">
             <input className="wc-input" placeholder="Search product name" value={query} onChange={(event) => setQuery(event.target.value)} />
             <select className="wc-input" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">All Categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select>
@@ -322,13 +245,38 @@ export function ProductsManager({
               </table>
             </div>
           )}
-        </section>
-      </div>
+      </section>
+
+      {formOpen ? <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) resetForm(); }}>
+        <form onSubmit={saveRow} className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-2xl">
+          <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4 sm:px-6">
+            <div>
+              <p className="wc-label">Product Catalog</p>
+              <h2 className="mt-1 text-xl font-black text-on-surface">{editingId ? "Edit Product" : "Add Product"}</h2>
+            </div>
+            <button type="button" onClick={resetForm} disabled={saving} className="grid h-10 w-10 place-items-center rounded-lg bg-surface-container text-on-surface" title="Close"><Icon name="close" /></button>
+          </div>
+
+          <div className="grid flex-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2 sm:p-6">
+            <label><span className="wc-label">Product name</span><input className="wc-input mt-2" placeholder="Product name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
+            <label><span className="wc-label">Category</span><input className="wc-input mt-2" list="product-category-options" placeholder="Category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} required /><datalist id="product-category-options">{categories.map((category) => <option key={category} value={category} />)}</datalist></label>
+            <label className="sm:col-span-2"><span className="wc-label">Image URL</span><input className="wc-input mt-2" placeholder="Image/Banner URL or Google Drive share link" value={form.image_url} onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))} /><span className="mt-2 block text-xs leading-5 text-on-surface-variant">Paste a normal image URL or a public Google Drive share link.</span></label>
+            <label className="sm:col-span-2"><span className="wc-label">Short description</span><input className="wc-input mt-2" placeholder="Short description" value={form.short_description} onChange={(event) => setForm((current) => ({ ...current, short_description: event.target.value }))} /></label>
+            <label className="sm:col-span-2"><span className="wc-label">Full description</span><textarea className="wc-input mt-2 min-h-40" placeholder="Full description" value={form.full_description} onChange={(event) => setForm((current) => ({ ...current, full_description: event.target.value }))} /><span className="mt-2 block text-xs leading-5 text-on-surface-variant">Formatting is automatic for headings, lists, and pasted tables.</span></label>
+            <label><span className="wc-label">Price / access</span><input className="wc-input mt-2" placeholder="Price / access type" value={form.price_or_access_type} onChange={(event) => setForm((current) => ({ ...current, price_or_access_type: event.target.value }))} /></label>
+            <label><span className="wc-label">Product link</span><input className="wc-input mt-2" placeholder="Product link / download URL" value={form.product_link} onChange={(event) => setForm((current) => ({ ...current, product_link: event.target.value }))} /></label>
+            <label className="sm:col-span-2"><span className="wc-label">Features</span><input className="wc-input mt-2" placeholder="Features (comma separated)" value={form.features} onChange={(event) => setForm((current) => ({ ...current, features: event.target.value }))} /></label>
+            <label><span className="wc-label">Badge</span><select className="wc-input mt-2" value={form.badge} onChange={(event) => setForm((current) => ({ ...current, badge: event.target.value }))}><option value="premium">Premium</option><option value="hot">Hot</option><option value="new">New</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
+            <label><span className="wc-label">Status</span><select className="wc-input mt-2" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+            <label><span className="wc-label">Display order</span><input className="wc-input mt-2" type="number" placeholder="Display order" value={form.display_order} onChange={(event) => setForm((current) => ({ ...current, display_order: event.target.value }))} /></label>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-outline-variant bg-surface-container-low px-5 py-4 sm:px-6">
+            <button type="button" onClick={resetForm} disabled={saving} className="wc-secondary-btn">Cancel</button>
+            <button disabled={saving} className="wc-primary-btn"><Icon name="save" /> {saving ? "Saving..." : editingId ? "Update Product" : "Create Product"}</button>
+          </div>
+        </form>
+      </div> : null}
     </>
   );
 }
-
-
-
-
-

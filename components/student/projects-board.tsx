@@ -97,7 +97,10 @@ export function StudentProjectsBoard() {
       <input className="wc-input md:col-span-2" type="url" placeholder="Live demo URL (optional)" value={form.live_url} onChange={(e) => setForm({...form,live_url:e.target.value})} />
       <input className="wc-input md:col-span-2" placeholder="Technologies, comma separated" value={form.technologies} onChange={(e) => setForm({...form,technologies:e.target.value})} />
       <input className="wc-input md:col-span-2" required placeholder="Short description" value={form.short_description} onChange={(e) => setForm({...form,short_description:e.target.value})} />
-      <textarea className="wc-input min-h-28 md:col-span-2" placeholder="Full project description" value={form.full_description} onChange={(e) => setForm({...form,full_description:e.target.value})} />
+      <div className="md:col-span-2">
+        <textarea className="wc-input min-h-36" placeholder="Full project description" value={form.full_description} onChange={(e) => setForm({...form,full_description:e.target.value})} />
+        <p className="mt-2 text-xs leading-5 text-on-surface-variant">Formatting is automatic. Paste headings, bullet or numbered lists, Markdown tables, or tab-separated tables copied from a sheet.</p>
+      </div>
       <div className="md:col-span-2 rounded-xl bg-surface-container-low p-4">
         <p className="wc-label">Google Drive screenshots</p>
         <div className="mt-3 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950">

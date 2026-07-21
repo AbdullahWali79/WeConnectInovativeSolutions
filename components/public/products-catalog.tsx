@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Icon } from "@/components/icon";
 import { normalizeImageUrl } from "@/lib/image-url";
 import type { Product } from "@/lib/supabase/types";
+import { renderMarkdownToHtml } from "@/lib/markdown";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/public/animations";
 
 const badgeTone: Record<string, string> = {
@@ -213,7 +214,7 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
 
                 <div className="mb-10">
                   <h3 className="text-xl font-black text-on-surface mb-4">Overview</h3>
-                  <p className="text-base text-[var(--wc-on-surface-variant)] leading-relaxed">{selected.full_description ?? selected.short_description ?? "No detailed overview available."}</p>
+                  <div className="product-rich-content" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(selected.full_description ?? selected.short_description ?? "No detailed overview available.") }} />
                 </div>
 
                 <div className="mb-10 grid gap-4 sm:grid-cols-2">

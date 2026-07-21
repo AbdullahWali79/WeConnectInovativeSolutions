@@ -48,6 +48,7 @@ export function renderMarkdownToHtml(markdown: string) {
   let codeLines: string[] = [];
   let inList = false;
   let inBlockquote = false;
+  let listType: "ul" | "ol" | null = null;
 
   function flushParagraph() {
     if (paragraph.length > 0) {
@@ -57,10 +58,25 @@ export function renderMarkdownToHtml(markdown: string) {
   }
 
   function closeList() {
-    if (inList) {
-      html.push("</ul>");
+    if (inList && listType) {
+      html.push(`</${listType}>`);
       inList = false;
+      listType = null;
     }
+  }
+
+  function renderTable(rows: string[][]) {
+    if (!rows.length) return;
+    const [header, ...body] = rows;
+    html.push('<div class="rich-table-scroll"><table><thead><tr>');
+    header.forEach((cell) => html.push(`<th>${renderInline(cell.trim())}</th>`));
+    html.push("</tr></thead><tbody>");
+    body.forEach((row) => {
+      html.push("<tr>");
+      header.forEach((_cell, index) => html.push(`<td>${renderInline((row[index] ?? "").trim())}</td>`));
+      html.push("</tr>");
+    });
+    html.push("</tbody></table></div>");
   }
 
   function closeBlockquote() {
@@ -70,8 +86,30 @@ export function renderMarkdownToHtml(markdown: string) {
     }
   }
 
-  for (const rawLine of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const rawLine = lines[lineIndex];
     const line = rawLine.trimEnd();
+
+    const nextLine = lines[lineIndex + 1]?.trim() ?? "";
+    const isMarkdownTable = line.includes("|") && /^\|?\s*:?-{3,}/.test(nextLine);
+    const isTabTable = line.split("\t").length >= 2 && nextLine.split("\t").length >= 2;
+    if (!inCode && (isMarkdownTable || isTabTable)) {
+      flushParagraph();
+      closeList();
+      closeBlockquote();
+      const rows: string[][] = [];
+      const splitRow = (value: string) => isTabTable ? value.split("\t") : value.replace(/^\||\|$/g, "").split("|");
+      rows.push(splitRow(line));
+      if (isMarkdownTable) lineIndex += 1;
+      while (lineIndex + 1 < lines.length) {
+        const candidate = lines[lineIndex + 1].trim();
+        if (!candidate || (isTabTable ? !candidate.includes("\t") : !candidate.includes("|"))) break;
+        rows.push(splitRow(candidate));
+        lineIndex += 1;
+      }
+      renderTable(rows);
+      continue;
+    }
 
     if (line.trim().startsWith("```")) {
       if (inCode) {
@@ -109,13 +147,18 @@ export function renderMarkdownToHtml(markdown: string) {
       continue;
     }
 
-    const listItem = /^[-*]\s+(.+)$/.exec(line);
+    const unorderedItem = /^[-*]\s+(.+)$/.exec(line);
+    const orderedItem = /^\d+[.)]\s+(.+)$/.exec(line);
+    const listItem = unorderedItem ?? orderedItem;
     if (listItem) {
       flushParagraph();
       closeBlockquote();
+      const nextListType = orderedItem ? "ol" : "ul";
+      if (inList && listType !== nextListType) closeList();
       if (!inList) {
-        html.push("<ul>");
+        html.push(`<${nextListType}>`);
         inList = true;
+        listType = nextListType;
       }
       html.push(`<li>${renderInline(listItem[1])}</li>`);
       continue;
