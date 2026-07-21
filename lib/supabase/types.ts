@@ -376,8 +376,31 @@ export type Product = {
   badge: ProductBadge;
   product_link: string | null;
   features: string[] | null;
+  gallery_urls?: string[] | null;
+  source_project_id?: string | null;
+  student_name?: string | null;
   status: GenericStatus;
   display_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StudentProject = {
+  id: string;
+  student_id: string;
+  title: string;
+  category: string;
+  short_description: string | null;
+  full_description: string | null;
+  github_url: string;
+  live_url: string | null;
+  image_urls: string[];
+  technologies: string[];
+  status: "submitted" | "approved" | "rejected";
+  admin_feedback: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  promoted_product_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -688,6 +711,12 @@ export type Database = {
         Row: TeamMember;
         Insert: Partial<TeamMember> & { name: string; role: string };
         Update: Partial<TeamMember>;
+        Relationships: [];
+      };
+      student_projects: {
+        Row: StudentProject;
+        Insert: Partial<StudentProject> & { student_id: string; title: string; category: string; github_url: string };
+        Update: Partial<StudentProject>;
         Relationships: [];
       };
       products: {

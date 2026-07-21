@@ -50,6 +50,38 @@ export const fallbackProducts: Product[] = [
   },
 ];
 
+function drivePreviewUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const id = url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] ?? url.searchParams.get("id");
+    return id ? "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1600" : value;
+  } catch {
+    return value;
+  }
+}
+
+function ProductGallery({ product }: { product: Product }) {
+  const sourceImages = product.gallery_urls?.length
+    ? product.gallery_urls
+    : [product.image_cdn_url ?? product.image_url].filter((value): value is string => Boolean(value));
+  const images = sourceImages.map(drivePreviewUrl);
+  const [index, setIndex] = useState(0);
+  if (!images.length) return null;
+
+  return (
+    <div className="mb-10">
+      <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] sm:h-80">
+        <Image src={images[index]} alt={product.name + " image " + (index + 1)} fill sizes="min(100vw, 896px)" unoptimized className="object-contain" />
+        {images.length > 1 ? <>
+          <button type="button" onClick={() => setIndex((index - 1 + images.length) % images.length)} className="absolute left-3 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/60 text-white"><Icon name="chevron_left" /></button>
+          <button type="button" onClick={() => setIndex((index + 1) % images.length)} className="absolute right-3 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/60 text-white"><Icon name="chevron_right" /></button>
+          <span className="absolute bottom-3 right-3 rounded-full bg-black/70 px-3 py-1 text-xs font-bold text-white">{index + 1}/{images.length}</span>
+        </> : null}
+      </div>
+      {images.length > 1 ? <div className="mt-3 flex gap-2 overflow-x-auto">{images.map((image, itemIndex) => <button type="button" key={image + itemIndex} onClick={() => setIndex(itemIndex)} className={"relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 " + (itemIndex === index ? "border-[var(--wc-secondary)]" : "border-transparent")}><Image src={image} alt="" fill unoptimized className="object-cover" /></button>)}</div> : null}
+    </div>
+  );
+}
 export function ProductsCatalog({ initialProducts = fallbackProducts }: { readonly initialProducts?: Product[] }) {
   const products = initialProducts;
   const [query, setQuery] = useState("");
@@ -176,11 +208,8 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
 
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                {(selected.image_cdn_url ?? selected.image_url) && (
-                  <div className="relative mb-10 h-64 sm:h-80 w-full overflow-hidden rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)]">
-                    <Image src={normalizeImageUrl(selected.image_cdn_url ?? selected.image_url ?? "") ?? selected.image_cdn_url ?? selected.image_url ?? ""} alt={selected.name} fill sizes="min(100vw, 896px)" unoptimized className="object-contain" />
-                  </div>
-                )}
+                <ProductGallery key={selected.id} product={selected} />
+
 
                 <div className="mb-10">
                   <h3 className="text-xl font-black text-on-surface mb-4">Overview</h3>
