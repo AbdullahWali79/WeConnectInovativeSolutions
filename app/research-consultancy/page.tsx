@@ -63,7 +63,7 @@ export default function ResearchConsultancyPage() {
               Research support that helps students move from topic idea to final submission.
             </h1>
 
-            <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-200">
+            <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-white">
               WeConnect-Innovation helps students with academic research planning, writing structure, data analysis, and presentation-ready outputs. Use this page as a starting point for real support around thesis work, project reports, and defense preparation.
             </p>
 
