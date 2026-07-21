@@ -11,6 +11,7 @@ async function getProducts() {
       const { data, error } = await supabase
         .from("products")
         .select("*")
+        .eq("status", "active")
         .order("display_order", { ascending: true });
 
       if (error || !data || data.length === 0) {
