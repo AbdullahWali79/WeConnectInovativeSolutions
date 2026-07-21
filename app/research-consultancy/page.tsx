@@ -59,11 +59,11 @@ export default function ResearchConsultancyPage() {
               Research Consultancy for BS, MS & PhD Students
             </div>
 
-            <h1 className="mx-auto max-w-5xl text-4xl font-black leading-tight text-on-surface sm:text-5xl md:text-6xl">
+            <h1 className="mx-auto max-w-5xl text-4xl font-black leading-tight text-white sm:text-5xl md:text-6xl">
               Research support that helps students move from topic idea to final submission.
             </h1>
 
-            <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-[var(--wc-on-surface-variant)]">
+            <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-200">
               WeConnect-Innovation helps students with academic research planning, writing structure, data analysis, and presentation-ready outputs. Use this page as a starting point for real support around thesis work, project reports, and defense preparation.
             </p>
 
