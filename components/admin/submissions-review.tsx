@@ -8,6 +8,7 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
+import { GoogleDriveImagePreviews } from "@/components/admin/google-drive-image-previews";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { courseInScope, filterCoursesByScope, loadTeacherCourseScope, type CourseScope } from "@/lib/admin-course-scope";
 import type { PermissionKey } from "@/lib/admin-permissions";
@@ -292,26 +293,7 @@ export function SubmissionsReview({
                         <ResourceLink label="YouTube" url={submission.youtube_url} />
                         <ResourceLink label="Proof" url={submission.proof_url} />
                       </div>
-                      {proofLinks.length > 0 ? (
-                        <div className="mt-3 rounded-xl bg-surface-container-low p-3">
-                          <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Google Drive image links</p>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {proofLinks.map((url, index) => (
-                              <a
-                                key={`${submission.id}-proof-${index}`}
-                                href={url}
-                                target="_blank"
-                                rel="noreferrer"
-                                title={url}
-                                className="inline-flex max-w-full items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-primary transition hover:bg-primary/5"
-                              >
-                                <span>Preview image {index + 1}</span>
-                                <span className="max-w-[220px] truncate text-[10px] font-medium text-on-surface-variant">{url}</span>
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
+                      <GoogleDriveImagePreviews links={proofLinks} />
                       {subScreenshots.length > 0 && (
                         <div className="mt-4">
                           <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">Submitted Screenshots</p>

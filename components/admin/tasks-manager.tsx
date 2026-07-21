@@ -8,6 +8,7 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
+import { GoogleDriveImagePreviews } from "@/components/admin/google-drive-image-previews";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { courseInScope, filterCoursesByScope, filterEnrollmentsByScope, loadTeacherCourseScope, type CourseScope } from "@/lib/admin-course-scope";
 import type { PermissionKey } from "@/lib/admin-permissions";
@@ -845,7 +846,7 @@ export function TasksManager({
                             </div>
                             <p className="truncate text-sm text-on-surface-variant">{task.description ?? "No description"}</p>
                             <p className="mt-2 text-xs text-on-surface-variant">
-                              {studentById.get(task.student_id)?.full_name ?? "Unknown student"} · {courseById.get(task.course_id)?.title ?? "Unknown course"} · Deadline {formatDateTime(task.deadline)}
+                              {studentById.get(task.student_id)?.full_name ?? "Unknown student"} Ã‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ã‚Â· Deadline {formatDateTime(task.deadline)}
                             </p>
                             {taskResources.length > 0 ? (
                               <div className="mt-4 flex flex-wrap gap-2">
@@ -941,6 +942,9 @@ export function TasksManager({
                   const taskResources = resources.filter((resource) => resource.task_id === task.id);
                   const isExpanded = expandedTaskId === task.id;
                   const taskSubmission = submissionByTaskId.get(task.id) ?? null;
+                  const imageProofLinks = Array.isArray(taskSubmission?.proof_links)
+                    ? taskSubmission.proof_links.filter((link): link is string => typeof link === "string" && link.trim().length > 0)
+                    : [];
                   const taskSubmissionForm = taskSubmission ? submissionForms[taskSubmission.id] ?? {
                     status: taskSubmission.status,
                     score: String(taskSubmission.score ?? 0),
@@ -969,7 +973,7 @@ export function TasksManager({
                           className="flex min-w-0 flex-1 items-start gap-3 text-left"
                         >
                           <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-container text-sm font-black text-primary transition hover:bg-surface-container-high">
-                            {isExpanded ? "−" : "+"}
+                            {isExpanded ? "Ã¢Ë†â€™" : "+"}
                           </span>
                           <div className="min-w-0">
                             <div className="mb-2 flex flex-wrap items-center gap-3">
@@ -981,7 +985,7 @@ export function TasksManager({
                               <span className="font-black text-slate-950">
                                 {studentById.get(task.student_id)?.full_name ?? "Unknown student"}
                               </span>{" "}
-                              · {courseById.get(task.course_id)?.title ?? "Unknown course"} · Deadline {formatDateTime(task.deadline)}
+                              Ã‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ã‚Â· Deadline {formatDateTime(task.deadline)}
                             </p>
                             <p className="mt-2 text-xs font-semibold text-on-surface-variant">
                               Submission:{" "}
@@ -1095,7 +1099,9 @@ export function TasksManager({
                                         </div>
                                       </div>
                                     </div>
+                                    <GoogleDriveImagePreviews links={imageProofLinks} />
 
+                                    {screenshots.some((screen) => screen.task_submission_id === taskSubmission.id) ? (
                                     <div className="space-y-2">
                                       <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Submitted Screenshots</p>
                                       {(() => {
@@ -1129,6 +1135,7 @@ export function TasksManager({
                                         );
                                       })()}
                                     </div>
+                                    ) : null}
 
                                     <div className="space-y-4 pt-3 border-t border-outline-variant/50">
                                       <div className="grid gap-4 grid-cols-2">
