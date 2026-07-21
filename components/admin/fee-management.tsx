@@ -187,6 +187,7 @@ export function FeeManagement() {
   const [quickAmountPaid, setQuickAmountPaid] = useState("0");
   const [quickDueDate, setQuickDueDate] = useState("");
   const [quickEndDate, setQuickEndDate] = useState("");
+  const [quickFeeRecordId, setQuickFeeRecordId] = useState<string | null>(null);
   const [forms, setForms] = useState<EditableFee>({});
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -454,6 +455,7 @@ export function FeeManagement() {
   function selectStudent(studentId: string) {
     const student = studentById.get(studentId);
     if (!student) return;
+    setQuickFeeRecordId(null);
 
     setSelectedStudentId(studentId);
     setStudentSearch(student.full_name ?? student.email ?? student.phone ?? "");
@@ -475,6 +477,7 @@ export function FeeManagement() {
     setQuickMonth(reminder.monthKey);
     setQuickDueDate(reminder.dueDateKey);
     setQuickEndDate(dateKey(addClampedMonths(reminder.dueDate, 1)));
+    setQuickFeeRecordId(reminder.nextFee?.id ?? null);
     setQuickAmountDue(String(reminder.nextFee?.amount_due ?? 0));
     setQuickAmountPaid(String(reminder.nextFee?.amount_paid ?? 0));
     setIsQuickFeesOpen(true);
@@ -493,6 +496,7 @@ export function FeeManagement() {
     setQuickEndDate(dateKey(nextEnd));
     setQuickAmountDue(String(fee.amount_due ?? 0));
     setQuickAmountPaid("0");
+    setQuickFeeRecordId(null);
     setIsQuickFeesOpen(true);
   }
 
@@ -542,6 +546,7 @@ export function FeeManagement() {
 
     setBusyId("quick-save");
     const result = await upsertStudentFeeRecord({
+      id: quickFeeRecordId ?? undefined,
       student_id: selectedStudentId,
       course_id: quickCourseId,
       month_key: quickMonth,
@@ -558,7 +563,7 @@ export function FeeManagement() {
       return;
     }
 
-    setToast({ type: "success", message: "Fee record saved for the selected student." });
+    setToast({ type: "success", message: quickFeeRecordId ? "Existing monthly fee updated." : "New monthly fee saved without changing previous history." });
     setIsQuickFeesOpen(false);
     await loadData();
   }
@@ -618,7 +623,7 @@ export function FeeManagement() {
             <p className="text-xs font-black uppercase tracking-wider text-primary">Fee management</p>
             <p className="mt-1 text-sm text-on-surface-variant">Add a payment without scrolling through the records.</p>
           </div>
-          <button type="button" onClick={() => setIsQuickFeesOpen(true)} className="wc-primary-btn whitespace-nowrap">
+          <button type="button" onClick={() => { setQuickFeeRecordId(null); setIsQuickFeesOpen(true); }} className="wc-primary-btn whitespace-nowrap">
             <Icon name="add_card" className="text-lg" />
             Quick Fees Entry
           </button>
@@ -756,6 +761,7 @@ export function FeeManagement() {
                     onChange={(event) => {
                       setStudentSearch(event.target.value);
                       setSelectedStudentId("");
+                      setQuickFeeRecordId(null);
                     }}
                     placeholder="Search student by name, email, or phone"
                   />
@@ -839,6 +845,7 @@ export function FeeManagement() {
                       onChange={(event) => {
                         const courseId = event.target.value;
                         setQuickCourseId(courseId);
+                        setQuickFeeRecordId(null);
                         setQuickMonth(courseId && selectedStudentId ? getSuggestedFeeMonth(fees, selectedStudentId, courseId) : currentMonthKey());
                         setQuickDueDate("");
                       }}
@@ -849,7 +856,7 @@ export function FeeManagement() {
                     </select>
                     <label className="space-y-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Fee month</span>
-                      <input className="wc-input" type="month" value={quickMonth} onChange={(event) => setQuickMonth(event.target.value)} />
+                      <input className="wc-input" type="month" value={quickMonth} onChange={(event) => { setQuickMonth(event.target.value); setQuickFeeRecordId(null); }} />
                     </label>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <label className="space-y-1">
@@ -944,6 +951,13 @@ export function FeeManagement() {
                     const statusTone = blocked ? "blocked" : fee.status;
                     const cycleEnd = feeCycleEndDate(fee);
                     const monthComplete = Boolean(cycleEnd && cycleEnd.getTime() <= localDateOnly(new Date()).getTime());
+                    const courseHistory = fees
+                      .filter((row) => row.student_id === fee.student_id && row.course_id === fee.course_id)
+                      .sort((a, b) => a.month_key.localeCompare(b.month_key));
+                    const historyIndex = courseHistory.findIndex((row) => row.id === fee.id);
+                    const totalPaid = courseHistory.reduce((sum, row) => sum + Number(row.amount_paid ?? 0), 0);
+                    const previousFee = historyIndex > 0 ? courseHistory[historyIndex - 1] : null;
+                    const nextFee = historyIndex >= 0 && historyIndex < courseHistory.length - 1 ? courseHistory[historyIndex + 1] : null;
 
                     return (
                       <Fragment key={fee.id}>
@@ -1013,23 +1027,31 @@ export function FeeManagement() {
                           <tr className={monthComplete ? "bg-red-50/60" : "bg-surface-container/30"}>
                             <td colSpan={6} className="px-4 pb-4">
                               <div className="grid gap-3 rounded-2xl border border-outline-variant/70 bg-surface p-4 lg:grid-cols-4">
-                                <input className="wc-input h-10" type="number" min="0" value={form?.amount_due ?? fee.amount_due ?? 0} onChange={(event) => updateForm(fee.id, { amount_due: event.target.value })} placeholder="Due amount" />
-                                <input className="wc-input h-10" type="number" min="0" value={form?.amount_paid ?? fee.amount_paid ?? 0} onChange={(event) => updateForm(fee.id, { amount_paid: event.target.value })} placeholder="Paid amount" />
-                                <select className="wc-input h-10" value={form?.status ?? fee.status} onChange={(event) => updateForm(fee.id, { status: event.target.value as StudentFeeStatus })}>
+                                <div className="rounded-xl bg-primary-container/50 p-3 lg:col-span-4">
+                                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div><p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">This cycle</p><p className="mt-1 font-black text-primary">{fee.month_key}</p></div>
+                                    <div><p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Previous cycle</p><p className="mt-1 font-bold text-on-surface">{previousFee ? `${previousFee.month_key} · Paid ${previousFee.amount_paid}` : "First saved cycle"}</p></div>
+                                    <div><p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Next saved cycle</p><p className="mt-1 font-bold text-on-surface">{nextFee ? `${nextFee.month_key} · Due ${nextFee.amount_due}` : `${getNextMonthKey(fee.month_key)} · Not added`}</p></div>
+                                    <div><p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Course fee history</p><p className="mt-1 font-black text-primary">{courseHistory.length} records · Paid {totalPaid}</p></div>
+                                  </div>
+                                </div>
+                                <input className="wc-input min-h-12" type="number" min="0" value={form?.amount_due ?? fee.amount_due ?? 0} onChange={(event) => updateForm(fee.id, { amount_due: event.target.value })} placeholder="Due amount" />
+                                <input className="wc-input min-h-12" type="number" min="0" value={form?.amount_paid ?? fee.amount_paid ?? 0} onChange={(event) => updateForm(fee.id, { amount_paid: event.target.value })} placeholder="Paid amount" />
+                                <select className="wc-input min-h-12 py-2.5 leading-6" value={form?.status ?? fee.status} onChange={(event) => updateForm(fee.id, { status: event.target.value as StudentFeeStatus })}>
                                   <option value="pending">Pending</option>
                                   <option value="partial">Partial</option>
                                   <option value="paid">Paid</option>
                                   <option value="overdue">Overdue</option>
                                   <option value="waived">Waived</option>
                                 </select>
-                                <input className="wc-input h-10" value={form?.payment_method ?? fee.payment_method ?? ""} onChange={(event) => updateForm(fee.id, { payment_method: event.target.value })} placeholder="Payment method" />
+                                <input className="wc-input min-h-12" value={form?.payment_method ?? fee.payment_method ?? ""} onChange={(event) => updateForm(fee.id, { payment_method: event.target.value })} placeholder="Payment method" />
                                 <label className="space-y-1">
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Month start date</span>
-                                  <input className="wc-input h-10" type="date" value={form?.due_date ?? fee.due_date ?? ""} onChange={(event) => updateForm(fee.id, { due_date: event.target.value })} />
+                                  <input className="wc-input min-h-12" type="date" value={form?.due_date ?? fee.due_date ?? ""} onChange={(event) => updateForm(fee.id, { due_date: event.target.value })} />
                                 </label>
                                 <label className="space-y-1">
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Month end date</span>
-                                  <input className="wc-input h-10" type="date" value={form?.paid_at ?? fee.paid_at ?? ""} onChange={(event) => updateForm(fee.id, { paid_at: event.target.value })} />
+                                  <input className="wc-input min-h-12" type="date" value={form?.paid_at ?? fee.paid_at ?? ""} onChange={(event) => updateForm(fee.id, { paid_at: event.target.value })} />
                                 </label>
                                 <textarea className="wc-input min-h-24 lg:col-span-2" value={form?.notes ?? fee.notes ?? ""} onChange={(event) => updateForm(fee.id, { notes: event.target.value })} placeholder="Notes" />
                                 <div className="lg:col-span-2 rounded-xl bg-surface-container p-3">

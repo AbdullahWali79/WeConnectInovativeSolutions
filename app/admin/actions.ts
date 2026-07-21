@@ -1588,10 +1588,14 @@ export async function upsertStudentFeeRecord(input: FeeRecordInput): Promise<Act
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabaseAdmin
-      .from("student_fee_records")
-      .upsert(payload, { onConflict: "student_id,course_id,month_key" });
+    const feeQuery = input.id
+      ? supabaseAdmin.from("student_fee_records").update(payload).eq("id", input.id)
+      : supabaseAdmin.from("student_fee_records").insert(payload);
+    const { error } = await feeQuery;
 
+    if (error?.code === "23505") {
+      throw new Error("This student's fee record already exists for the selected course and month. Open that month and edit it instead.");
+    }
     if (error) throw new Error(error.message);
 
     revalidatePath("/admin/fees");
