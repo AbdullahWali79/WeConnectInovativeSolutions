@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
@@ -65,6 +66,7 @@ export function TasksManager({
   const [toast, setToast] = useState<ToastState>(null);
   const [screenshots, setScreenshots] = useState<SubmissionScreenshot[]>([]);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [submittedProjectCount, setSubmittedProjectCount] = useState(0);
   const [query, setQuery] = useState("");
   const [studentFilter, setStudentFilter] = useState("all");
   const [courseFilter, setCourseFilter] = useState("all");
@@ -89,7 +91,7 @@ export function TasksManager({
       setToast({ type: "error", message: error instanceof Error ? error.message : "Failed to load course scope." });
       scope = [];
     }
-    const [studentResult, courseResult, enrollmentResult, taskResult, resourceResult, submissionResult, screenshotResult] = await Promise.all([
+    const [studentResult, courseResult, enrollmentResult, taskResult, resourceResult, submissionResult, screenshotResult, projectResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "student").eq("status", "approved").order("full_name"),
       supabase.from("courses").select("*").order("title"),
       supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
@@ -97,6 +99,7 @@ export function TasksManager({
       supabase.from("task_resources").select("*").order("created_at", { ascending: true }),
       supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
       supabase.from("submission_screenshots").select("*").order("created_at", { ascending: true }),
+      supabase.from("student_projects").select("id", { count: "exact", head: true }).eq("status", "submitted"),
     ]);
     const error = studentResult.error ?? courseResult.error ?? enrollmentResult.error ?? taskResult.error ?? resourceResult.error ?? submissionResult.error ?? screenshotResult.error;
     if (error) setToast({ type: "error", message: error.message });
@@ -112,6 +115,7 @@ export function TasksManager({
     setResources((resourceResult.data ?? []).filter((resource) => scopedTaskIds.has(resource.task_id)));
     setSubmissions(scopedSubmissions);
     setScreenshots(screenshotResult.data ?? []);
+    setSubmittedProjectCount(projectResult.count ?? 0);
     setSubmissionForms(Object.fromEntries(scopedSubmissions.map((submission) => [submission.id, {
       status: submission.status,
       score: String(submission.score ?? 0),
@@ -740,6 +744,13 @@ export function TasksManager({
                   Accepted with 0 Marks
                   <span className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700">{allZeroMarksTasks.length}</span>
                 </button>
+                <Link
+                  href="/admin/projects"
+                  className="rounded-t-xl px-4 py-2 text-sm font-bold text-on-surface-variant transition hover:bg-white hover:text-primary"
+                >
+                  Projects Submitted
+                  <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] text-blue-700">{submittedProjectCount}</span>
+                </Link>
               </div>
             </div>
 
@@ -846,7 +857,7 @@ export function TasksManager({
                             </div>
                             <p className="truncate text-sm text-on-surface-variant">{task.description ?? "No description"}</p>
                             <p className="mt-2 text-xs text-on-surface-variant">
-                              {studentById.get(task.student_id)?.full_name ?? "Unknown student"} Ã‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ã‚Â· Deadline {formatDateTime(task.deadline)}
+                              {studentById.get(task.student_id)?.full_name ?? "Unknown student"} Ãƒâ€šÃ‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ãƒâ€šÃ‚Â· Deadline {formatDateTime(task.deadline)}
                             </p>
                             {taskResources.length > 0 ? (
                               <div className="mt-4 flex flex-wrap gap-2">
@@ -973,7 +984,7 @@ export function TasksManager({
                           className="flex min-w-0 flex-1 items-start gap-3 text-left"
                         >
                           <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-container text-sm font-black text-primary transition hover:bg-surface-container-high">
-                            {isExpanded ? "Ã¢Ë†â€™" : "+"}
+                            {isExpanded ? "ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢" : "+"}
                           </span>
                           <div className="min-w-0">
                             <div className="mb-2 flex flex-wrap items-center gap-3">
@@ -985,7 +996,7 @@ export function TasksManager({
                               <span className="font-black text-slate-950">
                                 {studentById.get(task.student_id)?.full_name ?? "Unknown student"}
                               </span>{" "}
-                              Ã‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ã‚Â· Deadline {formatDateTime(task.deadline)}
+                              Ãƒâ€šÃ‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ãƒâ€šÃ‚Â· Deadline {formatDateTime(task.deadline)}
                             </p>
                             <p className="mt-2 text-xs font-semibold text-on-surface-variant">
                               Submission:{" "}

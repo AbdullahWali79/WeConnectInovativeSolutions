@@ -49,5 +49,5 @@ export function StudentProjectsManager() {
       <GoogleDriveImagePreviews links={row.image_urls}/>
       <textarea className="wc-input mt-4 min-h-20" placeholder="Admin feedback" value={feedback[row.id]??row.admin_feedback??""} onChange={e=>setFeedback({...feedback,[row.id]:e.target.value})}/>
       <div className="mt-3 flex flex-wrap gap-2">{row.status==="submitted"?<><button disabled={busy===row.id} onClick={()=>void review(row,"approved")} className="wc-primary-btn"><Icon name="check"/> Approve</button><button disabled={busy===row.id} onClick={()=>void review(row,"rejected")} className="wc-secondary-btn"><Icon name="close"/> Reject</button></>:null}{row.status==="approved"&&!row.promoted_product_id?<button disabled={busy===row.id} onClick={()=>void publish(row)} className="wc-primary-btn"><Icon name="inventory_2"/> Publish as Product</button>:null}</div>
-    </article>})}</div><Toast toast={toast} onClose={()=>setToast(null)}/></div>;
+    </article>})}</div><Toast toast={toast} onClear={()=>setToast(null)}/></div>;
 }
