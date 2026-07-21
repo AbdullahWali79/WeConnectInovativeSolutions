@@ -33,7 +33,6 @@ export function StudentDashboard() {
   const [acceptedTasksOpen, setAcceptedTasksOpen] = useState(false);
   const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
-  const [screenshotsOpen, setScreenshotsOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({
     course_id: "",
     title: "",
@@ -47,46 +46,6 @@ export function StudentDashboard() {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
-
-  const [dailyFiles, setDailyFiles] = useState<File[]>([]);
-  const [dailyPreviews, setDailyPreviews] = useState<string[]>([]);
-
-  const handleDailyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const files = Array.from(e.target.files);
-    
-    if (dailyFiles.length + files.length > 5) {
-      setToast({ type: "error", message: "You can upload up to 5 screenshots maximum." });
-      return;
-    }
-    
-    const validExtensions = ["jpg", "jpeg", "png", "webp"];
-    const newFiles: File[] = [];
-    const newPreviews: string[] = [];
-    
-    for (const file of files) {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "";
-      if (!validExtensions.includes(ext)) {
-        setToast({ type: "error", message: `Invalid file type: ${file.name}. Only jpg, jpeg, png, webp are allowed.` });
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setToast({ type: "error", message: `File size too large: ${file.name}. Maximum size is 5MB.` });
-        return;
-      }
-      newFiles.push(file);
-      newPreviews.push(URL.createObjectURL(file));
-    }
-    
-    setDailyFiles(prev => [...prev, ...newFiles]);
-    setDailyPreviews(prev => [...prev, ...newPreviews]);
-  };
-
-  const removeDailyFile = (index: number) => {
-    URL.revokeObjectURL(dailyPreviews[index]);
-    setDailyFiles(prev => prev.filter((_, i) => i !== index));
-    setDailyPreviews(prev => prev.filter((_, i) => i !== index));
-  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -284,7 +243,7 @@ export function StudentDashboard() {
             {submission ? (
               <div className="mt-3 text-body-sm text-on-surface-variant space-y-1.5">
                 <p className="font-semibold">
-                  Latest submission: {actionLabel} · Score: {submission.score ?? 0} / {task.max_score}
+                  Latest submission: {actionLabel} Â· Score: {submission.score ?? 0} / {task.max_score}
                 </p>
                 {submission.feedback && (
                   <div className="rounded-xl border border-outline-variant/40 bg-surface-container-low p-3 text-xs italic text-on-surface-variant max-w-xl">
@@ -392,11 +351,6 @@ export function StudentDashboard() {
       }
     }
 
-    if (dailyFiles.length > 5) {
-      setToast({ type: "error", message: "You can upload up to 5 screenshots." });
-      return;
-    }
-
     setCreating(true);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -407,34 +361,7 @@ export function StudentDashboard() {
     }
 
     try {
-      const uploadedScreenshots: { githubUrl: string; cdnUrl: string; originalFilename: string; fileSize: number; mimeType: string }[] = [];
-      
-      for (const file of dailyFiles) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("type", "task-screenshot");
-        formData.append("entityId", user.id);
-        
-        const res = await fetch("/api/uploads/github", {
-          method: "POST",
-          body: formData,
-        });
-        
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error ?? "Upload to GitHub failed.");
-        }
-        
-        uploadedScreenshots.push({
-          githubUrl: data.githubUrl,
-          cdnUrl: data.githubCdnUrl,
-          originalFilename: file.name,
-          fileSize: file.size,
-          mimeType: file.type || "image/octet-stream",
-        });
-      }
-
-      const { data: newTaskId, error: submitError } = await supabase.rpc("submit_student_task", {
+      const { error: submitError } = await supabase.rpc("submit_student_task", {
         target_course_id: taskForm.course_id,
         task_title: taskForm.title.trim(),
         task_description: taskForm.description.trim() || null,
@@ -454,38 +381,6 @@ export function StudentDashboard() {
         throw submitError;
       }
 
-      if (!newTaskId) {
-        throw new Error("Failed to retrieve the new task ID.");
-      }
-
-      const { data: subData, error: fetchSubError } = await supabase
-        .from("submissions")
-        .select("id")
-        .eq("task_id", newTaskId)
-        .maybeSingle();
-
-      if (fetchSubError) throw fetchSubError;
-      if (!subData?.id) throw new Error("Could not find the created task submission record.");
-
-      const screenshotRows = uploadedScreenshots.map(item => ({
-        task_submission_id: subData.id,
-        student_id: user.id,
-        task_id: newTaskId,
-        github_url: item.githubUrl,
-        cdn_url: item.cdnUrl,
-        original_filename: item.originalFilename,
-        file_size: item.fileSize,
-        mime_type: item.mimeType,
-      }));
-
-      if (screenshotRows.length > 0) {
-        const { error: insertError } = await supabase
-          .from("submission_screenshots")
-          .insert(screenshotRows);
-
-        if (insertError) throw insertError;
-      }
-
       setToast({ type: "success", message: "Daily task submitted for review." });
       setTaskForm({
         course_id: activeEnrollments[0]?.course_id ?? "",
@@ -495,12 +390,6 @@ export function StudentDashboard() {
         extra_proof_links: [],
       });
       setAddTaskOpen(false);
-      setScreenshotsOpen(false);
-      
-      dailyPreviews.forEach(url => URL.revokeObjectURL(url));
-      setDailyFiles([]);
-      setDailyPreviews([]);
-      
       await loadData();
     } catch (err: unknown) {
       const errMsg = err instanceof Error
@@ -748,48 +637,6 @@ export function StudentDashboard() {
           </label>
           <div className="sm:col-span-2 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4">
             <UrlInput label="Proof Link" value={taskForm.proof_url} onChange={(value) => updateTaskForm("proof_url", value)} placeholder="https://..." required />
-
-            <div className="mt-4 rounded-2xl border border-outline-variant bg-white/70 p-4">
-              <button type="button" onClick={() => setScreenshotsOpen((current) => !current)} className="flex w-full items-center justify-between gap-3 text-left" aria-expanded={screenshotsOpen}>
-                <span>
-                  <span className="wc-label block">Screenshots (Optional)</span>
-                  <span className="mt-1 block text-xs text-on-surface-variant">Up to 5 images, maximum 5MB each.</span>
-                </span>
-                <Icon name={screenshotsOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"} className="text-xl text-primary" />
-              </button>
-
-              {screenshotsOpen ? <div className="mt-4 space-y-4">
-              <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant bg-white/50 p-4 transition hover:border-primary">
-                <input
-                  type="file"
-                  multiple
-                  accept=".jpg,.jpeg,.png,.webp"
-                  onChange={handleDailyFileChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                <Icon name="cloud_upload" className="text-3xl text-primary mb-2" />
-                <span className="text-sm font-bold text-on-surface">Select screenshots from device</span>
-                <span className="text-xs text-on-surface-variant mt-1">Drag and drop or click to choose files</span>
-              </div>
-
-              {dailyPreviews.length > 0 ? (
-                <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-                  {dailyPreviews.map((preview, index) => (
-                    <div key={`preview-${index}`} className="relative group rounded-xl border border-outline-variant overflow-hidden aspect-video bg-surface-container-lowest">
-                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeDailyFile(index)}
-                        className="absolute top-1 right-1 rounded-full bg-black/60 hover:bg-red-600 text-white p-1 transition"
-                      >
-                        <Icon name="close" className="text-sm" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              </div> : null}
-            </div>
 
             <div className="mt-5 rounded-2xl bg-white/70 p-4">
               <div className="flex items-center justify-between gap-3">
