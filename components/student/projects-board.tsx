@@ -67,7 +67,15 @@ export function StudentProjectsBoard() {
       <textarea className="wc-input min-h-28 md:col-span-2" placeholder="Full project description" value={form.full_description} onChange={(e) => setForm({...form,full_description:e.target.value})} />
       <div className="md:col-span-2 rounded-xl bg-surface-container-low p-4">
         <p className="wc-label">Google Drive screenshots</p>
-        <p className="mt-1 text-xs text-on-surface-variant">Set every image to “Anyone with the link”. Add as many image URLs as needed.</p>
+        <div className="mt-3 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950">
+          <Icon name="warning" className="mt-0.5 shrink-0 text-xl text-amber-600" />
+          <div>
+            <p className="text-sm font-black">Google Drive access must be: Anyone with the link</p>
+            <p className="mt-1 text-xs leading-5">
+              Before pasting each image URL, open Google Drive Sharing, change General access from Restricted to Anyone with the link, and keep the role as Viewer. Private or restricted images cannot be previewed by admin.
+            </p>
+          </div>
+        </div>
         <div className="mt-3 grid gap-3">
           {form.image_urls.map((url,index) => <div key={index} className="flex gap-2"><input className="wc-input flex-1" required type="url" placeholder={"Public Google Drive image URL " + (index+1)} value={url} onChange={(e)=>setForm({...form,image_urls:form.image_urls.map((item,i)=>i===index?e.target.value:item)})}/>{form.image_urls.length>1?<button type="button" className="wc-secondary-btn" onClick={()=>setForm({...form,image_urls:form.image_urls.filter((_,i)=>i!==index)})}><Icon name="delete"/></button>:null}</div>)}
         </div>
