@@ -13,7 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { filterCoursesByScope, filterEnrollmentsByScope, loadTeacherCourseScope, courseInScope, type CourseScope } from "@/lib/admin-course-scope";
 import { deleteStudentAccount, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary } from "@/app/admin/actions";
 import type { PermissionKey } from "@/lib/admin-permissions";
-import type { Application, Course, Enrollment, Profile, ProgressReport, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
+import type { Application, Course, Enrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task } from "@/lib/supabase/types";
 import { normalizeProfileLinkUrl } from "@/lib/profile-links";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
@@ -85,6 +85,7 @@ export function StudentsManager({
   const [feeRecords, setFeeRecords] = useState<StudentFeeRecord[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [projects, setProjects] = useState<StudentProject[]>([]);
   const [courseScope, setCourseScope] = useState<CourseScope>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -124,7 +125,7 @@ export function StudentsManager({
       setToast({ type: "error", message: error instanceof Error ? error.message : "Failed to load course scope." });
       scope = [];
     }
-    const [profileResult, enrollmentResult, courseResult, progressResult, applicationResult, taskResult, submissionResult, feeResult] = await Promise.all([
+    const [profileResult, enrollmentResult, courseResult, progressResult, applicationResult, taskResult, submissionResult, projectResult, feeResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "student").order("created_at", { ascending: false }),
       supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
       supabase.from("courses").select("*").order("title"),
@@ -132,9 +133,10 @@ export function StudentsManager({
       supabase.from("applications").select("*").eq("status", "approved").order("created_at", { ascending: false }),
       supabase.from("tasks").select("*").order("created_at", { ascending: false }),
       supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
+      supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
       supabase.from("student_fee_records").select("*").order("month_key", { ascending: false }),
     ]);
-    const error = profileResult.error ?? enrollmentResult.error ?? courseResult.error ?? progressResult.error ?? applicationResult.error ?? taskResult.error ?? submissionResult.error ?? feeResult.error;
+    const error = profileResult.error ?? enrollmentResult.error ?? courseResult.error ?? progressResult.error ?? applicationResult.error ?? taskResult.error ?? submissionResult.error ?? projectResult.error ?? feeResult.error;
     if (error) setToast({ type: "error", message: error.message });
     const scopedEnrollments = filterEnrollmentsByScope(enrollmentResult.data ?? [], scope);
     const scopedStudentIds = new Set(scopedEnrollments.map((enrollment) => enrollment.student_id));
@@ -145,6 +147,7 @@ export function StudentsManager({
     setProgressReports((progressResult.data ?? []).filter((report) => courseInScope(report.course_id, scope)));
     setFeeRecords((feeResult.data ?? []).filter((fee) => scopedStudentIds.has(fee.student_id)));
     setTasks((taskResult.data ?? []).filter((task) => courseInScope(task.course_id, scope)));
+    setProjects((projectResult.data ?? []).filter((project) => courseInScope(project.course_id, scope)) as StudentProject[]);
     setSubmissions((submissionResult.data ?? []).filter((submission) => {
       const task = (taskResult.data ?? []).find((item) => item.id === submission.task_id);
       return task ? courseInScope(task.course_id, scope) : false;
@@ -619,6 +622,7 @@ export function StudentsManager({
                   <StudentTable
                     title="All Students"
                     students={totalStudents}
+                    projects={projects}
                     getStudentProgress={getStudentProgress}
                     editingGithubStudentId={editingGithubStudentId}
                     savingGithubStudentId={savingGithubStudentId}
@@ -653,6 +657,7 @@ export function StudentsManager({
                   <StudentTable
                     title={studentListTab === "active" ? "Active Students" : studentListTab === "completed" ? "Completed Students" : "Inactive Students"}
                     students={visibleStudents}
+                    projects={projects}
                     getStudentProgress={getStudentProgress}
                     editingGithubStudentId={editingGithubStudentId}
                     savingGithubStudentId={savingGithubStudentId}
@@ -881,6 +886,7 @@ function SummaryTile({ label, value, icon }: { label: string; value: number; ico
 function StudentTable({
   title,
   students,
+  projects,
   getStudentProgress,
   editingGithubStudentId,
   savingGithubStudentId,
@@ -913,6 +919,7 @@ function StudentTable({
 }: {
   title: string;
   students: StudentViewRow[];
+  projects: StudentProject[];
   getStudentProgress: (student: StudentRow) => { activeEnrollment: Enrollment | null; progressReport: ProgressReport | null };
   editingGithubStudentId: string | null;
   savingGithubStudentId: string | null;
@@ -963,7 +970,7 @@ function StudentTable({
               <th className="w-[18%] px-2 py-2">GitHub</th>
               <th className="w-[16%] px-2 py-2">Notes</th>
               <th className="w-[16%] px-2 py-2">Progress</th>
-              <th className="w-[14%] px-2 py-2">Tasks / Score</th>
+              <th className="w-[14%] px-2 py-2">Tasks / Projects</th>
               <th className="w-[10%] px-2 py-2">Status</th>
               <th className="w-[8%] px-2 py-2">Expand</th>
             </tr>
@@ -975,6 +982,7 @@ function StudentTable({
               const completedTasks = progressReport?.completed_tasks ?? 0;
               const targetTasks = progressReport?.target_tasks ?? activeEnrollment?.target_tasks ?? 100;
               const averageScore = progressReport?.average_score ?? activeEnrollment?.final_score ?? 0;
+              const completedProjects = projects.filter((project) => project.student_id === student.id && (!activeEnrollment || project.course_id === activeEnrollment.course_id)).length;
               const isEditingGithub = editingGithubStudentId === student.id;
               const isSavingGithub = savingGithubStudentId === student.id;
               const isEditingNotes = editingNotesStudentId === student.id;
@@ -1128,7 +1136,8 @@ function StudentTable({
                     )}
                   </td>
                   <td className="px-2 py-2 align-top text-[11px] text-on-surface-variant">
-                    <p className="font-semibold text-on-surface">Assigned {student.progress[0]?.total_tasks ?? 0} tasks</p>
+                    <p className="font-semibold text-on-surface">Completed {completedTasks} tasks</p>
+                    <p className="text-[11px] font-semibold text-primary">Completed {completedProjects} projects</p>
                     <p className="text-[11px]">Average score {averageScore}</p>
                   </td>
                   <td className="px-2 py-2 align-top">
@@ -1216,6 +1225,7 @@ function StudentTable({
                             <p>Notes: {student.weak_areas || student.next_focus || student.follow_up_date ? "Added" : "Not added"}</p>
                             <p>Progress: {progressValue}%</p>
                             <p>Tasks: {completedTasks}/{targetTasks}</p>
+                            <p>Projects: {completedProjects}</p>
                           </div>
                         </div>
                       </div>

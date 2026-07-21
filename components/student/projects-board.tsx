@@ -7,28 +7,33 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { StudentProject } from "@/lib/supabase/types";
+import type { Course, StudentProject } from "@/lib/supabase/types";
 
-const emptyForm = { title: "", category: "", short_description: "", full_description: "", github_url: "", live_url: "", technologies: "", image_urls: [""] };
+const emptyForm = { title: "", course_id: "", category: "", short_description: "", full_description: "", github_url: "", live_url: "", technologies: "", image_urls: [""] };
 
 export function StudentProjectsBoard() {
   const supabase = createSupabaseBrowserClient();
   const [rows, setRows] = useState<StudentProject[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [courseOptions, setCourseOptions] = useState<Pick<Course, "id" | "title">[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
 
   const load = useCallback(async () => {
-    const [projectsResult, productsResult] = await Promise.all([
+    const [projectsResult, productsResult, enrollmentsResult, coursesResult] = await Promise.all([
       supabase.from("student_projects").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("category").eq("status", "active").order("category"),
+      supabase.from("enrollments").select("course_id"),
+      supabase.from("courses").select("id,title").eq("status", "active").order("title"),
     ]);
-    const error = projectsResult.error ?? productsResult.error;
+    const error = projectsResult.error ?? productsResult.error ?? enrollmentsResult.error ?? coursesResult.error;
     if (error) setToast({ type: "error", message: error.message });
     setRows((projectsResult.data ?? []) as StudentProject[]);
     setCategories(Array.from(new Set((productsResult.data ?? []).map((product) => product.category.trim()).filter(Boolean))));
+    const enrolledCourseIds = new Set((enrollmentsResult.data ?? []).map((enrollment) => enrollment.course_id));
+    setCourseOptions((coursesResult.data ?? []).filter((course) => enrolledCourseIds.has(course.id)));
     setLoading(false);
   }, [supabase]);
 
@@ -43,6 +48,7 @@ export function StudentProjectsBoard() {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("student_projects").insert({
       student_id: user?.id,
+      course_id: form.course_id,
       title: form.title.trim(),
       category: form.category.trim(),
       short_description: form.short_description.trim() || null,
@@ -65,6 +71,13 @@ export function StudentProjectsBoard() {
     <PageHeader eyebrow="Portfolio" title="My Projects" description="Submit completed projects with GitHub, live demo, and public Google Drive screenshots." />
     <form onSubmit={submit} className="wc-card grid gap-4 p-5 md:grid-cols-2">
       <input className="wc-input" required placeholder="Project title" value={form.title} onChange={(e) => setForm({...form,title:e.target.value})} />
+      <div>
+        <label className="wc-label" htmlFor="project-course">Course</label>
+        <select id="project-course" className="wc-input mt-2" required value={form.course_id} onChange={(e) => setForm({ ...form, course_id: e.target.value })} disabled={!courseOptions.length}>
+          <option value="">{courseOptions.length ? "Select enrolled course" : "No active enrollment available"}</option>
+          {courseOptions.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
+        </select>
+      </div>
       <div>
         <label className="wc-label" htmlFor="project-category">Category</label>
         <select

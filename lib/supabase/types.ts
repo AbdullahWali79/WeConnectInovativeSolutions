@@ -388,6 +388,7 @@ export type Product = {
 export type StudentProject = {
   id: string;
   student_id: string;
+  course_id: string | null;
   title: string;
   category: string;
   short_description: string | null;

@@ -7,7 +7,7 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { Course, Enrollment, Profile, ProgressReport, Submission, Task } from "@/lib/supabase/types";
+import type { Course, Enrollment, Profile, ProgressReport, StudentProject, Submission, Task } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
@@ -214,6 +214,7 @@ export function StudentProgress() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [projects, setProjects] = useState<StudentProject[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportStart, setReportStart] = useState("");
@@ -222,12 +223,13 @@ export function StudentProgress() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [reportResult, courseResult, enrollmentResult, taskResult, submissionResult, userResult] = await Promise.all([
+    const [reportResult, courseResult, enrollmentResult, taskResult, submissionResult, projectResult, userResult] = await Promise.all([
       supabase.from("progress_reports").select("*").order("updated_at", { ascending: false }),
       supabase.from("courses").select("*"),
       supabase.from("enrollments").select("*"),
       supabase.from("tasks").select("*").order("created_at", { ascending: false }),
       supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
+      supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
       supabase.auth.getUser(),
     ]);
     setReports(reportResult.data ?? []);
@@ -235,6 +237,7 @@ export function StudentProgress() {
     setEnrollments(enrollmentResult.data ?? []);
     setTasks(taskResult.data ?? []);
     setSubmissions(submissionResult.data ?? []);
+    setProjects((projectResult.data ?? []) as StudentProject[]);
     const userId = userResult.data.user?.id;
     if (userId) {
       const { data: profileData } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -456,19 +459,22 @@ export function StudentProgress() {
             const targetTasks = report?.target_tasks ?? enrollment.target_tasks ?? 100;
             const progress = report?.progress_percentage ?? enrollment.progress_percentage;
             const averageScore = profileComplete ? (report?.average_score ?? enrollment.final_score) : "Pending";
+            const reviewedTasks = report?.completed_tasks ?? courseTasks.filter((task) => task.status === "reviewed").length;
+            const approvedProjects = projects.filter((project) => project.course_id === enrollment.course_id).length;
             return (
               <section key={enrollment.id} className="wc-card">
                 <div className="sticky top-0 z-20 rounded-t-2xl bg-primary p-6 text-white shadow-lg">
                   <p className="text-label-sm uppercase tracking-widest text-blue-100">{enrollment.status}</p>
                   <h2 className="mt-2 text-3xl font-extrabold">{courseById.get(enrollment.course_id)?.title ?? "Course"}</h2>
-                  <div className="mt-6 grid gap-4 md:grid-cols-4">
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                     <Metric label="Progress" value={`${progress}%`} />
-                    <Metric label="Target Tasks" value={targetTasks} />
-                    <Metric label="Reviewed" value={report?.completed_tasks ?? courseTasks.filter((task) => task.status === "reviewed").length} />
+                    <Metric label="Target Work" value={targetTasks} />
+                    <Metric label="Tasks Completed" value={reviewedTasks} />
+                    <Metric label="Projects Completed" value={approvedProjects} />
                     <Metric label="Average Score" value={averageScore} />
                   </div>
                   <div className="mt-6 h-3 rounded-full bg-white/20"><div className="h-3 rounded-full bg-secondary-container" style={{ width: `${progress}%` }} /></div>
-                  <p className="mt-2 text-sm text-blue-100">Reviewed {report?.completed_tasks ?? 0} of {targetTasks} target tasks</p>
+                  <p className="mt-2 text-sm text-blue-100">{reviewedTasks} reviewed tasks + {approvedProjects} approved projects = {reviewedTasks + approvedProjects} of {targetTasks} target work</p>
                 </div>
 
                 <div className="overflow-hidden rounded-b-2xl divide-y divide-outline-variant/70">
