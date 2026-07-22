@@ -59,6 +59,13 @@ type UnpaidDailyRow = {
   feedback: string;
   status: "submitted" | "pending";
 };
+type InactiveStudentReportRow = {
+  studentId: string;
+  studentName: string;
+  courseTitle: string;
+  lastSubmittedAt: string | null;
+  inactiveDays: number;
+};
 
 const metricConfig: Array<{
   key: MetricKey;
@@ -208,6 +215,23 @@ function getPakistanDayBounds(dateStr: string): { startIso: string; endIso: stri
     startIso: startPktInUtc.toISOString(),
     endIso: endPktInUtc.toISOString(),
   };
+}
+
+function pakistanDateKey(value: string | Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(typeof value === "string" ? new Date(value) : value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function daysSincePakistanDate(value: string) {
+  const sourceStart = new Date(getPakistanDayBounds(pakistanDateKey(value)).startIso).getTime();
+  const todayStart = new Date(getPakistanDayBounds(pakistanDateKey(new Date())).startIso).getTime();
+  return Math.max(0, Math.round((todayStart - sourceStart) / 86_400_000));
 }
 
 function buildDailyReportRows(
@@ -1726,6 +1750,121 @@ export function TaskAnalyticsDashboard({
     downloadCompactStudentReportPng(todayReportRows, "TODAY REPORT", "Today Reviewed Tasks", `Tasks reviewed on ${displayDate}`, "today-reviewed-tasks-report");
   }
 
+  function downloadInactiveStudentsReportPng() {
+    if (inactiveStudentRows.length === 0) return;
+
+    const rowsPerColumn = Math.ceil(inactiveStudentRows.length / 2);
+    const width = 1800;
+    const padding = 64;
+    const headerHeight = 205;
+    const columnHeaderHeight = 58;
+    const rowHeight = 76;
+    const footerHeight = 88;
+    const gap = 36;
+    const columnWidth = (width - padding * 2 - gap) / 2;
+    const height = headerHeight + 28 + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight + footerHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    const fitText = (text: string, maxWidth: number) => {
+      if (context.measureText(text).width <= maxWidth) return text;
+      let result = text;
+      while (result.length > 3 && context.measureText(`${result}...`).width > maxWidth) result = result.slice(0, -1);
+      return `${result}...`;
+    };
+    const reportDateLabel = new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Karachi",
+    }).format(new Date());
+
+    context.fillStyle = "#f8fafc";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "#15558a";
+    context.fillRect(0, 0, width, headerHeight);
+    context.fillStyle = "#bfdbfe";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText("INACTIVITY REPORT", padding, 54);
+    context.fillStyle = "#ffffff";
+    context.font = "700 42px Arial, sans-serif";
+    context.fillText("Paid Active Students - Last Task Activity", padding, 112);
+    context.fillStyle = "#dbeafe";
+    context.font = "24px Arial, sans-serif";
+    context.fillText(`Through ${reportDateLabel}, Pakistan time; never-submitted days count from enrollment`, padding, 160);
+
+    const drawColumn = (rows: InactiveStudentReportRow[], columnIndex: number, startNumber: number) => {
+      const x = padding + columnIndex * (columnWidth + gap);
+      const top = headerHeight + 28;
+      context.fillStyle = "#e8f0f7";
+      context.fillRect(x, top, columnWidth, columnHeaderHeight);
+      context.fillStyle = "#15558a";
+      context.font = "700 17px Arial, sans-serif";
+      context.fillText("ACTIVE PAID STUDENT", x + 22, top + 36);
+      context.textAlign = "right";
+      context.fillText("LAST TASK / INACTIVE DAYS", x + columnWidth - 22, top + 36);
+      context.textAlign = "left";
+
+      rows.forEach((row, rowIndex) => {
+        const y = top + columnHeaderHeight + rowIndex * rowHeight;
+        context.fillStyle = row.inactiveDays >= 7 ? "#fff1f2" : row.inactiveDays === 0 ? "#ecfdf5" : rowIndex % 2 === 0 ? "#ffffff" : "#f8fafc";
+        context.fillRect(x, y, columnWidth, rowHeight);
+        context.strokeStyle = "#dbe3ec";
+        context.beginPath();
+        context.moveTo(x, y + rowHeight);
+        context.lineTo(x + columnWidth, y + rowHeight);
+        context.stroke();
+
+        context.fillStyle = "#15558a";
+        context.beginPath();
+        context.arc(x + 29, y + rowHeight / 2, 18, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#ffffff";
+        context.font = "700 14px Arial, sans-serif";
+        context.textAlign = "center";
+        context.fillText(String(startNumber + rowIndex), x + 29, y + rowHeight / 2 + 5);
+        context.textAlign = "left";
+
+        context.fillStyle = "#0f172a";
+        context.font = "700 19px Arial, sans-serif";
+        context.fillText(fitText(row.studentName, 330), x + 58, y + 31);
+        context.fillStyle = "#64748b";
+        context.font = "16px Arial, sans-serif";
+        context.fillText(fitText(row.courseTitle || "Course not set", 330), x + 58, y + 57);
+
+        const lastTaskLabel = row.lastSubmittedAt
+          ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }).format(new Date(row.lastSubmittedAt))
+          : "Never submitted";
+        context.textAlign = "right";
+        context.fillStyle = "#334155";
+        context.font = "600 16px Arial, sans-serif";
+        context.fillText(lastTaskLabel, x + columnWidth - 22, y + 29);
+        context.fillStyle = row.inactiveDays >= 7 ? "#be123c" : row.inactiveDays === 0 ? "#047857" : "#b45309";
+        context.font = "700 19px Arial, sans-serif";
+        context.fillText(`${row.inactiveDays} day${row.inactiveDays === 1 ? "" : "s"}`, x + columnWidth - 22, y + 57);
+        context.textAlign = "left";
+      });
+    };
+
+    drawColumn(inactiveStudentRows.slice(0, rowsPerColumn), 0, 1);
+    drawColumn(inactiveStudentRows.slice(rowsPerColumn), 1, rowsPerColumn + 1);
+
+    const footerY = headerHeight + 28 + columnHeaderHeight + Math.max(rowsPerColumn, 1) * rowHeight;
+    context.fillStyle = "#15558a";
+    context.font = "700 21px Arial, sans-serif";
+    context.fillText(`Paid Active Students: ${inactiveStudentRows.length}`, padding, footerY + 48);
+    context.textAlign = "right";
+    context.fillText(`Never Submitted: ${inactiveStudentRows.filter((row) => !row.lastSubmittedAt).length}`, width - padding, footerY + 48);
+    context.textAlign = "left";
+
+    canvas.toBlob((blob) => {
+      if (blob) downloadBlob(blob, `paid-active-student-inactivity-${pakistanDateKey(new Date())}.png`);
+    }, "image/png");
+  }
+
   async function downloadTodayReportPdf() {
     if (todayReportRows.length === 0) return;
     const displayDate = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
@@ -1774,6 +1913,33 @@ export function TaskAnalyticsDashboard({
       .map((student) => ({ ...student, tasksCompletedCount: reviewedCountByStudent.get(student.studentId) ?? 0 }))
       .sort((first, second) => first.studentName.localeCompare(second.studentName));
   }, [data.allTaskDetails, data.studentWorkSummaries]);
+  const inactiveStudentRows = useMemo<InactiveStudentReportRow[]>(() => {
+    const latestSubmissionByStudent = new Map<string, string>();
+    for (const detail of data.allTaskDetails) {
+      if (!detail.submittedAt) continue;
+      const current = latestSubmissionByStudent.get(detail.studentId);
+      if (!current || detail.submittedAt > current) latestSubmissionByStudent.set(detail.studentId, detail.submittedAt);
+    }
+
+    const uniqueStudents = new Map<string, StudentTaskDetail>();
+    for (const student of data.activeStudents) {
+      if (!uniqueStudents.has(student.studentId)) uniqueStudents.set(student.studentId, student);
+    }
+
+    return [...uniqueStudents.values()]
+      .map((student) => {
+        const lastSubmittedAt = latestSubmissionByStudent.get(student.studentId) ?? null;
+        const inactiveReference = lastSubmittedAt ?? student.joinedAt;
+        return {
+          studentId: student.studentId,
+          studentName: student.studentName,
+          courseTitle: student.courseTitle,
+          lastSubmittedAt,
+          inactiveDays: inactiveReference ? daysSincePakistanDate(inactiveReference) : 0,
+        };
+      })
+      .sort((first, second) => second.inactiveDays - first.inactiveDays || first.studentName.localeCompare(second.studentName));
+  }, [data.activeStudents, data.allTaskDetails]);
   const selectedStudentReport = useMemo(
     () => reportCardRows.find((student) => student.studentId === selectedStudentReportId) ?? null,
     [reportCardRows, selectedStudentReportId],
@@ -2135,6 +2301,16 @@ export function TaskAnalyticsDashboard({
             <button type="button" onClick={() => setIsTodayReportOpen(true)} className="wc-secondary-btn px-4 py-2 text-sm">
               <Icon name="today" className="text-base" />
               Today Report
+            </button>
+            <button
+              type="button"
+              onClick={downloadInactiveStudentsReportPng}
+              disabled={inactiveStudentRows.length === 0}
+              className="wc-secondary-btn px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              title="Download paid active students' last task activity as a PNG"
+            >
+              <Icon name="history" className="text-base" />
+              Inactive Report PNG
             </button>
             <button
               type="button"
