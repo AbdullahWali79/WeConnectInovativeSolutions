@@ -378,6 +378,19 @@ export type AiAssistantSettings = {
   created_at: string;
   updated_at: string;
 };
+export type DeepSeekAssistantSettings = {
+  id: boolean;
+  api_key: string | null;
+  model: string;
+  enabled: boolean;
+  system_instructions: string | null;
+  validation_status: "not_tested" | "active" | "invalid" | "error";
+  last_error: string | null;
+  last_checked_at: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
 export type Product = {
   id: string;
   name: string;
@@ -741,7 +754,14 @@ export type Database = {
         Insert: Partial<AiAssistantSettings>;
         Update: Partial<AiAssistantSettings>;
         Relationships: [];
-      };      products: {
+      };
+      deepseek_assistant_settings: {
+        Row: DeepSeekAssistantSettings;
+        Insert: Partial<DeepSeekAssistantSettings>;
+        Update: Partial<DeepSeekAssistantSettings>;
+        Relationships: [];
+      };
+      products: {
         Row: Product;
         Insert: Partial<Product> & { name: string; category: string };
         Update: Partial<Product>;
