@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AiAssistantSettings } from "@/components/admin/ai-assistant-settings";
 import { getCurrentUserProfile } from "@/lib/admin-access";
-import { DEFAULT_AI_SETTINGS, getAiSettings } from "@/lib/ai-assistant";
+import { DEFAULT_AI_INSTRUCTIONS, DEFAULT_AI_SETTINGS, getAiSettings } from "@/lib/ai-assistant";
 
 export default async function AiAssistantSettingsPage() {
   const profile = await getCurrentUserProfile().catch(() => null);
@@ -12,5 +12,5 @@ export default async function AiAssistantSettingsPage() {
     setupError = error instanceof Error ? error.message : "AI settings table is not ready.";
     return DEFAULT_AI_SETTINGS;
   });
-  return <AiAssistantSettings initial={{ provider: settings.provider, model: settings.model === "gemini-flash-latest" ? "gemini-3.5-flash" : settings.model, enabled: settings.enabled, assistantName: settings.assistant_name, welcomeMessage: settings.welcome_message, systemInstructions: settings.system_instructions ?? "", validationStatus: settings.validation_status, lastError: settings.last_error, lastCheckedAt: settings.last_checked_at, hasApiKey: Boolean(settings.api_key) }} setupError={setupError} />;
+  return <AiAssistantSettings initial={{ provider: settings.provider, model: settings.model === "gemini-flash-latest" ? "gemini-3.5-flash" : settings.model, enabled: settings.enabled, assistantName: settings.assistant_name, welcomeMessage: settings.welcome_message, systemInstructions: settings.system_instructions?.trim() || DEFAULT_AI_INSTRUCTIONS, validationStatus: settings.validation_status, lastError: settings.last_error, lastCheckedAt: settings.last_checked_at, hasApiKey: Boolean(settings.api_key) }} defaultInstructions={DEFAULT_AI_INSTRUCTIONS} setupError={setupError} />;
 }

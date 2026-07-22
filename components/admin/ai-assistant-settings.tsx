@@ -9,7 +9,7 @@ import type { AiAssistantSettings as SettingsType } from "@/lib/supabase/types";
 
 type View = { provider: "gemini"; model: string; enabled: boolean; assistantName: string; welcomeMessage: string; systemInstructions: string; validationStatus: SettingsType["validation_status"]; lastError: string | null; lastCheckedAt: string | null; hasApiKey: boolean };
 
-export function AiAssistantSettings({ initial, setupError }: { initial: View; setupError: string | null }) {
+export function AiAssistantSettings({ initial, defaultInstructions, setupError }: { initial: View; defaultInstructions: string; setupError: string | null }) {
   const [form, setForm] = useState({ ...initial, apiKey: "" });
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -59,7 +59,7 @@ export function AiAssistantSettings({ initial, setupError }: { initial: View; se
         <label><span className="wc-label">Assistant name</span><input className="wc-input mt-2" value={form.assistantName} onChange={(event) => setForm({ ...form, assistantName: event.target.value })} /></label>
         <label className="flex items-center gap-3 rounded-xl border border-outline-variant p-4"><input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} className="h-5 w-5" /><span><strong className="block">Enable public AI bot</strong><span className="text-xs text-on-surface-variant">Turn off anytime without deleting the key.</span></span></label>
         <label className="md:col-span-2"><span className="wc-label">Welcome message</span><textarea className="wc-input mt-2 min-h-24" value={form.welcomeMessage} onChange={(event) => setForm({ ...form, welcomeMessage: event.target.value })} /></label>
-        <label className="md:col-span-2"><span className="wc-label">Additional behavior instructions</span><textarea className="wc-input mt-2 min-h-32" value={form.systemInstructions} onChange={(event) => setForm({ ...form, systemInstructions: event.target.value })} placeholder="Optional: tone, contact rules, languages, or escalation instructions." /></label>
+        <label className="md:col-span-2"><span className="flex flex-wrap items-center justify-between gap-2"><span className="wc-label">AI behavior instructions and examples</span><button type="button" className="wc-secondary-btn px-3 py-2 text-xs" onClick={() => setForm({ ...form, systemInstructions: defaultInstructions })}><Icon name="restart_alt" /> Restore recommended instructions</button></span><textarea className="wc-input mt-2 min-h-80 font-mono text-sm leading-6" value={form.systemInstructions} onChange={(event) => setForm({ ...form, systemInstructions: event.target.value })} /><span className="mt-2 block text-xs text-on-surface-variant">These editable rules and examples are included with website knowledge in every AI response.</span></label>
       </div>
       <div className="flex flex-wrap gap-3"><button className="wc-primary-btn" disabled={saving || Boolean(setupError)}><Icon name="save" /> {saving ? "Saving..." : "Save Settings"}</button><button type="button" className="wc-secondary-btn" disabled={testing || !form.hasApiKey || Boolean(setupError)} onClick={() => void test()}><Icon name="network_check" /> {testing ? "Testing..." : form.apiKey.trim() ? "Save & Test Connection" : "Test Connection"}</button></div>
     </form>
