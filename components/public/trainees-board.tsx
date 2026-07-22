@@ -71,7 +71,7 @@ export function TraineesBoard({
   const [projects] = useState<StudentProject[]>(initialProjects);
   const [loading] = useState(false);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [courseFilter, setCourseFilter] = useState("all");
   const courseById = useMemo(() => new Map(courses.map((course) => [course.id, course])), [courses]);
   const studentByEmail = useMemo(() => new Map(students.map((student) => [student.email?.trim().toLowerCase() ?? "", student])), [students]);
