@@ -2,7 +2,7 @@ create table if not exists public.ai_assistant_settings (
   id boolean primary key default true check (id = true),
   provider text not null default 'gemini' check (provider in ('gemini')),
   api_key text,
-  model text not null default 'gemini-3.5-flash',
+  model text not null default 'gemini-flash-latest',
   enabled boolean not null default false,
   assistant_name text not null default 'WeConnect Assistant',
   welcome_message text not null default 'Hello! I can guide you about our services, products, courses, and application process.',
