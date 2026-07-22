@@ -61,6 +61,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
     { href: "/admin/settings/signature", label: "Signature & Stamp", icon: "draw", adminOnly: true },
     { href: "/admin/settings/branding", label: "Branding", icon: "palette", adminOnly: true },
+    { href: "/admin/settings/ai-assistant", label: "AI Assistant", icon: "smart_toy", adminOnly: true },
   ]},
 ];
 
