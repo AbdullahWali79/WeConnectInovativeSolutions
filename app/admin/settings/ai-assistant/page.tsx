@@ -12,5 +12,5 @@ export default async function AiAssistantSettingsPage() {
     setupError = error instanceof Error ? error.message : "AI settings table is not ready.";
     return DEFAULT_AI_SETTINGS;
   });
-  return <AiAssistantSettings initial={{ provider: settings.provider, model: settings.model === "gemini-3.5-flash" ? "gemini-flash-latest" : settings.model, enabled: settings.enabled, assistantName: settings.assistant_name, welcomeMessage: settings.welcome_message, systemInstructions: settings.system_instructions ?? "", validationStatus: settings.validation_status, lastError: settings.last_error, lastCheckedAt: settings.last_checked_at, hasApiKey: Boolean(settings.api_key) }} setupError={setupError} />;
+  return <AiAssistantSettings initial={{ provider: settings.provider, model: settings.model === "gemini-flash-latest" ? "gemini-3.5-flash" : settings.model, enabled: settings.enabled, assistantName: settings.assistant_name, welcomeMessage: settings.welcome_message, systemInstructions: settings.system_instructions ?? "", validationStatus: settings.validation_status, lastError: settings.last_error, lastCheckedAt: settings.last_checked_at, hasApiKey: Boolean(settings.api_key) }} setupError={setupError} />;
 }
