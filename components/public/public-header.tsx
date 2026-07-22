@@ -57,7 +57,6 @@ export function PublicHeader() {
   const router = useRouter();
   const currentPath = pathname ?? "";
   const branding = useBranding();
-  const usingLogoPalette = branding.landingPalette === "logo";
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -184,16 +183,7 @@ export function PublicHeader() {
         </nav>
 
         <div className="public-header-actions">
-          <button
-            type="button"
-            className="public-header-palette"
-            onClick={() => branding.setLandingPalette(usingLogoPalette ? "classic" : "logo")}
-            title={`Use ${usingLogoPalette ? "classic" : "logo"} color scheme`}
-            aria-label={`Use ${usingLogoPalette ? "classic" : "logo"} color scheme`}
-          >
-            <Icon name="palette" className="text-lg" />
-            <span>{usingLogoPalette ? "Logo" : "Classic"}</span>
-          </button>
+
           <Link href="/testimonials" prefetch onClick={() => handleNavigate("/testimonials")} className="public-header-feedback public-header-feedback-action">
             Client Reviews
           </Link>
@@ -266,14 +256,7 @@ export function PublicHeader() {
         </nav>
 
         <div className="public-mobile-actions">
-          <button
-            type="button"
-            className="public-mobile-palette"
-            onClick={() => branding.setLandingPalette(usingLogoPalette ? "classic" : "logo")}
-          >
-            <Icon name="palette" />
-            Color scheme: {usingLogoPalette ? "Logo" : "Classic"}
-          </button>
+
           <Link href="/login" prefetch onClick={() => handleNavigate("/login")} className="public-mobile-login">
             Login
           </Link>

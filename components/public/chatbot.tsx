@@ -3,12 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Icon } from "@/components/icon";
+import { useBranding } from "@/components/branding-provider";
 
 type Message = { id: string; type: "user" | "bot"; text: string };
 const suggestions = ["What services do you offer?", "Show me your products", "Which courses are available?", "How can I apply?", "How do I contact your team?"];
 
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const branding = useBranding();
+  const usingLogoPalette = branding.landingPalette === "logo";
   const [messages, setMessages] = useState<Message[]>([{ id: "welcome", type: "bot", text: "Hello! How can I guide you about WeConnect today?" }]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -44,7 +48,11 @@ export function Chatbot() {
   }
 
   return <>
-    <AnimatePresence>{!isOpen ? <motion.button initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }} onClick={() => setIsOpen(true)} aria-label="Open AI assistant" className="public-chatbot-button fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full text-on-primary"><Icon name="smart_toy" className="text-3xl" /></motion.button> : null}</AnimatePresence>
+    <AnimatePresence>{!isOpen ? <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-2">
+      <AnimatePresence>{toolsOpen ? <motion.button initial={{ opacity: 0, y: 10, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.8 }} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }} type="button" onClick={() => branding.setLandingPalette(usingLogoPalette ? "classic" : "logo")} aria-label={`Use ${usingLogoPalette ? "classic" : "logo"} color scheme`} title={`Use ${usingLogoPalette ? "classic" : "logo"} color scheme`} className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-surface-lowest)] text-[var(--wc-secondary)] shadow-lg"><Icon name="palette" className="text-xl" /></motion.button> : null}</AnimatePresence>
+      <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }} type="button" onClick={() => setToolsOpen((current) => !current)} aria-label={toolsOpen ? "Close display options" : "Open display options"} aria-expanded={toolsOpen} title="Display options" className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wc-secondary)]/25 bg-[var(--wc-surface-lowest)] text-[var(--wc-secondary)] shadow-lg"><Icon name={toolsOpen ? "close" : "add"} className="text-xl" /></motion.button>
+      <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }} onClick={() => { setToolsOpen(false); setIsOpen(true); }} aria-label="Open AI assistant" className="public-chatbot-button flex h-16 w-16 items-center justify-center rounded-full text-on-primary"><Icon name="smart_toy" className="text-3xl" /></motion.button>
+    </motion.div> : null}</AnimatePresence>
     <AnimatePresence>{isOpen ? <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }} className="public-chatbot-panel fixed bottom-6 right-6 z-50 flex h-[600px] max-h-[85vh] w-[390px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-bg)] shadow-2xl">
       <div className="flex items-center justify-between border-b border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-4"><div className="flex items-center gap-3"><div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--wc-secondary)]/20 text-[var(--wc-secondary)]"><Icon name="smart_toy" /><span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white ${aiEnabled ? "bg-emerald-500" : "bg-amber-500"}`} /></div><div><h3 className="text-sm font-black text-on-surface">{assistantName}</h3><p className="text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)]">{aiEnabled ? "AI website guide" : "Guide mode"}</p></div></div><button onClick={() => setIsOpen(false)} aria-label="Close assistant" className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--wc-surface-low)]"><Icon name="close" /></button></div>
       <div className="flex-1 overflow-y-auto p-4"><div className="flex flex-col gap-4">{messages.map((message) => <div key={message.id} className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}><div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl p-3 text-sm leading-relaxed ${message.type === "user" ? "rounded-tr-sm bg-[var(--wc-secondary)] text-on-primary" : "rounded-tl-sm border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface"}`}>{message.text}</div></div>)}{isTyping ? <div className="flex justify-start"><div className="rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-3 text-sm text-on-surface-variant">Thinking...</div></div> : null}{messages.length <= 2 && !isTyping ? <div className="flex flex-wrap gap-2">{suggestions.map((item) => <button key={item} onClick={() => void send(item)} className="rounded-lg border border-[var(--wc-secondary)]/30 px-3 py-2 text-left text-xs font-bold text-[var(--wc-secondary)] hover:bg-[var(--wc-secondary)]/10">{item}</button>)}</div> : null}<div ref={endRef} /></div></div>
