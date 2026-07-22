@@ -66,7 +66,7 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
           <h1 className="max-w-4xl text-4xl font-black leading-tight text-on-surface sm:text-5xl md:text-6xl">{blog.title}</h1>
           {blog.excerpt ? <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--wc-on-surface-variant)]">{blog.excerpt}</p> : null}
           <div className="mt-8 flex flex-wrap gap-2">
-            {(blog.tags ?? []).map((tag) => <span key={tag} className="rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-3 py-1 text-xs font-bold text-[#C8D7F5]">{tag}</span>)}
+            {(blog.tags ?? []).map((tag) => <span key={tag} className="rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-3 py-1 text-xs font-bold text-[var(--wc-on-surface-variant)]">{tag}</span>)}
           </div>
 
           {coverImageUrl ? (
