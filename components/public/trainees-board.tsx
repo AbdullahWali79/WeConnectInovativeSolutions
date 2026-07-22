@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { LoadingState } from "@/components/loading-state";
 import { Icon } from "@/components/icon";
-import type { Course, Enrollment, ManualEnrollment, Profile, StudentFeeRecord, Submission, Task, Trainee } from "@/lib/supabase/types";
+import type { Course, Enrollment, ManualEnrollment, Profile, StudentFeeRecord, StudentProject, Submission, Task, Trainee } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/public/animations";
 import { DEFAULT_TARGET_TASKS, deriveStudentProgressStatus, getCourseSignals, getProgressPercentage, isReviewedStatus } from "@/lib/student-progress-status";
@@ -24,6 +24,7 @@ type TraineeView = {
   training_duration: string | null;
   assigned_tasks: number;
   completed_tasks: number;
+  completed_projects: number;
   pending_tasks: number;
   progress_percentage: number;
   status: "active" | "completed" | "pending" | "dropped";
@@ -41,6 +42,7 @@ type TraineesBoardProps = {
   initialSubmissions: Submission[];
   initialEnrollments: Enrollment[];
   initialManualEnrollments: ManualEnrollment[];
+  initialProjects: StudentProject[];
 };
 
 function compareMonthKeysDesc(a: string, b: string) {
@@ -56,6 +58,7 @@ export function TraineesBoard({
   initialSubmissions,
   initialEnrollments,
   initialManualEnrollments,
+  initialProjects,
 }: TraineesBoardProps) {
   const [trainees] = useState<Trainee[]>(initialTrainees);
   const [courses] = useState<Course[]>(initialCourses);
@@ -65,6 +68,7 @@ export function TraineesBoard({
   const [submissions] = useState<Submission[]>(initialSubmissions);
   const [enrollments] = useState<Enrollment[]>(initialEnrollments);
   const [manualEnrollments] = useState<ManualEnrollment[]>(initialManualEnrollments);
+  const [projects] = useState<StudentProject[]>(initialProjects);
   const [loading] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -94,6 +98,15 @@ export function TraineesBoard({
       return map;
     }, new Map<string, Enrollment[]>());
   }, [enrollments]);
+
+  const approvedProjectsByStudentAndCourse = useMemo(() => {
+    return projects.reduce((map, project) => {
+      if (!project.course_id || project.status !== "approved") return map;
+      const key = `${project.student_id}:${project.course_id}`;
+      map.set(key, (map.get(key) ?? 0) + 1);
+      return map;
+    }, new Map<string, number>());
+  }, [projects]);
 
   const traineesWithStatus = useMemo<TraineeView[]>(() => {
     const feeRecordsByStudentId = feeRecords.reduce((map, fee) => {
@@ -150,15 +163,17 @@ export function TraineesBoard({
         const taskStats = selectedCourseId ? reportsByStudentAndCourse.get(`${student.id}:${selectedCourseId}`) : null;
         const totalTasks = taskStats?.tasks.length ?? selectedSignals?.totalTasks ?? trainee?.assigned_tasks ?? 0;
         const completedTasks = taskStats?.completed ?? selectedSignals?.reviewedTasks ?? trainee?.completed_tasks ?? 0;
+        const completedProjects = selectedCourseId ? (approvedProjectsByStudentAndCourse.get(`${student.id}:${selectedCourseId}`) ?? 0) : 0;
         const pendingTasks = taskStats?.pending ?? trainee?.pending_tasks ?? Math.max(totalTasks - completedTasks, 0);
         const reviewedTasks = selectedSignals?.reviewedTasks ?? completedTasks;
         const revisionRequiredTasks = selectedSignals?.revisionRequiredTasks ?? 0;
         const startedTasks = selectedSignals?.startedTasks ?? 0;
         const targetTasks = trainee?.assigned_tasks > 0 ? Math.max(trainee.assigned_tasks, DEFAULT_TARGET_TASKS) : DEFAULT_TARGET_TASKS;
         const isCompletedEnrollment = latestEnrollment?.status === "completed";
+        const completedWork = reviewedTasks + completedProjects;
         const progressPercentage = getProgressPercentage({
           isCompletedEnrollment,
-          reviewedTasks,
+          reviewedTasks: completedWork,
           targetTasks,
           enrollmentProgress: latestEnrollment?.progress_percentage,
         });
@@ -166,7 +181,7 @@ export function TraineesBoard({
         const derivedStatus: TraineeView["status"] = deriveStudentProgressStatus({
           isBlocked,
           isCompletedEnrollment,
-          reviewedTasks,
+          reviewedTasks: completedWork,
           revisionRequiredTasks,
           startedTasks,
           targetTasks,
@@ -185,6 +200,7 @@ export function TraineesBoard({
           training_duration: trainee?.training_duration ?? null,
           assigned_tasks: displayTotalTasks,
           completed_tasks: displayCompletedTasks,
+          completed_projects: completedProjects,
           pending_tasks: displayPendingTasks,
           progress_percentage: displayProgressPercentage,
           status: derivedStatus,
@@ -209,6 +225,7 @@ export function TraineesBoard({
         const taskStats = student && trainee.course_id ? reportsByStudentAndCourse.get(`${student.id}:${trainee.course_id}`) : null;
         const totalTasks = taskStats?.tasks.length ?? selectedSignals?.totalTasks ?? trainee.assigned_tasks;
         const completedTasks = taskStats?.completed ?? selectedSignals?.reviewedTasks ?? trainee.completed_tasks;
+        const completedProjects = student && trainee.course_id ? (approvedProjectsByStudentAndCourse.get(`${student.id}:${trainee.course_id}`) ?? 0) : 0;
         const pendingTasks = taskStats?.pending ?? trainee.pending_tasks ?? Math.max(totalTasks - completedTasks, 0);
         const reviewedTasks = selectedSignals?.reviewedTasks ?? completedTasks;
         const revisionRequiredTasks = selectedSignals?.revisionRequiredTasks ?? 0;
@@ -218,16 +235,17 @@ export function TraineesBoard({
           ? manualEnrollmentByKey.get(`${student.email?.trim().toLowerCase() ?? ""}::${courseById.get(trainee.course_id)?.title.trim().toLowerCase() ?? ""}`)
           : null;
         const isCompletedEnrollment = latestEnrollment?.status === "completed" || Boolean(manualRecord?.completion_date);
+        const completedWork = reviewedTasks + completedProjects;
         const progressPercentage = getProgressPercentage({
           isCompletedEnrollment,
-          reviewedTasks,
+          reviewedTasks: completedWork,
           targetTasks,
           enrollmentProgress: latestEnrollment?.progress_percentage,
         });
         const derivedStatus: TraineeView["status"] = deriveStudentProgressStatus({
           isBlocked,
           isCompletedEnrollment,
-          reviewedTasks,
+          reviewedTasks: completedWork,
           revisionRequiredTasks,
           startedTasks,
           targetTasks,
@@ -246,6 +264,7 @@ export function TraineesBoard({
           training_duration: trainee.training_duration ?? null,
           assigned_tasks: displayTotalTasks,
           completed_tasks: displayCompletedTasks,
+          completed_projects: completedProjects,
           pending_tasks: displayPendingTasks,
           progress_percentage: displayProgressPercentage,
           status: derivedStatus,
@@ -256,7 +275,7 @@ export function TraineesBoard({
       });
 
     return [...profileRows, ...extraRows];
-  }, [feeRecords, studentByEmail, students, tasks, submissionByTaskId, traineeByEmail, trainees, enrollmentByStudentId, courseById, manualEnrollmentByKey]);
+  }, [feeRecords, studentByEmail, students, tasks, submissionByTaskId, traineeByEmail, trainees, enrollmentByStudentId, courseById, manualEnrollmentByKey, approvedProjectsByStudentAndCourse]);
 
   const filtered = useMemo(() => traineesWithStatus.filter((trainee) => {
     const text = `${trainee.name} ${trainee.email}`.toLowerCase();
@@ -313,14 +332,17 @@ export function TraineesBoard({
         ${safeUniversity ? `<rect x="170" y="220" rx="18" ry="18" width="${Math.max(140, safeUniversity.length * 11)}" height="34" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/><text x="188" y="243" fill="var(--wc-on-surface-variant)" font-family="Arial, sans-serif" font-size="16" font-weight="700">${safeUniversity}</text>` : ""}
         ${safeDuration ? `<rect x="${safeUniversity ? 170 + Math.max(140, safeUniversity.length * 11) + 14 : 170}" y="220" rx="18" ry="18" width="${Math.max(120, safeDuration.length * 10)}" height="34" fill="rgba(var(--landing-accent-rgb),0.10)" stroke="rgba(var(--landing-accent-rgb),0.20)"/><text x="${safeUniversity ? 188 + Math.max(140, safeUniversity.length * 11) + 14 : 188}" y="243" fill="var(--wc-secondary)" font-family="Arial, sans-serif" font-size="16" font-weight="700">${safeDuration}</text>` : ""}
         <rect x="90" y="320" width="1020" height="170" rx="24" fill="rgba(0,0,0,0.18)" stroke="rgba(255,255,255,0.05)"/>
-        <text x="190" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle">ASSIGNED</text>
-        <text x="190" y="424" fill="#ffffff" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">${trainee.assigned_tasks}</text>
-        <line x1="390" y1="348" x2="390" y2="460" stroke="rgba(255,255,255,0.08)"/>
-        <text x="550" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle">COMPLETED</text>
-        <text x="550" y="424" fill="#22c55e" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">${trainee.completed_tasks}</text>
-        <line x1="760" y1="348" x2="760" y2="460" stroke="rgba(255,255,255,0.08)"/>
-        <text x="930" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle">PENDING</text>
-        <text x="930" y="424" fill="var(--wc-secondary)" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">${trainee.pending_tasks}</text>
+        <text x="210" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle">ASSIGNED</text>
+        <text x="210" y="424" fill="#ffffff" font-family="Arial, sans-serif" font-size="44" font-weight="800" text-anchor="middle">${trainee.assigned_tasks}</text>
+        <line x1="345" y1="348" x2="345" y2="460" stroke="rgba(255,255,255,0.08)"/>
+        <text x="465" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle">TASKS COMPLETED</text>
+        <text x="465" y="424" fill="#22c55e" font-family="Arial, sans-serif" font-size="44" font-weight="800" text-anchor="middle">${trainee.completed_tasks}</text>
+        <line x1="600" y1="348" x2="600" y2="460" stroke="rgba(255,255,255,0.08)"/>
+        <text x="735" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle">PROJECTS COMPLETED</text>
+        <text x="735" y="424" fill="#38bdf8" font-family="Arial, sans-serif" font-size="44" font-weight="800" text-anchor="middle">${trainee.completed_projects}</text>
+        <line x1="870" y1="348" x2="870" y2="460" stroke="rgba(255,255,255,0.08)"/>
+        <text x="990" y="374" fill="#7D8BA6" font-family="Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle">PENDING</text>
+        <text x="990" y="424" fill="var(--wc-secondary)" font-family="Arial, sans-serif" font-size="44" font-weight="800" text-anchor="middle">${trainee.pending_tasks}</text>
         <text x="90" y="540" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="700">Progress</text>
         <text x="1110" y="540" fill="var(--wc-secondary)" font-family="Arial, sans-serif" font-size="22" font-weight="700" text-anchor="end">${trainee.progress_percentage}%</text>
         <rect x="90" y="558" width="1020" height="18" rx="9" fill="rgba(0,0,0,0.45)"/>
@@ -432,14 +454,18 @@ export function TraineesBoard({
                     </span>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-[var(--wc-surface-lowest)] p-4 text-center border border-[var(--wc-outline-variant)]">
+                  <div className="mt-6 grid grid-cols-2 gap-y-4 rounded-2xl bg-[var(--wc-surface-lowest)] p-4 text-center border border-[var(--wc-outline-variant)] sm:grid-cols-4 sm:gap-y-0">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Assigned</p>
                       <strong className="text-xl font-black text-on-surface">{trainee.assigned_tasks}</strong>
                     </div>
                     <div className="border-l border-[var(--wc-outline-variant)]">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Completed</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Tasks Completed</p>
                       <strong className="text-xl font-black text-green-400">{trainee.completed_tasks}</strong>
+                    </div>
+                    <div className="border-l border-[var(--wc-outline-variant)]">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Projects Completed</p>
+                      <strong className="text-xl font-black text-sky-400">{trainee.completed_projects}</strong>
                     </div>
                     <div className="border-l border-[var(--wc-outline-variant)]">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Pending</p>

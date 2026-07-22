@@ -1,7 +1,7 @@
 import { PublicHeader } from "@/components/public/public-header";
 import { TraineesBoard } from "@/components/public/trainees-board";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import type { Course, Enrollment, ManualEnrollment, Profile, StudentFeeRecord, Submission, Task, Trainee } from "@/lib/supabase/types";
+import type { Course, Enrollment, ManualEnrollment, Profile, StudentFeeRecord, StudentProject, Submission, Task, Trainee } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +15,11 @@ export default async function TraineesPage() {
     supabase.from("profiles").select("*").eq("role", "student").order("full_name"),
   ]);
 
-  const [taskResult, submissionResult, manualResult] = await Promise.all([
+  const [taskResult, submissionResult, manualResult, projectResult] = await Promise.all([
     supabase.from("tasks").select("*").order("created_at", { ascending: false }),
     supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
     supabase.from("manual_enrollments").select("*"),
+    supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
   ]);
 
   const enrollmentResult = await supabase.from("enrollments").select("*").order("created_at", { ascending: false });
@@ -30,6 +31,7 @@ export default async function TraineesPage() {
   const tasks = (taskResult.data ?? []) as Task[];
   const submissions = (submissionResult.data ?? []) as Submission[];
   const manualEnrollments = (manualResult.data ?? []) as ManualEnrollment[];
+  const projects = (projectResult.data ?? []) as StudentProject[];
   const enrollments = (enrollmentResult.data ?? []) as Enrollment[];
 
   return (
@@ -44,6 +46,7 @@ export default async function TraineesPage() {
         initialSubmissions={submissions}
         initialEnrollments={enrollments}
         initialManualEnrollments={manualEnrollments}
+        initialProjects={projects}
       />
     </main>
   );
