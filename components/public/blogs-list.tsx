@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icon";
 import type { Blog } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
+import { normalizeImageUrl } from "@/lib/image-url";
 
 export function BlogsList({ blogs }: { blogs: Blog[] }) {
   const [query, setQuery] = useState("");
@@ -51,12 +52,14 @@ export function BlogsList({ blogs }: { blogs: Blog[] }) {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((blog) => (
+            {filtered.map((blog) => {
+              const coverImageUrl = normalizeImageUrl(blog.cover_image_cdn_url ?? blog.cover_image_url);
+              return (
               <Link key={blog.id} href={`/blogs/${blog.slug}`} className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/70 shadow-[0_0_50px_rgba(0,0,0,0.25)] transition duration-300 hover:-translate-y-1 hover:border-[var(--wc-secondary)]/35">
                 <div className="aspect-[16/10] bg-[var(--wc-surface-low)]">
-                  {(blog.cover_image_cdn_url ?? blog.cover_image_url) ? (
+                  {coverImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={blog.cover_image_cdn_url ?? blog.cover_image_url ?? ""} alt={blog.title} className="h-full w-full object-cover" />
+                    <img src={coverImageUrl} alt={blog.title} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full items-center justify-center bg-[#071A3B] text-[var(--wc-secondary)]"><Icon name="article" className="text-5xl" /></div>
                   )}
@@ -70,7 +73,8 @@ export function BlogsList({ blogs }: { blogs: Blog[] }) {
                   <p className="mt-3 flex-1 text-sm leading-6 text-[var(--wc-on-surface-variant)] line-clamp-2">{blog.excerpt}</p>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

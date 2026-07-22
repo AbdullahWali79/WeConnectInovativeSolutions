@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PublicHeader } from "@/components/public/public-header";
 import { Icon } from "@/components/icon";
 import { getBlogBySlug, getRelatedBlogs } from "@/lib/blogs";
+import { normalizeImageUrl } from "@/lib/image-url";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import { formatDate } from "@/lib/utils";
 
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: BlogDetailProps): Promise<Met
     return { title: "Blog not found | WeConnect-Innovation" };
   }
 
-  const coverImageUrl = blog.cover_image_cdn_url ?? blog.cover_image_url;
+  const coverImageUrl = normalizeImageUrl(blog.cover_image_cdn_url ?? blog.cover_image_url);
 
   return {
     title: blog.seo_title || blog.title,
@@ -46,7 +47,7 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
 
   const related = await getRelatedBlogs(blog).catch(() => []);
   const html = renderMarkdownToHtml(blog.content);
-  const coverImageUrl = blog.cover_image_cdn_url ?? blog.cover_image_url;
+  const coverImageUrl = normalizeImageUrl(blog.cover_image_cdn_url ?? blog.cover_image_url);
 
   return (
     <main className="min-h-screen bg-[var(--wc-bg)] text-on-surface">

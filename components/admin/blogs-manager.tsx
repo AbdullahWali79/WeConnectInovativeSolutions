@@ -8,13 +8,10 @@ import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
-import { uploadFileToGithubCdn } from "@/lib/media/client-upload";
 import { normalizeBlogTags, slugifyBlogTitle, type BlogInput } from "@/lib/blogs";
+import { normalizeImageUrl } from "@/lib/image-url";
 import type { Blog } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
-type GithubUploadResult = Awaited<ReturnType<typeof uploadFileToGithubCdn>>;
-
-
 const defaultForm = {
   title: "",
   slug: "",
@@ -44,6 +41,8 @@ export function BlogsManager() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [toast, setToast] = useState<ToastState>(null);
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
+  const coverPreviewUrl = useMemo(() => normalizeImageUrl(form.cover_image_url), [form.cover_image_url]);
 
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -79,11 +78,13 @@ export function BlogsManager() {
     setEditingId(null);
     setSlugEdited(false);
     setForm(defaultForm);
+    setPreviewStatus("idle");
   }
 
   function startEdit(row: Blog) {
     setEditingId(row.id);
     setSlugEdited(true);
+    setPreviewStatus(row.cover_image_url ? "loading" : "idle");
     setForm({
       title: row.title,
       slug: row.slug,
@@ -117,46 +118,6 @@ export function BlogsManager() {
     setForm((current) => ({ ...current, slug: slugifyBlogTitle(value) }));
   }
 
-  async function saveCoverToEditingBlog(upload: GithubUploadResult) {
-    if (!editingId) return false;
-
-    const nextPayload = {
-      ...buildPayload(),
-      cover_image_url: upload.githubCdnUrl,
-      cover_image_github_path: upload.githubPath,
-      cover_image_github_url: upload.githubUrl,
-      cover_image_cdn_url: upload.githubCdnUrl,
-    };
-
-    const result = await updateBlog(editingId, nextPayload);
-    if (!result.ok) throw new Error(result.error ?? "Cover image could not be saved.");
-
-    setRows((current) => current.map((row) => row.id === editingId ? {
-      ...row,
-      cover_image_url: upload.githubCdnUrl,
-      cover_image_github_path: upload.githubPath,
-      cover_image_github_url: upload.githubUrl,
-      cover_image_cdn_url: upload.githubCdnUrl,
-    } : row));
-    return true;
-  }
-
-  async function onPickImage(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setSaving(true);
-    try {
-      const upload = await uploadFileToGithubCdn(file, "blog");
-      setForm((current) => ({ ...current, cover_image_url: upload.githubCdnUrl, cover_image_github_path: upload.githubPath, cover_image_github_url: upload.githubUrl, cover_image_cdn_url: upload.githubCdnUrl }));
-      const saved = await saveCoverToEditingBlog(upload);
-      setToast({ type: "success", message: saved ? "Cover image uploaded and saved to this blog." : "Cover image uploaded. Fill the blog form and click Create to save it." });
-    } catch (error) {
-      setToast({ type: "error", message: error instanceof Error ? error.message : "Cover image upload failed." });
-    } finally {
-      setSaving(false);
-      event.target.value = "";
-    }
-  }
   function buildPayload(): BlogInput {
     return {
       title: form.title,
@@ -245,8 +206,16 @@ export function BlogsManager() {
             <input className="wc-input" placeholder="Target keyword" value={form.target_keyword} onChange={(event) => setForm((current) => ({ ...current, target_keyword: event.target.value }))} />
             <textarea className="wc-input min-h-20" placeholder="Excerpt" value={form.excerpt} onChange={(event) => setForm((current) => ({ ...current, excerpt: event.target.value }))} />
             <textarea className="wc-input min-h-64 font-mono text-sm" placeholder="# Markdown content" value={form.content} onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))} required />
-            <input className="wc-input" placeholder="Cover image URL" value={form.cover_image_url} onChange={(event) => setForm((current) => ({ ...current, cover_image_url: event.target.value }))} />
-            <input className="wc-input" type="file" accept="image/*" onChange={onPickImage} />
+            <input className="wc-input" placeholder="Public image URL or Google Drive share link" value={form.cover_image_url} onChange={(event) => { setPreviewStatus(event.target.value.trim() ? "loading" : "idle"); setForm((current) => ({ ...current, cover_image_url: event.target.value, cover_image_github_path: "", cover_image_github_url: "", cover_image_cdn_url: "" })); }} />
+            <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low">
+              {coverPreviewUrl && previewStatus !== "error" ? <>
+                <div className="aspect-[16/9] bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={coverPreviewUrl} alt="Blog cover preview" className="h-full w-full object-cover" onLoad={() => setPreviewStatus("loaded")} onError={() => setPreviewStatus("error")} />
+                </div>
+                <p className={`flex items-center gap-2 border-t border-outline-variant px-3 py-2 text-xs font-bold ${previewStatus === "loaded" ? "text-emerald-700" : "text-on-surface-variant"}`}><Icon name={previewStatus === "loaded" ? "check_circle" : "progress_activity"} /> {previewStatus === "loaded" ? "Image preview loaded successfully" : "Loading image preview..."}</p>
+              </> : <div className="flex min-h-36 flex-col items-center justify-center gap-2 p-4 text-center text-on-surface-variant"><Icon name={previewStatus === "error" ? "broken_image" : "image"} className="text-3xl" /><p className="text-sm font-bold">{previewStatus === "error" ? "Image could not be previewed" : "Image preview will appear here"}</p><p className="text-xs">Google Drive access must be Anyone with the link - Viewer.</p></div>}
+            </div>
             <input className="wc-input" placeholder="Tags (comma separated)" value={form.tags} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))} />
             <input className="wc-input" placeholder="SEO title" value={form.seo_title} onChange={(event) => setForm((current) => ({ ...current, seo_title: event.target.value }))} />
             <textarea className="wc-input min-h-20" maxLength={160} placeholder="SEO description (max 160 characters)" value={form.seo_description} onChange={(event) => setForm((current) => ({ ...current, seo_description: event.target.value }))} />
