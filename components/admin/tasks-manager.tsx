@@ -99,7 +99,7 @@ export function TasksManager({
       supabase.from("task_resources").select("*").order("created_at", { ascending: true }),
       supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
       supabase.from("submission_screenshots").select("*").order("created_at", { ascending: true }),
-      supabase.from("student_projects").select("id", { count: "exact", head: true }).eq("status", "submitted"),
+      supabase.from("student_projects").select("id", { count: "exact", head: true }),
     ]);
     const error = studentResult.error ?? courseResult.error ?? enrollmentResult.error ?? taskResult.error ?? resourceResult.error ?? submissionResult.error ?? screenshotResult.error;
     if (error) setToast({ type: "error", message: error.message });
