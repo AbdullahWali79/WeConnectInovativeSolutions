@@ -11,6 +11,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { deleteStudentFeeRecord, toggleStudentFeeBlock, upsertStudentFeeRecord } from "@/app/admin/actions";
 import type { Course, Enrollment, Profile, StudentFeeRecord, StudentFeeStatus } from "@/lib/supabase/types";
+import { normalizeWhatsappPhone } from "@/lib/utils";
 
 type EditableFee = Record<string, {
   amount_due: string;
@@ -51,6 +52,7 @@ type FeeDueReminder = {
   dueDateKey: string;
   monthKey: string;
   daysUntilDue: number;
+  sourceFee: StudentFeeRecord;
   nextFee: StudentFeeRecord | null;
 };
 
@@ -91,6 +93,80 @@ function reminderTimingLabel(daysUntilDue: number) {
   if (daysUntilDue > 1) return `${daysUntilDue} days remaining`;
   if (daysUntilDue === -1) return "1 day overdue";
   return `${Math.abs(daysUntilDue)} days overdue`;
+}
+
+function formatFeeMonth(monthKey: string) {
+  const [year, month] = monthKey.split("-").map(Number);
+  if (!year || !month) return monthKey;
+  return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+}
+
+function formatFeeAmount(amount: number) {
+  return new Intl.NumberFormat("en-PK", { maximumFractionDigits: 0 }).format(Math.max(0, amount));
+}
+
+function feeReminderWhatsappUrl(reminder: FeeDueReminder) {
+  const phone = normalizeWhatsappPhone(reminder.student.phone);
+  if (!phone) return null;
+
+  const studentName = reminder.student.full_name?.trim() || "Student";
+  const pendingFee = reminder.nextFee && ["pending", "partial", "overdue"].includes(reminder.nextFee.status)
+    ? reminder.nextFee
+    : reminder.lastFeeStatus === "partial"
+      ? reminder.sourceFee
+      : null;
+  const outstanding = pendingFee ? Math.max(0, Number(pendingFee.amount_due) - Number(pendingFee.amount_paid)) : 0;
+  const message = pendingFee && outstanding > 0
+    ? [
+        `Assalam-o-Alaikum ${studentName},`,
+        "",
+        `Your pending fee for ${reminder.course.title} (${formatFeeMonth(pendingFee.month_key)}) is PKR ${formatFeeAmount(outstanding)}.`,
+        `Due date: ${formatReminderDate(localDateOnly(pendingFee.due_date ?? reminder.dueDate))}.`,
+        "Please submit the pending fee and share the payment confirmation.",
+      ].join("\n")
+    : [
+        `Assalam-o-Alaikum ${studentName},`,
+        "",
+        `Your previous fee cycle for ${reminder.course.title} is complete. The next monthly fee for ${formatFeeMonth(reminder.monthKey)} is PKR ${formatFeeAmount(Number(reminder.nextFee?.amount_due ?? reminder.sourceFee.amount_due))}.`,
+        `Due date: ${formatReminderDate(reminder.dueDate)}.`,
+        "Please submit the next month fee by the due date and share the payment confirmation.",
+      ].join("\n");
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function feeRecordWhatsappUrl(student: Profile | undefined, course: Course | undefined, fee: StudentFeeRecord, nextFee: StudentFeeRecord | null) {
+  const phone = normalizeWhatsappPhone(student?.phone);
+  if (!phone) return null;
+
+  const studentName = student?.full_name?.trim() || "Student";
+  const pendingFee = ["pending", "partial", "overdue"].includes(fee.status)
+    ? fee
+    : nextFee && ["pending", "partial", "overdue"].includes(nextFee.status)
+      ? nextFee
+      : null;
+  const outstanding = pendingFee ? Math.max(0, Number(pendingFee.amount_due) - Number(pendingFee.amount_paid)) : 0;
+  const nextMonthKey = nextFee?.month_key ?? getNextMonthKey(fee.month_key);
+  const nextDueDate = nextFee?.due_date
+    ? localDateOnly(nextFee.due_date)
+    : feeCycleEndDate(fee) ?? addClampedMonths(localDateOnly(new Date()), 1);
+  const message = pendingFee && outstanding > 0
+    ? [
+        `Assalam-o-Alaikum ${studentName},`,
+        "",
+        `Your pending fee for ${course?.title ?? "your course"} (${formatFeeMonth(pendingFee.month_key)}) is PKR ${formatFeeAmount(outstanding)}.`,
+        `Due date: ${formatReminderDate(localDateOnly(pendingFee.due_date ?? nextDueDate))}.`,
+        "Please submit the pending fee and share the payment confirmation.",
+      ].join("\n")
+    : [
+        `Assalam-o-Alaikum ${studentName},`,
+        "",
+        `Your previous fee cycle for ${course?.title ?? "your course"} is complete. The next monthly fee for ${formatFeeMonth(nextMonthKey)} is PKR ${formatFeeAmount(Number(nextFee?.amount_due ?? fee.amount_due))}.`,
+        `Due date: ${formatReminderDate(nextDueDate)}.`,
+        "Please submit the next month fee by the due date and share the payment confirmation.",
+      ].join("\n");
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
 function feeCycleEndDate(fee: StudentFeeRecord) {
@@ -304,6 +380,7 @@ export function FeeManagement() {
         dueDateKey: dateKey(dueDate),
         monthKey,
         daysUntilDue,
+        sourceFee: latestPayment,
         nextFee,
       });
     }
@@ -709,11 +786,26 @@ export function FeeManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredReminders.map((reminder) => (
+                  {filteredReminders.map((reminder) => {
+                    const whatsappUrl = feeReminderWhatsappUrl(reminder);
+                    return (
                     <tr key={`${reminder.enrollment.id}:${reminder.monthNumber}`} className="border-t border-outline-variant/60 hover:bg-surface-container/40">
                       <td className="px-4 py-4">
                         <p className="font-bold text-on-surface">{reminder.student.full_name ?? "Unnamed student"}</p>
-                        <p className="mt-1 text-xs text-on-surface-variant">{reminder.student.phone ?? reminder.student.email ?? "No contact details"}</p>
+                        {whatsappUrl ? (
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-green-700 underline decoration-green-300 underline-offset-4 hover:text-green-800"
+                            title="Open WhatsApp with a fee reminder"
+                          >
+                            <Icon name="chat" className="text-sm" />
+                            {reminder.student.phone}
+                          </a>
+                        ) : (
+                          <p className="mt-1 text-xs text-on-surface-variant">{reminder.student.phone ?? reminder.student.email ?? "No contact details"}</p>
+                        )}
                       </td>
                       <td className="px-4 py-4 font-semibold text-primary">{reminder.course.title}</td>
                       <td className="px-4 py-4">
@@ -744,7 +836,8 @@ export function FeeManagement() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -967,6 +1060,7 @@ export function FeeManagement() {
                     const totalPaid = courseHistory.reduce((sum, row) => sum + Number(row.amount_paid ?? 0), 0);
                     const previousFee = historyIndex > 0 ? courseHistory[historyIndex - 1] : null;
                     const nextFee = historyIndex >= 0 && historyIndex < courseHistory.length - 1 ? courseHistory[historyIndex + 1] : null;
+                    const whatsappUrl = feeRecordWhatsappUrl(student, course, fee, nextFee);
                     const cycleEnd = feeCycleEndDate(fee);
                     const cycleEnded = Boolean(cycleEnd && cycleEnd.getTime() <= localDateOnly(new Date()).getTime());
                     const needsNextCycle = cycleEnded && !nextFee;
@@ -999,7 +1093,21 @@ export function FeeManagement() {
                                 </span>
                               ) : null}
                             </div>
-                            <span className="truncate text-xs text-on-surface-variant">{student?.email ?? 'No email'} · {student?.phone ?? 'No phone'}</span>
+                            <span className="truncate text-xs text-on-surface-variant">{student?.email ?? "No email"}</span>
+                            {whatsappUrl ? (
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex w-fit items-center gap-1 text-xs font-bold text-green-700 underline decoration-green-300 underline-offset-4 hover:text-green-800"
+                                title="Open WhatsApp with a fee reminder"
+                              >
+                                <Icon name="chat" className="text-sm" />
+                                {student?.phone}
+                              </a>
+                            ) : (
+                              <span className="text-xs text-on-surface-variant">{student?.phone ?? "No phone"}</span>
+                            )}
                           </div>
                         </td>
 
