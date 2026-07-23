@@ -1,10 +1,39 @@
 import { parseScenarioTable } from "@/lib/scenario-table";
 
+const scenarioUrlPattern = /(https?:\/\/[^\s<>]+)/gi;
+
+function LinkifiedText({ value }: { value: string }) {
+  return value.split(scenarioUrlPattern).map((part, index) => {
+    if (!/^https?:\/\//i.test(part)) return part;
+
+    const trailingPunctuation = part.match(/[.,;:!?]+$/)?.[0] ?? "";
+    const href = trailingPunctuation ? part.slice(0, -trailingPunctuation.length) : part;
+    return (
+      <span key={`${href}-${index}`}>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="break-all font-bold text-primary underline decoration-primary/40 underline-offset-4 hover:text-primary/80"
+          title="Open link in a new tab"
+        >
+          {href}
+        </a>
+        {trailingPunctuation}
+      </span>
+    );
+  });
+}
+
 export function ScenarioDescription({ value, compact = false }: { value?: string | null; compact?: boolean }) {
   const table = parseScenarioTable(value);
 
   if (!table) {
-    return <p className={`${compact ? "text-xs" : "text-sm leading-6"} whitespace-pre-wrap text-on-surface-variant`}>{value || "No description provided."}</p>;
+    return (
+      <p className={`${compact ? "text-xs" : "text-sm leading-6"} whitespace-pre-wrap text-on-surface-variant`}>
+        <LinkifiedText value={value || "No description provided."} />
+      </p>
+    );
   }
 
   return (
@@ -21,7 +50,9 @@ export function ScenarioDescription({ value, compact = false }: { value?: string
           {table.rows.map((row, rowIndex) => (
             <tr key={rowIndex} className="border-b border-outline-variant/70 last:border-b-0 hover:bg-[#F8FAFF]">
               {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className={`px-4 py-3 align-top leading-6 text-on-surface ${cellIndex === 1 ? "font-bold text-[#0A2A72]" : ""}`}>{cell}</td>
+                <td key={cellIndex} className={`px-4 py-3 align-top leading-6 text-on-surface ${cellIndex === 1 ? "font-bold text-[#0A2A72]" : ""}`}>
+                  <LinkifiedText value={cell} />
+                </td>
               ))}
             </tr>
           ))}
