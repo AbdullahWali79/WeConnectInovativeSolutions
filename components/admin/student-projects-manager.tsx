@@ -218,8 +218,8 @@ export function StudentProjectsManager() {
               <p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">Original student submission - admin only</p>
               <p className="mt-2 text-sm leading-6">{row.full_description || row.short_description}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <a className="wc-secondary-btn" href={row.github_url} target="_blank" rel="noreferrer"><Icon name="code" /> Student GitHub</a>
-                {row.live_url ? <a className="wc-secondary-btn" href={row.live_url} target="_blank" rel="noreferrer"><Icon name="open_in_new" /> Student Live Demo</a> : null}
+                {row.github_url ? <a className="wc-secondary-btn" href={row.github_url} target="_blank" rel="noreferrer"><Icon name="code" /> Student GitHub</a> : null}
+                {row.live_url ? <a className="wc-secondary-btn" href={row.live_url} target="_blank" rel="noreferrer"><Icon name="open_in_new" /> {/(youtube\.com|youtu\.be)/i.test(row.live_url) ? "Student YouTube" : "Student Live Demo"}</a> : null}
               </div>
             </div>
 

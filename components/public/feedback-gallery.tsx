@@ -60,19 +60,19 @@ function FeedbackCard({ entry, active = false }: { entry: FeedbackRow; active?: 
       <div className="relative flex h-full flex-col p-5 md:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${buildAvatarGradient(entry.id)} text-sm font-black tracking-widest text-on-surface shadow-lg`}>
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${buildAvatarGradient(entry.id)} text-sm font-black tracking-widest text-white shadow-lg`}>
               {getInitials(entry.name)}
             </div>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`text-xs font-bold uppercase tracking-[0.22em] ${active ? "text-[var(--wc-secondary)]" : "text-[var(--wc-on-surface-variant)]"}`}>{entry.audience_type}</span>
+                <span className={`text-xs font-bold uppercase tracking-[0.22em] ${active ? "text-[var(--wc-secondary)]" : "text-[#B8C8E8]"}`}>{entry.audience_type}</span>
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-300/12 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-200">
                   <Icon name="check" className="text-[12px]" />
                   Verified
                 </span>
               </div>
-              <h3 className="mt-1 whitespace-nowrap text-[18px] font-black leading-none text-on-surface sm:text-[20px] md:text-[22px]">
+              <h3 className="mt-1 whitespace-nowrap text-[18px] font-black leading-none text-white sm:text-[20px] md:text-[22px]">
                 {entry.name}
               </h3>
             </div>
@@ -90,17 +90,17 @@ function FeedbackCard({ entry, active = false }: { entry: FeedbackRow; active?: 
           </span>
         </div>
 
-        <div className={`mb-4 flex items-center gap-2 text-xs font-semibold ${active ? "text-[var(--wc-on-surface-variant)]" : "text-[var(--wc-on-surface-variant)]"}`}>
+        <div className={`mb-4 flex items-center gap-2 text-xs font-semibold ${active ? "text-[#B8C8E8]" : "text-[#9FB0D1]"}`}>
           <Icon name="schedule" className="text-sm" />
           <span>{formatRelativeTime(entry.created_at)}</span>
         </div>
 
         <div className="flex-1">
-          {entry.title ? <h4 className={`text-[28px] font-black leading-tight ${active ? "text-on-surface" : "text-[var(--wc-on-surface-variant)]"}`}>{entry.title}</h4> : null}
-          <p className={`mt-4 text-sm leading-7 ${active ? "text-[var(--wc-on-surface-variant)]" : "text-[var(--wc-on-surface-variant)]"}`}>“{entry.message}”</p>
+          {entry.title ? <h4 className={`text-[28px] font-black leading-tight ${active ? "text-white" : "text-[#D6E1F5]"}`}>{entry.title}</h4> : null}
+          <p className={`mt-4 text-sm leading-7 ${active ? "text-[#D6E1F5]" : "text-[#B8C8E8]"}`}>&ldquo;{entry.message}&rdquo;</p>
         </div>
 
-        <div className={`mt-6 flex items-center justify-between border-t border-[var(--wc-outline-variant)] pt-4 text-xs ${active ? "text-[var(--wc-on-surface-variant)]" : "text-[var(--wc-on-surface-variant)]"}`}>
+        <div className={`mt-6 flex items-center justify-between border-t border-white/20 pt-4 text-xs ${active ? "text-[#B8C8E8]" : "text-[#9FB0D1]"}`}>
           <span className="font-bold uppercase tracking-widest">Approved by admin</span>
           <span>{formatDate(entry.created_at)}</span>
         </div>
@@ -128,10 +128,10 @@ export function FeedbackGallery({
   const chipBase =
     "group inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent";
   const chipIdle = "border border-outline-variant bg-white !text-[#17335F] hover:border-[#0A2A72]/30 hover:bg-[#EEF4FF] hover:!text-[var(--wc-primary)] hover:shadow-sm";
-  const chipActive = "border-transparent bg-primary text-on-surface shadow-sm";
+  const chipActive = "border-transparent bg-primary text-white shadow-sm";
   const countBase = "inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums";
   const countIdle = "bg-surface-container-high text-on-surface-variant group-hover:bg-[var(--wc-surface-low)]";
-  const countActive = "bg-[var(--wc-surface-low)] text-on-surface";
+  const countActive = "bg-white/20 text-white";
 
   const categories = useMemo(
     () =>
