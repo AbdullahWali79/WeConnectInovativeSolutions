@@ -23,6 +23,40 @@ function normalizePermissions(permissionKeys: readonly string[]) {
   return Array.from(new Set(permissionKeys.filter(isPermissionKey)));
 }
 
+const STUDENT_PRODUCT_PERMISSION_KEYS: PermissionKey[] = [
+  "products.view",
+  "products.create",
+  "products.edit",
+];
+
+async function isActivePaidStudent(userId: string) {
+  const supabaseAdmin = createSupabaseServiceClient();
+  const { data: enrollments, error: enrollmentError } = await supabaseAdmin
+    .from("enrollments")
+    .select("course_id")
+    .eq("student_id", userId)
+    .eq("status", "active");
+
+  if (enrollmentError) throw new Error(enrollmentError.message);
+  const courseIds = Array.from(new Set((enrollments ?? []).map((enrollment) => enrollment.course_id)));
+  if (courseIds.length === 0) return false;
+
+  const { data: fees, error: feeError } = await supabaseAdmin
+    .from("student_fee_records")
+    .select("course_id,status,updated_at")
+    .eq("student_id", userId)
+    .in("course_id", courseIds)
+    .order("updated_at", { ascending: false });
+
+  if (feeError) throw new Error(feeError.message);
+  const latestStatusByCourse = new Map<string, string>();
+  for (const fee of fees ?? []) {
+    if (!latestStatusByCourse.has(fee.course_id)) latestStatusByCourse.set(fee.course_id, fee.status);
+  }
+
+  return courseIds.some((courseId) => ["paid", "waived"].includes(latestStatusByCourse.get(courseId) ?? ""));
+}
+
 export async function getCurrentUserProfile() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -67,9 +101,17 @@ export async function getEffectivePermissions(profile: Profile) {
     return [...ALL_PERMISSION_KEYS];
   }
 
-  if (profile.status !== "approved" || profile.role !== "teacher") {
+  if (profile.status !== "approved") {
     return [];
   }
+
+  if (profile.role === "student") {
+    if (!(await isActivePaidStudent(profile.id))) return [];
+    const enabledPermissions = await getEnabledPermissionsForUser(profile.id);
+    return enabledPermissions.filter((permission) => STUDENT_PRODUCT_PERMISSION_KEYS.includes(permission));
+  }
+
+  if (profile.role !== "teacher") return [];
 
   return getEnabledPermissionsForUser(profile.id);
 }
@@ -105,7 +147,15 @@ export async function hasPermission(userId: string, permissionKey: PermissionKey
     .eq("id", userId)
     .single();
 
-  if (profileError || !profile || profile.role !== "teacher" || profile.status !== "approved") {
+  if (profileError || !profile || profile.status !== "approved") {
+    return false;
+  }
+
+  if (profile.role === "student") {
+    if (!STUDENT_PRODUCT_PERMISSION_KEYS.includes(permissionKey) || !(await isActivePaidStudent(userId))) {
+      return false;
+    }
+  } else if (profile.role !== "teacher") {
     return false;
   }
 
@@ -135,7 +185,7 @@ export async function requirePermission(permissionKey: PermissionKey) {
     return profile;
   }
 
-  if (profile.role !== "teacher" || !(await hasPermission(profile.id, permissionKey))) {
+  if (!["teacher", "student"].includes(profile.role) || !(await hasPermission(profile.id, permissionKey))) {
     throw new Error(authErrorMessage());
   }
 
