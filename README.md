@@ -1,413 +1,143 @@
-# WeConnect
+# WeConnect - Training Management Platform
 
-WeConnect ek training management platform hai jo software-house ya institute ke 3-month training/internship workflow ko manage karta hai. Is software me public website, student portal, admin dashboard, teacher/sub-admin permissions, task submissions, progress tracking, completions, internship letters, email alerts, WhatsApp alerts, products, team members, trainees aur promotional popups ke modules included hain.
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![Supabase](https://img.shields.io/badge/Supabase-Database-green?style=for-the-badge&logo=supabase)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-blue?style=for-the-badge&logo=tailwind-css)
 
-## Database
+WeConnect is a comprehensive training management platform designed specifically for software houses and educational institutes. It streamlines the management of 3-month training and internship workflows, offering dedicated portals for students, administrators, and instructors.
 
-Is project me **Supabase** use ho raha hai.
+With built-in tracking for tasks, applications, and completions, along with automated notifications (Email and WhatsApp), WeConnect ensures a seamless educational and operational experience.
 
-- Database engine: **PostgreSQL**
-- Platform: **Supabase managed cloud database**
-- Authentication: **Supabase Auth**
-- Authorization: **PostgreSQL Row Level Security (RLS) policies**
-- Backend data access: **Supabase JS client**
-- Server-side privileged access: **Supabase Service Role key**
-- Migrations location: `supabase/migrations/`
+## ✨ Key Features
 
-Supabase project URL aur keys `.env.local` file se load hoti hain:
+### 🏢 Public Platform
+* **Landing & Showcase:** Course catalogs, team members, completed students, and trainee showcases.
+* **Applicant Portal:** Intuitive student application and enrollment forms.
+* **Resources:** Products/Tools catalog, news, and dynamic promotional popups.
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
+### 🎓 Student Portal
+* **Dashboard & Tracking:** Real-time progress tracking, enrollment visibility, and feedback viewing.
+* **Task Management:** Assigned task lists with detailed views.
+* **Versatile Submissions:** Submit text, GitHub URLs, Google Docs/Sheets, images, and proof URLs.
 
-## Tech Stack
+### 🛡️ Admin & Teacher Dashboard
+* **User Management:** Complete lifecycle management for students, applications, teachers, and sub-admins.
+* **Curriculum Management:** Course, task, and resource management.
+* **Grading & Reviews:** Comprehensive submission reviewing, grading, and automated progress recalibrations.
+* **Certifications:** Integrated internship letter generation and PDF previews.
+* **Granular Access Control:** Role-Based Access Control (RBAC) allowing module-level permissions for sub-admins/teachers.
+* **Notification Controls:** Configure WhatsApp and Email automated alerts.
 
-- Next.js 15 App Router
-- React 19
-- TypeScript
-- Tailwind CSS
-- Supabase Auth, Database, RLS, SQL functions
-- Zod validation
-- Framer Motion animations
-- React PDF renderer for internship letter PDF generation
-- Google Script webhook based email notifications
-- WhatsApp Cloud API notifications
+## 🛠️ Technology Stack
 
-## Main Features
+* **Frontend:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Framer Motion
+* **Backend / Database:** Supabase (PostgreSQL, Auth, RLS, Edge Functions)
+* **Validation:** Zod
+* **PDF Generation:** React PDF Renderer
+* **Notifications:** Google Script Webhooks (Email), WhatsApp Cloud API
+* **File Storage:** GitHub API + jsDelivr CDN
 
-### Public Website
+## ⚙️ Core Workflows
 
-- Landing page for WeConnect Innovation
-- Public course catalog
-- Course browsing and course details display
-- Student application form
-- Team members showcase
-- Products catalog
-- Trainees page
-- Completed students showcase
-- News page
-- Contact page
-- Privacy policy and terms pages
-- Promotional popup display
-- Public loading and error states
+1. **Application Flow:** Students apply -> Admin/Teacher reviews -> On approval, an enrollment and progress report are automatically generated.
+2. **Task Workflow:** Admin assigns tasks -> Student submits proof -> Admin grades and provides feedback -> Progress is dynamically updated.
+3. **Progress & Completion:** Average scores and completion percentages are tracked. Admins can graduate students and generate internship certificates.
 
-### Student Features
+## 🚀 Getting Started
 
-- Student login/signup through Supabase Auth
-- Student dashboard
-- Course enrollment visibility
-- Assigned task list
-- Task details page
-- Task submission form
-- Submission support for:
-  - Explanation text
-  - GitHub URL
-  - Google Doc URL
-  - Google Sheet URL
-  - Image URL
-  - Proof URL
-- Student progress dashboard
-- Progress percentage and score visibility
-- Submission feedback visibility
-- Approved/pending/rejected account status flow
+### Prerequisites
+* Node.js (v18 or higher)
+* npm, yarn, or pnpm
+* Supabase Account
 
-### Admin Dashboard Features
+### Installation
 
-- Admin dashboard overview
-- Student management
-- Application management
-- Course management
-- Task management
-- Task resource management
-- Submission review and grading
-- Progress tracking
-- Completed student management
-- Internship letter generator
-- Internship letter preview/PDF flow
-- Announcement management
-- Team member management
-- Product management
-- Trainee management
-- Promotional popup management
-- Notification settings
-- Email alert settings
-- WhatsApp alert settings
-- Admin-only student password reset
-- Admin-only student account deletion
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/AbdullahWali79/WeConnectInovativeSolutions.git
+   cd WeConnectInovativeSolutions
+   ```
 
-### Teacher / Sub-Admin Features
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-- Teacher account creation by main admin
-- Teacher profile update
-- Teacher password reset
-- Teacher status approve/reject
-- Permission-based access control
-- Module-level permissions for selected features
-- Permission records stored in `user_permissions`
-- Teachers can access only modules/actions allowed by admin
+3. **Environment Setup**
+   Create a `.env.local` file in the root directory and configure the following variables:
+   ```env
+   # Supabase Configuration
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-### Application Workflow
+   # Email Notifications (Google Script Webhook)
+   GOOGLE_SCRIPT_MAIL_WEBHOOK=your-mail-webhook
+   ADMIN_NOTIFICATION_EMAIL=your-admin-email
+   MAIL_WEBHOOK_SECRET=your-mail-secret
 
-1. Student submits application from `/apply`.
-2. Application is stored in `applications`.
-3. Admin/allowed teacher reviews the application.
-4. On approval:
-   - Student profile can be approved.
-   - Enrollment can be created.
-   - Progress report can be initialized.
-5. On rejection:
-   - Application status becomes rejected.
-   - Related student profile/enrollment status can be updated.
+   # WhatsApp Notifications
+   WHATSAPP_ACCESS_TOKEN=your-whatsapp-token
+   WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+   WHATSAPP_ADMIN_NUMBER=your-admin-number
+   WHATSAPP_API_VERSION=v20.0
+   WHATSAPP_WEBHOOK_VERIFY_TOKEN=your-webhook-token
 
-### Task and Submission Workflow
+   # Cron Setup
+   CRON_SECRET=your-cron-secret
 
-1. Admin/allowed teacher creates tasks for a student and course.
-2. Student views assigned tasks from student portal.
-3. Student submits task proof and links.
-4. Submission status becomes `submitted`.
-5. Admin/allowed teacher reviews submission.
-6. Reviewer can add score, feedback, and status.
-7. Database triggers refresh student progress automatically.
+   # GitHub Storage (for Media)
+   GITHUB_TOKEN=your-github-token
+   GITHUB_OWNER=your-github-owner
+   GITHUB_REPO=your-github-repo
+   GITHUB_BRANCH=main
+   GITHUB_CDN_BASE=https://cdn.jsdelivr.net/gh
+   MAX_UPLOAD_MB=10
+   ```
 
-### Progress and Completion Workflow
+4. **Database Migration**
+   Initialize your Supabase database utilizing the provided migrations and seed files:
+   ```bash
+   supabase db push
+   ```
+   *(Seed scripts available in `supabase/` directory for initial data setup).*
 
-- Progress is calculated from reviewed tasks.
-- `progress_reports` stores:
-  - total tasks
-  - completed tasks
-  - pending tasks
-  - average score
-  - progress percentage
-- Admin can mark a course as completed.
-- Completed students are saved in `completed_students`.
-- Public showcase reads from `completed_student_showcase` view.
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+   The application will be available at `http://localhost:3000`.
 
-### Notification Features
+## 🗄️ Database Architecture
 
-Email notification support:
+The project relies heavily on **Supabase** (PostgreSQL) and utilizes **Row Level Security (RLS)** to enforce access control at the database level. 
 
-- New student registration/application alert
-- Daily pending summary
-- Email notification logs
-- Admin mail settings
-- Google Script mail webhook integration
+Key Tables:
+* `profiles`, `user_permissions` - Identity and Access Management
+* `courses`, `course_categories`, `tasks`, `task_resources` - Curriculum
+* `applications`, `enrollments`, `submissions`, `progress_reports`, `completed_students` - Student Lifecycle
+* `internship_letters` - Certification Records
 
-WhatsApp notification support:
+*Note: All sensitive administrative actions run securely server-side using the Supabase Service Role client.*
 
-- WhatsApp registration alert
-- Pending task summary alert
-- Cron-based pending task alerts
-- WhatsApp webhook verification route
-- WhatsApp notification logs
-- Admin WhatsApp settings
-
-Required environment variables:
-
-```env
-GOOGLE_SCRIPT_MAIL_WEBHOOK=...
-ADMIN_NOTIFICATION_EMAIL=...
-MAIL_WEBHOOK_SECRET=...
-CRON_SECRET=...
-WHATSAPP_ACCESS_TOKEN=...
-WHATSAPP_PHONE_NUMBER_ID=...
-WHATSAPP_ADMIN_NUMBER=...
-WHATSAPP_API_VERSION=...
-WHATSAPP_WEBHOOK_VERIFY_TOKEN=...
-```
-
-## Database Tables
-
-Core Supabase tables used by this project:
-
-| Table | Purpose |
-| --- | --- |
-| `profiles` | Auth users ki profile, role, status, email, phone |
-| `course_categories` | Course categories |
-| `courses` | Training courses |
-| `applications` | Student course applications |
-| `enrollments` | Student course enrollment records |
-| `tasks` | Student/course assignments |
-| `task_resources` | Task ke related resource links |
-| `submissions` | Student task submissions |
-| `progress_reports` | Student progress and average score |
-| `completed_students` | Completed course records |
-| `announcements` | Public/admin announcements |
-| `promotional_popups` | Landing/student promotional popups |
-| `team_members` | Public team member profiles |
-| `products` | Public products/tools/templates catalog |
-| `trainees` | Trainee tracking module |
-| `user_permissions` | Teacher/sub-admin permissions |
-| `admin_mail_settings` | Email notification settings |
-| `email_notification_logs` | Email alert logs |
-| `admin_notification_settings` | WhatsApp notification settings |
-| `whatsapp_notification_logs` | WhatsApp alert logs |
-| `internship_letters` | Internship letter records |
-
-Database view:
-
-| View | Purpose |
-| --- | --- |
-| `completed_student_showcase` | Public completed students list with student/course names |
-
-Important SQL functions:
-
-- `is_admin(user_id)`
-- `is_admin_or_teacher(user_id)`
-- `has_permission(target_user_id, target_permission_key)`
-- `has_any_permission(target_user_id, target_permission_keys)`
-- `can_request_student_access(target_email)`
-- `refresh_student_progress(target_student_id, target_course_id)`
-- `approve_application(application_id)`
-- `reject_application(application_id)`
-- `mark_course_completed(target_student_id, target_course_id)`
-- `submit_task(...)`
-
-## Access Control
-
-Access control database level par RLS policies se enforce hota hai.
-
-- Public users active courses, products, team members, public completed students aur active announcements dekh sakte hain.
-- Students apni profile, enrollments, tasks, submissions aur progress dekh sakte hain.
-- Admin complete management access rakhta hai.
-- Teachers/sub-admins ko `user_permissions` ke through selected module access milta hai.
-- Sensitive admin operations Supabase service role client se server-side run hoti hain.
-
-## Main Routes
-
-Public routes:
-
-- `/`
-- `/courses`
-- `/apply`
-- `/team`
-- `/products`
-- `/trainees`
-- `/completed-students`
-- `/news`
-- `/contact`
-- `/privacy-policy`
-- `/terms`
-- `/login`
-
-Student routes:
-
-- `/student`
-- `/student/progress`
-- `/student/tasks/[taskId]/submit`
-
-Admin routes:
-
-- `/admin`
-- `/admin/applications`
-- `/admin/students`
-- `/admin/courses`
-- `/admin/tasks`
-- `/admin/submissions`
-- `/admin/progress`
-- `/admin/completions`
-- `/admin/internship-letters`
-- `/admin/announcements`
-- `/admin/team-members`
-- `/admin/products`
-- `/admin/trainees`
-- `/admin/promotional-popups`
-- `/admin/subadmins`
-- `/admin/notification-settings`
-- `/admin/settings/notifications`
-
-API and cron routes:
-
-- `/api/whatsapp/webhook`
-- `/api/whatsapp/send-registration-alert`
-- `/api/whatsapp/send-pending-task-summary`
-- `/api/cron/pending-task-alerts`
-- `/api/cron/daily-pending-summary`
-
-## Project Structure
+## 📂 Project Structure
 
 ```text
 app/
-  admin/                 Admin dashboard pages and server actions
-  api/                   API, WhatsApp, and cron routes
-  apply/                 Public student application flow
-  auth/                  Supabase auth callback
-  student/               Student dashboard and task submission pages
-  courses/               Public course pages
-  team/                  Public team page
-  products/              Public products page
-  trainees/              Public trainees page
-  completed-students/    Public completed students page
+├── admin/                 # Admin dashboard pages and server actions
+├── api/                   # API, WhatsApp webhooks, and cron routes
+├── apply/                 # Public student application flow
+├── auth/                  # Supabase authentication callback
+├── student/               # Student dashboard and task submission pages
+└── [public_routes]/       # Various public pages (courses, team, products, etc.)
 
-components/
-  admin/                 Admin UI modules
-  public/                Public website components
-  student/               Student portal components
-
-lib/
-  supabase/              Supabase clients, env, generated types
-  mail/                  Email settings and sending logic
-  whatsapp/              WhatsApp settings, templates, logging, client
-  validations/           Zod schemas
-
-supabase/
-  migrations/            Database migrations
-  seed.sql               Seed data
+components/                # Reusable UI components segregated by domain
+lib/                       # Configurations, clients (Supabase, Mail, WhatsApp), & validations
+supabase/                  # Database migrations, RLS policies, and seed data
 ```
 
-## Setup
+## ☁️ Media Storage (GitHub + jsDelivr)
 
-Install dependencies:
-
-```bash
-npm install
-```
-
-Create `.env.local` and add Supabase plus notification variables:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-GOOGLE_SCRIPT_MAIL_WEBHOOK=optional-mail-webhook
-ADMIN_NOTIFICATION_EMAIL=optional-admin-email
-MAIL_WEBHOOK_SECRET=optional-mail-secret
-CRON_SECRET=optional-cron-secret
-WHATSAPP_ACCESS_TOKEN=optional-whatsapp-token
-WHATSAPP_PHONE_NUMBER_ID=optional-phone-number-id
-WHATSAPP_ADMIN_NUMBER=optional-admin-number
-WHATSAPP_API_VERSION=v20.0
-WHATSAPP_WEBHOOK_VERIFY_TOKEN=optional-webhook-token
-```
-
-Run development server:
-
-```bash
-npm run dev
-```
-
-Build production app:
-
-```bash
-npm run build
-```
-
-Start production server:
-
-```bash
-npm run start
-```
-
-Run lint:
-
-```bash
-npm run lint
-```
-
-## Database Setup
-
-Supabase migrations are stored in:
-
-```text
-supabase/migrations/
-```
-
-If Supabase CLI is configured, push migrations with:
-
-```bash
-supabase db push
-```
-
-Seed/setup SQL files are also available:
-
-- `supabase/seed.sql`
-- `supabase/sql-editor-setup.sql`
-- `supabase/admin-setup.sql`
-- `supabase/ai-news-setup.sql`
-
-## Notes
-
-- This software is built as a Next.js web application.
-- Main database is Supabase PostgreSQL, not MySQL or MongoDB.
-- Supabase Auth handles login/signup.
-- RLS policies protect table access.
-- Admin and teacher permission checks are implemented both in server code and database policies.
-- Notification modules depend on external credentials, so email/WhatsApp features need valid environment variables before production use.
-
-## GitHub + jsDelivr File Storage
-
-Uploaded media is stored in the configured GitHub repository under `uploads/` folders and served through jsDelivr. Supabase should store only public URLs and optional metadata, not uploaded file bytes or base64 data URLs.
-
-Required server-side environment variables:
-
-```env
-GITHUB_TOKEN=
-GITHUB_OWNER=
-GITHUB_REPO=
-GITHUB_BRANCH=main
-GITHUB_CDN_BASE=https://cdn.jsdelivr.net/gh
-MAX_UPLOAD_MB=10
-```
-
-Keep `GITHUB_TOKEN` server-only. Do not expose it with a `NEXT_PUBLIC_` prefix. The upload API route requires an authenticated approved user and only allows admin/teacher media types for admin areas.
+WeConnect implements a custom, cost-effective media storage solution. Uploaded media (such as task proofs or admin resources) is pushed securely to a designated `uploads/` directory on GitHub using the GitHub REST API. Media is then rapidly served via the **jsDelivr CDN**. Supabase only stores the resulting public CDN URLs.
