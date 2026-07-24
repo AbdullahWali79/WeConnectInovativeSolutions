@@ -16,11 +16,49 @@ import {
   updatePromotionalPopup,
 } from "@/app/admin/promotional-popups/actions";
 import type { PermissionKey } from "@/lib/admin-permissions";
-import { getYouTubeEmbedUrl, isDirectVideoUrl } from "@/lib/promo-media";
+import { getGoogleDrivePreviewUrl, getYouTubeEmbedUrl, isDirectVideoUrl } from "@/lib/promo-media";
 import type { Profile, PromotionalPopup } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/utils";
 
 const initialForm = { title: "", message: "", image_url: "", show_on: "both" as PromotionalPopup["show_on"] };
+
+function MediaPreview({ value, title }: { value: string; title: string }) {
+  const youtubeUrl = getYouTubeEmbedUrl(value);
+  const driveUrl = getGoogleDrivePreviewUrl(value);
+  const directVideo = isDirectVideoUrl(value);
+
+  if (!value.trim()) return null;
+
+  if (youtubeUrl || driveUrl) {
+    return (
+      <div className="mt-3 overflow-hidden rounded-lg border border-outline-variant bg-black">
+        <iframe
+          src={youtubeUrl ?? driveUrl ?? undefined}
+          title={`${title || "Promotion"} media preview`}
+          className="aspect-video w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  if (directVideo) {
+    return (
+      <div className="mt-3 overflow-hidden rounded-lg border border-outline-variant bg-black">
+        <video src={value} controls playsInline className="aspect-video w-full object-contain">
+          Your browser does not support this video.
+        </video>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative mt-3 aspect-video overflow-hidden rounded-lg border border-outline-variant bg-surface-container">
+      <Image src={value} alt={`${title || "Promotion"} preview`} fill sizes="420px" unoptimized className="object-contain" />
+    </div>
+  );
+}
 
 export function PromotionalPopupManager({
   currentRole = "admin",
@@ -180,8 +218,9 @@ export function PromotionalPopupManager({
             <label className="block">
               <span className="wc-label">Image or Video URL</span>
               <input className="wc-input mt-2" value={form.image_url} onChange={(e) => setForm((c) => ({ ...c, image_url: e.target.value }))} placeholder="YouTube, public video, image, or Google Drive URL" />
-              <p className="mt-1 text-[10px] text-on-surface-variant">YouTube links play inside the popup. Images and direct MP4/WebM video links are also supported.</p>
+              <p className="mt-1 text-[10px] text-on-surface-variant">YouTube, public Google Drive image/video, image, and direct MP4/WebM links are supported.</p>
             </label>
+            <MediaPreview value={form.image_url.trim()} title={form.title} />
             <label className="block">
               <span className="wc-label">Show On</span>
               <select className="wc-input mt-2" value={form.show_on} onChange={(e) => setForm((c) => ({ ...c, show_on: e.target.value as PromotionalPopup["show_on"] }))}>

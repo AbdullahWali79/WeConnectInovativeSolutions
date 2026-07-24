@@ -73,7 +73,7 @@ export async function getCurrentUserProfile() {
     }
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await createSupabaseServiceClient()
     .from("profiles")
     .select("*")
     .eq("id", user.id)

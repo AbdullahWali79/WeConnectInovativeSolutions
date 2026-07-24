@@ -29,6 +29,26 @@ export function getYouTubeEmbedUrl(value: string | null | undefined) {
   return videoId ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}` : null;
 }
 
+export function getGoogleDriveFileId(value: string | null | undefined) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value.trim());
+    const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
+    if (hostname !== "drive.google.com") return null;
+
+    return url.pathname.match(/\/file\/d\/([^/]+)/)?.[1]
+      ?? url.searchParams.get("id");
+  } catch {
+    return null;
+  }
+}
+
+export function getGoogleDrivePreviewUrl(value: string | null | undefined) {
+  const fileId = getGoogleDriveFileId(value);
+  return fileId ? `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview` : null;
+}
+
 export function isDirectVideoUrl(value: string | null | undefined) {
   if (!value) return false;
 
