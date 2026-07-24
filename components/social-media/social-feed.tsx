@@ -11,6 +11,7 @@ export function SocialFeed({ posts, reactions, currentUserId, canDelete = false 
   const [pending, startTransition] = useTransition();
   const [localReactions, setLocalReactions] = useState(reactions);
   const [visiblePosts, setVisiblePosts] = useState(posts);
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
 
   function react(postId: string, type: SocialReactionType) {
     if (pending) return;
@@ -47,8 +48,15 @@ export function SocialFeed({ posts, reactions, currentUserId, canDelete = false 
         return (
           <article key={post.id} className="overflow-hidden rounded-lg border border-outline-variant bg-white shadow-card">
             <a href={post.url} target="_blank" rel="noopener noreferrer" className="group/preview relative block" aria-label={`Open ${post.platform} post by ${post.authorName}`}>
-              {post.image_url ? (
-                <div className="aspect-[16/9] bg-cover bg-center transition-transform duration-300 group-hover/preview:scale-[1.02]" style={{ backgroundImage: `url(${JSON.stringify(post.image_url).slice(1, -1)})` }} role="img" aria-label={post.title ?? `${post.platform} post preview`} />
+              {post.image_url && !failedImages.has(post.id) ? (
+                // External social images can expire or reject hotlinking, so fall back to the platform tile on error.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={post.image_url}
+                  alt={post.title ?? `${post.platform} post preview`}
+                  className="aspect-[16/9] w-full object-cover transition-transform duration-300 group-hover/preview:scale-[1.02]"
+                  onError={() => setFailedImages((current) => new Set(current).add(post.id))}
+                />
               ) : (
                 <div className="flex aspect-[16/9] items-center justify-center bg-[linear-gradient(135deg,#071A3B,#174EA6)] text-white">
                   <div className="text-center"><Icon name="share" className="text-4xl" /><p className="mt-2 text-sm font-black">{post.platform}</p></div>
