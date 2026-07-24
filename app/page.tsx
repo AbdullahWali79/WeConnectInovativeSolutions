@@ -172,13 +172,33 @@ export default async function LandingPage() {
 
       {/* Standard Footer for Agency */}
       <footer className="border-t py-12" style={{ backgroundColor: "var(--wc-bg)", color: "var(--wc-on-surface-variant)", borderColor: "color-mix(in srgb, var(--wc-on-bg) 5%, transparent)" }}>
-        <div className="homepage-wide-container flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="homepage-wide-container flex flex-col items-center justify-between gap-6 lg:flex-row">
           <div className="text-xl font-bold" style={{ color: "var(--wc-on-bg)" }}>We Connect Innovative Solutions Pvt. Ltd.</div>
-          <div className="flex gap-6 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
             <Link href="/internships" className="transition-colors hover:text-[var(--wc-secondary)]">Looking for Internships?</Link>
             <Link href="/contact" className="transition-colors hover:text-[var(--wc-secondary)]">Contact Us</Link>
+            <a
+              href="https://www.facebook.com/groups/weconnectinnovativesolutions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 transition-colors hover:text-[var(--wc-secondary)]"
+              aria-label="Visit the We Connect Facebook community"
+            >
+              <Icon name="facebook" className="text-lg" />
+              Facebook Group
+            </a>
+            <a
+              href="https://www.linkedin.com/company/weconnect-innovative-solutions-pvt-ltd/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 transition-colors hover:text-[var(--wc-secondary)]"
+              aria-label="Visit the We Connect LinkedIn company page"
+            >
+              <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-sm border border-current text-[11px] font-black leading-none" aria-hidden="true">in</span>
+              LinkedIn Company
+            </a>
           </div>
-          <p className="text-sm">
+          <p className="text-center text-sm lg:text-right">
             &copy; 2026 We Connect Innovative Solutions Pvt. Ltd. All rights reserved.{" "}
             <a href={CONTACT_EMAIL_HREF} className="hover:underline" style={{ color: "var(--wc-secondary)" }}>{CONTACT_EMAIL}</a>
           </p>
