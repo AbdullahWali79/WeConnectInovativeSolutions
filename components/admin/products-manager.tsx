@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import * as XLSX from "xlsx";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
@@ -33,6 +34,11 @@ const defaultForm = {
   status: "active",
   display_order: "0",
 };
+
+function excelText(value: string | null | undefined) {
+  const text = value ?? "";
+  return /^[=+\-@]/.test(text) ? `'${text}` : text;
+}
 
 export function ProductsManager({
   currentRole = "admin",
@@ -199,6 +205,75 @@ export function ProductsManager({
     await loadRows();
   }
 
+  function downloadProducts() {
+    if (rows.length === 0) {
+      setToast({ type: "error", message: "There are no products to download." });
+      return;
+    }
+
+    const productsSheet = XLSX.utils.json_to_sheet(rows.map((row) => ({
+      "Product ID": row.id,
+      "Product Name": excelText(row.name),
+      Category: excelText(row.category),
+      "Short Description": excelText(row.short_description),
+      "Full Description": excelText(row.full_description),
+      "Price / Access": excelText(row.price_or_access_type),
+      Badge: row.badge,
+      Status: row.status,
+      Features: (row.features ?? []).map(excelText).join(", "),
+      "Cover Image URL": excelText(row.image_cdn_url ?? row.image_url),
+      "Public Access Link": excelText(row.product_link),
+      "Student Name": excelText(row.student_name),
+      "Source Project ID": row.source_project_id ?? "",
+      "Display Order": row.display_order,
+      "Created At": formatDate(row.created_at),
+      "Updated At": formatDate(row.updated_at),
+    })));
+    productsSheet["!cols"] = [
+      { wch: 38 }, { wch: 38 }, { wch: 22 }, { wch: 48 }, { wch: 70 },
+      { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 45 }, { wch: 60 },
+      { wch: 48 }, { wch: 24 }, { wch: 38 }, { wch: 14 }, { wch: 16 }, { wch: 16 },
+    ];
+
+    const imageRows = rows.flatMap((row) => {
+      const urls = row.gallery_urls?.length
+        ? row.gallery_urls
+        : [row.image_cdn_url ?? row.image_url].filter((url): url is string => Boolean(url));
+      return urls.map((url, index) => ({
+        "Product ID": row.id,
+        "Product Name": excelText(row.name),
+        "Image Number": index + 1,
+        "Image URL": excelText(url),
+        "Cover Image": index === 0 ? "Yes" : "No",
+      }));
+    });
+    const imagesSheet = XLSX.utils.json_to_sheet(imageRows.length ? imageRows : [{ "Product ID": "", "Product Name": "No image links", "Image Number": "", "Image URL": "", "Cover Image": "" }]);
+    imagesSheet["!cols"] = [{ wch: 38 }, { wch: 38 }, { wch: 14 }, { wch: 70 }, { wch: 14 }];
+
+    const relatedLinkRows = rows.flatMap((row) => (row.related_links ?? []).map((url, index) => ({
+      "Product ID": row.id,
+      "Product Name": excelText(row.name),
+      "Link Number": index + 1,
+      "Private Related Link": excelText(url),
+    })));
+    const linksSheet = XLSX.utils.json_to_sheet(relatedLinkRows.length ? relatedLinkRows : [{ "Product ID": "", "Product Name": "No private links", "Link Number": "", "Private Related Link": "" }]);
+    linksSheet["!cols"] = [{ wch: 38 }, { wch: 38 }, { wch: 14 }, { wch: 70 }];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, productsSheet, "Products");
+    XLSX.utils.book_append_sheet(workbook, imagesSheet, "Product Images");
+    XLSX.utils.book_append_sheet(workbook, linksSheet, "Private Links");
+
+    const data = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blobUrl = URL.createObjectURL(new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `weconnect-products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(blobUrl);
+    setToast({ type: "success", message: `${rows.length} products downloaded in Excel format.` });
+  }
+
   if (loading) return <LoadingState label="Loading products..." />;
 
   return (
@@ -209,6 +284,7 @@ export function ProductsManager({
         title="Manage products"
         description="Create and maintain digital products shown in the public Products catalog."
         action={<div className="flex flex-wrap gap-2">
+          <button type="button" onClick={downloadProducts} className="wc-secondary-btn text-sm"><Icon name="download" /> Download Products</button>
           {canCreate ? <button type="button" onClick={startCreate} className="wc-primary-btn text-sm"><Icon name="add" /> Add Product</button> : null}
           <Link href="/products" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Products</Link>
         </div>}
