@@ -38,12 +38,22 @@ export function getPakistanWeekRange(date = new Date()) {
 
 export function getSocialPlatform(hostname: string) {
   const host = hostname.toLowerCase().replace(/^www\./, "");
-  if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "LinkedIn";
-  if (host === "facebook.com" || host.endsWith(".facebook.com") || host === "fb.com") return "Facebook";
+  if (host === "linkedin.com" || host.endsWith(".linkedin.com") || host === "lnkd.in") return "LinkedIn";
+  if (
+    host === "facebook.com" ||
+    host.endsWith(".facebook.com") ||
+    host === "fb.com" ||
+    host === "fb.watch"
+  ) return "Facebook";
   if (host === "instagram.com" || host.endsWith(".instagram.com")) return "Instagram";
   if (host === "x.com" || host === "twitter.com" || host.endsWith(".twitter.com")) return "X";
   if (host === "threads.net" || host.endsWith(".threads.net")) return "Threads";
-  if (host === "tiktok.com" || host.endsWith(".tiktok.com")) return "TikTok";
+  if (
+    host === "tiktok.com" ||
+    host.endsWith(".tiktok.com") ||
+    host === "tiktokv.com" ||
+    host.endsWith(".tiktokv.com")
+  ) return "TikTok";
   return "Other";
 }
 

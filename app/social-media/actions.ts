@@ -5,6 +5,7 @@ import { isIP } from "node:net";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { getCurrentUserProfile } from "@/lib/admin-access";
 import { getSocialPlatform, type SocialReactionType } from "@/lib/social-media";
 
 const allowedPlatforms = new Set(["LinkedIn", "Facebook", "Instagram", "X", "Threads", "TikTok"]);
@@ -137,12 +138,27 @@ async function cacheFeaturedImage(imageUrl: string | null, studentId: string) {
 }
 
 async function requireApprovedUser() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Authentication required.");
-  const { data: profile } = await supabase.from("profiles").select("id,role,status").eq("id", user.id).single();
+  const profile = await getCurrentUserProfile();
   if (!profile || profile.status !== "approved") throw new Error("Your account is not approved.");
   return profile;
+}
+
+function normalizeSubmittedPostUrl(url: URL) {
+  url.hash = "";
+  for (const key of [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "fbclid",
+    "igsh",
+    "igshid",
+    "si",
+  ]) {
+    url.searchParams.delete(key);
+  }
+  return url;
 }
 
 export async function submitSocialPost(formData: FormData) {
@@ -150,11 +166,13 @@ export async function submitSocialPost(formData: FormData) {
     const profile = await requireApprovedUser();
     if (profile.role !== "student") throw new Error("Only students can submit social posts.");
     const rawUrl = String(formData.get("url") ?? "").trim();
-    const url = new URL(rawUrl);
-    url.hash = "";
+    if (!rawUrl) throw new Error("Apni published social media post ka link paste karein.");
+    const url = normalizeSubmittedPostUrl(new URL(rawUrl));
     const platform = getSocialPlatform(url.hostname);
     if (!allowedPlatforms.has(platform)) throw new Error("Submit a LinkedIn, Facebook, Instagram, X, Threads, or TikTok post URL.");
-    await assertPublicUrl(url);
+    if (url.protocol !== "https:" || url.username || url.password || url.port) {
+      throw new Error("Secure HTTPS social media post link paste karein.");
+    }
     const metadata = await fetchPostMetadata(url).catch(() => ({ title: null, description: null, imageUrl: null, siteName: null }));
     const cachedImageUrl = await cacheFeaturedImage(metadata.imageUrl, profile.id);
     const supabaseAdmin = createSupabaseServiceClient();
