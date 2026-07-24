@@ -27,6 +27,8 @@ const defaultForm = {
   price_or_access_type: "",
   badge: "new",
   product_link: "",
+  gallery_urls: [""],
+  related_links: [""],
   features: "",
   status: "active",
   display_order: "0",
@@ -35,9 +37,11 @@ const defaultForm = {
 export function ProductsManager({
   currentRole = "admin",
   permissions = [],
+  defaultWhatsAppNumber = "923270728950",
 }: {
   currentRole?: Profile["role"];
   permissions?: PermissionKey[];
+  defaultWhatsAppNumber?: string;
 }) {
   const supabase = createSupabaseBrowserClient();
   const canUse = useCallback((permission: PermissionKey) => currentRole === "admin" || permissions.includes(permission), [currentRole, permissions]);
@@ -99,6 +103,8 @@ export function ProductsManager({
       price_or_access_type: row.price_or_access_type ?? "",
       badge: row.badge,
       product_link: row.product_link ?? "",
+      gallery_urls: row.gallery_urls?.length ? row.gallery_urls : [row.image_url ?? ""],
+      related_links: row.related_links?.length ? row.related_links : row.product_link ? [row.product_link] : [""],
       features: (row.features ?? []).join(", "),
       status: row.status,
       display_order: String(row.display_order ?? 0),
@@ -113,7 +119,7 @@ export function ProductsManager({
 
   function startCreate() {
     setEditingId(null);
-    setForm(defaultForm);
+    setForm({ ...defaultForm, product_link: `https://wa.me/${defaultWhatsAppNumber.replace(/\D/g, "")}`, gallery_urls: [""], related_links: [""] });
     setFormOpen(true);
   }
 
@@ -131,10 +137,12 @@ export function ProductsManager({
     }
 
     setSaving(true);
+    const galleryUrls = form.gallery_urls.map((value) => normalizeImageUrl(value)).filter((value): value is string => Boolean(value));
+    const relatedLinks = form.related_links.map((value) => value.trim()).filter(Boolean);
     const payload = {
       name: form.name.trim(),
       category: form.category.trim(),
-      image_url: normalizeImageUrl(form.image_url),
+      image_url: galleryUrls[0] ?? normalizeImageUrl(form.image_url),
       image_github_path: form.image_github_path || null,
       image_github_url: form.image_github_url || null,
       image_cdn_url: form.image_cdn_url || null,
@@ -142,7 +150,9 @@ export function ProductsManager({
       full_description: form.full_description.trim() || null,
       price_or_access_type: form.price_or_access_type.trim() || null,
       badge: form.badge,
-      product_link: form.product_link.trim() || null,
+      product_link: `https://wa.me/${defaultWhatsAppNumber.replace(/\D/g, "")}`,
+      gallery_urls: galleryUrls,
+      related_links: relatedLinks,
       features: form.features.trim() ? form.features.split(",").map((item) => item.trim()).filter(Boolean) : [],
       status: form.status,
       display_order: Number(form.display_order || 0),
@@ -152,11 +162,12 @@ export function ProductsManager({
     const request = editingId ? supabase.from("products").update(payload).eq("id", editingId) : supabase.from("products").insert(payload);
     let { error } = await request;
 
-    if (error && /image_github_path|image_github_url|image_cdn_url|column/i.test(error.message)) {
+    if (error && /image_github_path|image_github_url|image_cdn_url|related_links|column/i.test(error.message)) {
       const fallbackPayload = { ...payload };
       delete fallbackPayload.image_github_path;
       delete fallbackPayload.image_github_url;
       delete fallbackPayload.image_cdn_url;
+      delete fallbackPayload.related_links;
       const fallbackRequest = editingId ? supabase.from("products").update(fallbackPayload).eq("id", editingId) : supabase.from("products").insert(fallbackPayload);
       const fallback = await fallbackRequest;
       error = fallback.error;
@@ -260,11 +271,33 @@ export function ProductsManager({
           <div className="grid flex-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2 sm:p-6">
             <label><span className="wc-label">Product name</span><input className="wc-input mt-2" placeholder="Product name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
             <label><span className="wc-label">Category</span><input className="wc-input mt-2" list="product-category-options" placeholder="Category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} required /><datalist id="product-category-options">{categories.map((category) => <option key={category} value={category} />)}</datalist></label>
-            <label className="sm:col-span-2"><span className="wc-label">Image URL</span><input className="wc-input mt-2" placeholder="Image/Banner URL or Google Drive share link" value={form.image_url} onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))} /><span className="mt-2 block text-xs leading-5 text-on-surface-variant">Paste a normal image URL or a public Google Drive share link.</span></label>
+            <div className="sm:col-span-2">
+              <span className="wc-label">Product images</span>
+              <p className="mt-1 text-xs leading-5 text-on-surface-variant">Add direct image or public Google Drive URLs. All images appear in the public product slider; the first image is the cover.</p>
+              <div className="mt-2 grid gap-2">
+                {form.gallery_urls.map((url, index) => <div key={index} className="flex gap-2">
+                  <input className="wc-input flex-1" type="url" placeholder={`Image URL ${index + 1}`} value={url} onChange={(event) => setForm((current) => ({ ...current, gallery_urls: current.gallery_urls.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} />
+                  {form.gallery_urls.length > 1 ? <button type="button" className="wc-secondary-btn px-3" title="Remove image" onClick={() => setForm((current) => ({ ...current, gallery_urls: current.gallery_urls.filter((_, itemIndex) => itemIndex !== index) }))}><Icon name="delete" /></button> : null}
+                </div>)}
+              </div>
+              <button type="button" className="wc-secondary-btn mt-2 text-sm" onClick={() => setForm((current) => ({ ...current, gallery_urls: [...current.gallery_urls, ""] }))}><Icon name="add" /> Add Image</button>
+            </div>
             <label className="sm:col-span-2"><span className="wc-label">Short description</span><input className="wc-input mt-2" placeholder="Short description" value={form.short_description} onChange={(event) => setForm((current) => ({ ...current, short_description: event.target.value }))} /></label>
             <label className="sm:col-span-2"><span className="wc-label">Full description</span><textarea className="wc-input mt-2 min-h-40" placeholder="Full description" value={form.full_description} onChange={(event) => setForm((current) => ({ ...current, full_description: event.target.value }))} /><span className="mt-2 block text-xs leading-5 text-on-surface-variant">Formatting is automatic for headings, lists, and pasted tables.</span></label>
             <label><span className="wc-label">Price / access</span><input className="wc-input mt-2" placeholder="Price / access type" value={form.price_or_access_type} onChange={(event) => setForm((current) => ({ ...current, price_or_access_type: event.target.value }))} /></label>
-            <label><span className="wc-label">Product link</span><input className="wc-input mt-2" placeholder="Product link / download URL" value={form.product_link} onChange={(event) => setForm((current) => ({ ...current, product_link: event.target.value }))} /></label>
+            <div><span className="wc-label">Public access destination</span><div className="wc-input mt-2 flex items-center gap-2 bg-surface-container-low"><Icon name="chat" /> WhatsApp: +{defaultWhatsAppNumber.replace(/\D/g, "")}</div><span className="mt-2 block text-xs leading-5 text-on-surface-variant">Change this number from Admin Settings → WhatsApp Alerts. Every public product inquiry uses it automatically.</span></div>
+            <div className="sm:col-span-2 rounded-xl border border-outline-variant p-4">
+              <span className="wc-label">Private client links</span>
+              <p className="mt-1 text-xs leading-5 text-on-surface-variant">Save YouTube, demo, download, Google Drive, documentation, or other URLs here. These links never appear on the public Products page.</p>
+              <div className="mt-3 grid gap-2">
+                {form.related_links.map((url, index) => <div key={index} className="flex gap-2">
+                  <input className="wc-input flex-1" type="url" placeholder={`Private related link ${index + 1}`} value={url} onChange={(event) => setForm((current) => ({ ...current, related_links: current.related_links.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} />
+                  <button type="button" className="wc-secondary-btn px-3" title="Copy link" disabled={!url.trim()} onClick={async () => { await navigator.clipboard.writeText(url.trim()); setToast({ type: "success", message: "Link copied." }); }}><Icon name="content_copy" /></button>
+                  {form.related_links.length > 1 ? <button type="button" className="wc-secondary-btn px-3" title="Remove link" onClick={() => setForm((current) => ({ ...current, related_links: current.related_links.filter((_, itemIndex) => itemIndex !== index) }))}><Icon name="delete" /></button> : null}
+                </div>)}
+              </div>
+              <button type="button" className="wc-secondary-btn mt-2 text-sm" onClick={() => setForm((current) => ({ ...current, related_links: [...current.related_links, ""] }))}><Icon name="add" /> Add Private Link</button>
+            </div>
             <label className="sm:col-span-2"><span className="wc-label">Features</span><input className="wc-input mt-2" placeholder="Features (comma separated)" value={form.features} onChange={(event) => setForm((current) => ({ ...current, features: event.target.value }))} /></label>
             <label><span className="wc-label">Badge</span><select className="wc-input mt-2" value={form.badge} onChange={(event) => setForm((current) => ({ ...current, badge: event.target.value }))}><option value="premium">Premium</option><option value="hot">Hot</option><option value="new">New</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
             <label><span className="wc-label">Status</span><select className="wc-input mt-2" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>

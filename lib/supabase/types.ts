@@ -406,6 +406,7 @@ export type Product = {
   product_link: string | null;
   features: string[] | null;
   gallery_urls?: string[] | null;
+  related_links?: string[] | null;
   source_project_id?: string | null;
   student_name?: string | null;
   status: GenericStatus;

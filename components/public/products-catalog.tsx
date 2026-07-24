@@ -83,7 +83,7 @@ function ProductGallery({ product }: { product: Product }) {
     </div>
   );
 }
-export function ProductsCatalog({ initialProducts = fallbackProducts }: { readonly initialProducts?: Product[] }) {
+export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNumber = "923270728950" }: { readonly initialProducts?: Product[]; readonly whatsappNumber?: string }) {
   const products = initialProducts;
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -246,13 +246,16 @@ export function ProductsCatalog({ initialProducts = fallbackProducts }: { readon
                   </ul>
                 </div>
 
-                {selected.product_link && (
-                  <div className="mt-10 border-t border-[var(--wc-outline-variant)] pt-8 pb-4 text-center">
-                    <a href={selected.product_link} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] px-10 py-4 text-base font-black text-on-primary transition-transform hover:scale-[1.02] shadow-[0_0_30px_rgba(var(--landing-accent-rgb),0.3)]">
-                      ACCESS PRODUCT <Icon name="open_in_new" className="text-lg" />
-                    </a>
-                  </div>
-                )}
+                <div className="mt-10 border-t border-[var(--wc-outline-variant)] pt-8 pb-4 text-center">
+                  <a
+                    href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello, I am interested in "${selected.name}". Please share its details and access options.`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] px-10 py-4 text-base font-black text-on-primary transition-transform hover:scale-[1.02] shadow-[0_0_30px_rgba(var(--landing-accent-rgb),0.3)]"
+                  >
+                    CONTACT ON WHATSAPP <Icon name="open_in_new" className="text-lg" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
