@@ -3,7 +3,6 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { revalidatePath } from "next/cache";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getCurrentUserProfile } from "@/lib/admin-access";
 import { getSocialPlatform, type SocialReactionType } from "@/lib/social-media";
