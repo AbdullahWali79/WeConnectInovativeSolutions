@@ -21,30 +21,13 @@ const nav = [
   { href: "/student/helping-videos", label: "Helping Videos", icon: "smart_display" },
 ];
 
-export function StudentShell({
-  profile,
-  branding,
-  canManageProducts = false,
-  children,
-}: {
-  profile: Profile | null;
-  branding?: BrandingSettingsSnapshot;
-  canManageProducts?: boolean;
-  children: React.ReactNode;
-}) {
+export function StudentShell({ profile, branding, children }: { profile: Profile | null; branding?: BrandingSettingsSnapshot; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const brandingContext = useBranding();
   const activeBranding = branding ?? brandingContext.settings;
   const activeBrandingStyle = brandingToCssVars(activeBranding);
-  const visibleNav = canManageProducts
-    ? [
-        ...nav.slice(0, 4),
-        { href: "/student/products", label: "Manage Products", icon: "inventory_2" },
-        ...nav.slice(4),
-      ]
-    : nav;
 
   async function logout() {
     await supabase.auth.signOut();
@@ -65,7 +48,7 @@ export function StudentShell({
           </div>
         </div>
         <nav className="grid grid-cols-1 gap-2 px-4 pb-4 lg:block lg:space-y-2 lg:overflow-visible">
-          {visibleNav.map((item) => {
+          {nav.map((item) => {
             const active = pathname === item.href;
             return (
               <Link
