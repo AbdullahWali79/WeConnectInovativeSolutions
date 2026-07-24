@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { CreateSubadminForm, buildTeacherLoginMessage, type CreatedTeacherPayload } from "@/components/admin/create-subadmin-form";
+import { ProductContributorAssignment } from "@/components/admin/product-contributor-assignment";
 import { SubadminMessageDialog } from "@/components/admin/subadmin-message-dialog";
 import { SubadminPermissionsSelector } from "@/components/admin/subadmin-permissions-selector";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -334,6 +335,8 @@ export function SubadminsManager() {
           </button>
         }
       />
+
+      <ProductContributorAssignment />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <TeacherStat icon="manage_accounts" label="Total teachers" value={teachers.length} />
