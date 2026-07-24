@@ -59,13 +59,18 @@ async function isActivePaidStudent(userId: string) {
 
 export async function getCurrentUserProfile() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const authResult = await supabase.auth.getUser();
+  let user = authResult.data.user;
 
-  if (authError || !user) {
-    throw new Error("You must be logged in to perform this action.");
+  if (authResult.error || !user) {
+    const refreshResult = await supabase.auth.refreshSession();
+    user = refreshResult.data.user ?? refreshResult.data.session?.user ?? null;
+
+    if (refreshResult.error || !user) {
+      throw new Error(
+        "Your login session has expired. Sign out, sign in again, and retry this action.",
+      );
+    }
   }
 
   const { data: profile, error: profileError } = await supabase
