@@ -8,8 +8,15 @@ import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  createPromotionalPopup,
+  deletePromotionalPopup,
+  getPromotionalPopups,
+  setPromotionalPopupActive,
+  updatePromotionalPopup,
+} from "@/app/admin/promotional-popups/actions";
 import type { PermissionKey } from "@/lib/admin-permissions";
+import { getYouTubeEmbedUrl, isDirectVideoUrl } from "@/lib/promo-media";
 import type { Profile, PromotionalPopup } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/utils";
 
@@ -22,7 +29,6 @@ export function PromotionalPopupManager({
   currentRole?: Profile["role"];
   permissions?: PermissionKey[];
 }) {
-  const supabase = createSupabaseBrowserClient();
   const canUse = useCallback((permission: PermissionKey) => currentRole === "admin" || permissions.includes(permission), [currentRole, permissions]);
   const canCreate = canUse("promotional_popups.create");
   const canEdit = canUse("promotional_popups.edit");
@@ -37,11 +43,11 @@ export function PromotionalPopupManager({
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("promotional_popups").select("*").order("created_at", { ascending: false });
-    if (error) setToast({ type: "error", message: error.message });
-    setPopups(data ?? []);
+    const result = await getPromotionalPopups();
+    if ("error" in result) setToast({ type: "error", message: result.error });
+    setPopups(result.ok ? result.data : []);
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -67,11 +73,11 @@ export function PromotionalPopupManager({
       show_on: form.show_on,
     };
     const result = editingId
-      ? await supabase.from("promotional_popups").update(payload).eq("id", editingId)
-      : await supabase.from("promotional_popups").insert(payload);
+      ? await updatePromotionalPopup(editingId, payload)
+      : await createPromotionalPopup(payload);
     setSaving(false);
-    if (result.error) {
-      setToast({ type: "error", message: result.error.message });
+    if ("error" in result) {
+      setToast({ type: "error", message: result.error });
       return;
     }
     setToast({ type: "success", message: editingId ? "Popup updated." : "Popup created." });
@@ -85,9 +91,9 @@ export function PromotionalPopupManager({
       setToast({ type: "error", message: "You do not have permission to update promotional popups." });
       return;
     }
-    const { error } = await supabase.from("promotional_popups").update({ is_active: !current }).eq("id", id);
-    if (error) {
-      setToast({ type: "error", message: error.message });
+    const result = await setPromotionalPopupActive(id, !current);
+    if ("error" in result) {
+      setToast({ type: "error", message: result.error });
       return;
     }
     setToast({ type: "success", message: !current ? "Popup activated." : "Popup deactivated." });
@@ -100,9 +106,9 @@ export function PromotionalPopupManager({
       return;
     }
     if (!confirm("Delete this promotional popup?")) return;
-    const { error } = await supabase.from("promotional_popups").delete().eq("id", id);
-    if (error) {
-      setToast({ type: "error", message: error.message });
+    const result = await deletePromotionalPopup(id);
+    if ("error" in result) {
+      setToast({ type: "error", message: result.error });
       return;
     }
     setToast({ type: "success", message: "Popup deleted." });
@@ -155,7 +161,7 @@ export function PromotionalPopupManager({
       <PageHeader
         eyebrow="Marketing"
         title="Promotional Popups"
-        description="Create eye-catching promotional popups with images and animated text. Popups appear on landing page and/or student portal for first-time visitors."
+        description="Create promotional popups with a public image or video and animated text. Popups appear on the landing page and/or student portal."
       />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -172,9 +178,9 @@ export function PromotionalPopupManager({
               <textarea className="wc-input mt-2 min-h-20" value={form.message} onChange={(e) => setForm((c) => ({ ...c, message: e.target.value }))} placeholder="Offer details, deadline, call-to-action..." required />
             </label>
             <label className="block">
-              <span className="wc-label">Image URL (Google Drive / any public link)</span>
-              <input className="wc-input mt-2" value={form.image_url} onChange={(e) => setForm((c) => ({ ...c, image_url: e.target.value }))} placeholder="https://drive.google.com/uc?export=view&id=..." />
-              <p className="mt-1 text-[10px] text-on-surface-variant">Paste any public image URL. Google Drive: right-click image → Share → Copy link → convert to direct link.</p>
+              <span className="wc-label">Image or Video URL</span>
+              <input className="wc-input mt-2" value={form.image_url} onChange={(e) => setForm((c) => ({ ...c, image_url: e.target.value }))} placeholder="YouTube, public video, image, or Google Drive URL" />
+              <p className="mt-1 text-[10px] text-on-surface-variant">YouTube links play inside the popup. Images and direct MP4/WebM video links are also supported.</p>
             </label>
             <label className="block">
               <span className="wc-label">Show On</span>
@@ -206,7 +212,11 @@ export function PromotionalPopupManager({
               popups.map((popup) => (
                 <motion.div key={popup.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="wc-card overflow-hidden p-4">
                   <div className="flex items-start gap-4">
-                    {popup.image_url ? (
+                    {getYouTubeEmbedUrl(popup.image_url) || isDirectVideoUrl(popup.image_url) ? (
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Icon name="play_circle" className="text-3xl" />
+                      </div>
+                    ) : popup.image_url ? (
                       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg">
                         <Image
                           src={popup.image_url}

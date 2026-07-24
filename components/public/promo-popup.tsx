@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { getYouTubeEmbedUrl, isDirectVideoUrl } from "@/lib/promo-media";
 import type { PromotionalPopup } from "@/lib/supabase/types";
 
 interface PromoPopupProps {
@@ -62,6 +63,9 @@ export function PromoPopup({ context }: PromoPopupProps) {
   }
 
   if (!isLoaded || !popup) return null;
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(popup.image_url);
+  const directVideo = isDirectVideoUrl(popup.image_url);
+  const hasMedia = Boolean(popup.image_url);
 
   return (
     <AnimatePresence>
@@ -89,8 +93,24 @@ export function PromoPopup({ context }: PromoPopupProps) {
               <span className="material-symbols-outlined text-lg">close</span>
             </button>
 
-            {/* Image */}
-            {popup.image_url && (
+            {/* Media */}
+            {youtubeEmbedUrl ? (
+              <div className="aspect-video w-full overflow-hidden bg-black">
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title={popup.title}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            ) : directVideo && popup.image_url ? (
+              <div className="aspect-video w-full overflow-hidden bg-black">
+                <video src={popup.image_url} controls playsInline className="h-full w-full object-contain">
+                  Your browser does not support this video.
+                </video>
+              </div>
+            ) : popup.image_url ? (
               <div className="relative h-52 w-full overflow-hidden">
                 <Image
                   src={popup.image_url}
@@ -103,10 +123,10 @@ export function PromoPopup({ context }: PromoPopupProps) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               </div>
-            )}
+            ) : null}
 
             {/* Content */}
-            <div className={`p-6 ${popup.image_url ? "-mt-8 relative" : "pt-8"}`}>
+            <div className={`p-6 ${hasMedia && !youtubeEmbedUrl && !directVideo ? "-mt-8 relative" : "pt-8"}`}>
               {/* Animated title */}
               <motion.h2
                 initial={{ opacity: 0, y: 20 }}

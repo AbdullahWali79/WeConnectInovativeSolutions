@@ -391,6 +391,19 @@ export type DeepSeekAssistantSettings = {
   created_at: string;
   updated_at: string;
 };
+export type MistralAssistantSettings = {
+  id: boolean;
+  api_key: string | null;
+  model: string;
+  enabled: boolean;
+  system_instructions: string | null;
+  validation_status: "not_tested" | "active" | "invalid" | "error";
+  last_error: string | null;
+  last_checked_at: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
 export type Product = {
   id: string;
   name: string;
@@ -760,6 +773,12 @@ export type Database = {
         Row: DeepSeekAssistantSettings;
         Insert: Partial<DeepSeekAssistantSettings>;
         Update: Partial<DeepSeekAssistantSettings>;
+        Relationships: [];
+      };
+      mistral_assistant_settings: {
+        Row: MistralAssistantSettings;
+        Insert: Partial<MistralAssistantSettings>;
+        Update: Partial<MistralAssistantSettings>;
         Relationships: [];
       };
       products: {

@@ -63,6 +63,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/settings/branding", label: "Branding", icon: "palette", adminOnly: true },
     { href: "/admin/settings/ai-assistant", label: "AI Assistant", icon: "smart_toy", adminOnly: true },
     { href: "/admin/settings/deepseek", label: "DeepSeek Fallback", icon: "backup", adminOnly: true },
+    { href: "/admin/settings/mistral", label: "Mistral Fallback", icon: "psychology", adminOnly: true },
   ]},
 ];
 

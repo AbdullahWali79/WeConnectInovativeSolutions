@@ -44,8 +44,8 @@ export function StudentProjectsBoard() {
     const githubUrl = form.github_url.trim();
     const liveUrl = form.live_url.trim();
     const imageUrls = form.image_urls.map((url) => url.trim()).filter(Boolean);
-    if (!githubUrl && !liveUrl && !imageUrls.length) {
-      return setToast({ type: "error", message: "Add at least one proof link: GitHub, YouTube/live demo, or a public Google Drive image." });
+    if (!imageUrls.length) {
+      return setToast({ type: "error", message: "At least one public Google Drive project image is required." });
     }
     if (imageUrls.some((url) => !url.includes("drive.google.com"))) return setToast({ type: "error", message: "Every image must use a public Google Drive URL." });
     setSaving(true);
@@ -72,7 +72,7 @@ export function StudentProjectsBoard() {
   if (loading) return <LoadingState label="Loading projects..." />;
 
   return <div className="space-y-6">
-    <PageHeader eyebrow="Portfolio" title="My Projects" description="Submit proof using GitHub, YouTube or a live demo, public Google Drive screenshots, or any combination." />
+    <PageHeader eyebrow="Portfolio" title="My Projects" description="Submit at least one public Google Drive screenshot. GitHub, YouTube, and live demo links can be added as optional proof." />
     <form onSubmit={submit} className="wc-card grid gap-4 p-5 md:grid-cols-2">
       <input className="wc-input" required placeholder="Project title" value={form.title} onChange={(e) => setForm({...form,title:e.target.value})} />
       <div>
@@ -99,7 +99,7 @@ export function StudentProjectsBoard() {
       </div>
       <input className="wc-input md:col-span-2" type="url" placeholder="GitHub project URL (optional)" value={form.github_url} onChange={(e) => setForm({...form,github_url:e.target.value})} />
       <input className="wc-input md:col-span-2" type="url" placeholder="YouTube video or live demo URL (optional)" value={form.live_url} onChange={(e) => setForm({...form,live_url:e.target.value})} />
-      <p className="md:col-span-2 text-xs leading-5 text-on-surface-variant">At least one proof link is required. You may submit GitHub, YouTube/live demo, Google Drive images, or multiple proof types together.</p>
+      <p className="md:col-span-2 text-xs leading-5 text-on-surface-variant">A public Google Drive project image is compulsory. GitHub, YouTube, and live demo links are optional.</p>
       <input className="wc-input md:col-span-2" placeholder="Technologies, comma separated" value={form.technologies} onChange={(e) => setForm({...form,technologies:e.target.value})} />
       <input className="wc-input md:col-span-2" required placeholder="Short description" value={form.short_description} onChange={(e) => setForm({...form,short_description:e.target.value})} />
       <div className="md:col-span-2">
@@ -107,7 +107,7 @@ export function StudentProjectsBoard() {
         <p className="mt-2 text-xs leading-5 text-on-surface-variant">Formatting is automatic. Paste headings, bullet or numbered lists, Markdown tables, or tab-separated tables copied from a sheet.</p>
       </div>
       <div className="md:col-span-2 rounded-xl bg-surface-container-low p-4">
-        <p className="wc-label">Google Drive screenshots (optional)</p>
+        <p className="wc-label">Google Drive screenshots <span className="text-error">*</span></p>
         <div className="mt-3 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950">
           <Icon name="warning" className="mt-0.5 shrink-0 text-xl text-amber-600" />
           <div>
@@ -118,7 +118,7 @@ export function StudentProjectsBoard() {
           </div>
         </div>
         <div className="mt-3 grid gap-3">
-          {form.image_urls.map((url,index) => <div key={index} className="flex gap-2"><input className="wc-input flex-1" type="url" placeholder={"Public Google Drive image URL " + (index+1) + " (optional)"} value={url} onChange={(e)=>setForm({...form,image_urls:form.image_urls.map((item,i)=>i===index?e.target.value:item)})}/>{form.image_urls.length>1?<button type="button" className="wc-secondary-btn" onClick={()=>setForm({...form,image_urls:form.image_urls.filter((_,i)=>i!==index)})}><Icon name="delete"/></button>:null}</div>)}
+          {form.image_urls.map((url,index) => <div key={index} className="flex gap-2"><input className="wc-input flex-1" type="url" required={index === 0} placeholder={"Public Google Drive image URL " + (index+1) + (index === 0 ? " (required)" : " (optional)")} value={url} onChange={(e)=>setForm({...form,image_urls:form.image_urls.map((item,i)=>i===index?e.target.value:item)})}/>{form.image_urls.length>1?<button type="button" className="wc-secondary-btn" onClick={()=>setForm({...form,image_urls:form.image_urls.filter((_,i)=>i!==index)})}><Icon name="delete"/></button>:null}</div>)}
         </div>
         <button type="button" className="wc-secondary-btn mt-3" onClick={()=>setForm({...form,image_urls:[...form.image_urls,""]})}><Icon name="add"/> Add Image URL</button>
       </div>
