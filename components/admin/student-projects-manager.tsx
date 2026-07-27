@@ -271,6 +271,7 @@ export function StudentProjectsManager() {
                 <button disabled={busy === row.id} onClick={() => void review(row, "revision_required")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-amber-100 px-5 py-3 font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" /> Need Improvement</button>
                 <button disabled={busy === row.id} onClick={() => void review(row, "rejected")} className="wc-secondary-btn"><Icon name="close" /> Reject</button>
               </> : null}
+              {row.status === "approved" && !row.promoted_product_id ? <button disabled={busy === row.id} onClick={() => void review(row, "revision_required")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-amber-100 px-5 py-3 font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" /> Need Improvement</button> : null}
             </div>
           </div> : null}
         </article>;
