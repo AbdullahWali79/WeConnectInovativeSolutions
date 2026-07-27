@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
@@ -18,9 +18,11 @@ export function StudentProjectsBoard() {
   const [categories, setCategories] = useState<string[]>([]);
   const [courseOptions, setCourseOptions] = useState<Pick<Course, "id" | "title">[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const load = useCallback(async () => {
     const [projectsResult, productsResult, enrollmentsResult, coursesResult] = await Promise.all([
@@ -40,6 +42,28 @@ export function StudentProjectsBoard() {
 
   useEffect(() => { void load(); }, [load]);
 
+  function editProject(row: StudentProject) {
+    if (row.status !== "revision_required") return;
+    setEditingId(row.id);
+    setForm({
+      title: row.title,
+      course_id: row.course_id ?? "",
+      category: row.category,
+      short_description: row.short_description ?? "",
+      full_description: row.full_description ?? "",
+      github_url: row.github_url ?? "",
+      live_url: row.live_url ?? "",
+      technologies: row.technologies.join(", "),
+      image_urls: row.image_urls.length ? row.image_urls : [""],
+    });
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const githubUrl = form.github_url.trim();
@@ -51,8 +75,7 @@ export function StudentProjectsBoard() {
     if (imageUrls.some((url) => !getGoogleDriveFileId(url))) return setToast({ type: "error", message: "Every image must use a valid public Google Drive file URL." });
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("student_projects").insert({
-      student_id: user?.id,
+    const projectPayload = {
       course_id: form.course_id,
       title: form.title.trim(),
       category: form.category.trim(),
@@ -62,11 +85,25 @@ export function StudentProjectsBoard() {
       live_url: liveUrl || null,
       technologies: form.technologies.split(",").map((item) => item.trim()).filter(Boolean),
       image_urls: imageUrls,
-    });
+      updated_at: new Date().toISOString(),
+    };
+    const result = editingId
+      ? await supabase.from("student_projects").update({
+          ...projectPayload,
+          status: "submitted",
+          reviewed_at: null,
+          reviewed_by: null,
+        }).eq("id", editingId).eq("student_id", user?.id).eq("status", "revision_required")
+      : await supabase.from("student_projects").insert({
+          ...projectPayload,
+          student_id: user?.id,
+        });
     setSaving(false);
-    if (error) return setToast({ type: "error", message: error.message });
+    if (result.error) return setToast({ type: "error", message: result.error.message });
+    const wasEditing = Boolean(editingId);
+    setEditingId(null);
     setForm(emptyForm);
-    setToast({ type: "success", message: "Project submitted for admin review." });
+    setToast({ type: "success", message: wasEditing ? "Improved project resubmitted for admin review." : "Project submitted for admin review." });
     await load();
   }
 
@@ -74,7 +111,14 @@ export function StudentProjectsBoard() {
 
   return <div className="space-y-6">
     <PageHeader eyebrow="Portfolio" title="My Projects" description="Submit at least one public Google Drive screenshot. GitHub, YouTube, and live demo links can be added as optional proof." />
-    <form onSubmit={submit} className="wc-card grid gap-4 p-5 md:grid-cols-2">
+    <form ref={formRef} onSubmit={submit} className="wc-card grid scroll-mt-6 gap-4 p-5 md:grid-cols-2">
+      {editingId ? <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+        <div>
+          <p className="font-black">Improve and resubmit this project</p>
+          <p className="mt-1 text-sm">Update the project according to the admin comments shown in Submission history.</p>
+        </div>
+        <button type="button" className="wc-secondary-btn" onClick={cancelEdit}><Icon name="close" /> Cancel editing</button>
+      </div> : null}
       <input className="wc-input" required placeholder="Project title" value={form.title} onChange={(e) => setForm({...form,title:e.target.value})} />
       <div>
         <label className="wc-label" htmlFor="project-course">Course</label>
@@ -123,8 +167,27 @@ export function StudentProjectsBoard() {
         </div>
         <button type="button" className="wc-secondary-btn mt-3" onClick={()=>setForm({...form,image_urls:[...form.image_urls,""]})}><Icon name="add"/> Add Image URL</button>
       </div>
-      <button disabled={saving} className="wc-primary-btn md:col-span-2"><Icon name="send"/> {saving ? "Submitting..." : "Submit Project"}</button>
+      <button disabled={saving} className="wc-primary-btn md:col-span-2"><Icon name="send"/> {saving ? "Submitting..." : editingId ? "Update & Resubmit Project" : "Submit Project"}</button>
     </form>
+    {rows.some((row) => row.status === "revision_required") ? <section className="wc-card overflow-hidden border border-amber-300">
+      <div className="border-b border-amber-300 bg-amber-50 p-4">
+        <h2 className="text-lg font-black text-amber-950">Projects needing improvement</h2>
+        <p className="mt-1 text-sm text-amber-900">Read the admin comments, update your project, and resubmit it for review.</p>
+      </div>
+      <div className="divide-y divide-amber-200">
+        {rows.filter((row) => row.status === "revision_required").map((row) => <article key={row.id} className="p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div><h3 className="font-black">{row.title}</h3><p className="text-sm text-on-surface-variant">{row.category} &middot; {row.image_urls.length} images</p></div>
+            <StatusPill value={row.status}/>
+          </div>
+          <div className="mt-3 rounded-lg border border-amber-300 bg-white p-3">
+            <p className="text-xs font-black uppercase tracking-wide text-on-surface-variant">Admin comments</p>
+            <p className="mt-1 text-sm leading-6">{row.admin_feedback}</p>
+          </div>
+          <button type="button" className="wc-primary-btn mt-3" onClick={() => editProject(row)}><Icon name="edit" /> Improve Project</button>
+        </article>)}
+      </div>
+    </section> : null}
     <section className="wc-card overflow-hidden"><div className="border-b border-outline-variant p-4"><h2 className="text-lg font-black">Submission history</h2></div><div className="divide-y divide-outline-variant">{rows.length?rows.map(row=><article key={row.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between"><div><h3 className="font-black">{row.title}</h3><p className="text-sm text-on-surface-variant">{row.category} &middot; {[row.github_url ? "GitHub" : "", row.live_url ? "video/live link" : "", row.image_urls.length ? `${row.image_urls.length} images` : ""].filter(Boolean).join(" · ")}</p>{row.admin_feedback?<p className="mt-2 text-sm">{row.admin_feedback}</p>:null}</div><div className="flex items-center gap-2"><StatusPill value={row.status}/>{row.promoted_product_id?<span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Published as product</span>:null}</div></article>):<p className="p-6 text-sm text-on-surface-variant">No projects submitted yet.</p>}</div></section>
     <Toast toast={toast} onClear={()=>setToast(null)} />
   </div>;

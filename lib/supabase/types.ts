@@ -440,7 +440,7 @@ export type StudentProject = {
   live_url: string | null;
   image_urls: string[];
   technologies: string[];
-  status: "submitted" | "approved" | "rejected";
+  status: "submitted" | "approved" | "rejected" | "revision_required";
   admin_feedback: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;

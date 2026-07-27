@@ -99,19 +99,28 @@ export function StudentProjectsManager() {
     setDrafts((current) => ({ ...current, [id]: { ...current[id], [field]: value } }));
   }
 
-  async function review(row: StudentProject, status: "approved" | "rejected") {
+  async function review(row: StudentProject, status: "approved" | "rejected" | "revision_required") {
+    const reviewFeedback = feedback[row.id]?.trim() || row.admin_feedback?.trim() || "";
+    if (status === "revision_required" && !reviewFeedback) {
+      return setToast({ type: "error", message: "Write improvement comments before sending the project back to the student." });
+    }
     setBusy(row.id);
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("student_projects").update({
       status,
-      admin_feedback: feedback[row.id]?.trim() || null,
+      admin_feedback: reviewFeedback || null,
       reviewed_at: new Date().toISOString(),
       reviewed_by: user?.id,
       updated_at: new Date().toISOString(),
     }).eq("id", row.id);
     setBusy(null);
     if (error) return setToast({ type: "error", message: error.message });
-    setToast({ type: "success", message: "Project " + status + "." });
+    setToast({
+      type: "success",
+      message: status === "revision_required"
+        ? "Project returned to the student for improvement."
+        : "Project " + status + ".",
+    });
     await load();
   }
 
@@ -170,6 +179,7 @@ export function StudentProjectsManager() {
   const filterOptions = [
     { value: "all", label: "All", count: rows.length },
     { value: "submitted", label: "Submitted", count: rows.filter((row) => row.status === "submitted").length },
+    { value: "revision_required", label: "Needs Improvement", count: rows.filter((row) => row.status === "revision_required").length },
     { value: "approved", label: "Approved", count: rows.filter((row) => row.status === "approved" && !row.promoted_product_id).length },
     { value: "published", label: "Published", count: rows.filter((row) => Boolean(row.promoted_product_id)).length },
     { value: "rejected", label: "Rejected", count: rows.filter((row) => row.status === "rejected").length },
@@ -258,6 +268,7 @@ export function StudentProjectsManager() {
             <div className="mt-3 flex flex-wrap gap-2">
               {row.status === "submitted" ? <>
                 <button disabled={busy === row.id} onClick={() => void review(row, "approved")} className="wc-primary-btn"><Icon name="check" /> Approve</button>
+                <button disabled={busy === row.id} onClick={() => void review(row, "revision_required")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-amber-100 px-5 py-3 font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" /> Need Improvement</button>
                 <button disabled={busy === row.id} onClick={() => void review(row, "rejected")} className="wc-secondary-btn"><Icon name="close" /> Reject</button>
               </> : null}
             </div>

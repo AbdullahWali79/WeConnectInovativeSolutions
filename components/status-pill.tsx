@@ -23,7 +23,7 @@ const toneClasses: Record<string, string> = {
 const labelMap: Record<string, string> = {
   reviewed: "Accepted",
   submitted: "Submitted",
-  revision_required: "Revision required",
+  revision_required: "Needs improvement",
 };
 
 export function StatusPill({ value, className }: { value: string; className?: string }) {
