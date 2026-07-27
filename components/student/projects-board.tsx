@@ -6,6 +6,7 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
+import { cleanExternalUrl, getGoogleDriveFileId } from "@/lib/image-url";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Course, StudentProject } from "@/lib/supabase/types";
 
@@ -43,11 +44,11 @@ export function StudentProjectsBoard() {
     event.preventDefault();
     const githubUrl = form.github_url.trim();
     const liveUrl = form.live_url.trim();
-    const imageUrls = form.image_urls.map((url) => url.trim()).filter(Boolean);
+    const imageUrls = form.image_urls.map(cleanExternalUrl).filter(Boolean);
     if (!imageUrls.length) {
       return setToast({ type: "error", message: "At least one public Google Drive project image is required." });
     }
-    if (imageUrls.some((url) => !url.includes("drive.google.com"))) return setToast({ type: "error", message: "Every image must use a public Google Drive URL." });
+    if (imageUrls.some((url) => !getGoogleDriveFileId(url))) return setToast({ type: "error", message: "Every image must use a valid public Google Drive file URL." });
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("student_projects").insert({

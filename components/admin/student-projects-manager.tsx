@@ -7,16 +7,17 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
+import { cleanExternalUrl, splitExternalUrls } from "@/lib/image-url";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Product, ProductBadge, Profile, StudentProject } from "@/lib/supabase/types";
 
 function driveThumbnail(url: string) {
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(cleanExternalUrl(url));
     const id = parsed.pathname.match(/\/file\/d\/([^/]+)/)?.[1] ?? parsed.searchParams.get("id");
-    return id ? "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1200" : url;
+    return id ? "https://lh3.googleusercontent.com/d/" + encodeURIComponent(id) + "=w1600" : cleanExternalUrl(url);
   } catch {
-    return url;
+    return cleanExternalUrl(url);
   }
 }
 
@@ -35,6 +36,10 @@ type ProductDraft = {
 
 function lines(value: string) {
   return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
+
+function urlLines(value: string) {
+  return splitExternalUrls(value);
 }
 
 function draftFrom(row: StudentProject, product?: Product): ProductDraft {
@@ -113,7 +118,7 @@ export function StudentProjectsManager() {
   async function saveProduct(row: StudentProject) {
     if (row.status !== "approved") return;
     const draft = drafts[row.id] ?? draftFrom(row, row.promoted_product_id ? productById.get(row.promoted_product_id) : undefined);
-    const imageUrls = lines(draft.imageLinksText);
+    const imageUrls = urlLines(draft.imageLinksText);
     const features = lines(draft.featuresText);
     if (!draft.name.trim() || !draft.category.trim()) {
       return setToast({ type: "error", message: "Product title and category are required." });
@@ -197,7 +202,7 @@ export function StudentProjectsManager() {
         const student = names.get(row.student_id);
         const expanded = expandedIds.includes(row.id);
         const draft = drafts[row.id] ?? draftFrom(row, row.promoted_product_id ? productById.get(row.promoted_product_id) : undefined);
-        const previewLinks = lines(draft.imageLinksText);
+        const previewLinks = urlLines(draft.imageLinksText);
         return <article key={row.id} className="wc-card overflow-hidden">
           <button type="button" onClick={() => toggleExpanded(row)} className="flex w-full items-center justify-between gap-4 p-5 text-left hover:bg-surface-container-low">
             <div className="min-w-0">
