@@ -5,6 +5,7 @@ import { GoogleDriveImagePreviews } from "@/components/admin/google-drive-image-
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
+import { ProductVideoPreview } from "@/components/product-video-preview";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { cleanExternalUrl, splitExternalUrls } from "@/lib/image-url";
@@ -32,6 +33,8 @@ type ProductDraft = {
   status: Product["status"];
   featuresText: string;
   imageLinksText: string;
+  videoUrl: string;
+  showInBranding: boolean;
 };
 
 function lines(value: string) {
@@ -48,12 +51,14 @@ function draftFrom(row: StudentProject, product?: Product): ProductDraft {
     category: product?.category ?? row.category,
     shortDescription: product?.short_description ?? row.short_description ?? "",
     fullDescription: product?.full_description ?? row.full_description ?? "",
-    visitorLink: product?.product_link ?? row.live_url ?? "",
+    visitorLink: product?.product_link ?? "",
     accessType: product?.price_or_access_type ?? "Portfolio Project",
     badge: product?.badge ?? "new",
     status: product?.status ?? "active",
     featuresText: (product?.features ?? row.technologies).join("\n"),
     imageLinksText: (product?.gallery_urls?.length ? product.gallery_urls : row.image_urls).join("\n"),
+    videoUrl: product?.video_url ?? row.live_url ?? "",
+    showInBranding: product?.show_in_branding ?? false,
   };
 }
 
@@ -95,7 +100,7 @@ export function StudentProjectsManager() {
       : { ...current, [row.id]: draftFrom(row, row.promoted_product_id ? productById.get(row.promoted_product_id) : undefined) });
   }
 
-  function updateDraft(id: string, field: keyof ProductDraft, value: string) {
+  function updateDraft<K extends keyof ProductDraft>(id: string, field: K, value: ProductDraft[K]) {
     setDrafts((current) => ({ ...current, [id]: { ...current[id], [field]: value } }));
   }
 
@@ -135,6 +140,9 @@ export function StudentProjectsManager() {
     if (draft.visitorLink.trim()) {
       try { new URL(draft.visitorLink.trim()); } catch { return setToast({ type: "error", message: "Visitor link must be a complete URL, for example https://wa.me/923001234567." }); }
     }
+    if (draft.videoUrl.trim()) {
+      try { new URL(draft.videoUrl.trim()); } catch { return setToast({ type: "error", message: "Video link must be a complete YouTube, Google Drive, or direct video URL." }); }
+    }
     setBusy(row.id);
     const student = names.get(row.student_id);
     const payload = {
@@ -150,6 +158,8 @@ export function StudentProjectsManager() {
       status: draft.status,
       display_order: 0,
       gallery_urls: imageUrls,
+      video_url: draft.videoUrl.trim() || null,
+      show_in_branding: draft.showInBranding,
       source_project_id: row.id,
       student_name: student?.full_name ?? "Student",
       updated_at: new Date().toISOString(),
@@ -236,6 +246,9 @@ export function StudentProjectsManager() {
                 {row.github_url ? <a className="wc-secondary-btn" href={row.github_url} target="_blank" rel="noreferrer"><Icon name="code" /> Student GitHub</a> : null}
                 {row.live_url ? <a className="wc-secondary-btn" href={row.live_url} target="_blank" rel="noreferrer"><Icon name="open_in_new" /> {/(youtube\.com|youtu\.be)/i.test(row.live_url) ? "Student YouTube" : "Student Live Demo"}</a> : null}
               </div>
+              {row.live_url ? <div className="mt-4 max-w-3xl overflow-hidden rounded-lg border border-outline-variant">
+                <ProductVideoPreview url={row.live_url} title={`${row.title} submitted video`} />
+              </div> : null}
             </div>
 
             {row.status === "approved" ? <div className="mt-5 rounded-xl border border-primary/30 p-4">
@@ -253,13 +266,19 @@ export function StudentProjectsManager() {
                 <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Short description</span><textarea className="wc-input min-h-20" value={draft.shortDescription} onChange={(event) => updateDraft(row.id, "shortDescription", event.target.value)} /></label>
                 <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Full description</span><textarea className="wc-input min-h-36" value={draft.fullDescription} onChange={(event) => updateDraft(row.id, "fullDescription", event.target.value)} /></label>
                 <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Visitor button link</span><input className="wc-input" placeholder="https://wa.me/923001234567 or any public URL" value={draft.visitorLink} onChange={(event) => updateDraft(row.id, "visitorLink", event.target.value)} /><span className="block text-xs text-on-surface-variant">Student GitHub is not published. Visitors open only this admin-selected link.</span></label>
+                <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Public product video</span><input className="wc-input" type="url" placeholder="YouTube, public Google Drive video, or direct MP4/WebM URL" value={draft.videoUrl} onChange={(event) => updateDraft(row.id, "videoUrl", event.target.value)} /><span className="block text-xs text-on-surface-variant">You can keep, replace, or remove the student&apos;s submitted video before publishing.</span></label>
+                <label className="flex items-center gap-3 rounded-lg border border-outline-variant p-4 md:col-span-2">
+                  <input type="checkbox" className="h-5 w-5 accent-primary" checked={draft.showInBranding} onChange={(event) => updateDraft(row.id, "showInBranding", event.target.checked)} />
+                  <span><strong>Also show in Branding</strong><span className="block text-xs text-on-surface-variant">The product remains in {draft.category || "its original category"} and also appears under Branding.</span></span>
+                </label>
                 <label className="space-y-1"><span className="text-xs font-bold uppercase">Access type</span><input className="wc-input" value={draft.accessType} onChange={(event) => updateDraft(row.id, "accessType", event.target.value)} /></label>
-                <label className="space-y-1"><span className="text-xs font-bold uppercase">Badge</span><select className="wc-input" value={draft.badge} onChange={(event) => updateDraft(row.id, "badge", event.target.value)}><option value="new">New</option><option value="premium">Premium</option><option value="hot">Hot</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
-                <label className="space-y-1"><span className="text-xs font-bold uppercase">Public status</span><select className="wc-input" value={draft.status} onChange={(event) => updateDraft(row.id, "status", event.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+                <label className="space-y-1"><span className="text-xs font-bold uppercase">Badge</span><select className="wc-input" value={draft.badge} onChange={(event) => updateDraft(row.id, "badge", event.target.value as ProductBadge)}><option value="new">New</option><option value="premium">Premium</option><option value="hot">Hot</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
+                <label className="space-y-1"><span className="text-xs font-bold uppercase">Public status</span><select className="wc-input" value={draft.status} onChange={(event) => updateDraft(row.id, "status", event.target.value as Product["status"])}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
                 <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Features / technologies - one per line</span><textarea className="wc-input min-h-28" value={draft.featuresText} onChange={(event) => updateDraft(row.id, "featuresText", event.target.value)} /></label>
                 <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Product image links - one per line</span><textarea className="wc-input min-h-32" placeholder="Google Drive or direct image URL, one per line" value={draft.imageLinksText} onChange={(event) => updateDraft(row.id, "imageLinksText", event.target.value)} /><span className="block text-xs text-on-surface-variant">Add, remove, replace, or reorder links. The first image becomes the product cover.</span></label>
               </div>
 
+              {draft.videoUrl ? <div className="mt-4 max-w-3xl overflow-hidden rounded-lg border border-outline-variant"><ProductVideoPreview url={draft.videoUrl} title={`${draft.name} public video preview`} /></div> : null}
               <GoogleDriveImagePreviews links={previewLinks} />
               <button disabled={busy === row.id} onClick={() => void saveProduct(row)} className="wc-primary-btn mt-4"><Icon name="save" /> {row.promoted_product_id ? "Save Product Changes" : "Publish Customized Product"}</button>
             </div> : null}

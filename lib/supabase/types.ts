@@ -420,6 +420,8 @@ export type Product = {
   features: string[] | null;
   gallery_urls?: string[] | null;
   related_links?: string[] | null;
+  video_url?: string | null;
+  show_in_branding?: boolean;
   source_project_id?: string | null;
   student_name?: string | null;
   status: GenericStatus;

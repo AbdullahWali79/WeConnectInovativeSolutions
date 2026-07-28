@@ -143,8 +143,11 @@ export function StudentProjectsBoard() {
         {!categories.length ? <p className="mt-2 text-xs font-semibold text-error">Ask admin to add an active product category first.</p> : null}
       </div>
       <input className="wc-input md:col-span-2" type="url" placeholder="GitHub project URL (optional)" value={form.github_url} onChange={(e) => setForm({...form,github_url:e.target.value})} />
-      <input className="wc-input md:col-span-2" type="url" placeholder="YouTube video or live demo URL (optional)" value={form.live_url} onChange={(e) => setForm({...form,live_url:e.target.value})} />
-      <p className="md:col-span-2 text-xs leading-5 text-on-surface-variant">A public Google Drive project image is compulsory. GitHub, YouTube, and live demo links are optional.</p>
+      <input className="wc-input md:col-span-2" type="url" placeholder="YouTube or public Google Drive video / live demo URL (optional)" value={form.live_url} onChange={(e) => setForm({...form,live_url:e.target.value})} />
+      <p className="md:col-span-2 text-xs leading-5 text-on-surface-variant">
+        A public Google Drive project image is compulsory. YouTube, GitHub, and live demo links are optional.
+        For a Google Drive video, sharing must be <strong>Anyone with the link</strong>.
+      </p>
       <input className="wc-input md:col-span-2" placeholder="Technologies, comma separated" value={form.technologies} onChange={(e) => setForm({...form,technologies:e.target.value})} />
       <input className="wc-input md:col-span-2" required placeholder="Short description" value={form.short_description} onChange={(e) => setForm({...form,short_description:e.target.value})} />
       <div className="md:col-span-2">

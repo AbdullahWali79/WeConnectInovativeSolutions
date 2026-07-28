@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { Icon } from "@/components/icon";
+import { ProductVideoPreview } from "@/components/product-video-preview";
 import { normalizeImageUrl } from "@/lib/image-url";
 import type { Product } from "@/lib/supabase/types";
 import { renderMarkdownToHtml } from "@/lib/markdown";
@@ -89,10 +90,17 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<Product | null>(null);
 
-  const categories = useMemo(() => Array.from(new Set(products.map((product) => product.category))).sort(), [products]);
+  const categories = useMemo(() => {
+    const values = new Set(products.map((product) => product.category));
+    if (products.some((product) => product.show_in_branding && product.video_url)) values.add("Branding");
+    return Array.from(values).sort();
+  }, [products]);
   const filtered = useMemo(() => products.filter((product) => {
     const queryMatch = `${product.name} ${product.short_description ?? ""}`.toLowerCase().includes(query.trim().toLowerCase());
-    const categoryMatch = category === "all" || product.category === category;
+    const categoryMatch = category === "all"
+      || (category === "Branding"
+        ? Boolean(product.show_in_branding && product.video_url)
+        : product.category === category);
     return queryMatch && categoryMatch;
   }), [products, query, category]);
 
@@ -172,11 +180,12 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
                         {product.badge}
                       </span>
                     </div>
+                    {product.video_url ? <span className="absolute bottom-4 left-4 z-20 inline-flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white"><Icon name="play_circle" className="text-sm" /> Video</span> : null}
                   </div>
                   <div className="flex flex-1 flex-col p-6">
                     <div className="mb-3">
                       <span className="rounded-md bg-[var(--wc-primary)]/50 border border-[var(--wc-primary)] px-2.5 py-1 text-[10px] font-bold text-[var(--wc-on-surface-variant)] uppercase tracking-wider">
-                        {product.category}
+                        {category === "Branding" && product.show_in_branding ? "Branding" : product.category}
                       </span>
                     </div>
                     <h3 className="mb-3 text-xl font-bold text-on-surface transition-colors group-hover:text-[var(--wc-secondary)] line-clamp-2">{product.name}</h3>
@@ -211,6 +220,12 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 <ProductGallery key={selected.id} product={selected} />
 
+                {selected.video_url ? (
+                  <div className="mb-10">
+                    <h3 className="mb-4 text-xl font-black text-on-surface">Project Video</h3>
+                    <ProductVideoPreview url={selected.video_url} title={`${selected.name} video`} />
+                  </div>
+                ) : null}
 
                 <div className="mb-10">
                   <h3 className="text-xl font-black text-on-surface mb-4">Overview</h3>

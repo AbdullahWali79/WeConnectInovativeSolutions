@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
+import { ProductVideoPreview } from "@/components/product-video-preview";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { PermissionKey } from "@/lib/admin-permissions";
@@ -28,6 +29,8 @@ const defaultForm = {
   price_or_access_type: "",
   badge: "new",
   product_link: "",
+  video_url: "",
+  show_in_branding: false,
   gallery_urls: [""],
   related_links: [""],
   features: "",
@@ -109,6 +112,8 @@ export function ProductsManager({
       price_or_access_type: row.price_or_access_type ?? "",
       badge: row.badge,
       product_link: row.product_link ?? "",
+      video_url: row.video_url ?? "",
+      show_in_branding: Boolean(row.show_in_branding),
       gallery_urls: row.gallery_urls?.length ? row.gallery_urls : [row.image_url ?? ""],
       related_links: row.related_links?.length ? row.related_links : row.product_link ? [row.product_link] : [""],
       features: (row.features ?? []).join(", "),
@@ -157,6 +162,8 @@ export function ProductsManager({
       price_or_access_type: form.price_or_access_type.trim() || null,
       badge: form.badge,
       product_link: `https://wa.me/${defaultWhatsAppNumber.replace(/\D/g, "")}`,
+      video_url: form.video_url.trim() || null,
+      show_in_branding: form.show_in_branding,
       gallery_urls: galleryUrls,
       related_links: relatedLinks,
       features: form.features.trim() ? form.features.split(",").map((item) => item.trim()).filter(Boolean) : [],
@@ -174,6 +181,8 @@ export function ProductsManager({
       delete fallbackPayload.image_github_url;
       delete fallbackPayload.image_cdn_url;
       delete fallbackPayload.related_links;
+      delete fallbackPayload.video_url;
+      delete fallbackPayload.show_in_branding;
       const fallbackRequest = editingId ? supabase.from("products").update(fallbackPayload).eq("id", editingId) : supabase.from("products").insert(fallbackPayload);
       const fallback = await fallbackRequest;
       error = fallback.error;
@@ -223,6 +232,8 @@ export function ProductsManager({
       Features: (row.features ?? []).map(excelText).join(", "),
       "Cover Image URL": excelText(row.image_cdn_url ?? row.image_url),
       "Public Access Link": excelText(row.product_link),
+      "Public Video URL": excelText(row.video_url),
+      "Show in Branding": row.show_in_branding ? "Yes" : "No",
       "Student Name": excelText(row.student_name),
       "Source Project ID": row.source_project_id ?? "",
       "Display Order": row.display_order,
@@ -357,6 +368,31 @@ export function ProductsManager({
                 </div>)}
               </div>
               <button type="button" className="wc-secondary-btn mt-2 text-sm" onClick={() => setForm((current) => ({ ...current, gallery_urls: [...current.gallery_urls, ""] }))}><Icon name="add" /> Add Image</button>
+            </div>
+            <div className="sm:col-span-2 grid gap-4 rounded-xl border border-outline-variant p-4 lg:grid-cols-[1fr_auto]">
+              <label>
+                <span className="wc-label">Public project video URL (optional)</span>
+                <input
+                  className="wc-input mt-2"
+                  type="url"
+                  value={form.video_url}
+                  onChange={(event) => setForm((current) => ({ ...current, video_url: event.target.value }))}
+                  placeholder="YouTube or public Google Drive video URL"
+                />
+                <span className="mt-2 block text-xs leading-5 text-on-surface-variant">Google Drive sharing must be set to Anyone with the link.</span>
+              </label>
+              <label className="flex min-h-[72px] items-center gap-3 self-end rounded-xl border border-outline-variant px-4">
+                <input
+                  type="checkbox"
+                  checked={form.show_in_branding}
+                  onChange={(event) => setForm((current) => ({ ...current, show_in_branding: event.target.checked }))}
+                />
+                <span>
+                  <strong className="block text-sm text-on-surface">Also show in Branding</strong>
+                  <small className="text-on-surface-variant">Original category bhi rahegi.</small>
+                </span>
+              </label>
+              {form.video_url.trim() ? <ProductVideoPreview url={form.video_url} title={`${form.name || "Product"} video preview`} className="lg:col-span-2" /> : null}
             </div>
             <label className="sm:col-span-2"><span className="wc-label">Short description</span><input className="wc-input mt-2" placeholder="Short description" value={form.short_description} onChange={(event) => setForm((current) => ({ ...current, short_description: event.target.value }))} /></label>
             <label className="sm:col-span-2"><span className="wc-label">Full description</span><textarea className="wc-input mt-2 min-h-40" placeholder="Full description" value={form.full_description} onChange={(event) => setForm((current) => ({ ...current, full_description: event.target.value }))} /><span className="mt-2 block text-xs leading-5 text-on-surface-variant">Formatting is automatic for headings, lists, and pasted tables.</span></label>

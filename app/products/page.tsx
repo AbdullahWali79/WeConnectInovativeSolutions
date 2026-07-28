@@ -11,7 +11,7 @@ async function getProducts() {
       const supabase = createSupabasePublicClient();
       const { data, error } = await supabase
         .from("products")
-        .select("id,name,category,image_url,image_github_path,image_github_url,image_cdn_url,short_description,full_description,price_or_access_type,badge,features,gallery_urls,source_project_id,student_name,status,display_order,created_at,updated_at")
+        .select("id,name,category,image_url,image_github_path,image_github_url,image_cdn_url,short_description,full_description,price_or_access_type,badge,features,gallery_urls,video_url,show_in_branding,source_project_id,student_name,status,display_order,created_at,updated_at")
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .order("display_order", { ascending: true });
