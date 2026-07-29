@@ -14,9 +14,10 @@ type Props = {
   existingTasks: Task[];
   canAssign: boolean;
   canEdit: boolean;
+  showPageHeader?: boolean;
 };
 
-const columns = [
+const webColumns = [
   "Day",
   "Topic",
   "Exact Video Title & Channel (English)",
@@ -24,18 +25,35 @@ const columns = [
   "Practice / Tough Project",
 ];
 
-function topicDescription(topic: CourseTopic) {
+const pythonColumns = [
+  "Day",
+  "Project Name (Real-Time / Advanced)",
+  "Covered Course Days (Syllabus)",
+  "Key Concepts & Tech Stack Used",
+];
+
+function topicDescription(topic: CourseTopic, isPython: boolean) {
   return [
     `Day ${String(topic.day_number).padStart(2, "0")}: ${topic.title}`,
-    topic.english_video ? `English resource: ${topic.english_video}` : "",
-    topic.urdu_video ? `Hindi / Urdu resource: ${topic.urdu_video}` : "",
-    topic.practice_project ? `Practice / tough project: ${topic.practice_project}` : "",
+    topic.english_video ? `${isPython ? "Covered course days" : "English resource"}: ${topic.english_video}` : "",
+    !isPython && topic.urdu_video ? `Hindi / Urdu resource: ${topic.urdu_video}` : "",
+    topic.practice_project ? `${isPython ? "Key concepts and tech stack" : "Practice / tough project"}: ${topic.practice_project}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-export function SyllabusManager({ course, topics, students, existingTasks, canAssign, canEdit }: Props) {
+export function SyllabusManager({
+  course,
+  topics,
+  students,
+  existingTasks,
+  canAssign,
+  canEdit,
+  showPageHeader = true,
+}: Props) {
+  const isPython = Boolean(course?.title.toLowerCase().includes("python"));
+  const columns = isPython ? pythonColumns : webColumns;
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [topicRows, setTopicRows] = useState(topics);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
@@ -124,7 +142,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
           course_id: course.id,
           workflow_type: "assigned" as const,
           title: topic.title,
-          description: topicDescription(topic),
+          description: topicDescription(topic, isPython),
           max_score: 100,
         })),
     );
@@ -153,18 +171,18 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
   return (
     <div>
       <Toast toast={toast} onClear={() => setToast(null)} />
-      <header className="mb-7">
+      {showPageHeader ? <header className="mb-7">
         <p className="text-sm font-bold uppercase tracking-widest text-primary">Academic roadmap</p>
         <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">Syllabus</h1>
         <p className="mt-3 max-w-4xl text-base text-on-surface-variant md:text-lg">
-          Excel-style curriculum rows for Advance Web Development. Select individual topics or assign the complete syllabus.
+          Excel-style curriculum rows for {course?.title ?? "your courses"}. Select individual topics or assign the complete syllabus.
         </p>
-      </header>
+      </header> : null}
 
       {!course ? (
         <section className="rounded-lg border border-outline-variant bg-surface p-8 text-center">
           <Icon name="menu_book" className="text-5xl text-primary" />
-          <h2 className="mt-4 text-xl font-bold">Advance Web Development syllabus not found</h2>
+          <h2 className="mt-4 text-xl font-bold">Syllabus not found</h2>
           <p className="mt-2 text-on-surface-variant">Run the curriculum migration, then reload this page.</p>
         </section>
       ) : (
@@ -206,7 +224,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                   <col className="w-24" />
                   <col className="w-56" />
                   <col className="w-72" />
-                  <col className="w-72" />
+                  {!isPython ? <col className="w-72" /> : null}
                   <col />
                   <col className="w-14" />
                 </colgroup>
@@ -246,7 +264,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                           </td>
                           <td className="border-l border-t border-outline-variant p-3 align-top font-bold">{topic.title}</td>
                           <td className="border-l border-t border-outline-variant p-3 align-top text-sm">{topic.english_video || "-"}</td>
-                          <td className="border-l border-t border-outline-variant p-3 align-top text-sm">{topic.urdu_video || "-"}</td>
+                          {!isPython ? <td className="border-l border-t border-outline-variant p-3 align-top text-sm">{topic.urdu_video || "-"}</td> : null}
                           <td className="border-l border-t border-outline-variant p-3 align-top text-sm">{topic.practice_project || "-"}</td>
                           <td className="border-l border-t border-outline-variant p-2 align-top">
                             <div className="flex items-center">
@@ -273,7 +291,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                         </tr>
                         {expanded ? (
                           <tr key={`${topic.id}-details`} className="bg-primary-container/30">
-                            <td colSpan={7} className="border-t border-outline-variant p-4">
+                            <td colSpan={isPython ? 6 : 7} className="border-t border-outline-variant p-4">
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                   <p className="font-bold">{topic.title}</p>
@@ -305,7 +323,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                                       />
                                     </label>
                                     <label className="text-sm font-bold">
-                                      Topic title
+                                      {isPython ? "Project name" : "Topic title"}
                                       <input
                                         value={topicDraft.title}
                                         onChange={(event) => setTopicDraft({ ...topicDraft, title: event.target.value })}
@@ -315,7 +333,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                                   </div>
                                   <div className="mt-4 grid gap-4 lg:grid-cols-2">
                                     <label className="text-sm font-bold">
-                                      English video title and channel
+                                      {isPython ? "Covered course days (syllabus)" : "English video title and channel"}
                                       <textarea
                                         value={topicDraft.english_video ?? ""}
                                         onChange={(event) => setTopicDraft({ ...topicDraft, english_video: event.target.value })}
@@ -323,7 +341,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                                         className="mt-2 w-full resize-y rounded-lg border border-outline-variant bg-surface p-3 font-normal outline-none focus:border-primary"
                                       />
                                     </label>
-                                    <label className="text-sm font-bold">
+                                    {!isPython ? <label className="text-sm font-bold">
                                       Hindi / Urdu alternative
                                       <textarea
                                         value={topicDraft.urdu_video ?? ""}
@@ -331,10 +349,10 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                                         rows={3}
                                         className="mt-2 w-full resize-y rounded-lg border border-outline-variant bg-surface p-3 font-normal outline-none focus:border-primary"
                                       />
-                                    </label>
+                                    </label> : null}
                                   </div>
                                   <label className="mt-4 block text-sm font-bold">
-                                    Practice / tough project
+                                    {isPython ? "Key concepts & tech stack used" : "Practice / tough project"}
                                     <textarea
                                       value={topicDraft.practice_project ?? ""}
                                       onChange={(event) => setTopicDraft({ ...topicDraft, practice_project: event.target.value })}
@@ -390,7 +408,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div>
-                <label htmlFor="student-search" className="text-xs font-extrabold uppercase">Active Advance Web Development students</label>
+                <label htmlFor="student-search" className="text-xs font-extrabold uppercase">Active {course.title} students</label>
                 <input
                   id="student-search"
                   value={studentSearch}
@@ -425,7 +443,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
               ))}
               {visibleStudents.length === 0 ? (
                 <p className="rounded-lg bg-surface-container-low p-4 text-sm text-on-surface-variant sm:col-span-2 xl:col-span-3">
-                  No active students are enrolled in Advance Web Development.
+                  No active students are enrolled in {course.title}.
                 </p>
               ) : null}
             </div>

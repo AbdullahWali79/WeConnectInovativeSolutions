@@ -1,10 +1,8 @@
 import { AccessDenied } from "@/components/admin/access-denied";
-import { SyllabusManager } from "@/components/admin/syllabus-manager";
+import { SyllabusCatalog, type SyllabusBundle } from "@/components/admin/syllabus-catalog";
 import { requirePermissionPage } from "@/lib/admin-access";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { Course, CourseTopic, Enrollment, Profile, Task } from "@/lib/supabase/types";
-
-const ADVANCE_WEB_DEVELOPMENT = "Advance Web Development";
 
 export default async function AdminSyllabusPage() {
   const access = await requirePermissionPage("/admin/syllabus", "courses.view");
@@ -14,28 +12,23 @@ export default async function AdminSyllabusPage() {
   }
 
   const supabase = createSupabaseServiceClient();
-  const { data: courseData } = await supabase
-    .from("courses")
-    .select("*")
-    .ilike("title", ADVANCE_WEB_DEVELOPMENT)
-    .maybeSingle();
+  const { data: topicsData } = await supabase.from("course_topics").select("*").order("day_number");
+  const topics = (topicsData ?? []) as CourseTopic[];
+  const courseIds = [...new Set(topics.map((topic) => topic.course_id))];
+  let bundles: SyllabusBundle[] = [];
 
-  const course = (courseData ?? null) as Course | null;
-  let topics: CourseTopic[] = [];
-  let students: Profile[] = [];
-  let tasks: Task[] = [];
-
-  if (course) {
-    const [topicsResult, enrollmentsResult, tasksResult] = await Promise.all([
-      supabase.from("course_topics").select("*").eq("course_id", course.id).order("day_number"),
-      supabase.from("enrollments").select("*").eq("course_id", course.id).eq("status", "active"),
-      supabase.from("tasks").select("*").eq("course_id", course.id),
+  if (courseIds.length > 0) {
+    const [coursesResult, enrollmentsResult, tasksResult] = await Promise.all([
+      supabase.from("courses").select("*").in("id", courseIds).eq("status", "active").order("title"),
+      supabase.from("enrollments").select("*").in("course_id", courseIds).eq("status", "active"),
+      supabase.from("tasks").select("*").in("course_id", courseIds),
     ]);
 
-    topics = (topicsResult.data ?? []) as CourseTopic[];
-    tasks = (tasksResult.data ?? []) as Task[];
+    const courses = (coursesResult.data ?? []) as Course[];
     const enrollments = (enrollmentsResult.data ?? []) as Enrollment[];
+    const tasks = (tasksResult.data ?? []) as Task[];
     const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.student_id))];
+    let students: Profile[] = [];
 
     if (studentIds.length > 0) {
       const { data: studentData } = await supabase
@@ -50,14 +43,24 @@ export default async function AdminSyllabusPage() {
         (student) => !student.admin_status || student.admin_status === "active" || student.admin_status === "approved",
       );
     }
+
+    bundles = courses.map((course) => {
+      const enrolledStudentIds = new Set(
+        enrollments.filter((enrollment) => enrollment.course_id === course.id).map((enrollment) => enrollment.student_id),
+      );
+
+      return {
+        course,
+        topics: topics.filter((topic) => topic.course_id === course.id),
+        students: students.filter((student) => enrolledStudentIds.has(student.id)),
+        existingTasks: tasks.filter((task) => task.course_id === course.id),
+      };
+    });
   }
 
   return (
-    <SyllabusManager
-      course={course}
-      topics={topics}
-      students={students}
-      existingTasks={tasks}
+    <SyllabusCatalog
+      bundles={bundles}
       canAssign={access.permissions.includes("tasks.create")}
       canEdit={access.permissions.includes("courses.edit")}
     />
