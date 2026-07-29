@@ -7,10 +7,14 @@ import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Course, CourseTopic, Profile, Task } from "@/lib/supabase/types";
 
+export type SyllabusStudent = Profile & {
+  assignmentCourseId: string;
+};
+
 type Props = {
   course: Course | null;
   topics: CourseTopic[];
-  students: Profile[];
+  students: SyllabusStudent[];
   existingTasks: Task[];
   canAssign: boolean;
   canEdit: boolean;
@@ -134,12 +138,14 @@ export function SyllabusManager({
     const duplicateKeys = new Set(
       assignedTasks.map((task) => `${task.student_id}:${task.title.trim().toLowerCase()}`),
     );
-    const payloads = selectedStudentIds.flatMap((studentId) =>
+
+    const selectedStudents = students.filter((student) => selectedStudentIds.includes(student.id));
+    const payloads = selectedStudents.flatMap((student) =>
       selectedTopics
-        .filter((topic) => !duplicateKeys.has(`${studentId}:${topic.title.trim().toLowerCase()}`))
+        .filter((topic) => !duplicateKeys.has(`${student.id}:${topic.title.trim().toLowerCase()}`))
         .map((topic) => ({
-          student_id: studentId,
-          course_id: course.id,
+          student_id: student.id,
+          course_id: student.assignmentCourseId,
           workflow_type: "assigned" as const,
           title: topic.title,
           description: topicDescription(topic, isPython),

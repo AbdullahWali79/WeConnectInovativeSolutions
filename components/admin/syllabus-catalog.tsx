@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/icon";
-import { SyllabusManager } from "@/components/admin/syllabus-manager";
-import type { Course, CourseTopic, Profile, Task } from "@/lib/supabase/types";
+import { SyllabusManager, type SyllabusStudent } from "@/components/admin/syllabus-manager";
+import type { Course, CourseTopic, Task } from "@/lib/supabase/types";
 
 export type SyllabusBundle = {
   course: Course;
   topics: CourseTopic[];
-  students: Profile[];
+  students: SyllabusStudent[];
   existingTasks: Task[];
 };
 
