@@ -17,7 +17,7 @@ import {
   requireAdminOnly,
   requirePermission,
 } from "@/lib/admin-access";
-import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, ClientHuntLead, Course, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, SoftwareHouse, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
+import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, ClientHuntLead, Course, CourseTopic, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, SoftwareHouse, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
 import { internshipLetterSchema, type InternshipLetterFormValues } from "@/lib/validations/internship-letter";
 import type { BrandingSettingsInput } from "@/lib/branding-settings";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
@@ -75,6 +75,15 @@ export type StudentTaskDetail = {
   status: "submitted" | "pending";
   feedback?: string | null;
   taskStatus?: string | null;
+};
+
+export type CourseTopicInput = {
+  id: string;
+  day_number: number;
+  title: string;
+  english_video?: string | null;
+  urdu_video?: string | null;
+  practice_project?: string | null;
 };
 
 export type DailyPendingReportRow = {
@@ -2479,5 +2488,43 @@ export async function updateApplicationStatus(applicationId: string, action: "ap
     return { success: true, data: null, error: null };
   } catch (error) {
     return { success: false, data: null, error: actionError(error, "Failed to update application.") };
+  }
+}
+
+export async function updateCourseTopic(input: CourseTopicInput): Promise<ActionResult<CourseTopic>> {
+  try {
+    await requirePermission("courses.edit");
+
+    const id = input.id.trim();
+    const title = input.title.trim();
+    const dayNumber = Number(input.day_number);
+
+    if (!id) throw new Error("Syllabus topic was not found.");
+    if (!title) throw new Error("Topic title is required.");
+    if (!Number.isInteger(dayNumber) || dayNumber < 1 || dayNumber > 999) {
+      throw new Error("Day number must be between 1 and 999.");
+    }
+
+    const supabaseAdmin = createSupabaseServiceClient();
+    const { data, error } = await supabaseAdmin
+      .from("course_topics")
+      .update({
+        day_number: dayNumber,
+        title,
+        english_video: input.english_video?.trim() || null,
+        urdu_video: input.urdu_video?.trim() || null,
+        practice_project: input.practice_project?.trim() || null,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error || !data) throw new Error(error?.message || "Failed to update syllabus topic.");
+
+    revalidatePath("/admin/syllabus");
+    revalidatePath("/student/syllabus");
+    return { success: true, data: data as CourseTopic, error: null };
+  } catch (error) {
+    return { success: false, data: null, error: actionError(error, "Failed to update syllabus topic.") };
   }
 }

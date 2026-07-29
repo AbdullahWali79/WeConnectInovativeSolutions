@@ -59,6 +59,7 @@ export default async function AdminSyllabusPage() {
       students={students}
       existingTasks={tasks}
       canAssign={access.permissions.includes("tasks.create")}
+      canEdit={access.permissions.includes("courses.edit")}
     />
   );
 }

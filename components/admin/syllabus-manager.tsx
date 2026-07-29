@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import { updateCourseTopic, type CourseTopicInput } from "@/app/admin/actions";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -12,6 +13,7 @@ type Props = {
   students: Profile[];
   existingTasks: Task[];
   canAssign: boolean;
+  canEdit: boolean;
 };
 
 const columns = [
@@ -33,17 +35,21 @@ function topicDescription(topic: CourseTopic) {
     .join("\n");
 }
 
-export function SyllabusManager({ course, topics, students, existingTasks, canAssign }: Props) {
+export function SyllabusManager({ course, topics, students, existingTasks, canAssign, canEdit }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [topicRows, setTopicRows] = useState(topics);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [expandedTopicIds, setExpandedTopicIds] = useState<string[]>([]);
   const [assignedTasks, setAssignedTasks] = useState(existingTasks);
   const [studentSearch, setStudentSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
+  const [topicDraft, setTopicDraft] = useState<CourseTopicInput | null>(null);
+  const [savingTopic, setSavingTopic] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
 
-  const selectedTopics = topics.filter((topic) => selectedTopicIds.includes(topic.id));
+  const selectedTopics = topicRows.filter((topic) => selectedTopicIds.includes(topic.id));
   const visibleStudents = students.filter((student) => {
     const query = studentSearch.trim().toLowerCase();
     return !query || `${student.full_name ?? ""} ${student.email ?? ""}`.toLowerCase().includes(query);
@@ -51,6 +57,50 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
 
   function toggleValue(value: string, values: string[], setValues: (next: string[]) => void) {
     setValues(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
+  }
+
+  function startEditing(topic: CourseTopic) {
+    setEditingTopicId(topic.id);
+    setTopicDraft({
+      id: topic.id,
+      day_number: topic.day_number,
+      title: topic.title,
+      english_video: topic.english_video,
+      urdu_video: topic.urdu_video,
+      practice_project: topic.practice_project,
+    });
+    if (!expandedTopicIds.includes(topic.id)) {
+      setExpandedTopicIds((current) => [...current, topic.id]);
+    }
+  }
+
+  function cancelEditing() {
+    setEditingTopicId(null);
+    setTopicDraft(null);
+  }
+
+  async function saveTopicChanges() {
+    if (!topicDraft || !canEdit) {
+      setToast({ type: "error", message: "You do not have permission to edit syllabus topics." });
+      return;
+    }
+
+    setSavingTopic(true);
+    const result = await updateCourseTopic(topicDraft);
+    setSavingTopic(false);
+
+    if (!result.success) {
+      setToast({ type: "error", message: result.error });
+      return;
+    }
+
+    setTopicRows((current) =>
+      current
+        .map((topic) => (topic.id === result.data.id ? result.data : topic))
+        .sort((left, right) => left.day_number - right.day_number),
+    );
+    cancelEditing();
+    setToast({ type: "success", message: "Syllabus topic updated successfully." });
   }
 
   async function assignSelectedTopics() {
@@ -124,25 +174,25 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
               <div>
                 <h2 className="text-xl font-extrabold">{course.title}</h2>
                 <p className="mt-1 text-sm text-on-surface-variant">
-                  {topics.length} spreadsheet rows | {selectedTopicIds.length} selected
+                  {topicRows.length} spreadsheet rows | {selectedTopicIds.length} selected
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setExpandedTopicIds(expandedTopicIds.length === topics.length ? [] : topics.map((topic) => topic.id))}
+                  onClick={() => setExpandedTopicIds(expandedTopicIds.length === topicRows.length ? [] : topicRows.map((topic) => topic.id))}
                   className="inline-flex items-center gap-2 rounded-lg border border-primary px-4 py-2 font-bold text-primary"
                 >
-                  <Icon name={expandedTopicIds.length === topics.length ? "unfold_less" : "unfold_more"} />
-                  {expandedTopicIds.length === topics.length ? "Collapse all" : "Expand all"}
+                  <Icon name={expandedTopicIds.length === topicRows.length ? "unfold_less" : "unfold_more"} />
+                  {expandedTopicIds.length === topicRows.length ? "Collapse all" : "Expand all"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedTopicIds(selectedTopicIds.length === topics.length ? [] : topics.map((topic) => topic.id))}
+                  onClick={() => setSelectedTopicIds(selectedTopicIds.length === topicRows.length ? [] : topicRows.map((topic) => topic.id))}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-bold text-on-primary"
                 >
-                  <Icon name={selectedTopicIds.length === topics.length ? "deselect" : "select_all"} />
-                  {selectedTopicIds.length === topics.length ? "Clear topics" : "Select all topics"}
+                  <Icon name={selectedTopicIds.length === topicRows.length ? "deselect" : "select_all"} />
+                  {selectedTopicIds.length === topicRows.length ? "Clear topics" : "Select all topics"}
                 </button>
               </div>
             </div>
@@ -152,7 +202,7 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
                 <colgroup>
-                  <col className="w-14" />
+                  <col className="w-24" />
                   <col className="w-24" />
                   <col className="w-56" />
                   <col className="w-72" />
@@ -166,17 +216,17 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                       <input
                         aria-label="Select all syllabus topics"
                         type="checkbox"
-                        checked={topics.length > 0 && selectedTopicIds.length === topics.length}
-                        onChange={() => setSelectedTopicIds(selectedTopicIds.length === topics.length ? [] : topics.map((topic) => topic.id))}
+                        checked={topicRows.length > 0 && selectedTopicIds.length === topicRows.length}
+                        onChange={() => setSelectedTopicIds(selectedTopicIds.length === topicRows.length ? [] : topicRows.map((topic) => topic.id))}
                         className="h-5 w-5 accent-white"
                       />
                     </th>
                     {columns.map((column) => <th key={column} className="border-l border-white/20 p-3 text-xs font-extrabold uppercase">{column}</th>)}
-                    <th className="border-l border-white/20 p-3"><span className="sr-only">Expand</span></th>
+                    <th className="border-l border-white/20 p-3"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {topics.map((topic, index) => {
+                  {topicRows.map((topic, index) => {
                     const expanded = expandedTopicIds.includes(topic.id);
                     const assignedCount = assignedTasks.filter((task) => task.title === topic.title).length;
                     return (
@@ -199,14 +249,26 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                           <td className="border-l border-t border-outline-variant p-3 align-top text-sm">{topic.urdu_video || "-"}</td>
                           <td className="border-l border-t border-outline-variant p-3 align-top text-sm">{topic.practice_project || "-"}</td>
                           <td className="border-l border-t border-outline-variant p-2 align-top">
-                            <button
-                              type="button"
-                              title={expanded ? "Collapse topic" : "Expand topic"}
-                              onClick={() => toggleValue(topic.id, expandedTopicIds, setExpandedTopicIds)}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg text-primary hover:bg-primary-container"
-                            >
-                              <Icon name={expanded ? "expand_less" : "expand_more"} />
-                            </button>
+                            <div className="flex items-center">
+                              {canEdit ? (
+                                <button
+                                  type="button"
+                                  title={`Edit ${topic.title}`}
+                                  onClick={() => startEditing(topic)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-primary hover:bg-primary-container"
+                                >
+                                  <Icon name="edit" />
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                title={expanded ? "Collapse topic" : "Expand topic"}
+                                onClick={() => toggleValue(topic.id, expandedTopicIds, setExpandedTopicIds)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-primary hover:bg-primary-container"
+                              >
+                                <Icon name={expanded ? "expand_less" : "expand_more"} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                         {expanded ? (
@@ -228,6 +290,79 @@ export function SyllabusManager({ course, topics, students, existingTasks, canAs
                                   <Icon name="assignment_add" /> Assign this topic
                                 </button>
                               </div>
+                              {editingTopicId === topic.id && topicDraft ? (
+                                <div className="mt-4 rounded-lg border border-primary/30 bg-surface p-4">
+                                  <div className="grid gap-4 md:grid-cols-[140px_minmax(0,1fr)]">
+                                    <label className="text-sm font-bold">
+                                      Day number
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={999}
+                                        value={topicDraft.day_number}
+                                        onChange={(event) => setTopicDraft({ ...topicDraft, day_number: Number(event.target.value) })}
+                                        className="mt-2 h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-normal outline-none focus:border-primary"
+                                      />
+                                    </label>
+                                    <label className="text-sm font-bold">
+                                      Topic title
+                                      <input
+                                        value={topicDraft.title}
+                                        onChange={(event) => setTopicDraft({ ...topicDraft, title: event.target.value })}
+                                        className="mt-2 h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-normal outline-none focus:border-primary"
+                                      />
+                                    </label>
+                                  </div>
+                                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                                    <label className="text-sm font-bold">
+                                      English video title and channel
+                                      <textarea
+                                        value={topicDraft.english_video ?? ""}
+                                        onChange={(event) => setTopicDraft({ ...topicDraft, english_video: event.target.value })}
+                                        rows={3}
+                                        className="mt-2 w-full resize-y rounded-lg border border-outline-variant bg-surface p-3 font-normal outline-none focus:border-primary"
+                                      />
+                                    </label>
+                                    <label className="text-sm font-bold">
+                                      Hindi / Urdu alternative
+                                      <textarea
+                                        value={topicDraft.urdu_video ?? ""}
+                                        onChange={(event) => setTopicDraft({ ...topicDraft, urdu_video: event.target.value })}
+                                        rows={3}
+                                        className="mt-2 w-full resize-y rounded-lg border border-outline-variant bg-surface p-3 font-normal outline-none focus:border-primary"
+                                      />
+                                    </label>
+                                  </div>
+                                  <label className="mt-4 block text-sm font-bold">
+                                    Practice / tough project
+                                    <textarea
+                                      value={topicDraft.practice_project ?? ""}
+                                      onChange={(event) => setTopicDraft({ ...topicDraft, practice_project: event.target.value })}
+                                      rows={3}
+                                      className="mt-2 w-full resize-y rounded-lg border border-outline-variant bg-surface p-3 font-normal outline-none focus:border-primary"
+                                    />
+                                  </label>
+                                  <div className="mt-4 flex flex-wrap justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={savingTopic}
+                                      onClick={cancelEditing}
+                                      className="min-h-11 rounded-lg border border-outline px-4 font-bold"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={savingTopic || !topicDraft.title.trim()}
+                                      onClick={saveTopicChanges}
+                                      className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-5 font-bold text-on-primary disabled:opacity-50"
+                                    >
+                                      <Icon name="save" />
+                                      {savingTopic ? "Saving..." : "Save changes"}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
                             </td>
                           </tr>
                         ) : null}
