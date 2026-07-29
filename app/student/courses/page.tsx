@@ -5,13 +5,23 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Course, CourseTopic, Enrollment } from "@/lib/supabase/types";
 
 export default async function StudentCoursesPage() {
+  return <StudentCourseRoadmap heading="My Courses" nextPath="/student/courses" />;
+}
+
+export async function StudentCourseRoadmap({
+  heading,
+  nextPath,
+}: {
+  heading: string;
+  nextPath: string;
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/student/courses");
+    redirect(`/login?next=${nextPath}`);
   }
 
   const { data: enrollmentData } = await supabase
@@ -41,7 +51,7 @@ export default async function StudentCoursesPage() {
     <div className="mx-auto max-w-7xl">
       <header className="mb-8">
         <p className="text-sm font-bold uppercase tracking-widest text-primary">Learning roadmap</p>
-        <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">My Courses</h1>
+        <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">{heading}</h1>
         <p className="mt-3 max-w-3xl text-base text-on-surface-variant md:text-lg">
           View your enrolled courses, daily topics, practice projects, and learning resources.
         </p>

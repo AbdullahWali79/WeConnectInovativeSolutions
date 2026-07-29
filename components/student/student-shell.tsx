@@ -14,6 +14,7 @@ import { useBranding } from "@/components/branding-provider";
 const nav = [
   { href: "/student", label: "My Tasks", icon: "assignment" },
   { href: "/student/courses", label: "My Courses", icon: "school" },
+  { href: "/student/syllabus", label: "Syllabus", icon: "menu_book" },
   { href: "/student/client-hunting", label: "Client Hunting", icon: "manage_search" },
   { href: "/student/social-media", label: "Social Media", icon: "share" },
   { href: "/student/projects", label: "Projects", icon: "folder_special" },
