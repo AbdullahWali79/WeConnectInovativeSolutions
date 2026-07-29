@@ -190,6 +190,17 @@ export type TeacherCourseAssignment = {
   created_at: string;
 };
 
+export type CourseTopic = {
+  id: string;
+  course_id: string;
+  day_number: number;
+  title: string;
+  english_video: string | null;
+  urdu_video: string | null;
+  practice_project: string | null;
+  created_at: string;
+};
+
 export type StudentFeeStatus = "pending" | "paid" | "partial" | "overdue" | "waived";
 
 export type StudentFeeRecord = {
@@ -667,6 +678,12 @@ export type Database = {
         Row: Course;
         Insert: Partial<Course> & { title: string };
         Update: Partial<Course>;
+        Relationships: [];
+      };
+      course_topics: {
+        Row: CourseTopic;
+        Insert: Partial<CourseTopic> & { course_id: string; day_number: number; title: string };
+        Update: Partial<CourseTopic>;
         Relationships: [];
       };
       applications: {

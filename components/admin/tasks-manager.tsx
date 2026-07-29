@@ -13,7 +13,7 @@ import { GoogleDriveImagePreviews } from "@/components/admin/google-drive-image-
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { courseInScope, filterCoursesByScope, filterEnrollmentsByScope, loadTeacherCourseScope, type CourseScope } from "@/lib/admin-course-scope";
 import type { PermissionKey } from "@/lib/admin-permissions";
-import type { Course, Enrollment, Profile, ResourceType, Submission, SubmissionStatus, Task, TaskResource } from "@/lib/supabase/types";
+import type { Course, CourseTopic, Enrollment, Profile, ResourceType, Submission, SubmissionStatus, Task, TaskResource } from "@/lib/supabase/types";
 import { normalizeAnyUrl } from "@/lib/profile-links";
 import { formatDateTime, toNumber } from "@/lib/utils";
 
@@ -48,6 +48,7 @@ export function TasksManager({
   const canDelete = canUse("tasks.delete");
   const [students, setStudents] = useState<Profile[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [courseTopics, setCourseTopics] = useState<CourseTopic[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [resources, setResources] = useState<TaskResource[]>([]);
@@ -78,6 +79,8 @@ export function TasksManager({
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"assigned" | "reviews" | "zero-marks">("assigned");
   const [bulkForm, setBulkForm] = useState(bulkTaskInitial);
+  const [selectedTopicId, setSelectedTopicId] = useState("");
+  const [bulkSelectedTopicId, setBulkSelectedTopicId] = useState("");
   const [bulkSelectedStudentIds, setBulkSelectedStudentIds] = useState<string[]>([]);
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -91,9 +94,10 @@ export function TasksManager({
       setToast({ type: "error", message: error instanceof Error ? error.message : "Failed to load course scope." });
       scope = [];
     }
-    const [studentResult, courseResult, enrollmentResult, taskResult, resourceResult, submissionResult, screenshotResult, projectResult] = await Promise.all([
+    const [studentResult, courseResult, topicResult, enrollmentResult, taskResult, resourceResult, submissionResult, screenshotResult, projectResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "student").eq("status", "approved").order("full_name"),
       supabase.from("courses").select("*").order("title"),
+      supabase.from("course_topics").select("*").order("day_number"),
       supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
       supabase.from("tasks").select("*").order("created_at", { ascending: false }),
       supabase.from("task_resources").select("*").order("created_at", { ascending: true }),
@@ -101,12 +105,13 @@ export function TasksManager({
       supabase.from("submission_screenshots").select("*").order("created_at", { ascending: true }),
       supabase.from("student_projects").select("id", { count: "exact", head: true }),
     ]);
-    const error = studentResult.error ?? courseResult.error ?? enrollmentResult.error ?? taskResult.error ?? resourceResult.error ?? submissionResult.error ?? screenshotResult.error;
+    const error = studentResult.error ?? courseResult.error ?? topicResult.error ?? enrollmentResult.error ?? taskResult.error ?? resourceResult.error ?? submissionResult.error ?? screenshotResult.error;
     if (error) setToast({ type: "error", message: error.message });
     const scopedEnrollments = filterEnrollmentsByScope(enrollmentResult.data ?? [], scope);
     const scopedStudentIds = new Set(scopedEnrollments.map((enrollment) => enrollment.student_id));
     setStudents(currentRole === "teacher" ? (studentResult.data ?? []).filter((student) => scopedStudentIds.has(student.id)) : (studentResult.data ?? []));
     setCourses(filterCoursesByScope(courseResult.data ?? [], scope));
+    setCourseTopics((topicResult.data ?? []).filter((topic) => courseInScope(topic.course_id, scope)));
     setEnrollments(scopedEnrollments);
     const scopedTasks = (taskResult.data ?? []).filter((task) => courseInScope(task.course_id, scope));
     const scopedTaskIds = new Set(scopedTasks.map((task) => task.id));
@@ -141,14 +146,12 @@ export function TasksManager({
   }, [submissions]);
   const enrollmentOptions = enrollments.filter((enrollment) => enrollment.status === "active");
   const singleAssignableEnrollments = useMemo(() => {
-    const enrollmentCounts = enrollmentOptions.reduce((map, enrollment) => {
-      map.set(enrollment.course_id, (map.get(enrollment.course_id) ?? 0) + 1);
-      return map;
-    }, new Map<string, number>());
-
+    const seenCourses = new Set<string>();
     return enrollmentOptions.filter((enrollment) => {
       const matchesStudent = !form.student_id || enrollment.student_id === form.student_id;
-      return enrollmentCounts.get(enrollment.course_id) === 1 && matchesStudent;
+      if (!matchesStudent || seenCourses.has(enrollment.course_id)) return false;
+      seenCourses.add(enrollment.course_id);
+      return true;
     });
   }, [enrollmentOptions, form.student_id]);
   const singleAssignableStudents = useMemo(() => {
@@ -186,6 +189,45 @@ export function TasksManager({
     [bulkCourseEnrollments, studentById],
   );
   const bulkSelectedStudentSet = useMemo(() => new Set(bulkSelectedStudentIds), [bulkSelectedStudentIds]);
+  const singleCourseTopics = useMemo(
+    () => courseTopics.filter((topic) => topic.course_id === form.course_id),
+    [courseTopics, form.course_id],
+  );
+  const bulkCourseTopics = useMemo(
+    () => courseTopics.filter((topic) => topic.course_id === bulkForm.course_id),
+    [courseTopics, bulkForm.course_id],
+  );
+
+  function topicDescription(topic: CourseTopic) {
+    return [
+      `Day ${String(topic.day_number).padStart(2, "0")}`,
+      topic.practice_project ? `Practice project:\n${topic.practice_project}` : "",
+      topic.english_video ? `English learning resource:\n${topic.english_video}` : "",
+      topic.urdu_video ? `Hindi / Urdu learning resource:\n${topic.urdu_video}` : "",
+    ].filter(Boolean).join("\n\n");
+  }
+
+  function applySingleTopic(topicId: string) {
+    setSelectedTopicId(topicId);
+    const topic = courseTopics.find((item) => item.id === topicId);
+    if (!topic) return;
+    setForm((current) => ({
+      ...current,
+      title: `Day ${String(topic.day_number).padStart(2, "0")}: ${topic.title}`,
+      description: topicDescription(topic),
+    }));
+  }
+
+  function applyBulkTopic(topicId: string) {
+    setBulkSelectedTopicId(topicId);
+    const topic = courseTopics.find((item) => item.id === topicId);
+    if (!topic) return;
+    setBulkForm((current) => ({
+      ...current,
+      title: `Day ${String(topic.day_number).padStart(2, "0")}: ${topic.title}`,
+      description: topicDescription(topic),
+    }));
+  }
   const assignedTaskStudents = useMemo(() => {
     const studentIds = new Set(tasks.map((task) => task.student_id));
     return students
@@ -1306,7 +1348,10 @@ export function TasksManager({
                       <select
                         className="wc-input mt-2"
                         value={form.course_id}
-                        onChange={(event) => setForm((current) => ({ ...current, course_id: event.target.value, student_id: "" }))}
+                        onChange={(event) => {
+                          setForm((current) => ({ ...current, course_id: event.target.value, student_id: "" }));
+                          setSelectedTopicId("");
+                        }}
                         required
                       >
                         <option value="">Choose course</option>
@@ -1318,6 +1363,19 @@ export function TasksManager({
                       </select>
                     </label>
                   </div>
+
+                  {singleCourseTopics.length > 0 ? (
+                    <label className="mt-4 block">
+                      <span className="wc-label">Course Topic</span>
+                      <select className="wc-input mt-2" value={selectedTopicId} onChange={(event) => applySingleTopic(event.target.value)}>
+                        <option value="">Choose a topic or enter task manually</option>
+                        {singleCourseTopics.map((topic) => (
+                          <option key={topic.id} value={topic.id}>Day {topic.day_number}: {topic.title}</option>
+                        ))}
+                      </select>
+                      <span className="mt-2 block text-xs text-on-surface-variant">Selecting a topic fills the task title, practice project, and learning resources automatically.</span>
+                    </label>
+                  ) : null}
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <label className="block md:col-span-2">
@@ -1422,6 +1480,7 @@ export function TasksManager({
                         onChange={(event) => {
                           setBulkForm((current) => ({ ...current, course_id: event.target.value }));
                           setBulkSelectedStudentIds([]);
+                          setBulkSelectedTopicId("");
                         }}
                         required
                       >
@@ -1438,6 +1497,19 @@ export function TasksManager({
                       <input className="wc-input mt-2" value={bulkForm.title} onChange={(event) => setBulkForm((current) => ({ ...current, title: event.target.value }))} required />
                     </label>
                   </div>
+
+                  {bulkCourseTopics.length > 0 ? (
+                    <label className="mt-4 block">
+                      <span className="wc-label">Course Topic</span>
+                      <select className="wc-input mt-2" value={bulkSelectedTopicId} onChange={(event) => applyBulkTopic(event.target.value)}>
+                        <option value="">Choose a topic or enter task manually</option>
+                        {bulkCourseTopics.map((topic) => (
+                          <option key={topic.id} value={topic.id}>Day {topic.day_number}: {topic.title}</option>
+                        ))}
+                      </select>
+                      <span className="mt-2 block text-xs text-on-surface-variant">The selected topic will be assigned to every checked student.</span>
+                    </label>
+                  ) : null}
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <label className="block md:col-span-2">
@@ -1604,6 +1676,7 @@ export function TasksManager({
                         onChange={(event) => {
                           setBulkForm((current) => ({ ...current, course_id: event.target.value }));
                           setBulkSelectedStudentIds([]);
+                          setBulkSelectedTopicId("");
                         }}
                         required
                       >
@@ -1620,6 +1693,19 @@ export function TasksManager({
                       <input className="wc-input mt-2" value={bulkForm.title} onChange={(event) => setBulkForm((current) => ({ ...current, title: event.target.value }))} required />
                     </label>
                   </div>
+
+                  {bulkCourseTopics.length > 0 ? (
+                    <label className="mt-4 block">
+                      <span className="wc-label">Course Topic</span>
+                      <select className="wc-input mt-2" value={bulkSelectedTopicId} onChange={(event) => applyBulkTopic(event.target.value)}>
+                        <option value="">Choose a topic or enter task manually</option>
+                        {bulkCourseTopics.map((topic) => (
+                          <option key={topic.id} value={topic.id}>Day {topic.day_number}: {topic.title}</option>
+                        ))}
+                      </select>
+                      <span className="mt-2 block text-xs text-on-surface-variant">The selected topic will be assigned to every checked student.</span>
+                    </label>
+                  ) : null}
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <label className="block md:col-span-2">
