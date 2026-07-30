@@ -41,8 +41,9 @@ export function StudentDashboard() {
     title: "",
     description: "",
     proof_url: "",
-    extra_proof_links: [] as string[],
   });
+  const [taskFiles, setTaskFiles] = useState<File[]>([]);
+  const [taskFilePreviews, setTaskFilePreviews] = useState<string[]>([]);
   const clearToast = useCallback(() => setToast(null), []);
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -317,22 +318,47 @@ export function StudentDashboard() {
     setTaskForm((current) => ({ ...current, [name]: value }));
   }
 
-  function updateExtraProofLink(index: number, value: string) {
-    setTaskForm((current) => ({
-      ...current,
-      extra_proof_links: current.extra_proof_links.map((link, itemIndex) => (itemIndex === index ? value : link)),
-    }));
+  function handleTaskFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (taskFiles.length + files.length > 5) {
+      setToast({ type: "error", message: "You can upload up to 5 screenshots maximum." });
+      return;
+    }
+
+    const validExtensions = new Set(["jpg", "jpeg", "png", "webp"]);
+    for (const file of files) {
+      const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+      if (!validExtensions.has(extension)) {
+        setToast({ type: "error", message: `Invalid file type: ${file.name}. Only JPG, JPEG, PNG, and WEBP are allowed.` });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setToast({ type: "error", message: `File size too large: ${file.name}. Maximum size is 5MB.` });
+        return;
+      }
+    }
+
+    setTaskFiles((current) => [...current, ...files]);
+    setTaskFilePreviews((current) => [...current, ...files.map((file) => URL.createObjectURL(file))]);
   }
 
-  function addExtraProofLink() {
-    setTaskForm((current) => ({ ...current, extra_proof_links: [...current.extra_proof_links, ""] }));
+  function removeTaskFile(index: number) {
+    URL.revokeObjectURL(taskFilePreviews[index]);
+    setTaskFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setTaskFilePreviews((current) => current.filter((_, itemIndex) => itemIndex !== index));
   }
 
-  function removeExtraProofLink(index: number) {
-    setTaskForm((current) => ({
-      ...current,
-      extra_proof_links: current.extra_proof_links.filter((_, itemIndex) => itemIndex !== index),
-    }));
+  function resetTaskForm() {
+    taskFilePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+    setTaskFiles([]);
+    setTaskFilePreviews([]);
+    setTaskForm({
+      course_id: activeEnrollments[0]?.course_id ?? "",
+      title: "",
+      description: "",
+      proof_url: "",
+    });
   }
 
   async function createTask(event: React.FormEvent<HTMLFormElement>) {
@@ -354,15 +380,6 @@ export function StudentDashboard() {
       return;
     }
 
-    for (const extraLink of taskForm.extra_proof_links) {
-      if (!extraLink.trim()) continue;
-      const extraLinkError = getProofLinkError(extraLink);
-      if (extraLinkError) {
-        setToast({ type: "error", message: `Additional proof link: ${extraLinkError}` });
-        return;
-      }
-    }
-
     setCreating(true);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -373,7 +390,37 @@ export function StudentDashboard() {
     }
 
     try {
-      const { error: submitError } = await supabase.rpc("submit_student_task", {
+      const uploadBatchId = `daily-${crypto.randomUUID()}`;
+      const uploadedScreenshots: Array<{
+        githubUrl: string;
+        cdnUrl: string;
+        originalFilename: string;
+        fileSize: number;
+        mimeType: string;
+      }> = [];
+
+      for (const file of taskFiles) {
+        const uploadData = new FormData();
+        uploadData.append("file", file);
+        uploadData.append("type", "task-screenshot");
+        uploadData.append("taskId", uploadBatchId);
+        uploadData.append("entityId", user.id);
+
+        const uploadResponse = await fetch("/api/uploads/github", { method: "POST", body: uploadData });
+        const uploadResult = await uploadResponse.json();
+        if (!uploadResponse.ok) {
+          throw new Error(uploadResult?.error ?? "Screenshot upload failed.");
+        }
+        uploadedScreenshots.push({
+          githubUrl: uploadResult.githubUrl,
+          cdnUrl: uploadResult.githubCdnUrl,
+          originalFilename: file.name,
+          fileSize: file.size,
+          mimeType: file.type || "image/octet-stream",
+        });
+      }
+
+      const { data: createdTaskId, error: submitError } = await supabase.rpc("submit_student_task", {
         target_course_id: taskForm.course_id,
         task_title: taskForm.title.trim(),
         task_description: taskForm.description.trim() || null,
@@ -386,21 +433,44 @@ export function StudentDashboard() {
         submission_image_url: null,
         submission_youtube_url: null,
         submission_proof_url: taskForm.proof_url.trim(),
-        submission_proof_links: taskForm.extra_proof_links.map((link) => link.trim()).filter(Boolean),
+        submission_proof_links: [],
       });
 
       if (submitError) {
         throw submitError;
       }
+      if (!createdTaskId) {
+        throw new Error("Task was created without a valid task ID.");
+      }
+
+      if (uploadedScreenshots.length > 0) {
+        const { data: createdSubmission, error: submissionError } = await supabase
+          .from("submissions")
+          .select("id")
+          .eq("task_id", createdTaskId)
+          .eq("student_id", user.id)
+          .maybeSingle();
+        if (submissionError || !createdSubmission) {
+          throw new Error(submissionError?.message || "Created task submission could not be found.");
+        }
+
+        const { error: screenshotError } = await supabase.from("submission_screenshots").insert(
+          uploadedScreenshots.map((screenshot) => ({
+            task_submission_id: createdSubmission.id,
+            student_id: user.id,
+            task_id: createdTaskId,
+            github_url: screenshot.githubUrl,
+            cdn_url: screenshot.cdnUrl,
+            original_filename: screenshot.originalFilename,
+            file_size: screenshot.fileSize,
+            mime_type: screenshot.mimeType,
+          })),
+        );
+        if (screenshotError) throw screenshotError;
+      }
 
       setToast({ type: "success", message: "Daily task submitted for review." });
-      setTaskForm({
-        course_id: activeEnrollments[0]?.course_id ?? "",
-        title: "",
-        description: "",
-        proof_url: "",
-        extra_proof_links: [],
-      });
+      resetTaskForm();
       setAddTaskOpen(false);
       await loadData();
     } catch (err: unknown) {
@@ -784,7 +854,7 @@ export function StudentDashboard() {
             <p className="text-label-sm uppercase tracking-widest text-primary">Daily Task</p>
             <h2 id="add-task-title" className="mt-1 text-title-lg text-on-surface">Add task</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
-              Add the task details and a compulsory proof link.
+              Submit the task explanation, proof link, and optional screenshots for review.
             </p>
           </div>
           <button type="button" onClick={() => setAddTaskOpen(false)} disabled={creating} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50" aria-label="Close add task form">
@@ -809,38 +879,33 @@ export function StudentDashboard() {
             <input className="wc-input mt-2" value={taskForm.title} onChange={(event) => updateTaskForm("title", event.target.value)} placeholder="Enter your task title" required />
           </label>
           <label className="block sm:col-span-2">
-            <span className="wc-label">Description</span>
-            <textarea className="wc-input mt-2 min-h-20" value={taskForm.description} onChange={(event) => updateTaskForm("description", event.target.value)} placeholder="Briefly explain what you made and how to verify it." />
+            <span className="wc-label">Explanation</span>
+            <textarea className="wc-input mt-2 min-h-32" value={taskForm.description} onChange={(event) => updateTaskForm("description", event.target.value)} placeholder="Explain your work, key implementation decisions, and how the admin should review it." required />
           </label>
           <div className="sm:col-span-2 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4">
             <UrlInput label="Proof Link" value={taskForm.proof_url} onChange={(value) => updateTaskForm("proof_url", value)} placeholder="https://..." required />
 
             <div className="mt-5 rounded-2xl bg-white/70 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="wc-label">Image Google Drive URLs</p>
-                  <p className="mt-1 max-w-xl text-xs leading-5 text-on-surface-variant">Upload each image to Google Drive, set access to &quot;Anyone with the link&quot;, then add one public URL per image. Use Add Image URL for multiple images.</p>
+              <p className="wc-label flex items-center gap-2"><Icon name="image" className="text-primary" /> Screenshots (Optional)</p>
+              <p className="mt-1 text-xs leading-5 text-on-surface-variant">Upload up to 5 screenshots from your device. JPG, JPEG, PNG, or WEBP; maximum 5MB each.</p>
+              <label className="relative mt-4 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-outline-variant/80 p-6 text-center transition hover:border-primary/50 hover:bg-primary/5">
+                <input type="file" multiple accept=".jpg,.jpeg,.png,.webp" onChange={handleTaskFileChange} className="absolute inset-0 cursor-pointer opacity-0" />
+                <Icon name="cloud_upload" className="text-3xl text-primary" />
+                <span className="mt-2 text-sm font-bold text-on-surface">Select screenshots from device</span>
+                <span className="mt-1 text-xs text-on-surface-variant">Drag and drop or click to choose files</span>
+              </label>
+              {taskFilePreviews.length > 0 ? (
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {taskFilePreviews.map((preview, index) => (
+                    <div key={preview} className="group relative aspect-video overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container-low">
+                      <img src={preview} alt={`Screenshot preview ${index + 1}`} className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => removeTaskFile(index)} className="absolute right-1.5 top-1.5 rounded-full bg-black/65 p-1.5 text-white transition hover:bg-red-600" aria-label={`Remove screenshot ${index + 1}`}>
+                        <Icon name="close" className="text-xs" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <button type="button" onClick={addExtraProofLink} className="wc-secondary-btn px-3 py-2 text-xs">
-                  <Icon name="add" /> Add Image URL
-                </button>
-              </div>
-              <div className="mt-4 grid gap-3">
-                {taskForm.extra_proof_links.map((link, index) => (
-                  <div key={`extra-proof-${index}`} className="flex gap-3">
-                    <input
-                      className="wc-input flex-1"
-                      type="url"
-                      value={link}
-                      onChange={(event) => updateExtraProofLink(index, event.target.value)}
-                      placeholder={`Public Google Drive image URL ${index + 1}`}
-                    />
-                    <button type="button" onClick={() => removeExtraProofLink(index)} className="wc-secondary-btn px-3 py-2 text-xs">
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
+              ) : null}
             </div>
 
           </div>
@@ -848,13 +913,7 @@ export function StudentDashboard() {
           <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-outline-variant/60 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
             <button
               type="button"
-              onClick={() => setTaskForm({
-                course_id: activeEnrollments[0]?.course_id ?? "",
-                title: "",
-                description: "",
-                proof_url: "",
-                extra_proof_links: [],
-              })}
+              onClick={resetTaskForm}
               className="wc-secondary-btn"
               disabled={creating}
             >
