@@ -1,6 +1,6 @@
-import { TaskSubmissionForm } from "@/components/student/task-submission-form";
+import { redirect } from "next/navigation";
 
 export default async function SubmitTaskPage({ params }: { params: Promise<{ taskId: string }> }) {
   const { taskId } = await params;
-  return <TaskSubmissionForm taskId={taskId} />;
+  redirect(`/student?submitTask=${encodeURIComponent(taskId)}`);
 }

@@ -15,6 +15,7 @@ import type { Announcement, ClientHuntLead, Course, Enrollment, Profile, Progres
 import { formatDateTime } from "@/lib/utils";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
 import { getProofLinkError } from "@/lib/proof-links";
+import { SyllabusTaskSubmissionModal } from "@/components/student/syllabus-task-submission-modal";
 
 export function StudentDashboard() {
   const supabase = createSupabaseBrowserClient();
@@ -36,14 +37,14 @@ export function StudentDashboard() {
   const [acceptedTasksOpen, setAcceptedTasksOpen] = useState(false);
   const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [submissionTask, setSubmissionTask] = useState<Task | null>(null);
   const [taskForm, setTaskForm] = useState({
     course_id: "",
     title: "",
     description: "",
     proof_url: "",
+    image_url: "",
   });
-  const [taskFiles, setTaskFiles] = useState<File[]>([]);
-  const [taskFilePreviews, setTaskFilePreviews] = useState<string[]>([]);
   const clearToast = useCallback(() => setToast(null), []);
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -105,6 +106,13 @@ export function StudentDashboard() {
     window.addEventListener("open-add-task", openAddTask);
     return () => window.removeEventListener("open-add-task", openAddTask);
   }, []);
+
+  useEffect(() => {
+    const taskId = new URLSearchParams(window.location.search).get("submitTask");
+    if (!taskId || tasks.length === 0) return;
+    const requestedTask = tasks.find((task) => task.id === taskId);
+    if (requestedTask) setSubmissionTask(requestedTask);
+  }, [tasks]);
 
   useEffect(() => {
     if (!addTaskOpen) return;
@@ -223,6 +231,15 @@ export function StudentDashboard() {
     return status === "pending" || status === "in_progress" || status === "revision_required";
   }
 
+  function closeSubmissionForm() {
+    setSubmissionTask(null);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("submitTask")) {
+      url.searchParams.delete("submitTask");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }
+
   function renderTaskCard(task: Task) {
     const taskResources = resources.filter((resource) => resource.task_id === task.id);
     const submission = submissionByTaskId.get(task.id);
@@ -285,9 +302,9 @@ export function StudentDashboard() {
             </div>
           </div>
           {actionEnabled ? (
-            <Link href={`/student/tasks/${task.id}/submit`} className="wc-primary-btn">
-              <Icon name="upload_file" /> {actionLabel}
-            </Link>
+              <button type="button" onClick={() => setSubmissionTask(task)} className="wc-primary-btn">
+                <Icon name="upload_file" /> {actionLabel}
+              </button>
           ) : (
             <span className="inline-flex items-center gap-2 rounded-2xl bg-surface-container px-4 py-3 text-sm font-bold text-on-surface-variant">
               <Icon name="check_circle" className="text-lg" />
@@ -318,46 +335,13 @@ export function StudentDashboard() {
     setTaskForm((current) => ({ ...current, [name]: value }));
   }
 
-  function handleTaskFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-    if (taskFiles.length + files.length > 5) {
-      setToast({ type: "error", message: "You can upload up to 5 screenshots maximum." });
-      return;
-    }
-
-    const validExtensions = new Set(["jpg", "jpeg", "png", "webp"]);
-    for (const file of files) {
-      const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-      if (!validExtensions.has(extension)) {
-        setToast({ type: "error", message: `Invalid file type: ${file.name}. Only JPG, JPEG, PNG, and WEBP are allowed.` });
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setToast({ type: "error", message: `File size too large: ${file.name}. Maximum size is 5MB.` });
-        return;
-      }
-    }
-
-    setTaskFiles((current) => [...current, ...files]);
-    setTaskFilePreviews((current) => [...current, ...files.map((file) => URL.createObjectURL(file))]);
-  }
-
-  function removeTaskFile(index: number) {
-    URL.revokeObjectURL(taskFilePreviews[index]);
-    setTaskFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    setTaskFilePreviews((current) => current.filter((_, itemIndex) => itemIndex !== index));
-  }
-
   function resetTaskForm() {
-    taskFilePreviews.forEach((preview) => URL.revokeObjectURL(preview));
-    setTaskFiles([]);
-    setTaskFilePreviews([]);
     setTaskForm({
       course_id: activeEnrollments[0]?.course_id ?? "",
       title: "",
       description: "",
       proof_url: "",
+      image_url: "",
     });
   }
 
@@ -379,6 +363,15 @@ export function StudentDashboard() {
       setToast({ type: "error", message: proofLinkError });
       return;
     }
+    if (taskForm.image_url.trim()) {
+      try {
+        const imageUrl = new URL(taskForm.image_url.trim());
+        if (!["http:", "https:"].includes(imageUrl.protocol)) throw new Error();
+      } catch {
+        setToast({ type: "error", message: "Enter a valid public image URL." });
+        return;
+      }
+    }
 
     setCreating(true);
 
@@ -390,36 +383,6 @@ export function StudentDashboard() {
     }
 
     try {
-      const uploadBatchId = `daily-${crypto.randomUUID()}`;
-      const uploadedScreenshots: Array<{
-        githubUrl: string;
-        cdnUrl: string;
-        originalFilename: string;
-        fileSize: number;
-        mimeType: string;
-      }> = [];
-
-      for (const file of taskFiles) {
-        const uploadData = new FormData();
-        uploadData.append("file", file);
-        uploadData.append("type", "task-screenshot");
-        uploadData.append("taskId", uploadBatchId);
-        uploadData.append("entityId", user.id);
-
-        const uploadResponse = await fetch("/api/uploads/github", { method: "POST", body: uploadData });
-        const uploadResult = await uploadResponse.json();
-        if (!uploadResponse.ok) {
-          throw new Error(uploadResult?.error ?? "Screenshot upload failed.");
-        }
-        uploadedScreenshots.push({
-          githubUrl: uploadResult.githubUrl,
-          cdnUrl: uploadResult.githubCdnUrl,
-          originalFilename: file.name,
-          fileSize: file.size,
-          mimeType: file.type || "image/octet-stream",
-        });
-      }
-
       const { data: createdTaskId, error: submitError } = await supabase.rpc("submit_student_task", {
         target_course_id: taskForm.course_id,
         task_title: taskForm.title.trim(),
@@ -430,7 +393,7 @@ export function StudentDashboard() {
         submission_github_url: null,
         submission_google_doc_url: null,
         submission_google_sheet_url: null,
-        submission_image_url: null,
+        submission_image_url: taskForm.image_url.trim() || null,
         submission_youtube_url: null,
         submission_proof_url: taskForm.proof_url.trim(),
         submission_proof_links: [],
@@ -441,32 +404,6 @@ export function StudentDashboard() {
       }
       if (!createdTaskId) {
         throw new Error("Task was created without a valid task ID.");
-      }
-
-      if (uploadedScreenshots.length > 0) {
-        const { data: createdSubmission, error: submissionError } = await supabase
-          .from("submissions")
-          .select("id")
-          .eq("task_id", createdTaskId)
-          .eq("student_id", user.id)
-          .maybeSingle();
-        if (submissionError || !createdSubmission) {
-          throw new Error(submissionError?.message || "Created task submission could not be found.");
-        }
-
-        const { error: screenshotError } = await supabase.from("submission_screenshots").insert(
-          uploadedScreenshots.map((screenshot) => ({
-            task_submission_id: createdSubmission.id,
-            student_id: user.id,
-            task_id: createdTaskId,
-            github_url: screenshot.githubUrl,
-            cdn_url: screenshot.cdnUrl,
-            original_filename: screenshot.originalFilename,
-            file_size: screenshot.fileSize,
-            mime_type: screenshot.mimeType,
-          })),
-        );
-        if (screenshotError) throw screenshotError;
       }
 
       setToast({ type: "success", message: "Daily task submitted for review." });
@@ -854,7 +791,7 @@ export function StudentDashboard() {
             <p className="text-label-sm uppercase tracking-widest text-primary">Daily Task</p>
             <h2 id="add-task-title" className="mt-1 text-title-lg text-on-surface">Add task</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
-              Submit the task explanation, proof link, and optional screenshots for review.
+              Submit the task explanation, proof link, and optional image URL for review.
             </p>
           </div>
           <button type="button" onClick={() => setAddTaskOpen(false)} disabled={creating} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50" aria-label="Close add task form">
@@ -885,28 +822,11 @@ export function StudentDashboard() {
           <div className="sm:col-span-2 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4">
             <UrlInput label="Proof Link" value={taskForm.proof_url} onChange={(value) => updateTaskForm("proof_url", value)} placeholder="https://..." required />
 
-            <div className="mt-5 rounded-2xl bg-white/70 p-4">
-              <p className="wc-label flex items-center gap-2"><Icon name="image" className="text-primary" /> Screenshots (Optional)</p>
-              <p className="mt-1 text-xs leading-5 text-on-surface-variant">Upload up to 5 screenshots from your device. JPG, JPEG, PNG, or WEBP; maximum 5MB each.</p>
-              <label className="relative mt-4 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-outline-variant/80 p-6 text-center transition hover:border-primary/50 hover:bg-primary/5">
-                <input type="file" multiple accept=".jpg,.jpeg,.png,.webp" onChange={handleTaskFileChange} className="absolute inset-0 cursor-pointer opacity-0" />
-                <Icon name="cloud_upload" className="text-3xl text-primary" />
-                <span className="mt-2 text-sm font-bold text-on-surface">Select screenshots from device</span>
-                <span className="mt-1 text-xs text-on-surface-variant">Drag and drop or click to choose files</span>
-              </label>
-              {taskFilePreviews.length > 0 ? (
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {taskFilePreviews.map((preview, index) => (
-                    <div key={preview} className="group relative aspect-video overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container-low">
-                      <img src={preview} alt={`Screenshot preview ${index + 1}`} className="h-full w-full object-cover" />
-                      <button type="button" onClick={() => removeTaskFile(index)} className="absolute right-1.5 top-1.5 rounded-full bg-black/65 p-1.5 text-white transition hover:bg-red-600" aria-label={`Remove screenshot ${index + 1}`}>
-                        <Icon name="close" className="text-xs" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            <label className="mt-5 block rounded-2xl bg-white/70 p-4">
+              <span className="wc-label flex items-center gap-2"><Icon name="image" className="text-primary" /> Image URL (Optional)</span>
+              <input className="wc-input mt-3" type="url" value={taskForm.image_url} onChange={(event) => updateTaskForm("image_url", event.target.value)} placeholder="https://... public image link" />
+              <span className="mt-1 block text-xs text-on-surface-variant">Paste a public image or Google Drive link. No file upload is required.</span>
+            </label>
 
           </div>
         </div>
@@ -926,6 +846,21 @@ export function StudentDashboard() {
         </form>
       </div>
       </div>
+      ) : null}
+
+      {submissionTask ? (
+        <SyllabusTaskSubmissionModal
+          task={submissionTask}
+          course={courseById.get(submissionTask.course_id)}
+          submission={submissionByTaskId.get(submissionTask.id)}
+          onClose={closeSubmissionForm}
+          onError={(message) => setToast({ type: "error", message })}
+          onSaved={async (message) => {
+            closeSubmissionForm();
+            setToast({ type: "success", message });
+            await loadData();
+          }}
+        />
       ) : null}
 
       <div className="mb-6 grid gap-4 md:grid-cols-5">
