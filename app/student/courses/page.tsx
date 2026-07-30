@@ -199,7 +199,7 @@ export async function StudentCourseRoadmap({
                                     Complete this work, then submit it from <span className="font-bold text-on-surface">Daily Task</span>.
                                   </p>
                                   <Link
-                                    href="/student?addTask=1"
+                                    href="/student/tasks?addTask=1"
                                     className="inline-flex items-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-bold text-primary hover:bg-primary-container"
                                   >
                                     <Icon name="add_task" /> Go to Daily Task
