@@ -25,6 +25,7 @@ const navCategories: NavCategory[] = [
     items: [
       { href: "/#overview", path: "/", label: "Overview" },
       { href: "/products", path: "/products", label: "Products" },
+      { href: "/services", path: "/services", label: "Services" },
       { href: "/team", path: "/team", label: "Team" },
       { href: "/contact", path: "/contact", label: "Contact" },
     ],

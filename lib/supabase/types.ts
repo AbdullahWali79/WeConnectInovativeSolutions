@@ -441,6 +441,24 @@ export type Product = {
   updated_at: string;
 };
 
+export type Service = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  icon: string;
+  short_description: string;
+  description: string;
+  highlights: string[];
+  cta_label: string;
+  cta_link: string;
+  featured: boolean;
+  status: GenericStatus;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type StudentProject = {
   id: string;
   student_id: string;
@@ -804,6 +822,12 @@ export type Database = {
         Row: Product;
         Insert: Partial<Product> & { name: string; category: string };
         Update: Partial<Product>;
+        Relationships: [];
+      };
+      services: {
+        Row: Service;
+        Insert: Partial<Service> & { title: string; slug: string; category: string; short_description: string; description: string };
+        Update: Partial<Service>;
         Relationships: [];
       };
       blogs: {

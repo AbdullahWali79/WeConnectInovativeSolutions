@@ -37,6 +37,7 @@ const navGroups: NavGroup[] = [
   { id: "finance", label: "Finance", icon: "payments", items: [
     { href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
     { href: "/admin/products", label: "Products", icon: "inventory_2", permission: "products.view" },
+    { href: "/admin/services", label: "Services", icon: "design_services", adminOnly: true },
     { href: "/admin/projects", label: "Student Projects", icon: "folder_special", adminOnly: true },
     { href: "/admin/client-hunting", label: "Client Hunting", icon: "manage_search", adminOnly: true },
     { href: "/admin/software-houses", label: "Software Houses", icon: "add_business", adminOnly: true },
