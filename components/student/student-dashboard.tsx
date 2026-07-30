@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
@@ -17,6 +18,8 @@ import { getProofLinkError } from "@/lib/proof-links";
 
 export function StudentDashboard() {
   const supabase = createSupabaseBrowserClient();
+  const pathname = usePathname();
+  const isOverview = pathname === "/student";
   const [tasks, setTasks] = useState<Task[]>([]);
   const [resources, setResources] = useState<TaskResource[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -60,7 +63,16 @@ export function StudentDashboard() {
       supabase.from("announcements").select("*").eq("is_active", true).order("created_at", { ascending: false }),
       supabase.auth.getUser(),
     ]);
-    const error = taskResult.error ?? resourceResult.error ?? submissionResult.error ?? clientHuntResult.error ?? enrollmentResult.error ?? courseResult.error ?? reportResult.error;
+      const error =
+        taskResult.error ??
+        resourceResult.error ??
+        submissionResult.error ??
+        clientHuntResult.error ??
+        enrollmentResult.error ??
+        courseResult.error ??
+        reportResult.error ??
+        announcementResult.error ??
+        userResult.error;
     if (error) setToast({ type: "error", message: error.message });
     setTasks(taskResult.data ?? []);
     setResources(resourceResult.data ?? []);
@@ -404,6 +416,210 @@ export function StudentDashboard() {
   }
 
   if (loading) return <LoadingState label="Loading student dashboard..." />;
+
+  if (isOverview) {
+    const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "Student";
+    const latestAnnouncements = announcements.slice(0, 3);
+    const overviewStats = [
+      {
+        label: "Pending work",
+        value: pendingAssignedTasks.length,
+        hint: "Tasks needing action",
+        href: "/student/tasks",
+        icon: "pending_actions",
+      },
+      {
+        label: "Completed",
+        value: acceptedAssignedTasks.length,
+        hint: "Reviewed and accepted",
+        href: "/student/tasks",
+        icon: "task_alt",
+      },
+      {
+        label: "Progress",
+        value: `${progress}%`,
+        hint: "Overall course progress",
+        href: "/student/progress",
+        icon: "monitoring",
+      },
+      {
+        label: "Approved leads",
+        value: approvedClientHuntCount,
+        hint: "Client hunting results",
+        href: "/student/client-hunting",
+        icon: "person_search",
+      },
+    ];
+
+    const quickLinks = [
+      { label: "My tasks", href: "/student/tasks", icon: "assignment" },
+      { label: "Syllabus", href: "/student/syllabus", icon: "menu_book" },
+      { label: "Projects", href: "/student/projects", icon: "folder_special" },
+      { label: "Social media", href: "/student/social-media", icon: "share" },
+      { label: "Client hunting", href: "/student/client-hunting", icon: "person_search" },
+      { label: "My progress", href: "/student/progress", icon: "monitoring" },
+    ];
+
+    return (
+      <>
+        <Toast toast={toast} onClear={() => setToast(null)} />
+        <PromoPopup context="student" />
+
+        <PageHeader
+          eyebrow="Student Hub"
+          title={`Welcome back, ${firstName}`}
+          description="Your learning activity, pending work, and latest updates in one place."
+          action={
+            <Link href="/student/tasks" className="wc-primary-btn">
+                <Icon name="assignment" className="text-[20px]" />
+              View tasks
+            </Link>
+          }
+        />
+
+        <section
+          className={`mb-5 border bg-white px-5 py-4 shadow-sm ${
+            latestAnnouncements.length > 0
+              ? "border-amber-300"
+              : "border-slate-200"
+          }`}
+          aria-labelledby="student-announcements-title"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-amber-100 text-amber-700">
+                  <Icon name="campaign" className="text-[22px]" />
+              </span>
+              <div>
+                <h2 id="student-announcements-title" className="text-lg font-bold text-slate-950">
+                  Announcements
+                </h2>
+                <p className="text-sm text-slate-600">
+                  {latestAnnouncements.length > 0
+                    ? `${latestAnnouncements.length} latest update${latestAnnouncements.length === 1 ? "" : "s"}`
+                    : "No announcements"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {latestAnnouncements.length > 0 ? (
+            <div className="mt-4 divide-y divide-slate-200 border-t border-slate-200">
+              {latestAnnouncements.map((announcement) => (
+                <details key={announcement.id} className="group py-3">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-slate-950">
+                    <span className="min-w-0 truncate">{announcement.title}</span>
+                    <span className="flex shrink-0 items-center gap-3 text-xs font-medium text-slate-500">
+                      {new Date(announcement.created_at).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                      <Icon
+                        name="expand_more"
+                        size={20}
+                        className="transition-transform group-open:rotate-180"
+                      />
+                    </span>
+                  </summary>
+                  <p className="mt-3 max-w-4xl whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                    {announcement.message}
+                  </p>
+                </details>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section aria-label="Student overview" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {overviewStats.map((stat) => (
+            <Link
+              key={stat.label}
+              href={stat.href}
+              className="group border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex h-10 w-10 items-center justify-center bg-blue-50 text-blue-600">
+                    <Icon name={stat.icon} className="text-[21px]" />
+                </span>
+                <Icon
+                  name="arrow_forward"
+                  size={18}
+                  className="text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-600"
+                />
+              </div>
+              <p className="mt-4 text-sm font-semibold text-slate-600">{stat.label}</p>
+              <p className="mt-1 text-3xl font-bold text-slate-950">{stat.value}</p>
+              <p className="mt-1 text-xs text-slate-500">{stat.hint}</p>
+            </Link>
+          ))}
+        </section>
+
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_1fr]">
+          <section className="wc-card p-5" aria-labelledby="next-task-title">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase text-blue-600">Priority</p>
+                <h2 id="next-task-title" className="mt-1 text-xl font-bold text-slate-950">
+                  Next task
+                </h2>
+              </div>
+              <Link href="/student/tasks" className="text-sm font-bold text-blue-600 hover:underline">
+                View all
+              </Link>
+            </div>
+
+            {topTask ? (
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-950">{topTask.title}</h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {courseById.get(topTask.course_id)?.name ?? "Course"}
+                      {" · "}
+                      {topTask.deadline
+                        ? `Due ${new Date(topTask.deadline).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}`
+                        : "No deadline"}
+                    </p>
+                  </div>
+                  <Link href="/student/tasks" className="wc-primary-btn">
+                    Open task
+                    <Icon name="arrow_forward" className="text-[18px]" />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <p className="font-semibold text-slate-800">No pending tasks</p>
+                <p className="mt-1 text-sm text-slate-500">You are up to date with your assigned work.</p>
+              </div>
+            )}
+          </section>
+
+          <section className="wc-card p-5" aria-labelledby="quick-access-title">
+            <h2 id="quick-access-title" className="text-xl font-bold text-slate-950">
+              Quick access
+            </h2>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {quickLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex min-h-14 items-center gap-3 border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <Icon name={item.icon} className="shrink-0 text-[20px] text-blue-600" />
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
