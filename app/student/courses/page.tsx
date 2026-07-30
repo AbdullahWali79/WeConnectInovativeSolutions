@@ -156,36 +156,57 @@ export async function StudentCourseRoadmap({
                           const isSyllabusTask = syllabusTopicTitles.has(normalizeTitle(task.title));
 
                           return (
-                            <article
+                            <details
                               key={task.id}
-                              className="grid gap-4 rounded-lg border border-outline-variant bg-surface p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                              className="group/task rounded-lg border border-outline-variant bg-surface"
                             >
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-on-primary-container">
-                                    {isSyllabusTask ? "Syllabus task" : "Admin task"}
-                                  </span>
-                                  <span
-                                    className={`rounded-full px-2.5 py-1 text-xs font-bold ${taskStatusClass(task.status)}`}
-                                  >
-                                    {taskStatusLabel(task.status)}
-                                  </span>
+                              <summary className="grid cursor-pointer list-none gap-4 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-on-primary-container">
+                                      {isSyllabusTask ? "Syllabus task" : "Admin task"}
+                                    </span>
+                                    <span
+                                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${taskStatusClass(task.status)}`}
+                                    >
+                                      {taskStatusLabel(task.status)}
+                                    </span>
+                                  </div>
+                                  <h4 className="mt-3 font-extrabold">{task.title}</h4>
+                                  {task.description ? (
+                                    <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">{task.description}</p>
+                                  ) : null}
+                                  <p className="mt-2 text-xs font-bold uppercase text-on-surface-variant">
+                                    Deadline: {formatDeadline(task.deadline)}
+                                  </p>
                                 </div>
-                                <h4 className="mt-3 font-extrabold">{task.title}</h4>
-                                {task.description ? (
-                                  <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">{task.description}</p>
-                                ) : null}
-                                <p className="mt-2 text-xs font-bold uppercase text-on-surface-variant">
-                                  Deadline: {formatDeadline(task.deadline)}
+                                <span
+                                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90"
+                                >
+                                  <Icon name="visibility" />
+                                  <span className="group-open/task:hidden">View details</span>
+                                  <span className="hidden group-open/task:inline">Hide details</span>
+                                  <Icon name="expand_more" className="transition-transform group-open/task:rotate-180" />
+                                </span>
+                              </summary>
+                              <div className="border-t border-outline-variant px-4 py-5">
+                                <p className="text-xs font-bold uppercase tracking-wider text-primary">Task details</p>
+                                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-on-surface-variant">
+                                  {task.description ?? "No additional task details were provided."}
                                 </p>
+                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-container-low p-3">
+                                  <p className="text-sm text-on-surface-variant">
+                                    Complete this work, then submit it from <span className="font-bold text-on-surface">Daily Task</span>.
+                                  </p>
+                                  <Link
+                                    href="/student?addTask=1"
+                                    className="inline-flex items-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-bold text-primary hover:bg-primary-container"
+                                  >
+                                    <Icon name="add_task" /> Go to Daily Task
+                                  </Link>
+                                </div>
                               </div>
-                              <Link
-                                href={`/student/tasks/${task.id}/submit`}
-                                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90"
-                              >
-                                <Icon name="open_in_new" /> Open task
-                              </Link>
-                            </article>
+                            </details>
                           );
                         })}
                       </div>
