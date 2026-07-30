@@ -489,8 +489,8 @@ export function FeeManagement() {
       .map((enrollment) => courseById.get(enrollment.course_id))
       .filter((course): course is Course => Boolean(course));
 
-    return options.length > 0 ? options : courses;
-  }, [courseById, courses, selectedStudentEnrollments]);
+    return options;
+  }, [courseById, selectedStudentEnrollments]);
 
   const selectedStudentPaidMonths = selectedStudentFees.filter((fee) => fee.status === "paid").length;
   const selectedStudentTotalMonths = selectedStudentFees.length;

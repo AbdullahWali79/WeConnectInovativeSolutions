@@ -154,44 +154,32 @@ export type TaskAnalyticsDashboardData = {
   };
 };
 
-async function ensureEnrollmentForFeeRecord(
+async function requireEnrollmentForFeeRecord(
   supabaseAdmin: ReturnType<typeof createSupabaseServiceClient>,
   studentId: string,
   courseId: string,
+  enrollmentId?: string | null,
 ) {
-  const { data: existingEnrollment, error: existingError } = await supabaseAdmin
+  let enrollmentQuery = supabaseAdmin
     .from("enrollments")
-    .select("id")
+    .select("id,student_id,course_id")
     .eq("student_id", studentId)
-    .eq("course_id", courseId)
-    .maybeSingle();
+    .eq("course_id", courseId);
 
-  if (existingError) {
-    throw new Error(existingError.message);
+  if (enrollmentId) {
+    enrollmentQuery = enrollmentQuery.eq("id", enrollmentId);
   }
 
-  if (existingEnrollment?.id) {
-    return existingEnrollment.id as string;
+  const { data: enrollment, error } = await enrollmentQuery.maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!enrollment?.id) {
+    throw new Error("This student is not enrolled in the selected course. Add the course enrollment before recording its fee.");
   }
 
-  const { data: createdEnrollment, error: createError } = await supabaseAdmin
-    .from("enrollments")
-    .upsert(
-      {
-        student_id: studentId,
-        course_id: courseId,
-        status: "active",
-      },
-      { onConflict: "student_id,course_id" },
-    )
-    .select("id")
-    .single();
-
-  if (createError || !createdEnrollment?.id) {
-    throw new Error(createError?.message || "Failed to create enrollment for fee record.");
-  }
-
-  return createdEnrollment.id as string;
+  return enrollment.id as string;
 }
 
 type ActionResult<T = null> =
@@ -1579,7 +1567,12 @@ export async function upsertStudentFeeRecord(input: FeeRecordInput): Promise<Act
     const paid = Number(input.amount_paid ?? 0);
     const due = Number(input.amount_due ?? 0);
     const status = input.status || (paid <= 0 ? "pending" : paid < due ? "partial" : "paid");
-    const enrollmentId = input.enrollment_id || (await ensureEnrollmentForFeeRecord(supabaseAdmin, input.student_id, input.course_id));
+    const enrollmentId = await requireEnrollmentForFeeRecord(
+      supabaseAdmin,
+      input.student_id,
+      input.course_id,
+      input.enrollment_id,
+    );
 
     const payload = {
       student_id: input.student_id,
