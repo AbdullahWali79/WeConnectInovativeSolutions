@@ -2,7 +2,36 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Course, CourseTopic, Enrollment } from "@/lib/supabase/types";
+import type { Course, CourseTopic, Enrollment, Task } from "@/lib/supabase/types";
+
+function normalizeTitle(value: string) {
+  return value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+}
+
+function taskStatusLabel(status: Task["status"]) {
+  return {
+    pending: "Not started",
+    in_progress: "In progress",
+    submitted: "Submitted",
+    reviewed: "Reviewed",
+    revision_required: "Needs improvement",
+    rejected: "Rejected",
+  }[status];
+}
+
+function taskStatusClass(status: Task["status"]) {
+  if (status === "reviewed") return "bg-emerald-100 text-emerald-800";
+  if (status === "submitted") return "bg-blue-100 text-blue-800";
+  if (status === "revision_required") return "bg-amber-100 text-amber-900";
+  if (status === "rejected") return "bg-red-100 text-red-800";
+  return "bg-surface-container-high text-on-surface-variant";
+}
+
+function formatDeadline(value: string | null) {
+  if (!value) return "No deadline";
+
+  return new Intl.DateTimeFormat("en-PK", { dateStyle: "medium" }).format(new Date(value));
+}
 
 export default async function StudentCoursesPage() {
   return <StudentCourseRoadmap heading="My Courses" nextPath="/student/courses" />;
@@ -24,13 +53,22 @@ export async function StudentCourseRoadmap({
     redirect(`/login?next=${nextPath}`);
   }
 
-  const { data: enrollmentData } = await supabase
-    .from("enrollments")
-    .select("*")
-    .eq("student_id", user.id)
-    .order("created_at", { ascending: false });
+  const [enrollmentsResult, tasksResult] = await Promise.all([
+    supabase
+      .from("enrollments")
+      .select("*")
+      .eq("student_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("tasks")
+      .select("*")
+      .eq("student_id", user.id)
+      .eq("workflow_type", "assigned")
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const enrollments = (enrollmentData ?? []) as Enrollment[];
+  const enrollments = (enrollmentsResult.data ?? []) as Enrollment[];
+  const assignedTasks = (tasksResult.data ?? []) as Task[];
   const courseIds = Array.from(new Set(enrollments.map((enrollment) => enrollment.course_id)));
 
   let courses: Course[] = [];
@@ -70,6 +108,8 @@ export async function StudentCourseRoadmap({
           {courses.map((course) => {
             const enrollment = enrollmentByCourse.get(course.id);
             const courseTopics = topics.filter((topic) => topic.course_id === course.id);
+            const courseTasks = assignedTasks.filter((task) => task.course_id === course.id);
+            const syllabusTopicTitles = new Set(courseTopics.map((topic) => normalizeTitle(topic.title)));
 
             return (
               <details key={course.id} className="group overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-sm" open>
@@ -92,6 +132,67 @@ export async function StudentCourseRoadmap({
 
                 <div className="border-t border-outline-variant px-5 py-5 md:px-6">
                   {course.description ? <p className="mb-5 text-on-surface-variant">{course.description}</p> : null}
+
+                  <section className="mb-6 rounded-lg border border-outline-variant bg-surface-container-low p-4 md:p-5">
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-extrabold">Assigned work</h3>
+                        <p className="mt-1 text-sm text-on-surface-variant">
+                          Tasks assigned by your admin and tasks shared from this syllabus.
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-primary-container px-3 py-1 text-xs font-bold text-on-primary-container">
+                        {courseTasks.length} tasks
+                      </span>
+                    </div>
+
+                    {courseTasks.length === 0 ? (
+                      <p className="rounded-lg bg-surface p-4 text-sm text-on-surface-variant">
+                        No task has been assigned for this course yet.
+                      </p>
+                    ) : (
+                      <div className="grid gap-3">
+                        {courseTasks.map((task) => {
+                          const isSyllabusTask = syllabusTopicTitles.has(normalizeTitle(task.title));
+
+                          return (
+                            <article
+                              key={task.id}
+                              className="grid gap-4 rounded-lg border border-outline-variant bg-surface p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-on-primary-container">
+                                    {isSyllabusTask ? "Syllabus task" : "Admin task"}
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-2.5 py-1 text-xs font-bold ${taskStatusClass(task.status)}`}
+                                  >
+                                    {taskStatusLabel(task.status)}
+                                  </span>
+                                </div>
+                                <h4 className="mt-3 font-extrabold">{task.title}</h4>
+                                {task.description ? (
+                                  <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">{task.description}</p>
+                                ) : null}
+                                <p className="mt-2 text-xs font-bold uppercase text-on-surface-variant">
+                                  Deadline: {formatDeadline(task.deadline)}
+                                </p>
+                              </div>
+                              <Link
+                                href={`/student/tasks/${task.id}/submit`}
+                                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90"
+                              >
+                                <Icon name="open_in_new" /> Open task
+                              </Link>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+
+                  <h3 className="mb-4 text-lg font-extrabold">Course roadmap</h3>
 
                   {courseTopics.length === 0 ? (
                     <p className="rounded-lg bg-surface-container-low p-5 text-on-surface-variant">
