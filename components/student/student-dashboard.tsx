@@ -514,11 +514,10 @@ export function StudentDashboard() {
                         day: "2-digit",
                         month: "short",
                       })}
-                      <Icon
-                        name="expand_more"
-                        size={20}
-                        className="transition-transform group-open:rotate-180"
-                      />
+                        <Icon
+                          name="expand_more"
+                          className="text-[20px] transition-transform group-open:rotate-180"
+                        />
                     </span>
                   </summary>
                   <p className="mt-3 max-w-4xl whitespace-pre-wrap text-sm leading-6 text-slate-700">
@@ -541,11 +540,10 @@ export function StudentDashboard() {
                 <span className="flex h-10 w-10 items-center justify-center bg-blue-50 text-blue-600">
                     <Icon name={stat.icon} className="text-[21px]" />
                 </span>
-                <Icon
-                  name="arrow_forward"
-                  size={18}
-                  className="text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-600"
-                />
+                      <Icon
+                        name="arrow_forward"
+                        className="text-[18px] text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-600"
+                      />
               </div>
               <p className="mt-4 text-sm font-semibold text-slate-600">{stat.label}</p>
               <p className="mt-1 text-3xl font-bold text-slate-950">{stat.value}</p>
