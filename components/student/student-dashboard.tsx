@@ -419,35 +419,35 @@ export function StudentDashboard() {
 
   if (isOverview) {
     const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "Student";
-    const latestAnnouncements = announcements.slice(0, 3);
+    const latestAnnouncements = announcements.slice(0, 5);
     const overviewStats = [
       {
-        label: "Pending work",
+        label: "Pending Tasks",
         value: pendingAssignedTasks.length,
-        hint: "Tasks needing action",
         href: "/student/tasks",
         icon: "pending_actions",
+        color: "border-blue-200 bg-blue-50 text-blue-600 hover:border-blue-400 hover:bg-blue-100/50",
       },
       {
         label: "Completed",
         value: acceptedAssignedTasks.length,
-        hint: "Reviewed and accepted",
         href: "/student/tasks",
         icon: "task_alt",
+        color: "border-emerald-200 bg-emerald-50 text-emerald-600 hover:border-emerald-400 hover:bg-emerald-100/50",
       },
       {
         label: "Progress",
         value: `${progress}%`,
-        hint: "Overall course progress",
         href: "/student/progress",
         icon: "monitoring",
+        color: "border-indigo-200 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100/50",
       },
       {
-        label: "Approved leads",
+        label: "Approved Leads",
         value: approvedClientHuntCount,
-        hint: "Client hunting results",
         href: "/student/client-hunting",
         icon: "person_search",
+        color: "border-purple-200 bg-purple-50 text-purple-600 hover:border-purple-400 hover:bg-purple-100/50",
       },
     ];
 
@@ -456,166 +456,129 @@ export function StudentDashboard() {
       { label: "Syllabus", href: "/student/syllabus", icon: "menu_book" },
       { label: "Projects", href: "/student/projects", icon: "folder_special" },
       { label: "Social media", href: "/student/social-media", icon: "share" },
-      { label: "Client hunting", href: "/student/client-hunting", icon: "person_search" },
-      { label: "My progress", href: "/student/progress", icon: "monitoring" },
     ];
 
     return (
-      <>
+      <div className="mx-auto max-w-6xl space-y-6">
         <Toast toast={toast} onClear={() => setToast(null)} />
         <PromoPopup context="student" />
 
-        <PageHeader
-          eyebrow="Student Hub"
-          title={`Welcome back, ${firstName}`}
-          description="Your learning activity, pending work, and latest updates in one place."
-          action={
-            <Link href="/student/tasks" className="wc-primary-btn">
-                <Icon name="assignment" className="text-[20px]" />
-              View tasks
-            </Link>
-          }
-        />
+        {/* Header */}
+        <header className="flex flex-col justify-between gap-4 border-b border-outline-variant/50 pb-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-label-sm font-bold uppercase tracking-widest text-primary">Student Hub</p>
+            <h1 className="mt-1 text-3xl font-black text-on-surface">Welcome, {firstName}</h1>
+          </div>
+          <Link href="/student/tasks" className="wc-primary-btn shrink-0">
+             <Icon name="assignment" /> View Tasks
+          </Link>
+        </header>
 
-        <section
-          className={`mb-5 border bg-white px-5 py-4 shadow-sm ${
-            latestAnnouncements.length > 0
-              ? "border-amber-300"
-              : "border-slate-200"
-          }`}
-          aria-labelledby="student-announcements-title"
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-amber-100 text-amber-700">
-                  <Icon name="campaign" className="text-[22px]" />
-              </span>
-              <div>
-                <h2 id="student-announcements-title" className="text-lg font-bold text-slate-950">
-                  Announcements
-                </h2>
-                <p className="text-sm text-slate-600">
-                  {latestAnnouncements.length > 0
-                    ? `${latestAnnouncements.length} latest update${latestAnnouncements.length === 1 ? "" : "s"}`
-                    : "No announcements"}
-                </p>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Left Column: Stats and Quick Links */}
+          <div className="space-y-6 lg:col-span-2">
+            
+            {/* Compact Stats */}
+            <section aria-label="Key metrics">
+               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {overviewStats.map(stat => (
+                     <Link key={stat.label} href={stat.href} className={`flex flex-col rounded-2xl border p-4 transition-all hover:scale-[1.02] hover:shadow-md ${stat.color}`}>
+                        <Icon name={stat.icon} className="mb-2 text-2xl opacity-80" />
+                        <span className="mb-1 text-3xl font-black">{stat.value}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{stat.label}</span>
+                     </Link>
+                  ))}
+               </div>
+            </section>
+
+            {/* Next Task Highlight */}
+            <section aria-label="Next task">
+              <div className="mb-3 flex items-center justify-between">
+                 <h2 className="text-lg font-bold text-on-surface">Next Task</h2>
               </div>
-            </div>
+              {topTask ? (
+                 <Link href="/student/tasks" className="group block wc-card p-5 transition-all hover:border-primary/50 hover:shadow-lg">
+                    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+                       <div>
+                          <div className="mb-3 flex flex-wrap items-center gap-2">
+                             <StatusPill value={submissionByTaskId.get(topTask.id)?.status ?? topTask.status} />
+                             {topTask.workflow_type === "daily" ? (
+                               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800">Daily Task</span>
+                             ) : (
+                               <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-800">Admin Assigned</span>
+                             )}
+                          </div>
+                          <h3 className="text-xl font-bold text-on-surface transition-colors group-hover:text-primary">{topTask.title}</h3>
+                          <p className="mt-1.5 text-sm font-medium text-on-surface-variant">
+                            {courseById.get(topTask.course_id)?.title ?? "Course"} · Due: {topTask.deadline ? formatDateTime(topTask.deadline) : "No deadline"}
+                          </p>
+                       </div>
+                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white sm:self-center">
+                          <Icon name="arrow_forward" />
+                       </div>
+                    </div>
+                 </Link>
+              ) : (
+                 <div className="wc-card border-dashed p-6 text-center">
+                    <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                       <Icon name="done_all" className="text-2xl" />
+                    </div>
+                    <p className="font-bold text-on-surface">All caught up!</p>
+                    <p className="mt-1 text-sm text-on-surface-variant">You have no pending assigned tasks.</p>
+                 </div>
+              )}
+            </section>
+
+            {/* Quick Links */}
+            <section aria-label="Quick links" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+               {quickLinks.map(link => (
+                  <Link key={link.label} href={link.href} className="group flex flex-col items-center gap-2 rounded-2xl border border-outline-variant bg-surface-container-low p-4 text-center transition-colors hover:border-primary/40 hover:bg-primary/5">
+                     <Icon name={link.icon} className="text-[28px] text-primary transition-transform group-hover:scale-110" />
+                     <span className="text-xs font-bold text-on-surface">{link.label}</span>
+                  </Link>
+               ))}
+            </section>
+
           </div>
 
-          {latestAnnouncements.length > 0 ? (
-            <div className="mt-4 divide-y divide-slate-200 border-t border-slate-200">
-              {latestAnnouncements.map((announcement) => (
-                <details key={announcement.id} className="group py-3">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-slate-950">
-                    <span className="min-w-0 truncate">{announcement.title}</span>
-                    <span className="flex shrink-0 items-center gap-3 text-xs font-medium text-slate-500">
-                      {new Date(announcement.created_at).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                      })}
-                        <Icon
-                          name="expand_more"
-                          className="text-[20px] transition-transform group-open:rotate-180"
-                        />
-                    </span>
-                  </summary>
-                  <p className="mt-3 max-w-4xl whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                    {announcement.message}
-                  </p>
-                </details>
-              ))}
-            </div>
-          ) : null}
-        </section>
-
-        <section aria-label="Student overview" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {overviewStats.map((stat) => (
-            <Link
-              key={stat.label}
-              href={stat.href}
-              className="group border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex h-10 w-10 items-center justify-center bg-blue-50 text-blue-600">
-                    <Icon name={stat.icon} className="text-[21px]" />
-                </span>
-                      <Icon
-                        name="arrow_forward"
-                        className="text-[18px] text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-600"
-                      />
-              </div>
-              <p className="mt-4 text-sm font-semibold text-slate-600">{stat.label}</p>
-              <p className="mt-1 text-3xl font-bold text-slate-950">{stat.value}</p>
-              <p className="mt-1 text-xs text-slate-500">{stat.hint}</p>
-            </Link>
-          ))}
-        </section>
-
-        <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_1fr]">
-          <section className="wc-card p-5" aria-labelledby="next-task-title">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase text-blue-600">Priority</p>
-                <h2 id="next-task-title" className="mt-1 text-xl font-bold text-slate-950">
-                  Next task
-                </h2>
-              </div>
-              <Link href="/student/tasks" className="text-sm font-bold text-blue-600 hover:underline">
-                View all
-              </Link>
-            </div>
-
-            {topTask ? (
-              <div className="mt-4 border-t border-slate-200 pt-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-950">{topTask.title}</h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {courseById.get(topTask.course_id)?.name ?? "Course"}
-                      {" · "}
-                      {topTask.deadline
-                        ? `Due ${new Date(topTask.deadline).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}`
-                        : "No deadline"}
-                    </p>
-                  </div>
-                  <Link href="/student/tasks" className="wc-primary-btn">
-                    Open task
-                    <Icon name="arrow_forward" className="text-[18px]" />
-                  </Link>
+          {/* Right Column: Announcements */}
+          <div className="space-y-4">
+             <div className="flex items-center gap-2 text-amber-600">
+                <Icon name="campaign" className="text-2xl" />
+                <h2 className="text-lg font-bold">Announcements</h2>
+             </div>
+             
+             {latestAnnouncements.length > 0 ? (
+                <div className="space-y-3">
+                   {latestAnnouncements.map(announcement => (
+                      <details key={announcement.id} className="group overflow-hidden rounded-2xl border border-amber-200/60 bg-amber-50/50 shadow-sm transition-all hover:shadow-md [&_summary::-webkit-details-marker]:hidden">
+                         <summary className="flex cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-amber-100/50">
+                            <div className="min-w-0">
+                               <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-amber-600/80">{new Date(announcement.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                               <h3 className="truncate text-sm font-bold text-slate-900">{announcement.title}</h3>
+                            </div>
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-200/50 text-amber-700 transition-transform group-open:rotate-180">
+                               <Icon name="expand_more" />
+                            </div>
+                         </summary>
+                         <div className="border-t border-amber-200/50 p-4 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
+                            {announcement.message}
+                         </div>
+                      </details>
+                   ))}
                 </div>
-              </div>
-            ) : (
-              <div className="mt-4 border-t border-slate-200 pt-4">
-                <p className="font-semibold text-slate-800">No pending tasks</p>
-                <p className="mt-1 text-sm text-slate-500">You are up to date with your assigned work.</p>
-              </div>
-            )}
-          </section>
-
-          <section className="wc-card p-5" aria-labelledby="quick-access-title">
-            <h2 id="quick-access-title" className="text-xl font-bold text-slate-950">
-              Quick access
-            </h2>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {quickLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex min-h-14 items-center gap-3 border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  <Icon name={item.icon} className="shrink-0 text-[20px] text-blue-600" />
-                  <span>{item.label}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
+             ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center shadow-sm">
+                   <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-200/50 text-slate-400">
+                      <Icon name="notifications_off" className="text-3xl" />
+                   </div>
+                   <p className="font-bold text-slate-500">No Announcements</p>
+                   <p className="mt-1 text-xs text-slate-400">You&apos;re all caught up!</p>
+                </div>
+             )}
+          </div>
         </div>
-      </>
+      </div>
     );
   }
 
