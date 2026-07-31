@@ -64,7 +64,7 @@ export default async function LandingPage() {
               </span>
             </div>
             <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.5vw,4.35rem)] font-black leading-[0.96] tracking-[-0.055em]">
-              <span className="landing-hero-title block">Digital Products Built to</span>
+              <span className="landing-hero-title block">We Build Digital Products That</span>
               <span className="relative mt-4 inline-flex flex-wrap items-center justify-center gap-4 leading-none">
                 <span
                   className="absolute inset-x-[-1.25rem] top-1/2 -z-10 h-[72%] -translate-y-1/2 rounded-full blur-3xl"
@@ -81,7 +81,7 @@ export default async function LandingPage() {
                 >
                 <span className="inline-flex h-full items-center justify-center bg-clip-text leading-[0] text-transparent" style={{ backgroundImage: "linear-gradient(90deg, var(--wc-primary), var(--wc-secondary))" }}>
                     <TypingText
-                      text={["Grow Your Business.", "Scale With Confidence.", "Convert More Customers.", "Automate Your Operations.", "Move Your Brand Forward."]}
+                      text={["Grow Businesses.", "Scale With Confidence.", "Convert More Customers.", "Automate Your Operations.", "Move Your Brand Forward."]}
                       speed={72}
                       startDelay={250}
                       holdDelay={2200}
@@ -92,7 +92,7 @@ export default async function LandingPage() {
               </span>
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-pretty text-lg leading-8 sm:text-xl sm:leading-9" style={{ color: "var(--wc-on-surface-variant)" }}>
-              From strategy to launch, we create high-conversion platforms, intelligent automation, and polished digital experiences engineered for measurable growth.
+              Custom software, web platforms and intelligent automation—from strategy to launch.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Link
@@ -104,10 +104,10 @@ export default async function LandingPage() {
                   boxShadow: "0 0 40px color-mix(in srgb, var(--wc-secondary) 30%, transparent)",
                 }}
               >
-                Discuss Your Project <Icon name="arrow_forward" className="text-xl" />
+                Start Your Project <Icon name="arrow_forward" className="text-xl" />
               </Link>
               <Link href="#portfolio" className="landing-hero-secondary inline-flex items-center justify-center rounded-xl border px-8 py-4 text-base font-bold backdrop-blur-sm transition-colors">
-                Explore Our Work
+                View Our Work
               </Link>
             </div>
             <div className="landing-hero-features mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border p-3 text-left backdrop-blur-sm sm:grid-cols-3 sm:text-center">
