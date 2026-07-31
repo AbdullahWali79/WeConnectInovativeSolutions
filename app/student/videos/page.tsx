@@ -46,7 +46,7 @@ export default async function StudentVideosPage() {
               <div className="flex flex-1 flex-col p-5">
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <h3 className="font-bold text-on-surface line-clamp-2">{video.title}</h3>
-                  <StatusPill status={video.status} />
+                  <StatusPill value={video.status} />
                 </div>
                 {video.description && (
                   <p className="mb-4 text-sm text-on-surface-variant line-clamp-3">{video.description}</p>

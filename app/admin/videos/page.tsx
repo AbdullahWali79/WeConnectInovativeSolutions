@@ -55,7 +55,7 @@ export default async function AdminVideosPage() {
                       {new Date(video.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <StatusPill status={video.status} />
+                      <StatusPill value={video.status} />
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Link

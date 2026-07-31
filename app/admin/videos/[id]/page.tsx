@@ -42,7 +42,7 @@ export default async function AdminVideoReviewPage({ params }: { params: Promise
           <div className="rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-outline/10">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">{video.title}</h2>
-              <StatusPill status={video.status} />
+              <StatusPill value={video.status} />
             </div>
             
             <div className="mb-6">
