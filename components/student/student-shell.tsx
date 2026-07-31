@@ -209,7 +209,7 @@ export function StudentShell({ profile, branding, children }: { profile: Profile
 
       <main
         className={cn(
-          "min-w-0 flex-1 p-5 pt-16 transition-[margin] duration-300 md:p-8 md:pt-16 lg:p-10 lg:pt-10",
+          "min-w-0 flex-1 p-3 pt-20 transition-[margin] duration-300 md:p-6 md:pt-20 lg:p-8 lg:pt-8",
           collapsed ? "lg:ml-20" : "lg:ml-72",
         )}
       >
