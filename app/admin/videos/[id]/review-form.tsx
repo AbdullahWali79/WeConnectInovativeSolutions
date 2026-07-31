@@ -29,6 +29,7 @@ export function ReviewForm({ video }: { video: StudentVideo }) {
     }
   }
 
+  return (
     <div className="rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-outline/10 relative">
       <Toast toast={toast} onClear={() => setToast(null)} />
       <h3 className="mb-4 text-lg font-bold text-on-surface">Admin Review</h3>
