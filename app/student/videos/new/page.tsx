@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { submitStudentVideo } from "../actions";
 import { Icon } from "@/components/icon";
+import { ProductVideoPreview } from "@/components/product-video-preview";
 
 export default function NewStudentVideoPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -65,11 +67,22 @@ export default function NewStudentVideoPage() {
             name="video_url"
             type="url"
             required
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="https://youtube.com/... or https://drive.google.com/..."
             className="rounded-xl border-outline/20 bg-surface-lowest px-4 py-3 text-sm focus:border-primary focus:ring-primary"
           />
           <p className="text-xs text-on-surface-variant">Please make sure the link is publicly accessible.</p>
         </div>
+
+        {videoUrl && (
+          <div className="flex flex-col gap-2 rounded-2xl bg-surface-variant/30 p-4">
+            <label className="text-sm font-bold text-on-surface">Video Preview</label>
+            <div className="overflow-hidden rounded-xl border border-outline/10 shadow-sm">
+              <ProductVideoPreview url={videoUrl} title="Video Preview" />
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <label htmlFor="description" className="text-sm font-bold text-on-surface">

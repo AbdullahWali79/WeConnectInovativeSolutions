@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icon";
 import { StatusPill } from "@/components/status-pill";
 import { ReviewForm } from "./review-form";
+import { ProductVideoPreview } from "@/components/product-video-preview";
 
 export default async function AdminVideoReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,16 +47,21 @@ export default async function AdminVideoReviewPage({ params }: { params: Promise
             </div>
             
             <div className="mb-6">
-              <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-on-surface-variant">Video Link</h3>
-              <a
-                href={video.video_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/20"
-              >
-                <Icon name="open_in_new" className="text-[18px]" />
-                Open Video
-              </a>
+              <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-on-surface-variant">Video Link & Preview</h3>
+              <div className="mb-3 flex items-center gap-3">
+                <a
+                  href={video.video_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/20"
+                >
+                  <Icon name="open_in_new" className="text-[18px]" />
+                  Open Video Externally
+                </a>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-outline/10 shadow-sm">
+                <ProductVideoPreview url={video.video_url} title={video.title} />
+              </div>
             </div>
 
             {video.description && (
