@@ -9,7 +9,8 @@ type Message = { id: string; type: "user" | "bot"; text: string };
 type ChatCta = { href: string; label: string; icon: string };
 const suggestions = ["What services do you offer?", "Show me your products", "Which courses are available?", "How can I apply?", "How do I contact your team?"];
 const faqs = [
-  { question: "What services do you offer?", answer: "We build websites, web applications, automation solutions, and other digital products. Explore current work on /products." },
+  { question: "What services do you offer?", answer: "We build websites, web applications, desktop applications, automation solutions, and other digital products. Explore current work on /products." },
+  { question: "Do you build custom desktop applications?", answer: "Yes, we build cross-platform desktop applications using Python and Electron. We also provide maintenance and feature updates for existing software." },
   { question: "How can I discuss a new project?", answer: "Share your requirements through /contact and the team can review the scope, timeline, and next steps." },
   { question: "How can I join a course?", answer: "View active courses on /courses, then submit your application through /apply." },
   { question: "Do you provide research consultancy?", answer: "Yes. Visit /research-consultancy for available academic research support and guidance." },
