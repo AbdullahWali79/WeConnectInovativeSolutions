@@ -87,12 +87,11 @@ export async function StudentCourseRoadmap({
 
   return (
     <div className="mx-auto max-w-7xl">
-      <header className="mb-8">
-        <p className="text-sm font-bold uppercase tracking-widest text-primary">Learning roadmap</p>
-        <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">{heading}</h1>
-        <p className="mt-3 max-w-3xl text-base text-on-surface-variant md:text-lg">
-          View your enrolled courses, daily topics, practice projects, and learning resources.
-        </p>
+      <header className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-black uppercase tracking-tight text-on-surface">{heading}</h1>
+          <p className="text-sm text-on-surface-variant">View your enrolled courses, topics, and learning resources.</p>
+        </div>
       </header>
 
       {courses.length === 0 ? (
@@ -113,35 +112,32 @@ export async function StudentCourseRoadmap({
 
             return (
               <details key={course.id} className="group overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-sm" open>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 md:p-6">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-extrabold md:text-2xl">{course.title}</h2>
-                      <span className="rounded-full bg-primary-container px-3 py-1 text-xs font-bold uppercase text-on-primary-container">
+                      <h2 className="text-lg font-black">{course.title}</h2>
+                      <span className="rounded-full bg-primary-container px-2 py-0.5 text-[10px] font-bold uppercase text-on-primary-container">
                         {enrollment?.status ?? "enrolled"}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-on-surface-variant">
+                    <p className="mt-1 text-xs text-on-surface-variant">
                       {courseTopics.length} topics
                       {course.duration ? ` · ${course.duration}` : ""}
                       {course.level ? ` · ${course.level}` : ""}
                     </p>
                   </div>
-                  <Icon name="expand_more" className="shrink-0 text-2xl transition-transform group-open:rotate-180" />
+                  <Icon name="expand_more" className="shrink-0 text-xl transition-transform group-open:rotate-180" />
                 </summary>
 
-                <div className="border-t border-outline-variant px-5 py-5 md:px-6">
-                  {course.description ? <p className="mb-5 text-on-surface-variant">{course.description}</p> : null}
+                <div className="border-t border-outline-variant px-4 py-4">
+                  {course.description ? <p className="mb-4 text-sm text-on-surface-variant">{course.description}</p> : null}
 
-                  <section className="mb-6 rounded-lg border border-outline-variant bg-surface-container-low p-4 md:p-5">
-                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <section className="mb-4 rounded-lg border border-outline-variant bg-surface-container-low p-3">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-lg font-extrabold">Assigned work</h3>
-                        <p className="mt-1 text-sm text-on-surface-variant">
-                          Tasks assigned by your admin and tasks shared from this syllabus.
-                        </p>
+                        <h3 className="text-base font-bold">Assigned work</h3>
                       </div>
-                      <span className="rounded-full bg-primary-container px-3 py-1 text-xs font-bold text-on-primary-container">
+                      <span className="rounded-full bg-primary-container px-2 py-0.5 text-xs font-bold text-on-primary-container">
                         {courseTasks.length} tasks
                       </span>
                     </div>
@@ -160,33 +156,33 @@ export async function StudentCourseRoadmap({
                               key={task.id}
                               className="group/task rounded-lg border border-outline-variant bg-surface"
                             >
-                              <summary className="grid cursor-pointer list-none gap-4 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                              <summary className="grid cursor-pointer list-none gap-3 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                                 <div className="min-w-0">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-on-primary-container">
+                                    <span className="rounded-full bg-primary-container px-2 py-0.5 text-[10px] font-bold text-on-primary-container">
                                       {isSyllabusTask ? "Syllabus task" : "Admin task"}
                                     </span>
                                     <span
-                                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${taskStatusClass(task.status)}`}
+                                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${taskStatusClass(task.status)}`}
                                     >
                                       {taskStatusLabel(task.status)}
                                     </span>
                                   </div>
-                                  <h4 className="mt-3 font-extrabold">{task.title}</h4>
+                                  <h4 className="mt-2 font-bold text-sm">{task.title}</h4>
                                   {task.description ? (
-                                    <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">{task.description}</p>
+                                    <p className="mt-1 line-clamp-1 text-xs text-on-surface-variant">{task.description}</p>
                                   ) : null}
-                                  <p className="mt-2 text-xs font-bold uppercase text-on-surface-variant">
+                                  <p className="mt-1.5 text-[10px] font-bold uppercase text-on-surface-variant">
                                     Deadline: {formatDeadline(task.deadline)}
                                   </p>
                                 </div>
                                 <span
-                                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90"
+                                  className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:opacity-90"
                                 >
-                                  <Icon name="visibility" />
-                                  <span className="group-open/task:hidden">View details</span>
-                                  <span className="hidden group-open/task:inline">Hide details</span>
-                                  <Icon name="expand_more" className="transition-transform group-open/task:rotate-180" />
+                                  <Icon name="visibility" className="text-[16px]" />
+                                  <span className="group-open/task:hidden">View</span>
+                                  <span className="hidden group-open/task:inline">Hide</span>
+                                  <Icon name="expand_more" className="transition-transform group-open/task:rotate-180 text-[16px]" />
                                 </span>
                               </summary>
                               <div className="border-t border-outline-variant px-4 py-5">
