@@ -34,7 +34,7 @@ export default async function AdminVideoReviewPage({ params }: { params: Promise
 
       <PageHeader
         title="Review Video Submission"
-        description={`Submitted by ${(video.student as any)?.full_name || "Unknown"} on ${new Date(video.created_at).toLocaleDateString()}`}
+        description={`Submitted by ${((video.student as unknown) as { full_name: string | null })?.full_name || "Unknown"} on ${new Date(video.created_at).toLocaleDateString()}`}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">

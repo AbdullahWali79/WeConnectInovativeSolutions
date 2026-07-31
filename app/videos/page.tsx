@@ -64,10 +64,10 @@ export default async function PublicVideosPage() {
                     <div className="mt-auto border-t border-outline/10 pt-4">
                       <div className="mb-4 flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                          {((video.student as any)?.full_name || "S")[0].toUpperCase()}
+                          {(((video.student as unknown) as { full_name: string | null })?.full_name || "S")[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-on-surface">{(video.student as any)?.full_name || "Student"}</p>
+                          <p className="text-sm font-bold text-on-surface">{((video.student as unknown) as { full_name: string | null })?.full_name || "Student"}</p>
                           <p className="text-xs text-on-surface-variant">WeConnect Student</p>
                         </div>
                       </div>

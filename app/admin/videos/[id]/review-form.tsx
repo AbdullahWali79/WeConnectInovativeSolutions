@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { updateStudentVideoStatus } from "../actions";
 import { Icon } from "@/components/icon";
 
-export function ReviewForm({ video }: { video: any }) {
+import type { StudentVideo } from "@/lib/supabase/types";
+
+export function ReviewForm({ video }: { video: StudentVideo }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

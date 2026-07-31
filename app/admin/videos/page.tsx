@@ -45,8 +45,8 @@ export default async function AdminVideosPage() {
                 videos.map((video) => (
                   <tr key={video.id} className="transition hover:bg-surface-variant/50">
                     <td className="px-6 py-4">
-                      <p className="font-bold text-on-surface">{(video.student as any)?.full_name || "Unknown"}</p>
-                      <p className="text-xs text-on-surface-variant">{(video.student as any)?.email}</p>
+                      <p className="font-bold text-on-surface">{((video.student as unknown) as { full_name: string | null })?.full_name || "Unknown"}</p>
+                      <p className="text-xs text-on-surface-variant">{((video.student as unknown) as { email: string | null })?.email}</p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-medium text-on-surface max-w-[200px] truncate">{video.title}</p>
