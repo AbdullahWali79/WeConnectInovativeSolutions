@@ -10,7 +10,7 @@ type VideoCardProps = {
     title: string;
     description: string | null;
     video_url: string;
-    student: any;
+    student: unknown;
   };
 };
 
