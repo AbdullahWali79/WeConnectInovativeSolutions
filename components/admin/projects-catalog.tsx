@@ -139,7 +139,7 @@ function ProjectManager({
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: "binary" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(firstSheet) as any[];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet);
 
         const newProjects: { title: string; description: string }[] = [];
         

@@ -64,7 +64,7 @@ export function StudentAssignedProjectsBoard({ studentId }: { studentId: string 
           </div>
           <h2 className="mt-4 text-xl font-bold">No projects assigned</h2>
           <p className="mt-2 text-on-surface-variant text-sm max-w-sm mx-auto">
-            You don't have any assigned projects yet. When admins assign projects to you, they will appear here.
+            You don&apos;t have any assigned projects yet. When admins assign projects to you, they will appear here.
           </p>
         </section>
       ) : (
