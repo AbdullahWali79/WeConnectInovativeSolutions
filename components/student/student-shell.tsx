@@ -14,8 +14,7 @@ import type { BrandingSettingsSnapshot } from "@/lib/supabase/types";
 import { useBranding } from "@/components/branding-provider";
 
 const nav = [
-  { href: "/student", label: "My Tasks", icon: "assignment" },
-  { href: "/student/courses", label: "My Courses", icon: "school" },
+  { href: "/student", label: "My Dashboard", icon: "dashboard" },
   { href: "/student/syllabus", label: "Syllabus", icon: "menu_book" },
   { href: "/student/client-hunting", label: "Client Hunting", icon: "manage_search" },
   { href: "/student/social-media", label: "Social Media", icon: "share" },
