@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 
 export async function updateStudentVideoStatus(
   videoId: string,
@@ -26,7 +27,12 @@ export async function updateStudentVideoStatus(
     return { error: "Unauthorized" };
   }
 
-  const { data, error } = await supabase
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data, error } = await supabaseAdmin
     .from("student_videos")
     .update({
       status,
