@@ -673,6 +673,20 @@ export type ClientHuntLead = {
   updated_at: string;
 };
 
+export type StudentVideo = {
+  id: string;
+  student_id: string;
+  title: string;
+  description: string | null;
+  video_url: string;
+  status: "submitted" | "approved" | "rejected" | "revision_required";
+  admin_feedback: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -914,6 +928,12 @@ export type Database = {
             business_name: string;
           };
         Update: Partial<ClientHuntLead>;
+        Relationships: [];
+      };
+      student_videos: {
+        Row: StudentVideo;
+        Insert: Partial<StudentVideo> & { student_id: string; title: string; video_url: string };
+        Update: Partial<StudentVideo>;
         Relationships: [];
       };
       social_media_settings: {

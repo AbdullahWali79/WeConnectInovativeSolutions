@@ -22,6 +22,7 @@ const nav = [
   { href: "/student/projects", label: "Projects", icon: "folder_special" },
   { href: "/student/progress", label: "My Progress", icon: "monitoring" },
   { href: "/student/profile", label: "My Profile", icon: "person" },
+  { href: "/student/videos", label: "My Videos", icon: "videocam" },
   { href: "/student/helping-videos", label: "Helping Videos", icon: "smart_display" },
 ];
 

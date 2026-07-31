@@ -27,6 +27,7 @@ const navCategories: NavCategory[] = [
     label: "Work",
     items: [
       { href: "/products", path: "/products", label: "Products & Portfolio" },
+      { href: "/videos", path: "/videos", label: "Student Videos" },
       { href: "/testimonials", path: "/testimonials", label: "Client Reviews" },
     ],
   },

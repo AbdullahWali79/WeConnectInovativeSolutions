@@ -27,6 +27,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/submissions", label: "Reviews", icon: "rate_review", permission: "submissions.view" },
     { href: "/admin/progress", label: "Progress", icon: "monitoring", permission: "progress.view" },
     { href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
+    { href: "/admin/videos", label: "Student Videos", icon: "videocam", adminOnly: true },
     { href: "/admin/helping-videos", label: "Helping Videos", icon: "smart_display", adminOnly: true },
   ]},
   { id: "students", label: "Students", icon: "groups", items: [
