@@ -291,7 +291,7 @@ export function AdminShell({
 
       {/* Main Content */}
       <main className={cn(
-        "min-w-0 flex-1 p-4 pt-16 transition-[margin] duration-300 md:p-6 md:pt-16 lg:p-6 lg:pt-4",
+        "min-w-0 flex-1 p-3 pt-20 transition-[margin] duration-300 md:p-6 md:pt-20 lg:p-6 lg:pt-4",
         collapsed ? "lg:ml-20" : "lg:ml-64"
       )}>
         {children}
