@@ -34,3 +34,16 @@ export async function deleteProject(projectId: string) {
   revalidatePath("/admin/projects-catalog");
   return { success: true };
 }
+
+export async function updateProject(projectId: string, title: string, description: string) {
+  const supabase = await createSupabaseServerClient();
+  
+  const { error } = await supabase.from("course_projects").update({ title, description }).eq("id", projectId);
+  
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  
+  revalidatePath("/admin/projects-catalog");
+  return { success: true };
+}
