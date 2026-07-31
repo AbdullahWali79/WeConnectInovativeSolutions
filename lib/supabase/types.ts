@@ -6,7 +6,7 @@ export type ProfileStatus = "pending" | "approved" | "rejected";
 export type ApplicationStatus = "pending" | "approved" | "rejected";
 export type EnrollmentStatus = "active" | "completed" | "dropped";
 export type TaskStatus = "pending" | "in_progress" | "submitted" | "reviewed" | "revision_required" | "rejected";
-export type TaskWorkflowType = "assigned" | "daily";
+export type TaskWorkflowType = "assigned" | "daily" | "project";
 export type ResourceType = "video" | "google_doc" | "google_sheet" | "image" | "github" | "custom";
 export type SubmissionStatus = "submitted" | "reviewed" | "revision_required" | "rejected";
 export type CourseStatus = "active" | "inactive";
@@ -198,6 +198,14 @@ export type CourseTopic = {
   english_video: string | null;
   urdu_video: string | null;
   practice_project: string | null;
+  created_at: string;
+};
+
+export type CourseProject = {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string;
   created_at: string;
 };
 
@@ -702,6 +710,12 @@ export type Database = {
         Row: CourseTopic;
         Insert: Partial<CourseTopic> & { course_id: string; day_number: number; title: string };
         Update: Partial<CourseTopic>;
+        Relationships: [];
+      };
+      course_projects: {
+        Row: CourseProject;
+        Insert: Partial<CourseProject> & { course_id: string; title: string; description: string };
+        Update: Partial<CourseProject>;
         Relationships: [];
       };
       applications: {

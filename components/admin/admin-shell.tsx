@@ -22,6 +22,7 @@ const navGroups: NavGroup[] = [
   { id: "academics", label: "Academics", icon: "school", items: [
     { href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
     { href: "/admin/syllabus", label: "Syllabus", icon: "menu_book", permission: "courses.view" },
+    { href: "/admin/projects-catalog", label: "Projects Catalog", icon: "assignment", permission: "courses.view" },
     { href: "/admin/tasks", label: "Tasks", icon: "assignment_add", permission: "tasks.view" },
     { href: "/admin/submissions", label: "Reviews", icon: "rate_review", permission: "submissions.view" },
     { href: "/admin/progress", label: "Progress", icon: "monitoring", permission: "progress.view" },
