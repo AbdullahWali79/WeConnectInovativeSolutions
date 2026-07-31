@@ -88,16 +88,16 @@ export function StudentAssignedProjectsBoard({ studentId }: { studentId: string 
                   {task.description}
                 </p>
 
-                {submission?.admin_feedback && (status === "revision_required" || status === "rejected") && (
+                {submission?.feedback && (status === "revision_required" || status === "rejected") && (
                   <div className="mt-4 rounded-xl border border-error/20 bg-error/5 p-3 text-sm">
                     <p className="font-bold text-error">Admin Feedback:</p>
-                    <p className="mt-1 text-error/80">{submission.admin_feedback}</p>
+                    <p className="mt-1 text-error/80">{submission.feedback}</p>
                   </div>
                 )}
-                {submission?.admin_feedback && status === "reviewed" && (
+                {submission?.feedback && status === "reviewed" && (
                   <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
                     <p className="font-bold text-primary">Admin Feedback:</p>
-                    <p className="mt-1 text-primary/80">{submission.admin_feedback}</p>
+                    <p className="mt-1 text-primary/80">{submission.feedback}</p>
                   </div>
                 )}
 

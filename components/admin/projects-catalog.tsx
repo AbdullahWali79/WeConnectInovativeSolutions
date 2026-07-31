@@ -175,6 +175,13 @@ function ProjectManager({
     reader.readAsBinaryString(file);
   };
 
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([{ "Project Name": "Sample Project Title", "Description in detail": "Sample detailed requirements and instructions for this project." }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Projects");
+    XLSX.writeFile(wb, "Projects_Template.xlsx");
+  };
+
   function toggleValue(value: string, values: string[], setValues: (next: string[]) => void) {
     setValues(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
   }
@@ -235,7 +242,15 @@ function ProjectManager({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h3 className="text-lg font-bold">Projects</h3>
         {canEdit && (
-          <div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={downloadTemplate}
+              className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low"
+            >
+              <Icon name="download" className="text-[18px]" />
+              Download Template
+            </button>
             <input
               type="file"
               accept=".xlsx,.xls"
