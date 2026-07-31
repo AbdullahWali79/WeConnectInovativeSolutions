@@ -26,7 +26,7 @@ export async function updateStudentVideoStatus(
     return { error: "Unauthorized" };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("student_videos")
     .update({
       status,
@@ -34,11 +34,13 @@ export async function updateStudentVideoStatus(
       reviewed_by: user.id,
       reviewed_at: new Date().toISOString(),
     })
-    .eq("id", videoId);
+    .eq("id", videoId)
+    .select()
+    .single();
 
-  if (error) {
+  if (error || !data) {
     console.error("Error updating video status:", error);
-    return { error: "Failed to update video" };
+    return { error: error?.message || "Failed to update video. Check permissions." };
   }
 
   revalidatePath("/admin/videos");

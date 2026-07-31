@@ -6,37 +6,32 @@ import { updateStudentVideoStatus } from "../actions";
 import { Icon } from "@/components/icon";
 
 import type { StudentVideo } from "@/lib/supabase/types";
+import { Toast, type ToastState } from "@/components/toast";
 
 export function ReviewForm({ video }: { video: StudentVideo }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
 
   async function handleReview(status: "approved" | "rejected" | "revision_required", formData: FormData) {
     setLoading(true);
-    setError(null);
 
     const feedback = formData.get("feedback") as string;
     const result = await updateStudentVideoStatus(video.id, status, feedback);
 
     if (result.error) {
-      setError(result.error);
+      setToast({ type: "error", message: result.error });
       setLoading(false);
     } else {
+      setToast({ type: "success", message: `Video marked as ${status.replace("_", " ")}.` });
       router.refresh();
       setLoading(false);
     }
   }
 
-  return (
-    <div className="rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-outline/10">
+    <div className="rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-outline/10 relative">
+      <Toast toast={toast} onClear={() => setToast(null)} />
       <h3 className="mb-4 text-lg font-bold text-on-surface">Admin Review</h3>
-      
-      {error && (
-        <div className="mb-4 rounded-xl bg-error/10 p-3 text-sm text-error">
-          {error}
-        </div>
-      )}
 
       <form action={(data) => handleReview(video.status === "submitted" ? "approved" : video.status, data)} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
