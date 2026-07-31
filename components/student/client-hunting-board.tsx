@@ -241,12 +241,13 @@ export function ClientHuntingBoard() {
   return (
     <>
       <Toast toast={toast} onClear={() => setToast(null)} />
-      <PageHeader
-        eyebrow="Client Hunting"
-        title="Daily lead submissions"
-        description="Submit your daily client target for the active scenario. Approved details are hidden from your view."
-        action={<Link href="/student/profile" className="wc-secondary-btn">Set Specialization</Link>}
-      />
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-black uppercase tracking-tight text-on-surface">Daily Lead Submissions</h1>
+          <p className="text-sm text-on-surface-variant">Submit your target for the active scenario. Approved details are hidden.</p>
+        </div>
+        <Link href="/student/profile" className="wc-secondary-btn py-1.5 px-3 text-xs">Set Specialization</Link>
+      </div>
 
       {!profile?.client_hunting_specialization ? (
         <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
@@ -260,30 +261,30 @@ export function ClientHuntingBoard() {
         </div>
       ) : null}
 
-      <div className="mb-6 grid gap-4 md:grid-cols-5">
+      <div className="mb-4 grid gap-2 md:grid-cols-5">
         <Stat label="Current Target" value={dailyTarget} icon="flag" dark />
-        <Stat label="Overall Approved" value={totalApprovedClientHunts} icon="insights" />
+        <Stat label="Approved" value={totalApprovedClientHunts} icon="insights" />
         <Stat label="Pending" value={pendingCount} icon="pending_actions" />
         <Stat label="Rejected" value={rejectedCount} icon="close" />
-        <Stat label="Target remaining" value={remainingTarget} icon="flag" />
+        <Stat label="Target Left" value={remainingTarget} icon="flag" />
       </div>
 
       {currentScenario ? (
-        <div className="mb-6 rounded-3xl border border-primary/10 bg-[linear-gradient(135deg,rgba(238,244,255,0.95),rgba(255,255,255,0.98))] p-5 shadow-card">
+        <div className="mb-4 rounded-xl border border-primary/10 bg-[linear-gradient(135deg,rgba(238,244,255,0.95),rgba(255,255,255,0.98))] p-4 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary">{getClientHuntSpecializationLabel(currentScenario.specialization)}</p>
-              <h2 className="mt-1 text-2xl font-black text-on-surface">{currentScenario.title}</h2>
-              <div className="mt-4 max-w-5xl">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">{getClientHuntSpecializationLabel(currentScenario.specialization)}</p>
+              <h2 className="mt-1 text-lg font-black text-on-surface">{currentScenario.title}</h2>
+              <div className="mt-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar text-sm">
                 <ScenarioDescription value={currentScenario.description} />
               </div>
-              {currentScenario.instructions ? <p className="mt-3 rounded-2xl bg-white/80 p-3 text-sm text-on-surface">{currentScenario.instructions}</p> : null}
+              {currentScenario.instructions ? <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs text-on-surface">{currentScenario.instructions}</p> : null}
             </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Progress</p>
-              <p className="mt-1 text-3xl font-black text-primary">{completionPercent}%</p>
-              <p className="text-sm text-on-surface-variant">{approvedCount}/{dailyTarget} approved</p>
-              <div className="mt-3 h-2 w-56 overflow-hidden rounded-full bg-surface-container">
+            <div className="rounded-xl bg-white p-3 shadow-sm w-full lg:w-48 shrink-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Progress</p>
+              <p className="mt-1 text-2xl font-black text-primary leading-none">{completionPercent}%</p>
+              <p className="mt-1 text-xs text-on-surface-variant">{approvedCount}/{dailyTarget} approved</p>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
                 <div className="h-full rounded-full bg-primary" style={{ width: `${completionPercent}%` }} />
               </div>
             </div>
@@ -293,8 +294,8 @@ export function ClientHuntingBoard() {
         <EmptyState title="No active scenario" description="Admin will publish the next daily brief here." icon="event_note" />
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <form onSubmit={submitLead} className="wc-card p-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <form onSubmit={submitLead} className="wc-card p-4">
           <div className="mb-4 rounded-2xl border border-primary/15 bg-primary/5 p-4 text-sm text-on-surface-variant">
             <p className="font-bold text-on-surface">Manual entry only</p>
             <p className="mt-1">
