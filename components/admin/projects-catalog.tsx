@@ -116,6 +116,10 @@ function ProjectManager({
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
   const selectedProjects = projects.filter((p) => selectedProjectIds.includes(p.id));
   const visibleStudents = students.filter((student) => {
@@ -245,6 +249,14 @@ function ProjectManager({
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low"
+            >
+              <Icon name="add" className="text-[18px]" />
+              Add Project
+            </button>
+            <button
+              type="button"
               onClick={downloadTemplate}
               className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low"
             >
@@ -368,6 +380,54 @@ function ProjectManager({
           Assign Projects
         </button>
       </div>
+
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
+            <h2 className="text-xl font-bold">Add Project Manually</h2>
+            <form onSubmit={handleAddProject} className="mt-4 space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium">Project Name</span>
+                <input
+                  type="text"
+                  required
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+                  placeholder="Enter project title"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium">Description</span>
+                <textarea
+                  required
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+                  placeholder="Enter detailed requirements"
+                />
+              </label>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-bold text-on-surface hover:bg-surface-container-low"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAdding}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90 disabled:opacity-50"
+                >
+                  {isAdding ? "Adding..." : "Add Project"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
