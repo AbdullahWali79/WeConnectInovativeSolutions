@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { importProjects, deleteProject } from "@/app/admin/projects-catalog/actions";
+import { importProjects, deleteProject, updateProject } from "@/app/admin/projects-catalog/actions";
 import type { Course, CourseProject, Profile, Task } from "@/lib/supabase/types";
 
 export type ProjectStudent = Profile & {
@@ -117,6 +117,7 @@ function ProjectManager({
   const [studentSearch, setStudentSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -148,11 +149,16 @@ function ProjectManager({
         const newProjects: { title: string; description: string }[] = [];
         
         for (const row of rows) {
-          const title = row["Project Name"] || row["project name"] || row["Title"];
-          const desc = row["Description in detail"] || row["Description"] || row["description"];
+          const normalizedRow: Record<string, string> = {};
+          for (const key in row) {
+            normalizedRow[key.toLowerCase().trim()] = String(row[key]);
+          }
+
+          const title = normalizedRow["project name"] || normalizedRow["title"];
+          const desc = normalizedRow["description in detail"] || normalizedRow["description"];
           
           if (title && desc) {
-            newProjects.push({ title: String(title).trim(), description: String(desc).trim() });
+            newProjects.push({ title: title.trim(), description: desc.trim() });
           }
         }
 
@@ -177,6 +183,43 @@ function ProjectManager({
       }
     };
     reader.readAsBinaryString(file);
+  };
+
+  const handleAddProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newDescription.trim()) {
+      onToast({ type: "error", message: "Title and description are required." });
+      return;
+    }
+    
+    setIsAdding(true);
+    let result;
+    if (editingProjectId) {
+      result = await updateProject(editingProjectId, newTitle.trim(), newDescription.trim());
+    } else {
+      result = await importProjects(course.id, [{ title: newTitle.trim(), description: newDescription.trim() }]);
+    }
+    setIsAdding(false);
+    
+    if (result.success) {
+      onToast({ type: "success", message: editingProjectId ? "Project updated successfully." : "Project added successfully." });
+      setIsAddModalOpen(false);
+      setEditingProjectId(null);
+      setNewTitle("");
+      setNewDescription("");
+    } else {
+      onToast({ type: "error", message: result.error || "Failed to save project." });
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!window.confirm("Are you sure you want to delete this project? Tasks already assigned to students will NOT be deleted.")) return;
+    const result = await deleteProject(projectId);
+    if (result.success) {
+      onToast({ type: "success", message: "Project deleted successfully." });
+    } else {
+      onToast({ type: "error", message: result.error || "Failed to delete project." });
+    }
   };
 
   const downloadTemplate = () => {
@@ -249,7 +292,12 @@ function ProjectManager({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => {
+                setEditingProjectId(null);
+                setNewTitle("");
+                setNewDescription("");
+                setIsAddModalOpen(true);
+              }}
               className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low"
             >
               <Icon name="add" className="text-[18px]" />
@@ -293,23 +341,49 @@ function ProjectManager({
               <p className="p-4 text-center text-sm text-on-surface-variant">No projects available for this course. Import them via Excel.</p>
             ) : (
               projects.map((project) => (
-                <label
-                  key={project.id}
-                  className={`flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors hover:bg-surface-container-low ${
-                    selectedProjectIds.includes(project.id) ? "bg-primary-container text-on-primary-container" : ""
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-1 shrink-0 rounded border-outline-variant text-primary focus:ring-primary"
-                    checked={selectedProjectIds.includes(project.id)}
-                    onChange={() => toggleValue(project.id, selectedProjectIds, setSelectedProjectIds)}
-                  />
-                  <div className="flex-1 overflow-hidden">
-                    <p className="font-bold leading-tight">{project.title}</p>
-                    <p className="mt-1 line-clamp-2 text-xs opacity-80">{project.description}</p>
-                  </div>
-                </label>
+                <div key={project.id} className="flex gap-2 mb-2 items-stretch">
+                  <label
+                    className={`flex-1 flex cursor-pointer items-start gap-3 rounded-lg border border-outline-variant p-3 transition-colors hover:bg-surface-container-low ${
+                      selectedProjectIds.includes(project.id) ? "bg-primary-container text-on-primary-container border-primary" : "bg-surface"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1 shrink-0 rounded border-outline-variant text-primary focus:ring-primary"
+                      checked={selectedProjectIds.includes(project.id)}
+                      onChange={() => toggleValue(project.id, selectedProjectIds, setSelectedProjectIds)}
+                    />
+                    <div className="flex-1 overflow-hidden">
+                      <p className="font-bold leading-tight">{project.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs opacity-80">{project.description}</p>
+                    </div>
+                  </label>
+                  {canEdit && (
+                    <div className="flex flex-col gap-1 w-10 shrink-0">
+                      <button
+                        title="Edit Project"
+                        type="button"
+                        onClick={() => {
+                          setEditingProjectId(project.id);
+                          setNewTitle(project.title);
+                          setNewDescription(project.description);
+                          setIsAddModalOpen(true);
+                        }}
+                        className="flex flex-1 items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors"
+                      >
+                        <Icon name="edit" className="text-[18px]" />
+                      </button>
+                      <button
+                        title="Delete Project"
+                        type="button"
+                        onClick={() => handleDeleteProject(project.id)}
+                        className="flex flex-1 items-center justify-center rounded-lg border border-error/30 bg-error/5 text-error hover:bg-error/20 transition-colors"
+                      >
+                        <Icon name="delete" className="text-[18px]" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               ))
             )}
           </div>
@@ -384,7 +458,7 @@ function ProjectManager({
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
-            <h2 className="text-xl font-bold">Add Project Manually</h2>
+            <h2 className="text-xl font-bold">{editingProjectId ? "Edit Project" : "Add Project Manually"}</h2>
             <form onSubmit={handleAddProject} className="mt-4 space-y-4">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium">Project Name</span>
@@ -411,7 +485,10 @@ function ProjectManager({
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => {
+                    setIsAddModalOpen(false);
+                    setEditingProjectId(null);
+                  }}
                   className="rounded-lg px-4 py-2 text-sm font-bold text-on-surface hover:bg-surface-container-low"
                 >
                   Cancel
@@ -421,7 +498,7 @@ function ProjectManager({
                   disabled={isAdding}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90 disabled:opacity-50"
                 >
-                  {isAdding ? "Adding..." : "Add Project"}
+                  {isAdding ? "Saving..." : editingProjectId ? "Save Changes" : "Add Project"}
                 </button>
               </div>
             </form>
