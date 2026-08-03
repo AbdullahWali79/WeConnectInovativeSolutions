@@ -19,6 +19,15 @@ type SubmitStudentApplicationResult =
 const emailPattern = /^\S+@\S+\.\S+$/;
 
 export async function submitStudentApplication(input: SubmitStudentApplicationInput): Promise<SubmitStudentApplicationResult> {
+  try {
+    return await createStudentApplication(input);
+  } catch (error) {
+    console.error("Student application submission failed", error);
+    return { success: false, error: "Application could not be submitted right now. Please try again." };
+  }
+}
+
+async function createStudentApplication(input: SubmitStudentApplicationInput): Promise<SubmitStudentApplicationResult> {
   const fullName = input.full_name.trim();
   const email = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
@@ -82,6 +91,8 @@ export async function submitStudentApplication(input: SubmitStudentApplicationIn
   });
 
   if (appError) {
+    await supabaseAdmin.from("profiles").delete().eq("id", userId);
+    await supabaseAdmin.auth.admin.deleteUser(userId);
     return { success: false, error: appError.message };
   }
 

@@ -5,6 +5,7 @@ import type { Course } from "@/lib/supabase/types";
 import { Toast, type ToastState } from "@/components/toast";
 import { submitStudentApplication } from "@/app/apply/actions";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
+import { Icon } from "@/components/icon";
 
 const initialForm = {
   full_name: "",
@@ -21,6 +22,8 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
   const [form, setForm] = useState({ ...initialForm, course_id: initialCourseId });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [resultMessage, setResultMessage] = useState<ToastState>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const selectedCourse = useMemo(() => courses.find((course) => course.id === form.course_id), [courses, form.course_id]);
   const clearToast = useCallback(() => setToast(null), []);
@@ -31,48 +34,60 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setResultMessage(null);
+
+    const showResult = (result: NonNullable<ToastState>) => {
+      setToast(result);
+      setResultMessage(result);
+    };
 
     if (!form.full_name.trim() || !form.email.trim() || !form.phone.trim() || !form.course_id) {
-      setToast({ type: "error", message: "Full name, email, phone, and course are required." });
+      showResult({ type: "error", message: "Full name, email, phone, and course are required." });
       return;
     }
 
     if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-      setToast({ type: "error", message: "Enter a valid email address." });
+      showResult({ type: "error", message: "Enter a valid email address." });
       return;
     }
 
     if (form.password.length < 6) {
-      setToast({ type: "error", message: "Password must be at least 6 characters long." });
+      showResult({ type: "error", message: "Password must be at least 6 characters long." });
       return;
     }
 
     if (form.password !== form.confirm_password) {
-      setToast({ type: "error", message: "Passwords do not match." });
+      showResult({ type: "error", message: "Passwords do not match." });
       return;
     }
 
     setLoading(true);
-    const result = await submitStudentApplication({
-      full_name: form.full_name.trim(),
-      email: form.email.trim().toLowerCase(),
-      phone: form.phone.trim(),
-      password: form.password,
-      course_id: form.course_id,
-      message: form.message.trim() || null,
-    });
-    setLoading(false);
+    try {
+      const result = await submitStudentApplication({
+        full_name: form.full_name.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
+        password: form.password,
+        course_id: form.course_id,
+        message: form.message.trim() || null,
+      });
 
-    if (!result.success) {
-      setToast({ type: "error", message: result.error });
-      return;
+      if (!result.success) {
+        showResult({ type: "error", message: result.error });
+        return;
+      }
+
+      setForm({ ...initialForm, course_id: initialCourseId });
+      showResult({
+        type: result.warning ? "info" : "success",
+        message: result.warning ?? "Application submitted successfully. Admin will review it soon.",
+      });
+    } catch (error) {
+      console.error("Application submission failed", error);
+      showResult({ type: "error", message: "Application could not be submitted. Please check your connection and try again." });
+    } finally {
+      setLoading(false);
     }
-
-    setForm({ ...initialForm, course_id: initialCourseId });
-    setToast({
-      type: result.warning ? "info" : "success",
-      message: result.warning ?? "Application submitted. Admin will review it from the dashboard.",
-    });
   }
 
   return (
@@ -123,15 +138,31 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
           </div>
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Password</span>
-            <input value={form.password} onChange={(event) => updateField("password", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" type="password" minLength={6} placeholder="••••••••" required />
+            <span className="relative block">
+              <input value={form.password} onChange={(event) => updateField("password", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] py-4 pl-5 pr-14 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" type={showPassword ? "text" : "password"} minLength={6} autoComplete="new-password" placeholder="••••••••" required />
+              <button type="button" onClick={() => setShowPassword((current) => !current)} className="absolute inset-y-0 right-0 flex w-14 items-center justify-center text-[var(--wc-on-surface-variant)] hover:text-[var(--wc-secondary)]" aria-label={showPassword ? "Hide password" : "Show password"} title={showPassword ? "Hide password" : "Show password"}>
+                <Icon name={showPassword ? "visibility_off" : "visibility"} />
+              </button>
+            </span>
           </label>
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Confirm Password</span>
-            <input value={form.confirm_password} onChange={(event) => updateField("confirm_password", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" type="password" minLength={6} placeholder="••••••••" required />
+            <span className="relative block">
+              <input value={form.confirm_password} onChange={(event) => updateField("confirm_password", event.target.value)} className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] py-4 pl-5 pr-14 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" type={showPassword ? "text" : "password"} minLength={6} autoComplete="new-password" placeholder="••••••••" required />
+              <button type="button" onClick={() => setShowPassword((current) => !current)} className="absolute inset-y-0 right-0 flex w-14 items-center justify-center text-[var(--wc-on-surface-variant)] hover:text-[var(--wc-secondary)]" aria-label={showPassword ? "Hide password" : "Show password"} title={showPassword ? "Hide password" : "Show password"}>
+                <Icon name={showPassword ? "visibility_off" : "visibility"} />
+              </button>
+            </span>
           </label>
         </div>
 
-        <button disabled={loading || courses.length === 0} className="w-full rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] py-4 text-sm font-black text-on-primary shadow-glow transition-all hover:scale-[1.02] hover:shadow-glow-lg disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100">
+        {resultMessage ? (
+          <div role="alert" aria-live="polite" className={`rounded-xl border px-4 py-3 text-sm font-semibold ${resultMessage.type === "error" ? "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200" : "border-green-300 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/40 dark:text-green-200"}`}>
+            {resultMessage.message}
+          </div>
+        ) : null}
+
+        <button type="submit" disabled={loading || courses.length === 0} className="w-full rounded-xl bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] py-4 text-sm font-black text-on-primary shadow-glow transition-all hover:scale-[1.02] hover:shadow-glow-lg disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100">
           {loading ? "SUBMITTING..." : "SEND APPLICATION INTEREST"}
         </button>
       </form>
