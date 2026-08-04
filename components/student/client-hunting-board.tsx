@@ -278,7 +278,11 @@ export function ClientHuntingBoard() {
               <div className="mt-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar text-sm">
                 <ScenarioDescription value={currentScenario.description} />
               </div>
-              {currentScenario.instructions ? <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs text-on-surface">{currentScenario.instructions}</p> : null}
+              {currentScenario.instructions ? (
+                <div className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-white/80 p-3 text-xs leading-5 text-on-surface">
+                  {currentScenario.instructions}
+                </div>
+              ) : null}
             </div>
             <div className="rounded-xl bg-white p-3 shadow-sm w-full lg:w-48 shrink-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Progress</p>
