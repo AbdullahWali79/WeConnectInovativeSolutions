@@ -2,8 +2,8 @@
 
 import {
   getGoogleDrivePreviewUrl,
+  getPlayableVideoUrl,
   getYouTubeEmbedUrl,
-  isDirectVideoUrl,
 } from "@/lib/promo-media";
 
 type ProductVideoPreviewProps = {
@@ -17,6 +17,7 @@ export function ProductVideoPreview({ url, title, className = "" }: ProductVideo
   if (!cleanUrl) return null;
 
   const embedUrl = getYouTubeEmbedUrl(cleanUrl) ?? getGoogleDrivePreviewUrl(cleanUrl);
+  const playableVideoUrl = getPlayableVideoUrl(cleanUrl);
 
   if (embedUrl) {
     return (
@@ -31,12 +32,13 @@ export function ProductVideoPreview({ url, title, className = "" }: ProductVideo
     );
   }
 
-  if (isDirectVideoUrl(cleanUrl)) {
+  if (playableVideoUrl) {
     return (
       <video
         className={`aspect-video w-full bg-black object-contain ${className}`}
-        src={cleanUrl}
+        src={playableVideoUrl}
         controls
+        playsInline
         preload="metadata"
       >
         Your browser does not support video playback.

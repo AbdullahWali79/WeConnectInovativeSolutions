@@ -49,6 +49,27 @@ export function getGoogleDrivePreviewUrl(value: string | null | undefined) {
   return fileId ? `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview` : null;
 }
 
+export function getPlayableVideoUrl(value: string | null | undefined) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value.trim());
+    const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
+
+    if (hostname === "github.com") {
+      const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+)$/i);
+      if (match) {
+        const [, owner, repository, filePath] = match;
+        return `https://raw.githubusercontent.com/${owner}/${repository}/${filePath}`;
+      }
+    }
+
+    return isDirectVideoUrl(url.toString()) ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function isDirectVideoUrl(value: string | null | undefined) {
   if (!value) return false;
 

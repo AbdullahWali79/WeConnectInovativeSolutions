@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { CLIENT_HUNTING_SPECIALIZATIONS, getClientHuntSpecializationLabel, type ClientHuntScenarioSpecialization, type ClientHuntSpecialization } from "@/lib/client-hunting";
+import { CLIENT_HUNTING_SPECIALIZATIONS, getClientHuntSpecializationLabel, type ClientHuntScenarioSpecialization } from "@/lib/client-hunting";
 import { getMissingProfileLinks, isStudentProfileComplete, profileLinkFields } from "@/lib/profile-links";
 import type { ClientHuntLead, ClientHuntScenario, Enrollment, Profile, StudentFeeRecord } from "@/lib/supabase/types";
 import type { PermissionKey } from "@/lib/admin-permissions";
@@ -1117,6 +1117,41 @@ export function ClientHuntingManager({
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/50 py-4">
+              <p className="text-xs text-on-surface-variant">
+                Excel downloads use the filters selected above ({filteredLeads.length} client hunts).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="wc-secondary-btn text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={exportClientWise}
+                  disabled={filteredLeads.length === 0}
+                >
+                  <Icon name="download" />
+                  Client-wise Excel
+                </button>
+                <button
+                  type="button"
+                  className="wc-secondary-btn text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={exportStudentWise}
+                  disabled={filteredLeads.length === 0}
+                >
+                  <Icon name="download" />
+                  Student-wise Excel
+                </button>
+                <button
+                  type="button"
+                  className="wc-secondary-btn text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={exportSkillWise}
+                  disabled={filteredLeads.length === 0}
+                >
+                  <Icon name="download" />
+                  Skill-wise Excel
+                </button>
               </div>
             </div>
 

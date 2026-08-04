@@ -69,10 +69,10 @@ export default function NewStudentVideoPage() {
             required
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="https://youtube.com/... or https://drive.google.com/..."
+            placeholder="YouTube, Google Drive, GitHub video file, or direct video URL"
             className="rounded-xl border-outline/20 bg-surface-lowest px-4 py-3 text-sm focus:border-primary focus:ring-primary"
           />
-          <p className="text-xs text-on-surface-variant">Please make sure the link is publicly accessible.</p>
+          <p className="text-xs text-on-surface-variant">YouTube, public Google Drive, or a public GitHub MP4/WebM file is supported. Make sure the link is publicly accessible.</p>
         </div>
 
         {videoUrl && (
