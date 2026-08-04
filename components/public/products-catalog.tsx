@@ -105,40 +105,40 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
   }), [products, query, category]);
 
   return (
-    <section className="min-h-screen bg-[var(--wc-bg)] text-on-surface pt-32 pb-24 relative overflow-hidden">
+    <section className="relative min-h-screen overflow-hidden bg-[var(--wc-bg)] pb-16 pt-24 text-on-surface md:pb-20 md:pt-28">
       {/* Background Effects */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),transparent)] pointer-events-none"></div>
 
       <div className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
         <FadeIn>
-          <div className="mb-12 max-w-3xl text-center mx-auto">
-            <div className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-2 text-xs font-bold tracking-widest text-[var(--wc-secondary)] uppercase">
+          <div className="mx-auto mb-8 max-w-2xl text-center md:mb-10">
+            <div className="mb-3 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--wc-secondary)]">
               <Icon name="diamond" className="text-sm" /> Digital Products
             </div>
-            <h1 className="mb-6 bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] bg-clip-text text-4xl font-black text-transparent md:text-5xl lg:text-6xl">
+            <h1 className="mb-3 bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] bg-clip-text text-3xl font-black leading-tight text-transparent md:text-4xl lg:text-5xl">
               Explore Our Premium Assets
             </h1>
-            <p className="text-lg text-[var(--wc-on-surface-variant)]">
+            <p className="text-sm leading-6 text-[var(--wc-on-surface-variant)] md:text-base">
               Discover robust tools, high-end templates, and complete software solutions engineered by our expert team.
             </p>
           </div>
         </FadeIn>
 
         <FadeIn>
-          <div className="mb-10 grid gap-4 md:grid-cols-[1fr_auto] items-center bg-[var(--wc-surface-low)] backdrop-blur-md border border-[var(--wc-outline-variant)] rounded-2xl p-4">
-            <div className="relative">
-              <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]" />
+          <div className="mb-7 flex flex-col gap-3 rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-3 shadow-sm backdrop-blur-md lg:flex-row lg:items-center">
+            <div className="relative shrink-0 lg:w-64 xl:w-72">
+              <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-[var(--wc-on-surface-variant)]" />
               <input
-                className="w-full bg-transparent pl-12 pr-4 py-3 text-on-surface placeholder-[#5B6B88] focus:outline-none focus:ring-2 focus:ring-[var(--wc-secondary)]/50 rounded-xl transition-all"
+                className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-bg)]/35 py-2.5 pl-10 pr-3 text-sm text-on-surface placeholder-[#5B6B88] transition-all focus:border-[var(--wc-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--wc-secondary)]/20"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search tools, templates, or assets..."
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 lg:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button
                 onClick={() => setCategory("all")}
-                className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all ${category === "all" ? "bg-[var(--wc-secondary)] text-on-primary shadow-glow" : "bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] text-[var(--wc-on-surface-variant)] hover:bg-[var(--wc-surface-low)]"}`}
+                className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all ${category === "all" ? "bg-[var(--wc-secondary)] text-on-primary shadow-glow" : "border border-[var(--wc-outline-variant)] bg-transparent text-[var(--wc-on-surface-variant)] hover:border-[var(--wc-secondary)]/40 hover:text-on-surface"}`}
               >
                 All
               </button>
@@ -146,7 +146,7 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
                 <button
                   key={item}
                   onClick={() => setCategory(item)}
-                  className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all ${category === item ? "bg-[var(--wc-secondary)] text-on-primary shadow-glow" : "bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] text-[var(--wc-on-surface-variant)] hover:bg-[var(--wc-surface-low)]"}`}
+                  className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all ${category === item ? "bg-[var(--wc-secondary)] text-on-primary shadow-glow" : "border border-[var(--wc-outline-variant)] bg-transparent text-[var(--wc-on-surface-variant)] hover:border-[var(--wc-secondary)]/40 hover:text-on-surface"}`}
                 >
                   {item}
                 </button>
@@ -164,34 +164,34 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
             </div>
           </FadeIn>
         ) : (
-          <StaggerContainer className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.05}>
+          <StaggerContainer className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" staggerDelay={0.05}>
             {filtered.map((product) => (
               <StaggerItem key={product.id}>
-                <article className="group flex h-full flex-col overflow-hidden rounded-3xl bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] transition-all duration-300 hover:-translate-y-2 hover:bg-[var(--wc-surface-low)] hover:border-[var(--wc-outline-variant)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-                  <div className="relative h-48 w-full bg-[var(--wc-surface-lowest)] overflow-hidden">
+                <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] transition-all duration-300 hover:-translate-y-1 hover:border-[var(--wc-secondary)]/35 hover:shadow-[0_16px_36px_rgba(0,0,0,0.18)]">
+                  <div className="relative h-40 w-full overflow-hidden bg-[var(--wc-surface-lowest)] md:h-44">
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--wc-bg)] to-transparent z-10 opacity-60"></div>
                     {(product.image_cdn_url ?? product.image_url) ? (
                       <Image src={normalizeImageUrl(product.image_cdn_url ?? product.image_url ?? "") ?? product.image_cdn_url ?? product.image_url ?? ""} alt={product.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" unoptimized className="object-contain transition-transform duration-700 group-hover:scale-110" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-[var(--wc-on-surface-variant)]"><Icon name="code_blocks" className="text-6xl opacity-20" /></div>
                     )}
-                    <div className="absolute top-4 right-4 z-20">
+                    <div className="absolute right-3 top-3 z-20">
                       <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider shadow-lg ${badgeTone[product.badge] ?? "bg-slate-800 text-slate-300 border border-slate-700"}`}>
                         {product.badge}
                       </span>
                     </div>
-                    {product.video_url ? <span className="absolute bottom-4 left-4 z-20 inline-flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white"><Icon name="play_circle" className="text-sm" /> Video</span> : null}
+                    {product.video_url ? <span className="absolute bottom-3 left-3 z-20 inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white"><Icon name="play_circle" className="text-sm" /> Video</span> : null}
                   </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <div className="mb-3">
+                  <div className="flex flex-1 flex-col p-5">
+                    <div className="mb-2.5">
                       <span className="rounded-md bg-[var(--wc-primary)]/50 border border-[var(--wc-primary)] px-2.5 py-1 text-[10px] font-bold text-[var(--wc-on-surface-variant)] uppercase tracking-wider">
                         {category === "Branding" && product.show_in_branding ? "Branding" : product.category}
                       </span>
                     </div>
-                    <h3 className="mb-3 text-xl font-bold text-on-surface transition-colors group-hover:text-[var(--wc-secondary)] line-clamp-2">{product.name}</h3>
-                    <p className="mb-6 line-clamp-3 text-sm text-[var(--wc-on-surface-variant)] flex-1">{product.short_description ?? "No description available for this premium asset."}</p>
-                    <button onClick={() => setSelected(product)} className="w-full rounded-xl bg-[var(--wc-surface-low)] py-3 text-sm font-bold text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary">
-                      View Details
+                    <h3 className="mb-2 line-clamp-2 text-lg font-bold leading-snug text-on-surface transition-colors group-hover:text-[var(--wc-secondary)]">{product.name}</h3>
+                    <p className="mb-4 line-clamp-2 flex-1 text-sm leading-5 text-[var(--wc-on-surface-variant)]">{product.short_description ?? "No description available for this premium asset."}</p>
+                    <button onClick={() => setSelected(product)} className="flex w-full items-center justify-center gap-1 rounded-lg border border-[var(--wc-outline-variant)] bg-transparent py-2.5 text-xs font-bold text-on-surface transition-all hover:border-[var(--wc-secondary)] hover:bg-[var(--wc-secondary)] hover:text-on-primary">
+                      View Details <Icon name="arrow_forward" className="text-base" />
                     </button>
                   </div>
                 </article>
