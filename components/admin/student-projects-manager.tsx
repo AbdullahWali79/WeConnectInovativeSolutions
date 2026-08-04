@@ -120,6 +120,7 @@ export function StudentProjectsManager() {
     }).eq("id", row.id);
     setBusy(null);
     if (error) return setToast({ type: "error", message: error.message });
+    setExpandedIds((current) => current.filter((id) => id !== row.id));
     setToast({
       type: "success",
       message: status === "revision_required"
