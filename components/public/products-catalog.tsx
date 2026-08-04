@@ -182,14 +182,8 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
                     </div>
                     {product.video_url ? <span className="absolute bottom-3 left-3 z-20 inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white"><Icon name="play_circle" className="text-sm" /> Video</span> : null}
                   </div>
-                  <div className="flex flex-1 flex-col p-5">
-                    <div className="mb-2.5">
-                      <span className="rounded-md bg-[var(--wc-primary)]/50 border border-[var(--wc-primary)] px-2.5 py-1 text-[10px] font-bold text-[var(--wc-on-surface-variant)] uppercase tracking-wider">
-                        {category === "Branding" && product.show_in_branding ? "Branding" : product.category}
-                      </span>
-                    </div>
-                    <h3 className="mb-2 line-clamp-2 text-lg font-bold leading-snug text-on-surface transition-colors group-hover:text-[var(--wc-secondary)]">{product.name}</h3>
-                    <p className="mb-4 line-clamp-2 flex-1 text-sm leading-5 text-[var(--wc-on-surface-variant)]">{product.short_description ?? "No description available for this premium asset."}</p>
+                  <div className="flex flex-1 flex-col p-4">
+                    <h3 className="mb-4 line-clamp-2 min-h-12 text-lg font-bold leading-snug text-on-surface transition-colors group-hover:text-[var(--wc-secondary)]">{product.name}</h3>
                     <button onClick={() => setSelected(product)} className="flex w-full items-center justify-center gap-1 rounded-lg border border-[var(--wc-outline-variant)] bg-transparent py-2.5 text-xs font-bold text-on-surface transition-all hover:border-[var(--wc-secondary)] hover:bg-[var(--wc-secondary)] hover:text-on-primary">
                       View Details <Icon name="arrow_forward" className="text-base" />
                     </button>
