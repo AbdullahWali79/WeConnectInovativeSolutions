@@ -72,6 +72,7 @@ export function StudentProjectsManager() {
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [drafts, setDrafts] = useState<Record<string, ProductDraft>>({});
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -195,12 +196,25 @@ export function StudentProjectsManager() {
     { value: "published", label: "Published", count: rows.filter((row) => Boolean(row.promoted_product_id)).length },
     { value: "rejected", label: "Rejected", count: rows.filter((row) => row.status === "rejected").length },
   ];
-  const visible = rows.filter((row) => {
-    if (filter === "all") return true;
-    if (filter === "published") return Boolean(row.promoted_product_id);
-    if (filter === "approved") return row.status === "approved" && !row.promoted_product_id;
-    return row.status === filter;
-  });
+  const visible = rows
+    .filter((row) => {
+      if (filter === "published") return Boolean(row.promoted_product_id);
+      if (filter === "approved") return row.status === "approved" && !row.promoted_product_id;
+      return filter === "all" || row.status === filter;
+    })
+    .filter((row) => {
+      const query = search.trim().toLocaleLowerCase();
+      if (!query) return true;
+      const student = names.get(row.student_id);
+      return [row.title, row.category, row.status, student?.full_name, student?.email]
+        .some((value) => value?.toLocaleLowerCase().includes(query));
+    })
+    .sort((a, b) => {
+      if (filter !== "approved") return 0;
+      const aReviewed = a.reviewed_at ? new Date(a.reviewed_at).getTime() : 0;
+      const bReviewed = b.reviewed_at ? new Date(b.reviewed_at).getTime() : 0;
+      return bReviewed - aReviewed;
+    });
 
   function toggleExpanded(row: StudentProject) {
     setExpandedIds((current) => current.includes(row.id) ? current.filter((item) => item !== row.id) : [...current, row.id]);
@@ -217,6 +231,18 @@ export function StudentProjectsManager() {
         {option.label} <span className="rounded-full bg-current/10 px-2 py-0.5 text-xs">{option.count}</span>
       </button>)}
     </div>
+
+    <label className="relative block max-w-xl">
+      <span className="sr-only">Search projects in the selected tab</span>
+      <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+      <input
+        type="search"
+        className="wc-input pl-12"
+        placeholder="Search by project, student, email, or category..."
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
+    </label>
 
     <div className="grid gap-4">
       {visible.length ? visible.map((row) => {
