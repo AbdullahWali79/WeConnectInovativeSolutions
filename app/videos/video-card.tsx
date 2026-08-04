@@ -3,19 +3,20 @@
 import { useState, useEffect } from "react";
 import { Icon } from "@/components/icon";
 import { ProductVideoPreview } from "@/components/product-video-preview";
+import { getGoogleDriveThumbnailUrl, getPlayableVideoUrl, getYouTubeThumbnailUrl } from "@/lib/promo-media";
 
 type VideoCardProps = {
   video: {
     id: string;
     title: string;
-    description: string | null;
     video_url: string;
-    student: unknown;
   };
 };
 
 export function VideoCard({ video }: VideoCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const imageThumbnail = getYouTubeThumbnailUrl(video.video_url) ?? getGoogleDriveThumbnailUrl(video.video_url);
+  const playableVideoUrl = getPlayableVideoUrl(video.video_url);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -41,41 +42,24 @@ export function VideoCard({ video }: VideoCardProps) {
 
   return (
     <>
-      <div className="group relative flex flex-col overflow-hidden rounded-3xl bg-surface shadow-sm ring-1 ring-outline/10 transition-all hover:shadow-md hover:ring-primary/20">
-        <div className="flex flex-1 flex-col p-6">
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <h3 className="text-xl font-bold text-on-surface line-clamp-2 group-hover:text-primary transition-colors">
-              {video.title}
-            </h3>
-          </div>
-          
-          {video.description && (
-            <p className="mb-6 text-sm text-on-surface-variant line-clamp-3">
-              {video.description}
-            </p>
+      <article className="group overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-outline/10 transition hover:-translate-y-1 hover:shadow-lg hover:ring-primary/30">
+        <button type="button" onClick={() => setIsModalOpen(true)} className="relative block aspect-video w-full overflow-hidden bg-slate-950 text-left" aria-label={`Play ${video.title}`}>
+          {imageThumbnail ? (
+            <span className="absolute inset-0 bg-cover bg-center transition duration-300 group-hover:scale-105" style={{ backgroundImage: `url(${JSON.stringify(imageThumbnail).slice(1, -1)})` }} />
+          ) : playableVideoUrl ? (
+            <video className="h-full w-full object-cover" src={playableVideoUrl} muted playsInline preload="metadata" />
+          ) : (
+            <span className="absolute inset-0 bg-gradient-to-br from-primary/70 to-slate-950" />
           )}
-
-          <div className="mt-auto border-t border-outline/10 pt-4">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                {(((video.student as unknown) as { full_name: string | null })?.full_name || "S")[0].toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-on-surface">{((video.student as unknown) as { full_name: string | null })?.full_name || "Student"}</p>
-                <p className="text-xs text-on-surface-variant">WeConnect Student</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition hover:brightness-110"
-            >
-              <Icon name="play_arrow" className="text-[20px]" />
-              Watch Video
-            </button>
-          </div>
-        </div>
-      </div>
+          <span className="absolute inset-0 bg-black/10 transition group-hover:bg-black/25" />
+          <span className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-primary shadow-lg transition group-hover:scale-110">
+            <Icon name="play_arrow" className="text-2xl" />
+          </span>
+        </button>
+        <button type="button" onClick={() => setIsModalOpen(true)} className="block min-h-16 w-full p-3 text-left">
+          <h3 className="line-clamp-2 text-sm font-bold leading-5 text-on-surface transition-colors group-hover:text-primary">{video.title}</h3>
+        </button>
+      </article>
 
       {isModalOpen && (
         <div 

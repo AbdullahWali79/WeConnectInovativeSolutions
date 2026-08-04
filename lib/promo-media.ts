@@ -29,6 +29,11 @@ export function getYouTubeEmbedUrl(value: string | null | undefined) {
   return videoId ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}` : null;
 }
 
+export function getYouTubeThumbnailUrl(value: string | null | undefined) {
+  const videoId = getYouTubeVideoId(value);
+  return videoId ? `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg` : null;
+}
+
 export function getGoogleDriveFileId(value: string | null | undefined) {
   if (!value) return null;
 
@@ -47,6 +52,27 @@ export function getGoogleDriveFileId(value: string | null | undefined) {
 export function getGoogleDrivePreviewUrl(value: string | null | undefined) {
   const fileId = getGoogleDriveFileId(value);
   return fileId ? `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview` : null;
+}
+
+export function getGoogleDriveThumbnailUrl(value: string | null | undefined) {
+  const fileId = getGoogleDriveFileId(value);
+  return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1000` : null;
+}
+
+export type VideoSource = "youtube" | "google-drive" | "github" | "direct" | "other";
+
+export function getVideoSource(value: string | null | undefined): VideoSource {
+  if (getYouTubeVideoId(value)) return "youtube";
+  if (getGoogleDriveFileId(value)) return "google-drive";
+
+  try {
+    const hostname = new URL(value?.trim() || "").hostname.replace(/^www\./, "").toLowerCase();
+    if (hostname === "github.com" || hostname === "raw.githubusercontent.com") return "github";
+  } catch {
+    return "other";
+  }
+
+  return isDirectVideoUrl(value) ? "direct" : "other";
 }
 
 export function getPlayableVideoUrl(value: string | null | undefined) {

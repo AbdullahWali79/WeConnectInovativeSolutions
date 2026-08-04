@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/public/public-header";
 import { Icon } from "@/components/icon";
-import { VideoCard } from "./video-card";
+import { VideoGallery } from "./video-gallery";
 
 export const metadata = {
   title: "Student Videos - WeConnect",
@@ -46,11 +46,7 @@ export default async function PublicVideosPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {videos.map((video) => (
-                <VideoCard key={video.id} video={video} />
-              ))}
-            </div>
+            <VideoGallery videos={videos.map((video) => ({ id: video.id, title: video.title, video_url: video.video_url }))} />
           )}
         </div>
       </main>
