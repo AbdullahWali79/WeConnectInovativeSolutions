@@ -20,7 +20,6 @@ export default function LoginPage() {
   );
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [showApplyNow, setShowApplyNow] = useState(false);
   const clearToast = useCallback(() => setToast(null), []);
 
   function updateField(name: keyof typeof form, value: string) {
@@ -47,7 +46,6 @@ export default function LoginPage() {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setShowApplyNow(false);
 
     const email = form.email.trim().toLowerCase();
 
@@ -68,7 +66,6 @@ export default function LoginPage() {
 
     if (error) {
       setToast({ type: "error", message: error.message });
-      setShowApplyNow(error.message.toLowerCase().includes("invalid login credentials"));
       return;
     }
 
@@ -142,19 +139,17 @@ export default function LoginPage() {
               {loading ? "WORKING..." : "SIGN IN"}
             </button>
 
-            {showApplyNow ? (
-              <div className="rounded-2xl border border-[var(--wc-secondary)]/40 bg-[var(--wc-secondary)]/10 p-4 text-center">
-                <p className="text-sm text-[var(--wc-on-surface-variant)]">
-                  Don&apos;t have an approved student account yet? Submit your application first.
-                </p>
-                <Link
-                  href="/apply"
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-secondary)] bg-[var(--wc-surface-lowest)] px-5 py-3 text-sm font-black text-[var(--wc-secondary)] transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary"
-                >
-                  <Icon name="send" className="text-lg" /> APPLY NOW
-                </Link>
-              </div>
-            ) : null}
+            <div className="rounded-2xl border border-[var(--wc-secondary)]/40 bg-[var(--wc-secondary)]/10 p-4 text-center">
+              <p className="text-sm text-[var(--wc-on-surface-variant)]">
+                Don&apos;t have a student account? Apply first and choose your login password.
+              </p>
+              <Link
+                href="/apply"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-secondary)] bg-[var(--wc-surface-lowest)] px-5 py-3 text-sm font-black text-[var(--wc-secondary)] transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary"
+              >
+                <Icon name="send" className="text-lg" /> APPLY NOW
+              </Link>
+            </div>
           </form>
         </section>
       </div>
