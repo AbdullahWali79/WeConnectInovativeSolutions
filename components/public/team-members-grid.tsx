@@ -214,6 +214,47 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
           </select>
         </div>
 
+        {/* Leadership cards */}
+        <div className="mx-auto mb-20 grid max-w-4xl gap-8 sm:grid-cols-2">
+          <div className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
+            <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
+              <Icon name="person" className="text-5xl" />
+            </div>
+            <h2 className="text-xl font-bold">Dr. Hammad Habib Qazi</h2>
+            <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Founder &amp; CEO</p>
+            <p className="mt-4 flex-grow text-sm text-[var(--wc-on-surface-variant)]">
+              Leading the vision and strategy for digital excellence and innovation.
+            </p>
+            <div className="mt-6 flex w-full flex-col gap-3">
+              <a href="tel:03217726944" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
+                <Icon name="call" className="text-[18px]" /> 0321 772 6944
+              </a>
+              <a href="https://www.linkedin.com/in/hummad-h-qazi-01bb8662/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
+                <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> Connect on LinkedIn
+              </a>
+            </div>
+          </div>
+
+          <div className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
+            <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
+              <Icon name="manage_accounts" className="text-5xl" />
+            </div>
+            <h2 className="text-xl font-bold">Muhammad Abdullah</h2>
+            <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Manager</p>
+            <p className="mt-4 flex-grow text-sm text-[var(--wc-on-surface-variant)]">
+              Overseeing operations, product development, and ensuring client success.
+            </p>
+            <div className="mt-6 flex w-full flex-col gap-3">
+              <a href="tel:03046983794" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
+                <Icon name="call" className="text-[18px]" /> 0304 698 3794
+              </a>
+              <a href="https://www.linkedin.com/in/abdullahwale/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
+                <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> Connect on LinkedIn
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* 3D Coverflow Carousel */}
         {filtered.length === 0 ? (
           <div className="bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] rounded-3xl p-12 text-center max-w-2xl mx-auto mt-8">
