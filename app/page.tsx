@@ -154,69 +154,6 @@ export default async function LandingPage() {
         <ProductShowcaseCarousel products={products} totalCount={productCount} />
       </div>
 
-      {/* Leadership / Team Section */}
-      <section className="bg-[var(--wc-surface)] py-16 sm:py-24" style={{ color: "var(--wc-on-surface)" }}>
-        <div className="homepage-wide-container">
-          <div className="mx-auto mb-12 max-w-3xl text-center">
-            <FadeIn>
-              <div className="wc-section-label mb-4">
-                <Icon name="groups" className="text-sm" /> Our Team
-              </div>
-              <h2 className="text-3xl font-extrabold sm:text-4xl lg:text-5xl">
-                Meet Our Leadership
-              </h2>
-              <p className="mt-4 text-base text-[var(--wc-on-surface-variant)] sm:text-lg">
-                The experts driving innovation and excellence at We Connect Innovative Solutions.
-              </p>
-            </FadeIn>
-          </div>
-
-          <div className="mx-auto grid max-w-4xl gap-8 sm:grid-cols-2">
-            <FadeIn delay={100}>
-              <div className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
-                <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
-                   <Icon name="person" className="text-5xl" />
-                </div>
-                <h3 className="text-xl font-bold">Dr. Hammad Habib Qazi</h3>
-                <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Founder & CEO</p>
-                <p className="mt-4 text-sm text-[var(--wc-on-surface-variant)] flex-grow">
-                  Leading the vision and strategy for digital excellence and innovation.
-                </p>
-                <div className="mt-6 flex w-full flex-col gap-3">
-                  <a href="tel:03217726944" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
-                    <Icon name="call" className="text-[18px]" /> 0321 772 6944
-                  </a>
-                  <a href="https://www.linkedin.com/in/hummad-h-qazi-01bb8662/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
-                    <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> Connect on LinkedIn
-                  </a>
-                </div>
-              </div>
-            </FadeIn>
-
-            <FadeIn delay={200}>
-              <div className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
-                <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
-                   <Icon name="manage_accounts" className="text-5xl" />
-                </div>
-                <h3 className="text-xl font-bold">Muhammad Abdullah</h3>
-                <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Manager</p>
-                <p className="mt-4 text-sm text-[var(--wc-on-surface-variant)] flex-grow">
-                  Overseeing operations, product development, and ensuring client success.
-                </p>
-                <div className="mt-6 flex w-full flex-col gap-3">
-                  <a href="tel:03046983794" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
-                    <Icon name="call" className="text-[18px]" /> 0304 698 3794
-                  </a>
-                  <a href="https://www.linkedin.com/in/abdullahwale/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
-                    <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> Connect on LinkedIn
-                  </a>
-                </div>
-              </div>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
-
       {/* Final Agency CTA */}
       <section className="relative overflow-hidden py-24 text-center" style={{ backgroundColor: "var(--wc-surface)", color: "var(--wc-on-surface)" }}>
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.8)_0%,transparent_100%)] bg-[length:24px_24px] [background-image:radial-gradient(#ffffff_1px,transparent_1px)]"></div>
