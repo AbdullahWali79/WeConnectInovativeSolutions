@@ -17,7 +17,7 @@ import {
   requireAdminOnly,
   requirePermission,
 } from "@/lib/admin-access";
-import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, ClientHuntLead, Course, CourseTopic, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, SoftwareHouse, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
+import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, ClientHuntLead, Course, CourseTopic, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, ProgressReport, SoftwareHouse, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
 import { internshipLetterSchema, type InternshipLetterFormValues } from "@/lib/validations/internship-letter";
 import type { BrandingSettingsInput } from "@/lib/branding-settings";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
@@ -481,14 +481,15 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
   const allActiveStudentIds = Array.from(new Set(activeEnrollments.map((enrollment) => enrollment.student_id)));
   const allCourseIds = Array.from(new Set(activeEnrollments.map((enrollment) => enrollment.course_id)));
 
-  const [studentResult, courseResult, taskResult, submissionResult] = await Promise.all([
+  const [studentResult, courseResult, taskResult, submissionResult, progressReportResult] = await Promise.all([
     supabaseAdmin.from("profiles").select("*").in("id", allActiveStudentIds),
     supabaseAdmin.from("courses").select("*").in("id", allCourseIds),
     supabaseAdmin.from("tasks").select("*").in("student_id", allActiveStudentIds).in("course_id", allCourseIds).order("created_at", { ascending: false }),
     supabaseAdmin.from("submissions").select("*").in("student_id", allActiveStudentIds).order("submitted_at", { ascending: false }),
+    supabaseAdmin.from("progress_reports").select("*").in("student_id", allActiveStudentIds).in("course_id", allCourseIds),
   ]);
 
-  const error = studentResult.error ?? courseResult.error ?? taskResult.error ?? submissionResult.error;
+  const error = studentResult.error ?? courseResult.error ?? taskResult.error ?? submissionResult.error ?? progressReportResult.error;
   if (error) {
     throw new Error(error.message);
   }
@@ -500,6 +501,7 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
   );
   const activeTaskIds = new Set(tasks.map((task) => task.id));
   const submissions = ((submissionResult.data ?? []) as Submission[]).filter((submission) => activeTaskIds.has(submission.task_id));
+  const progressReports = (progressReportResult.data ?? []) as ProgressReport[];
   const clientHuntLeads = (clientHuntLeadsData ?? []) as ClientHuntLead[];
 
   const studentById = new Map(students.map((student) => [student.id, student]));
@@ -612,6 +614,22 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
     reviewedTaskCountByStudent.set(detail.studentId, (reviewedTaskCountByStudent.get(detail.studentId) ?? 0) + 1);
   }
 
+  // The admin can explicitly save a student's completed-task total in Progress.
+  // That summary is the canonical number shown across progress/completion screens.
+  // Use it here too, otherwise analytics can show a lower count when older reviewed
+  // tasks are outside the student's current active paid enrollment.
+  const paidEnrollmentKeys = new Set(
+    paidActiveEnrollments.map((enrollment) => `${enrollment.student_id}:${enrollment.course_id}`),
+  );
+  const savedCompletedTaskCountByStudent = new Map<string, number>();
+  for (const report of progressReports) {
+    if (!paidEnrollmentKeys.has(`${report.student_id}:${report.course_id}`)) continue;
+    savedCompletedTaskCountByStudent.set(
+      report.student_id,
+      (savedCompletedTaskCountByStudent.get(report.student_id) ?? 0) + Math.max(0, Number(report.completed_tasks ?? 0)),
+    );
+  }
+
   const approvedClientHuntCountByStudent = new Map<string, number>();
   for (const lead of clientHuntLeads) {
     if (lead.status !== "approved") continue;
@@ -624,7 +642,9 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
       studentName: student.studentName,
       email: student.email,
       paidFeesCount: paidFeeCountByStudent.get(student.studentId) ?? 0,
-      tasksCompletedCount: reviewedTaskCountByStudent.get(student.studentId) ?? 0,
+      tasksCompletedCount: savedCompletedTaskCountByStudent.get(student.studentId)
+        ?? reviewedTaskCountByStudent.get(student.studentId)
+        ?? 0,
       clientHuntsDoneCount: approvedClientHuntCountByStudent.get(student.studentId) ?? 0,
     }))
     .sort((first, second) => first.studentName.localeCompare(second.studentName));
@@ -738,7 +758,7 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
   return {
     totalActiveStudents: uniqueCount(paidActiveStudentIds),
     todaySubmittedCount: uniqueCount(todaySubmittedStudents.map((detail) => detail.studentId)),
-    completedTasksCount: taskDetails.filter((detail) => detail.taskStatus === "reviewed").length,
+    completedTasksCount: studentWorkSummaries.reduce((total, student) => total + student.tasksCompletedCount, 0),
     pendingStudentsCount: uniqueCount(pendingStudents.map((detail) => detail.studentId)),
     paidFeeStudentsCount: paidFeeStudents.length,
     clientHuntingAssignedCount: uniqueCount(clientHuntingAssignedStudents.map((detail) => detail.studentId)),
