@@ -291,7 +291,10 @@ function toStudentTaskDetail({
     reviewedAt: submission?.reviewed_at ?? null,
     status,
     feedback: submission?.feedback ?? null,
-    taskStatus: submission?.status ?? task?.status ?? null,
+    // Progress reports are calculated from tasks.status. Keep analytics/report-card
+    // counts on the same canonical status so an older/latest submission state does
+    // not make the admin report disagree with the student's progress summary.
+    taskStatus: task?.status ?? submission?.status ?? null,
   };
 }
 
