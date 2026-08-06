@@ -36,6 +36,9 @@ export default function LoginPage() {
     }
 
     if (profile.status !== "approved") {
+      // Password authentication can succeed before the profile access check.
+      // Clear that session so a deactivated student is never left signed in.
+      await supabase.auth.signOut();
       setToast({ type: "info", message: statusMessage(profile.status) });
       return;
     }

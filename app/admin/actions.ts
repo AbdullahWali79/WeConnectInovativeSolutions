@@ -1258,10 +1258,10 @@ export async function updateStudentStatus(studentId: string, status: Extract<Pro
     const supabase = createSupabaseServiceClient();
     const { data, error } = await supabase
       .from("profiles")
-      .update({
-        status,
-        admin_status: status === "approved" ? "approved" : "inactive",
-      })
+      // `status` is the authentication/access source of truth. Do not include
+      // `admin_status` here because older production databases may not have
+      // that optional lifecycle column yet.
+      .update({ status })
       .eq("id", studentId)
       .eq("role", "student")
       .select("*")
@@ -1313,7 +1313,7 @@ export async function setStudentLifecycleStatus(input: {
     if (input.status === "inactive") {
       const { error } = await supabase
         .from("profiles")
-        .update({ status: "rejected", admin_status: "inactive" })
+        .update({ status: "rejected" })
         .eq("id", input.studentId)
         .eq("role", "student");
 
@@ -1321,7 +1321,7 @@ export async function setStudentLifecycleStatus(input: {
     } else if (input.status === "approved") {
       const { error } = await supabase
         .from("profiles")
-        .update({ status: "approved", admin_status: "approved" })
+        .update({ status: "approved" })
         .eq("id", input.studentId)
         .eq("role", "student");
 
