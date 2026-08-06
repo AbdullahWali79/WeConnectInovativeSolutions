@@ -642,9 +642,10 @@ export async function getTaskAnalyticsDashboardData(): Promise<TaskAnalyticsDash
       studentName: student.studentName,
       email: student.email,
       paidFeesCount: paidFeeCountByStudent.get(student.studentId) ?? 0,
-      tasksCompletedCount: savedCompletedTaskCountByStudent.get(student.studentId)
-        ?? reviewedTaskCountByStudent.get(student.studentId)
-        ?? 0,
+      tasksCompletedCount: Math.max(
+        savedCompletedTaskCountByStudent.get(student.studentId) ?? 0,
+        reviewedTaskCountByStudent.get(student.studentId) ?? 0,
+      ),
       clientHuntsDoneCount: approvedClientHuntCountByStudent.get(student.studentId) ?? 0,
     }))
     .sort((first, second) => first.studentName.localeCompare(second.studentName));

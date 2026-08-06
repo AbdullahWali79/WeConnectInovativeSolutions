@@ -5,6 +5,9 @@ import { requirePermissionPage } from "@/lib/admin-access";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { AdminSignatureSettings } from "@/lib/supabase/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function TaskAnalyticsPage() {
   const access = await requirePermissionPage("/admin/task-analytics", "dashboard.view");
 
