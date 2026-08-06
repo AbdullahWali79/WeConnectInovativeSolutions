@@ -24,6 +24,7 @@ type StudentViewRow = StudentRow & {
   displayStatusLabel: string;
   feeSummaryLabel: string;
   latestFeeMonth: string | null;
+  hasSecondMonthFeePending: boolean;
 };
 
 function compareMonthKeysDesc(a: string, b: string) {
@@ -113,7 +114,7 @@ export function StudentsManager({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [studentListTab, setStudentListTab] = useState<"total" | "active" | "completed" | "inactive">("total");
+  const [studentListTab, setStudentListTab] = useState<"total" | "active" | "completed" | "inactive" | "second_month_pending">("total");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -181,6 +182,18 @@ export function StudentsManager({
       const records = (feeRecordsByStudentId.get(student.id) ?? []).sort((a, b) => compareMonthKeysDesc(a.month_key, b.month_key));
       const latestFee = records[0] ?? null;
       const hasFeeData = records.length > 0;
+      const recordsByCourse = records.reduce((map, fee) => {
+        const courseRecords = map.get(fee.course_id) ?? [];
+        courseRecords.push(fee);
+        map.set(fee.course_id, courseRecords);
+        return map;
+      }, new Map<string, StudentFeeRecord[]>());
+      const hasSecondMonthFeePending = [...recordsByCourse.values()].some((courseRecords) => {
+        const secondMonthRecord = [...courseRecords].sort((a, b) => a.month_key.localeCompare(b.month_key))[1];
+        return secondMonthRecord
+          ? secondMonthRecord.status === "pending" || secondMonthRecord.status === "partial" || secondMonthRecord.status === "overdue"
+          : false;
+      });
       let displayStatus: StudentViewRow["displayStatus"] = student.admin_status ?? "approved";
       if (!student.admin_status) {
         if (student.status === "rejected") {
@@ -200,6 +213,7 @@ export function StudentsManager({
         displayStatusLabel: getStudentStatusLabel(displayStatus),
         feeSummaryLabel: latestFee ? getFeeSummaryLabel(latestFee.status) : "Pending Fee",
         latestFeeMonth: latestFee?.month_key ?? null,
+        hasSecondMonthFeePending,
       };
     });
   }, [feeRecords, students]);
@@ -255,6 +269,10 @@ export function StudentsManager({
     [filteredStudents],
   );
   const inactiveStudents = useMemo(() => filteredStudents.filter((student) => student.displayStatus === "inactive"), [filteredStudents]);
+  const secondMonthPendingStudents = useMemo(
+    () => filteredStudents.filter((student) => student.hasSecondMonthFeePending && student.displayStatus !== "inactive" && student.displayStatus !== "completed"),
+    [filteredStudents],
+  );
   const totalStudents = filteredStudents;
   const visibleStudents =
     studentListTab === "active"
@@ -263,6 +281,8 @@ export function StudentsManager({
         ? completedStudents
       : studentListTab === "inactive"
         ? inactiveStudents
+        : studentListTab === "second_month_pending"
+          ? secondMonthPendingStudents
         : totalStudents;
 
   async function deleteStudent(student: Profile) {
@@ -608,6 +628,20 @@ export function StudentsManager({
                   {inactiveStudents.length}
                 </span>
               </button>
+              <button
+                type="button"
+                onClick={() => setStudentListTab("second_month_pending")}
+                className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                  studentListTab === "second_month_pending"
+                    ? "bg-amber-600 text-white shadow-sm"
+                    : "bg-transparent text-amber-800 hover:bg-amber-50"
+                }`}
+              >
+                2nd Month Fee Pending
+                <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] ${studentListTab === "second_month_pending" ? "bg-white/20" : "bg-amber-100 text-amber-800"}`}>
+                  {secondMonthPendingStudents.length}
+                </span>
+              </button>
             </div>
 
             {filteredStudents.length === 0 && filteredApplications.length === 0 ? (
@@ -655,7 +689,7 @@ export function StudentsManager({
                   />
                 ) : visibleStudents.length > 0 ? (
                   <StudentTable
-                    title={studentListTab === "active" ? "Active Students" : studentListTab === "completed" ? "Completed Students" : "Inactive Students"}
+                    title={studentListTab === "active" ? "Active Students" : studentListTab === "completed" ? "Completed Students" : studentListTab === "second_month_pending" ? "2nd Month Fee Pending Students" : "Inactive Students"}
                     students={visibleStudents}
                     projects={projects}
                     getStudentProgress={getStudentProgress}
@@ -688,7 +722,13 @@ export function StudentsManager({
                     canEditStudents={canEditStudents}
                     canDeleteStudents={canDeleteStudents}
                   />
-                ) : null}
+                ) : (
+                  <EmptyState
+                    title={studentListTab === "second_month_pending" ? "No second-month fees pending" : "No students in this tab"}
+                    description={studentListTab === "second_month_pending" ? "Students will appear here when their second monthly fee record is pending, partial, or overdue." : "No students currently match this category and the selected filters."}
+                    icon={studentListTab === "second_month_pending" ? "payments" : "groups"}
+                  />
+                )}
               </>
             )}
           </div>
