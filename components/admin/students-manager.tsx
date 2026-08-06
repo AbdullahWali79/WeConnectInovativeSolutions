@@ -184,18 +184,13 @@ export function StudentsManager({
       const records = (feeRecordsByStudentId.get(student.id) ?? []).sort((a, b) => compareMonthKeysDesc(a.month_key, b.month_key));
       const latestFee = records[0] ?? null;
       const hasFeeData = records.length > 0;
-      const recordsByCourse = records.reduce((map, fee) => {
-        const courseRecords = map.get(fee.course_id) ?? [];
-        courseRecords.push(fee);
-        map.set(fee.course_id, courseRecords);
-        return map;
-      }, new Map<string, StudentFeeRecord[]>());
-      const hasSecondMonthFeePending = [...recordsByCourse.values()].some((courseRecords) => {
-        const secondMonthRecord = [...courseRecords].sort((a, b) => a.month_key.localeCompare(b.month_key))[1];
-        return secondMonthRecord
-          ? secondMonthRecord.status === "pending" || secondMonthRecord.status === "partial" || secondMonthRecord.status === "overdue"
-          : false;
-      });
+      // A student becomes active after the initial fee cycle. Therefore an
+      // unpaid latest fee record for an active student is the pending next
+      // (second) cycle, even when the initial payment was not saved as a
+      // separate student_fee_records row.
+      const hasSecondMonthFeePending = Boolean(
+        latestFee && ["pending", "partial", "overdue"].includes(latestFee.status),
+      );
       let displayStatus: StudentViewRow["displayStatus"] = student.admin_status ?? "approved";
       if (!student.admin_status) {
         if (student.status === "rejected") {
@@ -272,7 +267,7 @@ export function StudentsManager({
   );
   const inactiveStudents = useMemo(() => filteredStudents.filter((student) => student.displayStatus === "inactive"), [filteredStudents]);
   const secondMonthPendingStudents = useMemo(
-    () => filteredStudents.filter((student) => student.hasSecondMonthFeePending && student.displayStatus !== "inactive" && student.displayStatus !== "completed"),
+    () => filteredStudents.filter((student) => student.hasSecondMonthFeePending && student.displayStatus === "active"),
     [filteredStudents],
   );
   const totalStudents = filteredStudents;
