@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
@@ -74,6 +75,7 @@ export function StudentsManager({
   currentRole?: Profile["role"];
   permissions?: PermissionKey[];
 }) {
+  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const canEditStudents = currentRole === "admin" || permissions.includes("students.edit");
   const canDeleteStudents = currentRole === "admin";
@@ -445,8 +447,25 @@ export function StudentsManager({
     const confirmed = confirm(`Set ${student.full_name ?? student.email ?? "this student"} to ${nextStatus}?`);
     if (!confirmed) return;
 
+    // Refresh the browser session before invoking the protected server action.
+    // This also updates the auth cookies read by the server action.
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshed.session) {
+        setToast({ type: "error", message: "Your admin session expired. Please sign in again to continue." });
+        router.push("/login?next=/admin/students&message=session_expired");
+        return;
+      }
+    }
+
     const result = await setStudentLifecycleStatus({ studentId: student.id, status: nextStatus });
     if (!result.success) {
+      if (result.error?.toLowerCase().includes("session has expired")) {
+        await supabase.auth.signOut();
+        router.push("/login?next=/admin/students&message=session_expired");
+        return;
+      }
       setToast({ type: "error", message: result.error ?? "Failed to update student lifecycle status." });
       return;
     }

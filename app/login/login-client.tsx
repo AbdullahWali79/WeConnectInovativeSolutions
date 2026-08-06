@@ -161,6 +161,7 @@ export default function LoginPage() {
 }
 
 function statusMessage(status: string) {
+  if (status === "session_expired") return "Your session expired. Sign in again to continue.";
   if (status === "pending" || status === "profile_pending") return "Your profile is pending admin approval.";
   if (status === "rejected") return "Your application was rejected. Contact admin for clarification.";
   return "Continue after your account status is approved.";
