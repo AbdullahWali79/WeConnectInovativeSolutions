@@ -420,6 +420,7 @@ html[data-branding-scope="landing"][data-landing-palette="logo"] {
     gap: 30px;
     min-width: 0;
     flex: 1;
+    overflow: visible;
     transition: gap 0.24s ease;
   }
 
@@ -443,7 +444,25 @@ html[data-branding-scope="landing"][data-landing-palette="logo"] {
     font-weight: 800;
     line-height: 1;
     text-decoration: none;
+    white-space: nowrap;
     transition: color 0.22s ease;
+  }
+
+  .public-header-chevron {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s ease;
+  }
+
+  .public-header-chevron.is-expanded {
+    transform: rotate(180deg);
   }
 
   .public-header.is-scrolled .public-header-link {
@@ -529,6 +548,7 @@ html[data-branding-scope="landing"][data-landing-palette="logo"] {
     justify-content: flex-end;
     gap: 12px;
     min-width: 192px;
+    flex: 0 0 auto;
     transition: min-width 0.24s ease;
   }
 

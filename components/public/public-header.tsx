@@ -21,6 +21,18 @@ type NavCategory = {
   items?: NavItem[];
 };
 
+function HeaderChevron({ expanded = false, className = "" }: { expanded?: boolean; className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className={`public-header-chevron ${expanded ? "is-expanded" : ""} ${className}`}
+    >
+      <path d="m5.25 7.5 4.75 4.75 4.75-4.75" />
+    </svg>
+  );
+}
+
 const navCategories: NavCategory[] = [
   { label: "Services", href: "/services", path: "/services" },
   {
@@ -173,7 +185,7 @@ export function PublicHeader() {
             return (
               <div key={cat.label} className="group relative">
                 <button className={`public-header-link flex items-center gap-1 ${isActiveCategory ? "font-bold" : ""}`} style={isActiveCategory ? { color: "var(--wc-on-bg)" } : undefined}>
-                  {cat.label} <Icon name="expand_more" className="text-[16px] transition-transform group-hover:rotate-180" />
+                  {cat.label} <HeaderChevron className="group-hover:rotate-180" />
                 </button>
                 {/* Invisible bridge (pt-2) to prevent hover loss */}
                 <div className="absolute left-0 top-full hidden w-56 flex-col pt-2 group-hover:flex z-50">
@@ -256,7 +268,7 @@ export function PublicHeader() {
                   className="public-mobile-category-button"
                 >
                   {cat.label}
-                  <Icon name={isExpanded ? "expand_less" : "expand_more"} />
+                  <HeaderChevron expanded={isExpanded} />
                 </button>
                 {isExpanded && (
                   <div className="public-mobile-submenu">
