@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { LoadingState } from "@/components/loading-state";
 import { Icon } from "@/components/icon";
-import type { Course, Enrollment, ManualEnrollment, Profile, StudentFeeRecord, StudentProject, Submission, Task, Trainee } from "@/lib/supabase/types";
+import type { Course, Enrollment, ManualEnrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task, Trainee } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/public/animations";
 import { DEFAULT_TARGET_TASKS, deriveStudentProgressStatus, getCourseSignals, getProgressPercentage, isReviewedStatus, isRevisionRequiredStatus, isStartedStatus } from "@/lib/student-progress-status";
@@ -43,6 +43,7 @@ type TraineesBoardProps = {
   initialEnrollments: Enrollment[];
   initialManualEnrollments: ManualEnrollment[];
   initialProjects: StudentProject[];
+  initialReports: ProgressReport[];
 };
 
 function compareMonthKeysDesc(a: string, b: string) {
@@ -59,6 +60,7 @@ export function TraineesBoard({
   initialEnrollments,
   initialManualEnrollments,
   initialProjects,
+  initialReports,
 }: TraineesBoardProps) {
   const [trainees] = useState<Trainee[]>(initialTrainees);
   const [courses] = useState<Course[]>(initialCourses);
@@ -69,6 +71,7 @@ export function TraineesBoard({
   const [enrollments] = useState<Enrollment[]>(initialEnrollments);
   const [manualEnrollments] = useState<ManualEnrollment[]>(initialManualEnrollments);
   const [projects] = useState<StudentProject[]>(initialProjects);
+  const [reports] = useState<ProgressReport[]>(initialReports);
   const [loading] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("active");
@@ -124,26 +127,6 @@ export function TraineesBoard({
       return map;
     }, new Map<string, Task[]>());
 
-    const reportsByStudentAndCourse = new Map<string, { tasks: Task[]; completed: number; pending: number; progress: number }>();
-    for (const [studentId, studentTasks] of reportsByStudentId.entries()) {
-      const taskByCourse = new Map<string, Task[]>();
-      for (const task of studentTasks) {
-        const current = taskByCourse.get(task.course_id) ?? [];
-        current.push(task);
-        taskByCourse.set(task.course_id, current);
-      }
-
-      for (const [courseId, courseTasks] of taskByCourse.entries()) {
-        const completed = courseTasks.filter((task) => {
-          const submissionStatus = submissionByTaskId.get(task.id)?.status;
-          return isReviewedStatus(task.status) || isReviewedStatus(submissionStatus);
-        }).length;
-        const pending = Math.max(courseTasks.length - completed, 0);
-        const progress = courseTasks.length > 0 ? Math.min(100, Math.round((completed / DEFAULT_TARGET_TASKS) * 100)) : 0;
-        reportsByStudentAndCourse.set(`${studentId}:${courseId}`, { tasks: courseTasks, completed, pending, progress });
-      }
-    }
-
     const profileRows = students
       .filter((student) => student.role === "student")
       .map((student) => {
@@ -159,17 +142,22 @@ export function TraineesBoard({
           [...records].sort((a, b) => compareMonthKeysDesc(a.month_key, b.month_key))[0]?.course_id ??
           tasks.find((task) => task.student_id === student.id)?.course_id ??
           null;
-        const allStudentTasks = reportsByStudentId.get(student.id) ?? [];
+
+        const report = selectedCourseId ? reports.find((r) => r.student_id === student.id && r.course_id === selectedCourseId) : reports.find((r) => r.student_id === student.id);
+        const courseTasks = selectedCourseId ? tasks.filter((task) => task.student_id === student.id && task.course_id === selectedCourseId && task.workflow_type !== "daily") : [];
         
-        const totalTasks = allStudentTasks.length > 0 ? allStudentTasks.length : (trainee?.assigned_tasks ?? 0);
+        const targetTasks = report?.target_tasks ?? latestEnrollment?.target_tasks ?? (trainee?.assigned_tasks > 0 ? trainee.assigned_tasks : DEFAULT_TARGET_TASKS);
         
-        const completedTasks = allStudentTasks.length > 0 
-          ? allStudentTasks.filter((task) => {
+        const reviewedTasks = report?.completed_tasks ?? (courseTasks.length > 0 
+          ? courseTasks.filter((task) => {
               const submissionStatus = submissionByTaskId.get(task.id)?.status;
               return isReviewedStatus(task.status) || isReviewedStatus(submissionStatus);
             }).length
-          : (trainee?.completed_tasks ?? 0);
+          : (trainee?.completed_tasks ?? 0));
 
+        const pendingTasks = report?.pending_tasks ?? trainee?.pending_tasks ?? Math.max(targetTasks - reviewedTasks, 0);
+
+        const allStudentTasks = reportsByStudentId.get(student.id) ?? [];
         const revisionRequiredTasks = allStudentTasks.filter((task) => {
           const submissionStatus = submissionByTaskId.get(task.id)?.status;
           return isRevisionRequiredStatus(task.status) || isRevisionRequiredStatus(submissionStatus);
@@ -180,14 +168,11 @@ export function TraineesBoard({
           return isStartedStatus(task.status) || isStartedStatus(submissionStatus);
         }).length;
 
-        const completedProjects = projects.filter((p) => p.student_id === student.id && p.status === "approved").length;
-        const pendingTasks = trainee?.pending_tasks ?? Math.max(totalTasks - completedTasks, 0);
-        const reviewedTasks = completedTasks;
+        const completedProjects = projects.filter((p) => p.student_id === student.id && (selectedCourseId ? p.course_id === selectedCourseId : true)).length;
         
-        const targetTasks = trainee?.assigned_tasks > 0 ? Math.max(trainee.assigned_tasks, DEFAULT_TARGET_TASKS) : DEFAULT_TARGET_TASKS;
         const isCompletedEnrollment = latestEnrollment?.status === "completed";
         const completedWork = reviewedTasks + completedProjects;
-        const progressPercentage = getProgressPercentage({
+        const progressPercentage = report?.progress_percentage ?? latestEnrollment?.progress_percentage ?? getProgressPercentage({
           isCompletedEnrollment,
           reviewedTasks: completedWork,
           targetTasks,
@@ -202,8 +187,9 @@ export function TraineesBoard({
           startedTasks,
           targetTasks,
         });
-        const displayTotalTasks = derivedStatus === "completed" ? Math.max(totalTasks, targetTasks) : totalTasks;
-        const displayCompletedTasks = derivedStatus === "completed" ? displayTotalTasks : completedTasks;
+        
+        const displayTotalTasks = derivedStatus === "completed" ? Math.max(targetTasks, targetTasks) : targetTasks;
+        const displayCompletedTasks = derivedStatus === "completed" ? displayTotalTasks : reviewedTasks;
         const displayPendingTasks = derivedStatus === "completed" ? 0 : pendingTasks;
         const displayProgressPercentage = derivedStatus === "completed" ? 100 : progressPercentage;
 
@@ -237,17 +223,21 @@ export function TraineesBoard({
         const isBlocked = records.some((record) => record.blocked);
         const studentEnrollments = student ? enrollmentByStudentId.get(student.id) ?? [] : [];
         const latestEnrollment = studentEnrollments[0] ?? null;
-        const allStudentTasks = student ? (reportsByStudentId.get(student.id) ?? []) : [];
+        const report = (student && trainee.course_id) ? reports.find((r) => r.student_id === student.id && r.course_id === trainee.course_id) : (student ? reports.find((r) => r.student_id === student.id) : null);
+        const courseTasks = (student && trainee.course_id) ? tasks.filter((task) => task.student_id === student.id && task.course_id === trainee.course_id && task.workflow_type !== "daily") : [];
         
-        const totalTasks = allStudentTasks.length > 0 ? allStudentTasks.length : trainee.assigned_tasks;
+        const targetTasks = report?.target_tasks ?? latestEnrollment?.target_tasks ?? (trainee.assigned_tasks > 0 ? trainee.assigned_tasks : DEFAULT_TARGET_TASKS);
         
-        const completedTasks = allStudentTasks.length > 0 
-          ? allStudentTasks.filter((task) => {
+        const reviewedTasks = report?.completed_tasks ?? (courseTasks.length > 0 
+          ? courseTasks.filter((task) => {
               const submissionStatus = submissionByTaskId.get(task.id)?.status;
               return isReviewedStatus(task.status) || isReviewedStatus(submissionStatus);
             }).length
-          : trainee.completed_tasks;
+          : trainee.completed_tasks);
 
+        const pendingTasks = report?.pending_tasks ?? trainee.pending_tasks ?? Math.max(targetTasks - reviewedTasks, 0);
+
+        const allStudentTasks = student ? (reportsByStudentId.get(student.id) ?? []) : [];
         const revisionRequiredTasks = allStudentTasks.filter((task) => {
           const submissionStatus = submissionByTaskId.get(task.id)?.status;
           return isRevisionRequiredStatus(task.status) || isRevisionRequiredStatus(submissionStatus);
@@ -258,17 +248,14 @@ export function TraineesBoard({
           return isStartedStatus(task.status) || isStartedStatus(submissionStatus);
         }).length;
 
-        const completedProjects = student ? projects.filter((p) => p.student_id === student.id && p.status === "approved").length : 0;
-        const pendingTasks = trainee.pending_tasks ?? Math.max(totalTasks - completedTasks, 0);
-        const reviewedTasks = completedTasks;
+        const completedProjects = student ? projects.filter((p) => p.student_id === student.id && (trainee.course_id ? p.course_id === trainee.course_id : true)).length : 0;
         
-        const targetTasks = trainee.assigned_tasks > 0 ? Math.max(trainee.assigned_tasks, DEFAULT_TARGET_TASKS) : DEFAULT_TARGET_TASKS;
         const manualRecord = student && trainee.course_id
           ? manualEnrollmentByKey.get(`${student.email?.trim().toLowerCase() ?? ""}::${courseById.get(trainee.course_id)?.title.trim().toLowerCase() ?? ""}`)
           : null;
         const isCompletedEnrollment = latestEnrollment?.status === "completed" || Boolean(manualRecord?.completion_date);
         const completedWork = reviewedTasks + completedProjects;
-        const progressPercentage = getProgressPercentage({
+        const progressPercentage = report?.progress_percentage ?? latestEnrollment?.progress_percentage ?? getProgressPercentage({
           isCompletedEnrollment,
           reviewedTasks: completedWork,
           targetTasks,
@@ -282,8 +269,8 @@ export function TraineesBoard({
           startedTasks,
           targetTasks,
         });
-        const displayTotalTasks = derivedStatus === "completed" ? Math.max(totalTasks, targetTasks) : totalTasks;
-        const displayCompletedTasks = derivedStatus === "completed" ? displayTotalTasks : completedTasks;
+        const displayTotalTasks = derivedStatus === "completed" ? Math.max(targetTasks, targetTasks) : targetTasks;
+        const displayCompletedTasks = derivedStatus === "completed" ? displayTotalTasks : reviewedTasks;
         const displayPendingTasks = derivedStatus === "completed" ? 0 : pendingTasks;
         const displayProgressPercentage = derivedStatus === "completed" ? 100 : progressPercentage;
 

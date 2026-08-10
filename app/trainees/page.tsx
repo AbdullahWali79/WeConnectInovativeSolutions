@@ -1,7 +1,7 @@
 import { PublicHeader } from "@/components/public/public-header";
 import { TraineesBoard } from "@/components/public/trainees-board";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import type { Course, Enrollment, ManualEnrollment, Profile, StudentFeeRecord, StudentProject, Submission, Task, Trainee } from "@/lib/supabase/types";
+import type { Course, Enrollment, ManualEnrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task, Trainee } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,10 @@ export default async function TraineesPage() {
     supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
   ]);
 
-  const enrollmentResult = await supabase.from("enrollments").select("*").order("created_at", { ascending: false });
+  const [enrollmentResult, reportResult] = await Promise.all([
+    supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
+    supabase.from("progress_reports").select("*"),
+  ]);
 
   const trainees = (traineeResult.data ?? []) as Trainee[];
   const courses = (courseResult.data ?? []) as Course[];
@@ -33,6 +36,7 @@ export default async function TraineesPage() {
   const manualEnrollments = (manualResult.data ?? []) as ManualEnrollment[];
   const projects = (projectResult.data ?? []) as StudentProject[];
   const enrollments = (enrollmentResult.data ?? []) as Enrollment[];
+  const reports = (reportResult.data ?? []) as ProgressReport[];
 
   return (
     <main className="min-h-screen bg-[var(--wc-bg)] text-on-surface">
@@ -47,6 +51,7 @@ export default async function TraineesPage() {
         initialEnrollments={enrollments}
         initialManualEnrollments={manualEnrollments}
         initialProjects={projects}
+        initialReports={reports}
       />
     </main>
   );
