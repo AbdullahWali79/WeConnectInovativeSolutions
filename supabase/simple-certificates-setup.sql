@@ -12,11 +12,19 @@ create table if not exists public.simple_certificates (
   logo_url text,
   signatory_name text,
   signatory_title text,
+  primary_color text not null default '#1455d9',
+  secondary_color text not null default '#338ed8',
+  text_color text not null default '#244b5e',
   created_by uuid references auth.users(id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint simple_certificate_dates check (end_date >= start_date)
 );
+
+-- Safe to run again for projects where the table was created by an older version.
+alter table public.simple_certificates add column if not exists primary_color text not null default '#1455d9';
+alter table public.simple_certificates add column if not exists secondary_color text not null default '#338ed8';
+alter table public.simple_certificates add column if not exists text_color text not null default '#244b5e';
 
 create index if not exists simple_certificates_roll_idx on public.simple_certificates (roll_number);
 create index if not exists simple_certificates_student_idx on public.simple_certificates using gin (to_tsvector('simple', student_name));

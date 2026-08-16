@@ -645,6 +645,9 @@ export type SimpleCertificate = {
   logo_url: string | null;
   signatory_name: string | null;
   signatory_title: string | null;
+  primary_color: string;
+  secondary_color: string;
+  text_color: string;
   created_by: string | null;
   created_at: string;
   updated_at: string;
