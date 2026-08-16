@@ -17,7 +17,7 @@ import {
   requireAdminOnly,
   requirePermission,
 } from "@/lib/admin-access";
-import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, ClientHuntLead, Course, CourseTopic, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, ProgressReport, SoftwareHouse, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
+import type { AdminSignatureSettings, BrandingScope, BrandingSettingsSnapshot, ClientHuntLead, Course, CourseTopic, Enrollment, InternshipLetter, ManualEnrollment, ManualEnrollmentComment, Profile, ProfileStatus, ProgressReport, SimpleCertificate, SoftwareHouse, StudentFeeRecord, Submission, Task } from "@/lib/supabase/types";
 import { internshipLetterSchema, type InternshipLetterFormValues } from "@/lib/validations/internship-letter";
 import type { BrandingSettingsInput } from "@/lib/branding-settings";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
@@ -2476,6 +2476,41 @@ export async function deleteSoftwareHouse(id: string): Promise<ActionResult<null
   } catch (error) {
     return { success: false, data: null, error: actionError(error, "Failed to delete software house.") };
   }
+}
+
+export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title">;
+
+export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: string): Promise<ActionResult<SimpleCertificate>> {
+  try {
+    const profile = await requireAdminOnly();
+    const required = [input.roll_number, input.student_name, input.course_name, input.start_date, input.end_date, input.software_house_name];
+    if (required.some((value) => !value?.trim())) throw new Error("Please complete all required certificate fields.");
+    if (new Date(input.end_date) < new Date(input.start_date)) throw new Error("End date cannot be before start date.");
+    const payload = {
+      ...input,
+      roll_number: input.roll_number.trim(), student_name: input.student_name.trim(), course_name: input.course_name.trim(),
+      software_house_name: input.software_house_name.trim(), duration_weeks: Math.max(1, Number(input.duration_weeks) || 8),
+      software_house_id: input.software_house_id || null, logo_url: input.logo_url || null,
+      signatory_name: input.signatory_name?.trim() || null, signatory_title: input.signatory_title?.trim() || null,
+      created_by: profile.id,
+    };
+    const db = createSupabaseServiceClient();
+    const query = id ? db.from("simple_certificates").update(payload).eq("id", id) : db.from("simple_certificates").insert(payload);
+    const { data, error } = await query.select("*").single();
+    if (error || !data) throw new Error(error?.code === "23505" ? "This roll number already exists." : error?.message || "Certificate could not be saved.");
+    revalidatePath("/admin/simple-certificates");
+    return { success: true, data: data as SimpleCertificate, error: null };
+  } catch (error) { return { success: false, data: null, error: actionError(error, "Certificate could not be saved.") }; }
+}
+
+export async function deleteSimpleCertificate(id: string): Promise<ActionResult<null>> {
+  try {
+    await requireAdminOnly();
+    const { error } = await createSupabaseServiceClient().from("simple_certificates").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    revalidatePath("/admin/simple-certificates");
+    return { success: true, data: null, error: null };
+  } catch (error) { return { success: false, data: null, error: actionError(error, "Certificate could not be deleted.") }; }
 }
 
 export async function updateApplicationStatus(applicationId: string, action: "approve_application" | "reject_application"): Promise<ActionResult> {

@@ -632,6 +632,24 @@ export type CompletedStudentShowcase = {
   completed_at: string | null;
 };
 
+export type SimpleCertificate = {
+  id: string;
+  roll_number: string;
+  student_name: string;
+  course_name: string;
+  duration_weeks: number;
+  start_date: string;
+  end_date: string;
+  software_house_id: string | null;
+  software_house_name: string;
+  logo_url: string | null;
+  signatory_name: string | null;
+  signatory_title: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ClientHuntScenario = {
   id: string;
   title: string;
@@ -910,6 +928,12 @@ export type Database = {
         Row: CompletedStudent;
         Insert: Partial<CompletedStudent> & { student_id: string; course_id: string };
         Update: Partial<CompletedStudent>;
+        Relationships: [];
+      };
+      simple_certificates: {
+        Row: SimpleCertificate;
+        Insert: Partial<SimpleCertificate> & { roll_number: string; student_name: string; course_name: string; start_date: string; end_date: string; software_house_name: string };
+        Update: Partial<SimpleCertificate>;
         Relationships: [];
       };
       client_hunt_scenarios: {

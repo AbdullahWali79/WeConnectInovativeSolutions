@@ -1,0 +1,69 @@
+"use client";
+
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PageHeader } from "@/components/page-header";
+import { Icon } from "@/components/icon";
+import { Toast, type ToastState } from "@/components/toast";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import type { SimpleCertificate, SoftwareHouse } from "@/lib/supabase/types";
+import { deleteSimpleCertificate, saveSimpleCertificate, type SimpleCertificateInput } from "@/app/admin/actions";
+
+const today = () => new Date().toISOString().slice(0, 10);
+const plusWeeks = (date: string, weeks: number) => { const d = new Date(`${date}T12:00:00`); d.setDate(d.getDate() + weeks * 7); return d.toISOString().slice(0, 10); };
+const blank = (): SimpleCertificateInput => ({ roll_number: "", student_name: "", course_name: "", duration_weeks: 8, start_date: today(), end_date: plusWeeks(today(), 8), software_house_id: null, software_house_name: "", logo_url: null, signatory_name: "", signatory_title: "" });
+const pretty = (date: string) => new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
+
+export function SimpleCertificatesManager() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [rows, setRows] = useState<SimpleCertificate[]>([]); const [houses, setHouses] = useState<SoftwareHouse[]>([]);
+  const [form, setForm] = useState<SimpleCertificateInput>(blank()); const [editing, setEditing] = useState<string | undefined>();
+  const [search, setSearch] = useState(""); const [houseFilter, setHouseFilter] = useState(""); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(true); const [uploading, setUploading] = useState(false);
+  const [toast, setToast] = useState<ToastState>(null); const fileRef = useRef<HTMLInputElement>(null);
+  const update = <K extends keyof SimpleCertificateInput>(key: K, value: SimpleCertificateInput[K]) => setForm((old) => ({ ...old, [key]: value }));
+  const load = useCallback(async () => { setLoading(true); const [certs, companies] = await Promise.all([supabase.from("simple_certificates").select("*").order("created_at", { ascending: false }), supabase.from("software_houses").select("*").eq("is_active", true).order("display_order")]); if (certs.error) setToast({ type: "error", message: certs.error.message }); setRows((certs.data as SimpleCertificate[]) ?? []); setHouses((companies.data as SoftwareHouse[]) ?? []); setLoading(false); }, [supabase]);
+  useEffect(() => { void load(); }, [load]);
+  const filtered = rows.filter((r) => (!search || `${r.roll_number} ${r.student_name}`.toLowerCase().includes(search.toLowerCase())) && (!houseFilter || r.software_house_name === houseFilter));
+  const chooseHouse = (id: string) => { const h = houses.find((x) => x.id === id); setForm((f) => ({ ...f, software_house_id: h?.id ?? null, software_house_name: h?.name ?? "", logo_url: h?.logo_url ?? null })); };
+  async function uploadLogo(file: File) { if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) { setToast({ type: "error", message: "PNG, JPG, WebP or SVG logo up to 5 MB is allowed." }); return; } setUploading(true); const ext = file.name.split(".").pop()?.toLowerCase() || "png"; const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`; const result = await supabase.storage.from("certificate-logos").upload(path, file, { upsert: false }); if (result.error) setToast({ type: "error", message: result.error.message }); else { const { data } = supabase.storage.from("certificate-logos").getPublicUrl(path); update("logo_url", data.publicUrl); setToast({ type: "success", message: "Logo uploaded to Supabase." }); } setUploading(false); }
+  async function submit(e: React.FormEvent) { e.preventDefault(); setBusy(true); const result = await saveSimpleCertificate(form, editing); setBusy(false); if (!result.success) return setToast({ type: "error", message: result.error ?? "Save failed." }); setToast({ type: "success", message: editing ? "Certificate updated." : "Certificate saved." }); setEditing(undefined); setForm(blank()); await load(); }
+  function edit(row: SimpleCertificate) { setEditing(row.id); setForm({ roll_number: row.roll_number, student_name: row.student_name, course_name: row.course_name, duration_weeks: row.duration_weeks, start_date: row.start_date, end_date: row.end_date, software_house_id: row.software_house_id, software_house_name: row.software_house_name, logo_url: row.logo_url, signatory_name: row.signatory_name, signatory_title: row.signatory_title }); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  async function remove(id: string) { if (!confirm("Delete this certificate record?")) return; const result = await deleteSimpleCertificate(id); if (!result.success) setToast({ type: "error", message: result.error ?? "Delete failed." }); else { setRows((old) => old.filter((r) => r.id !== id)); setToast({ type: "success", message: "Certificate deleted." }); } }
+  function print() { window.print(); }
+  return <><Toast toast={toast} onClear={() => setToast(null)} /><PageHeader eyebrow="Certificates & Letters" title="Simple Certificates" description="Create, print and retain searchable student certificate records." />
+    <div className="grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)] print:block">
+      <form onSubmit={submit} className="wc-card space-y-4 p-5 print:hidden">
+        <div className="flex items-center justify-between"><h2 className="font-bold text-on-surface">{editing ? "Edit certificate" : "New certificate"}</h2>{editing && <button type="button" className="text-sm text-primary" onClick={() => { setEditing(undefined); setForm(blank()); }}>Cancel</button>}</div>
+        <Field label="Roll number *"><input required className="wc-input" value={form.roll_number} onChange={(e) => update("roll_number", e.target.value)} placeholder="e.g. WC-2026-001" /></Field>
+        <Field label="Student name *"><input required className="wc-input" value={form.student_name} onChange={(e) => update("student_name", e.target.value)} /></Field>
+        <Field label="Course *"><input required className="wc-input" value={form.course_name} onChange={(e) => update("course_name", e.target.value)} placeholder="Web Development" /></Field>
+        <div className="grid grid-cols-2 gap-3"><Field label="Duration (weeks)"><input min={1} type="number" className="wc-input" value={form.duration_weeks} onChange={(e) => { const weeks = Number(e.target.value); setForm((f) => ({ ...f, duration_weeks: weeks, end_date: plusWeeks(f.start_date, weeks) })); }} /></Field><Field label="Start date *"><input required type="date" className="wc-input" value={form.start_date} onChange={(e) => { const start = e.target.value; setForm((f) => ({ ...f, start_date: start, end_date: plusWeeks(start, f.duration_weeks) })); }} /></Field></div>
+        <Field label="End date *"><input required type="date" className="wc-input" value={form.end_date} onChange={(e) => update("end_date", e.target.value)} /></Field>
+        <Field label="Software house"><select className="wc-input" value={form.software_house_id ?? ""} onChange={(e) => chooseHouse(e.target.value)}><option value="">Custom software house</option>{houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></Field>
+        <Field label="Software house name *"><input required className="wc-input" value={form.software_house_name} onChange={(e) => update("software_house_name", e.target.value)} /></Field>
+        <Field label="Company logo"><input ref={fileRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(e) => e.target.files?.[0] && void uploadLogo(e.target.files[0])} /><button type="button" className="wc-secondary-btn w-full justify-center py-2" disabled={uploading} onClick={() => fileRef.current?.click()}><Icon name="cloud_upload" />{uploading ? "Uploading…" : "Upload to Supabase"}</button></Field>
+        <div className="grid grid-cols-2 gap-3"><Field label="Signatory"><input className="wc-input" value={form.signatory_name ?? ""} onChange={(e) => update("signatory_name", e.target.value)} placeholder="Director name" /></Field><Field label="Title"><input className="wc-input" value={form.signatory_title ?? ""} onChange={(e) => update("signatory_title", e.target.value)} placeholder="Director" /></Field></div>
+        <button disabled={busy} className="wc-primary-btn w-full justify-center py-3"><Icon name="save" />{busy ? "Saving…" : editing ? "Update certificate" : "Save certificate"}</button>
+      </form>
+      <div><div className="mb-3 flex justify-end print:hidden"><button onClick={print} className="wc-primary-btn px-4 py-2"><Icon name="print" />Print / Save PDF</button></div>
+        <CertificatePreview data={form} />
+      </div>
+    </div>
+    <section className="wc-card mt-7 overflow-hidden print:hidden"><div className="border-b border-outline-variant p-5"><h2 className="font-bold">Saved certificate records</h2><div className="mt-3 grid gap-3 sm:grid-cols-2"><input className="wc-input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search roll number or student name…" /><select className="wc-input" value={houseFilter} onChange={(e) => setHouseFilter(e.target.value)}><option value="">All software houses</option>{[...new Set(rows.map((r) => r.software_house_name))].map((name) => <option key={name}>{name}</option>)}</select></div></div>
+      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-surface-container text-xs uppercase text-on-surface-variant"><tr><th className="p-4">Roll #</th><th className="p-4">Student</th><th className="p-4">Course</th><th className="p-4">Software house</th><th className="p-4">Dates</th><th className="p-4 text-right">Actions</th></tr></thead><tbody>{loading ? <tr><td colSpan={6} className="p-8 text-center">Loading…</td></tr> : filtered.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-on-surface-variant">No certificates found.</td></tr> : filtered.map((r) => <tr key={r.id} className="border-t border-outline-variant"><td className="p-4 font-bold">{r.roll_number}</td><td className="p-4">{r.student_name}</td><td className="p-4">{r.course_name}</td><td className="p-4">{r.software_house_name}</td><td className="p-4 text-xs">{r.start_date} — {r.end_date}</td><td className="p-4"><div className="flex justify-end gap-2"><button onClick={() => edit(r)} className="rounded-lg p-2 hover:bg-surface-container" title="Edit"><Icon name="edit" /></button><button onClick={() => void remove(r.id)} className="rounded-lg p-2 text-red-600 hover:bg-red-50" title="Delete"><Icon name="delete" /></button></div></td></tr>)}</tbody></table></div>
+    </section></>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="wc-label mb-1.5 block">{label}</span>{children}</label>; }
+
+const CertificatePreview = ({ data }: { data: SimpleCertificateInput }) => <div className="certificate-print relative mx-auto aspect-[1.414/1] w-full max-w-[1100px] overflow-hidden bg-white p-[6%] text-[#244b5e] shadow-xl print:max-w-none print:shadow-none">
+  <div className="absolute left-0 top-0 h-24 w-24 bg-[#43c3bd]" /><div className="absolute left-12 top-0 h-16 w-16 bg-[#31596b]" /><div className="absolute bottom-0 right-0 h-20 w-20 bg-[#43c3bd]" /><div className="absolute bottom-10 right-0 h-16 w-16 bg-[#31596b]" />
+  <div className="absolute inset-[7%] border-2 border-[#43c3bd]" />
+  <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
+    {data.logo_url ? <div className="relative mb-3 h-16 w-28"><Image src={data.logo_url} alt="Software house logo" fill className="object-contain" unoptimized /></div> : <div className="mb-3 text-sm font-bold uppercase tracking-[.2em]">{data.software_house_name || "Software House"}</div>}
+    <h1 className="text-3xl font-light sm:text-5xl">Certificate of Completion</h1><p className="mt-5 text-sm sm:text-lg">This certificate is proudly awarded to</p>
+    <h2 className="my-4 text-3xl font-black text-[#173c4e] sm:text-6xl">{data.student_name || "Student Name"}</h2>
+    <p className="max-w-3xl text-sm leading-7 sm:text-xl">for successfully completing the <b>{data.course_name || "Course Name"}</b> course<br />of <b>{data.duration_weeks || 8} weeks</b>, from {pretty(data.start_date)} to {pretty(data.end_date)}.</p>
+    <div className="mt-10 grid w-4/5 grid-cols-2 items-end gap-12"><div><div className="border-b-2 border-[#43c3bd] pb-2 font-bold">{data.roll_number || "ROLL-NUMBER"}</div><p className="mt-2 text-xs">Roll Number</p></div><div><div className="border-b-2 border-[#43c3bd] pb-2 font-bold">{data.signatory_name || "Authorized Signature"}</div><p className="mt-2 text-xs">{data.signatory_title || data.software_house_name || "Software House"}</p></div></div>
+  </div><style jsx global>{`@media print { body * { visibility:hidden!important } .certificate-print,.certificate-print * { visibility:visible!important } .certificate-print { position:fixed!important; inset:0!important; width:100vw!important; height:100vh!important; aspect-ratio:auto!important; } @page { size:A4 landscape; margin:0 } }`}</style>
+</div>;

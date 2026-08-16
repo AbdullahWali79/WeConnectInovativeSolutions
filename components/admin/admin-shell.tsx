@@ -52,6 +52,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
   ]},
   { id: "certificates", label: "Certificates & Letters", icon: "workspace_premium", items: [
+    { href: "/admin/simple-certificates", label: "Simple Certificates", icon: "card_membership", adminOnly: true },
     { href: "/admin/completions", label: "Completion", icon: "workspace_premium", adminOnly: true },
     { href: "/admin/internship-letters", label: "Internship Letters", icon: "description", adminOnly: true },
     { href: "/admin/manual-completions", label: "Manual Completion", icon: "workspace_premium", adminOnly: true },
