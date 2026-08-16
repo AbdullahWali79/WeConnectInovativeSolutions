@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
-import { uploadFileToGithubCdn } from "@/lib/media/client-upload";
 import { EmptyState } from "@/components/empty-state";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { SoftwareHouse } from "@/lib/supabase/types";
@@ -115,18 +114,13 @@ export function SoftwareHousesManager() {
     }
     setUploading(field);
     try {
-      let uploadedUrl: string;
-      if (field === "head_signature_url") {
-        if (file.size > 5 * 1024 * 1024) throw new Error("Signature image must be 5 MB or smaller.");
-        const extension = file.name.split(".").pop()?.toLowerCase() || "png";
-        const path = `signatures/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-        const { error } = await supabase.storage.from("certificate-logos").upload(path, file, { upsert: false });
-        if (error) throw new Error(error.message);
-        uploadedUrl = supabase.storage.from("certificate-logos").getPublicUrl(path).data.publicUrl;
-      } else {
-        const upload = await uploadFileToGithubCdn(file, "software_house");
-        uploadedUrl = upload.githubCdnUrl;
-      }
+      if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5 MB or smaller.");
+      const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+      const folder = field === "logo_url" ? "software-house-logos" : field === "watermark_url" ? "software-house-watermarks" : "signatures";
+      const path = `${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage.from("certificate-logos").upload(path, file, { upsert: false });
+      if (error) throw new Error(error.message);
+      const uploadedUrl = supabase.storage.from("certificate-logos").getPublicUrl(path).data.publicUrl;
       const nextForm = { ...form, [field]: uploadedUrl };
       setForm(nextForm);
 
