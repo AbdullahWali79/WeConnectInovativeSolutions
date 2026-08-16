@@ -113,6 +113,7 @@ function ProjectManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [projectSearch, setProjectSearch] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
@@ -123,6 +124,10 @@ function ProjectManager({
   const [isAdding, setIsAdding] = useState(false);
 
   const selectedProjects = projects.filter((p) => selectedProjectIds.includes(p.id));
+  const visibleProjects = projects.filter((project) => {
+    const query = projectSearch.trim().toLowerCase();
+    return !query || `${project.title} ${project.description}`.toLowerCase().includes(query);
+  });
   const visibleStudents = students.filter((student) => {
     const query = studentSearch.trim().toLowerCase();
     return !query || `${student.full_name ?? ""} ${student.email ?? ""}`.toLowerCase().includes(query);
@@ -335,12 +340,23 @@ function ProjectManager({
         <div className="rounded-xl border border-outline-variant bg-surface-lowest">
           <div className="border-b border-outline-variant p-4">
             <h4 className="font-bold">Available Projects</h4>
+            <label className="relative mt-3 block">
+              <span className="sr-only">Search projects</span>
+              <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+              <input
+                type="search"
+                placeholder="Search projects by title or description..."
+                value={projectSearch}
+                onChange={(event) => setProjectSearch(event.target.value)}
+                className="w-full rounded-lg border-outline-variant bg-surface-container py-2 pl-10 pr-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </label>
           </div>
           <div className="max-h-[400px] overflow-y-auto p-2">
-            {projects.length === 0 ? (
-              <p className="p-4 text-center text-sm text-on-surface-variant">No projects available for this course. Import them via Excel.</p>
+            {visibleProjects.length === 0 ? (
+              <p className="p-4 text-center text-sm text-on-surface-variant">{projects.length ? "No projects match your search." : "No projects available for this course. Import them via Excel."}</p>
             ) : (
-              projects.map((project) => (
+              visibleProjects.map((project) => (
                 <div key={project.id} className="flex gap-2 mb-2 items-stretch">
                   <label
                     className={`flex-1 flex cursor-pointer items-start gap-3 rounded-lg border border-outline-variant p-3 transition-colors hover:bg-surface-container-low ${

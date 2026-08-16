@@ -1,0 +1,96 @@
+-- TOP-UP: current expected totals are Web=25 and Python Pro Bootcamp=32.
+-- This adds 25 Web + 18 Python advanced projects, producing exactly 50 in each.
+-- Paste the complete file into Supabase SQL Editor and click Run.
+-- Duplicate-safe by normalized title. Existing project descriptions are not overwritten.
+
+begin;
+
+do $$
+declare
+  web_course_id uuid;
+  python_course_id uuid;
+  web_inserted integer := 0;
+  python_inserted integer := 0;
+begin
+  select id into web_course_id from public.courses
+  where lower(btrim(title)) in (lower('Advance Web Development'), lower('Advanced Web Development'))
+  order by case when lower(btrim(title)) = lower('Advance Web Development') then 0 else 1 end, created_at limit 1;
+
+  select id into python_course_id from public.courses
+  where lower(btrim(title)) in (lower('Python Development Pro Bootcamp'), lower('Advanced Python Development'))
+  order by case when lower(btrim(title)) = lower('Python Development Pro Bootcamp') then 0 else 1 end, created_at limit 1;
+
+  if web_course_id is null then raise exception 'Advance Web Development course not found.'; end if;
+  if python_course_id is null then raise exception 'Python Development Pro Bootcamp course not found.'; end if;
+
+  insert into public.course_projects (course_id, title, description)
+  select web_course_id, p.title, p.description from (values
+    ('AI Enterprise Procurement Portal', 'Build a multi-tenant Next.js procurement system for vendors, quotations, approval chains and purchase orders. Add AI-assisted RFQ creation, bid comparison and contract-risk summaries grounded in uploaded documents. Include RBAC, organization isolation, audit logs, notifications, PDF exports, Stripe-ready billing, tests and production deployment.'),
+    ('Generative UI Website Builder SaaS', 'Create a prompt-driven website builder that converts structured requirements into editable page sections. Users must visually reorder components, edit content, preview responsive layouts and publish versioned sites. Add safe schema-based generation, reusable themes, asset uploads, undo history, team collaboration, quotas and exportable clean code.'),
+    ('AI Product Feedback Intelligence Hub', 'Develop a platform that imports reviews, surveys and support tickets, then clusters themes, detects sentiment and produces evidence-linked product insights. Include filters, trend charts, source drill-down, human corrections, scheduled ingestion, organization workspaces, data exports, AI evaluation and privacy controls.'),
+    ('Real-Time Collaborative AI Whiteboard', 'Build a collaborative canvas with shapes, sticky notes, cursors and presence using WebSockets or a realtime database. AI should group ideas, summarize boards and turn selected notes into action plans. Include conflict-safe updates, permissions, version history, comments, exports, offline recovery and responsive interaction.'),
+    ('AI Property Management Operations Suite', 'Create a multi-property portal for tenants, leases, rent, maintenance and contractors. Add AI maintenance triage from text/images, lease Q&A with citations and reply drafting. Implement tenant/manager roles, payment integration stubs, work-order timelines, reminders, secure documents, dashboards and audit trails.'),
+    ('AI Food Delivery Operations Platform', 'Build a marketplace for restaurants, menus, carts, orders, riders and live delivery status. Add AI menu search, dietary preference matching and support-ticket triage. Require structured outputs tied to real menu data, payment webhooks, location tracking, admin moderation, analytics, caching and end-to-end tests.'),
+    ('Headless Commerce and AI Merchandising Studio', 'Develop a headless storefront plus admin merchandising console using Next.js and a commerce API. AI should create product copy, semantic collections and cross-sell suggestions with approval workflows. Add internationalization, SEO, image optimization, inventory webhooks, edge caching, analytics and performance budgets.'),
+    ('AI Insurance Claims Review Portal', 'Create a claims intake and review system with secure document/image uploads, policy lookup, status workflows and adjuster notes. AI extracts structured claim data, flags missing evidence and summarizes relevant policy clauses with citations. Include fraud-rule indicators, human decisions, RBAC, audit logs and privacy safeguards.'),
+    ('Smart Manufacturing Quality Dashboard', 'Build a web dashboard that consumes simulated production and inspection data in real time. Display OEE, defects, downtime and alerts; add AI explanations for anomalies and retrieval over equipment manuals. Include role-based plants, streaming charts, alert acknowledgement, exports, caching and resilient API handling.'),
+    ('AI Event Planning and Vendor Marketplace', 'Develop an event planning SaaS with budgets, guest lists, schedules, vendors, quotations and approvals. Add an AI planner that produces editable timelines and recommends vendors only from verified marketplace data. Include messaging, deposits, reminders, collaborative workspaces, review moderation and mobile-first UI.'),
+    ('AI Localization Management Platform', 'Create a localization workspace for translation keys, languages, screenshots and review states. AI proposes context-aware translations while preserving placeholders and glossary rules. Add side-by-side review, translation memory, import/export, team permissions, version history, quality checks and usage analytics.'),
+    ('AI Accessibility Audit and Remediation Portal', 'Build a service that crawls submitted web pages, records accessibility findings and organizes remediation work. AI explains WCAG issues and drafts safe code suggestions without claiming automatic compliance. Include screenshots, severity filters, team assignments, historical scores, exports and automated regression scans.'),
+    ('Subscription Billing and Revenue Intelligence SaaS', 'Create a subscription management application with products, plans, trials, invoices, coupons and Stripe webhooks. Add AI-assisted churn summaries and natural-language revenue exploration over approved metrics. Implement idempotent webhooks, entitlement checks, dunning simulation, role access, audit logs and financial test cases.'),
+    ('AI Construction Project Control Center', 'Develop a construction operations portal for sites, milestones, daily reports, RFIs, change orders and documents. AI summarizes progress, extracts risks from reports and answers from project files with citations. Include subcontractor roles, photo timelines, approvals, notifications, dashboards and immutable history.'),
+    ('AI Newsroom and Editorial Workflow', 'Build a newsroom CMS for pitches, drafts, fact checks, approvals and publishing schedules. AI may generate outlines, summaries and SEO metadata but must attach research sources and retain editor approval. Add collaborative editing, revisions, author roles, media library, plagiarism checks and public article pages.'),
+    ('Digital Twin Energy Monitoring Dashboard', 'Create a real-time building energy platform with meters, rooms, equipment and consumption history. Add anomaly detection explanations, forecast visualization and AI-assisted efficiency recommendations tied to measured evidence. Include floor-plan views, alerts, tenant isolation, exports, responsive charts and WebSocket updates.'),
+    ('AI Grant Discovery and Proposal Workspace', 'Develop a platform that indexes grant opportunities and matches them to organization profiles using explainable criteria. Provide collaborative proposal sections, requirements checklists, deadlines and AI drafting grounded in approved organizational facts. Include citations, reviewer comments, versioning, exports and role permissions.'),
+    ('Privacy-First AI Personal Finance PWA', 'Build an installable budgeting application for accounts, transactions, goals and recurring expenses. AI categorizes transactions and explains spending trends without giving regulated financial advice. Add local-first/offline behavior, encryption-aware design, CSV imports, consent controls, editable suggestions, charts and secure synchronization.'),
+    ('AI Supply Chain Risk Command Center', 'Create a supplier and shipment risk dashboard combining operational events, documents and external mock feeds. AI summarizes disruptions, retrieves contract obligations and proposes mitigation options with evidence. Include maps, severity workflows, approvals, scenario comparison, tenant isolation and audit history.'),
+    ('Live Commerce Streaming Platform', 'Build a real-time shopping experience with video events, product pinning, inventory, chat, carts and checkout. Add AI chat moderation, multilingual product Q&A grounded in catalog data and post-event summaries. Include WebSockets, CDN-ready media, rate limiting, webhook safety, analytics and load testing.'),
+    ('AI Clinical Trial Matching Portal', 'Develop a research-focused portal that matches synthetic patient profiles to published trial criteria with transparent evidence and exclusions. Include trial search, saved candidates, reviewer decisions and consent tracking. Clearly avoid medical recommendations, protect sensitive fields, add audit logs, citations and evaluation cases.'),
+    ('AI Logistics Control Tower', 'Create a web control tower for orders, carriers, routes, ETAs and exceptions. AI summarizes disruptions, drafts customer updates and recommends actions from approved playbooks. Include live maps, role-based organizations, notification rules, event timelines, bulk imports, analytics and integration adapters.'),
+    ('Enterprise Feature Flag and Experiment Platform', 'Build a multi-tenant feature flag service with environments, targeting rules, percentage rollouts and an SDK-facing API. Add experiment metrics and AI summaries of results with statistical caveats. Include low-latency evaluation, audit history, approvals, kill switches, caching, webhook events and load tests.'),
+    ('AI Data Governance and Catalog Portal', 'Develop a searchable catalog for datasets, schemas, owners, lineage and access requests. AI generates descriptions, answers governance questions from policies and detects possible sensitive fields for steward review. Add RBAC, approval workflows, change history, glossary management, quality indicators and audit exports.'),
+    ('Capstone: AI-Native Enterprise Resource Planning SaaS', 'Build a modular multi-tenant ERP covering CRM, inventory, purchasing, sales, finance events and staff workflows. Add grounded copilots for search, document extraction, forecasting explanations and workflow assistance. Require RBAC, tenant isolation, approvals, audit logs, queues, realtime dashboards, billing, observability, tests and CI/CD.')
+  ) as p(title, description)
+  where not exists (select 1 from public.course_projects e where e.course_id = web_course_id and lower(btrim(e.title)) = lower(btrim(p.title)));
+  get diagnostics web_inserted = row_count;
+
+  insert into public.course_projects (course_id, title, description)
+  select python_course_id, p.title, p.description from (values
+    ('Distributed Python Task Processing Platform', 'Build a production task-processing platform with FastAPI, Celery or Dramatiq, Redis and PostgreSQL. Support priorities, retries, scheduling, idempotency, cancellation and progress events. Add worker health, dead-letter handling, tenant quotas, tracing, metrics, Docker Compose, failure-injection tests and horizontal scaling documentation.'),
+    ('Python LLM Evaluation and Prompt Registry', 'Create a platform for versioning prompts, datasets and model configurations, then running reproducible batch evaluations. Measure correctness, groundedness, latency and cost, support human scoring and compare releases. Use FastAPI, PostgreSQL and background workers with structured outputs, caching, dashboards, CI quality gates and audit logs.'),
+    ('MLOps Model Registry and Deployment Service', 'Develop a lightweight MLOps backend for registering models, datasets, metrics and promotion stages. Serve approved models behind versioned FastAPI endpoints with canary rollout and rollback. Add artifact integrity checks, drift metrics, access control, experiment history, automated tests, Docker and deployment manifests.'),
+    ('Real-Time Computer Vision Safety Monitor', 'Build an OpenCV and deep-learning service that analyzes simulated workplace video for PPE and restricted-zone violations. Provide queued inference, annotated evidence, confidence thresholds and human review. Add event deduplication, privacy masking, model/version metadata, precision-recall evaluation, API endpoints and GPU/CPU deployment.'),
+    ('Enterprise Search Crawler and Indexing Engine', 'Create an asynchronous Python crawler and indexing service for approved websites and documents. Respect robots rules, canonicalize URLs, detect changes and maintain hybrid keyword/vector indexes. Add access-control metadata, incremental refresh, retry queues, content extraction tests, search APIs, observability and secure deletion.'),
+    ('Event-Driven Order Fulfilment Microservices', 'Implement Python microservices for orders, payments, inventory and shipping using FastAPI and a message broker. Use outbox/inbox patterns, idempotent consumers, sagas and compensating actions to maintain consistency. Include contract tests, distributed tracing, dead-letter queues, Docker Compose and chaos scenarios.'),
+    ('AI Database Migration Assistant', 'Build a developer tool that inspects approved database schemas, compares versions and drafts migration plans with risk explanations. Never execute destructive SQL without explicit approval. Add dialect adapters, schema snapshots, rule-based validation, dependency ordering, rollback generation, audit records, CLI/FastAPI interfaces and test databases.'),
+    ('Cyber Threat Intelligence Processing Pipeline', 'Develop a Python pipeline that ingests structured threat feeds, normalizes indicators, scores confidence and correlates related campaigns. Use queues, PostgreSQL and enrichment adapters; add AI summaries grounded in stored evidence. Include deduplication, expiration policies, analyst review, STIX-style exports, metrics and security tests.'),
+    ('Large-Scale PDF Processing and Search Service', 'Create an asynchronous service for uploading, validating, OCR-processing and indexing large PDF collections. Track job progress, resume failed work and expose page-level cited search. Add object storage, checksums, deduplication, tenant isolation, malware-scan adapter, queues, rate limits, load tests and monitoring.'),
+    ('Dynamic Pricing Simulation Engine', 'Build a research-grade pricing service that forecasts demand and simulates constrained price recommendations using historical data. Include elasticity estimation, guardrails, explainability and offline policy evaluation. Serve scenarios through FastAPI, version models/configurations, prevent unsupported claims and add reproducible notebooks and tests.'),
+    ('Graph-Based Fraud Investigation Platform', 'Create a Python system that models accounts, devices and transactions as a graph, detects suspicious communities and exposes investigation APIs. Combine graph rules with anomaly scores, show evidence paths and accept analyst feedback. Add batch/stream ingestion, access control, audit logs, performance benchmarks and synthetic evaluation data.'),
+    ('Privacy-Preserving Data Anonymization Toolkit', 'Develop a Python CLI and API that profiles datasets, identifies sensitive fields and applies configurable masking, tokenization, generalization and synthetic replacement. Produce privacy-risk and utility reports, preserve referential consistency and support repeatable policies. Include secure key handling, audit logs and comprehensive tests.'),
+    ('Kubernetes Cost Analytics and Optimization API', 'Build a Python ingestion and analytics service for synthetic Kubernetes usage and billing data. Allocate costs by cluster, namespace and team, forecast spend and detect anomalies. Add recommendation rules, explainable AI summaries, scheduled reports, caching, multi-tenant access, Prometheus metrics and deployment charts.'),
+    ('Autonomous QA Test Generation Pipeline', 'Create a Python tool that reads API schemas and approved requirements, generates structured test cases and executes them in isolated test environments. Add mutation and regression testing, flaky-test detection, coverage reports and human approval of generated code. Include sandbox boundaries, timeouts, CLI/FastAPI interfaces and CI integration.'),
+    ('Streaming Social Sentiment Analytics Engine', 'Develop a Python event pipeline that consumes simulated social posts, detects language, classifies topics/sentiment and updates real-time aggregates. Handle late/duplicate events, model confidence and moderation flags. Use Kafka/Redis Streams, FastAPI, PostgreSQL, dashboards, drift monitoring and load tests.'),
+    ('AI-Enhanced Network Log Anomaly Detector', 'Build a security analytics service that parses network logs, engineers temporal features and flags anomalies using statistical and ML models. AI converts evidence into analyst-readable summaries without inventing facts. Include streaming ingestion, alert grouping, baselines, model evaluation, secret redaction and incident APIs.'),
+    ('High-Performance Python Market Data Service', 'Create an async market-data backend using FastAPI, WebSockets and PostgreSQL/Timescale-style storage with simulated feeds. Support subscriptions, caching, aggregation and backpressure. Add replay, data-quality checks, rate limits, latency benchmarks, tracing, containerization and clear research-only disclaimers.'),
+    ('Capstone: Multi-Region Python AI Platform', 'Design a cloud-native multi-tenant AI backend with FastAPI, PostgreSQL, Redis, workers, vector search and object storage. Implement RAG, tool workflows, approvals, quotas, metering, encryption-aware secrets, audit trails and evaluations. Add event-driven processing, disaster recovery design, observability, load/security tests, CI/CD and Kubernetes manifests.')
+  ) as p(title, description)
+  where not exists (select 1 from public.course_projects e where e.course_id = python_course_id and lower(btrim(e.title)) = lower(btrim(p.title)));
+  get diagnostics python_inserted = row_count;
+
+  raise notice 'Inserted % Web and % Python projects.', web_inserted, python_inserted;
+end
+$$;
+
+commit;
+
+-- Final verification: both target courses should show 50.
+select c.title as course, count(cp.id) as total_projects
+from public.courses c
+left join public.course_projects cp on cp.course_id = c.id
+where c.id in (
+  (select id from public.courses where lower(btrim(title)) in (lower('Advance Web Development'), lower('Advanced Web Development')) order by case when lower(btrim(title)) = lower('Advance Web Development') then 0 else 1 end, created_at limit 1),
+  (select id from public.courses where lower(btrim(title)) in (lower('Python Development Pro Bootcamp'), lower('Advanced Python Development')) order by case when lower(btrim(title)) = lower('Python Development Pro Bootcamp') then 0 else 1 end, created_at limit 1)
+)
+group by c.id, c.title
+order by c.title;
