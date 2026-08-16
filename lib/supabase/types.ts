@@ -648,6 +648,7 @@ export type SimpleCertificate = {
   primary_color: string;
   secondary_color: string;
   text_color: string;
+  template_style: "modern" | "classic" | "executive";
   created_by: string | null;
   created_at: string;
   updated_at: string;
