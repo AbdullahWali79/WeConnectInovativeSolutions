@@ -2478,7 +2478,7 @@ export async function deleteSoftwareHouse(id: string): Promise<ActionResult<null
   }
 }
 
-export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style">;
+export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size">;
 
 export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: string): Promise<ActionResult<SimpleCertificate>> {
   try {
