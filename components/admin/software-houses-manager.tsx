@@ -115,15 +115,26 @@ export function SoftwareHousesManager() {
     }
     setUploading(field);
     try {
-      const upload = await uploadFileToGithubCdn(file, "software_house");
-      const nextForm = { ...form, [field]: upload.githubCdnUrl };
+      let uploadedUrl: string;
+      if (field === "head_signature_url") {
+        if (file.size > 5 * 1024 * 1024) throw new Error("Signature image must be 5 MB or smaller.");
+        const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+        const path = `signatures/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+        const { error } = await supabase.storage.from("certificate-logos").upload(path, file, { upsert: false });
+        if (error) throw new Error(error.message);
+        uploadedUrl = supabase.storage.from("certificate-logos").getPublicUrl(path).data.publicUrl;
+      } else {
+        const upload = await uploadFileToGithubCdn(file, "software_house");
+        uploadedUrl = upload.githubCdnUrl;
+      }
+      const nextForm = { ...form, [field]: uploadedUrl };
       setForm(nextForm);
 
       if (editing) {
         const result = await updateSoftwareHouse(editing.id, nextForm);
         if (!result.success) throw new Error(result.error ?? "Uploaded image could not be saved.");
-        setHouses((prev) => prev.map((house) => house.id === editing.id ? { ...house, [field]: upload.githubCdnUrl } : house));
-        setEditing((current) => current ? { ...current, [field]: upload.githubCdnUrl } : current);
+        setHouses((prev) => prev.map((house) => house.id === editing.id ? { ...house, [field]: uploadedUrl } : house));
+        setEditing((current) => current ? { ...current, [field]: uploadedUrl } : current);
       }
 
       const label = field === "logo_url" ? "Logo" : field === "watermark_url" ? "Watermark" : "Head signature";
