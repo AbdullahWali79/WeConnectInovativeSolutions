@@ -2384,6 +2384,7 @@ export interface SoftwareHouseInput {
   address: string;
   hr_manager_name: string;
   ceo_name: string;
+  head_signature_url: string;
   header_color1: string;
   header_color2: string;
   is_active: boolean;
@@ -2410,6 +2411,7 @@ export async function createSoftwareHouse(input: SoftwareHouseInput): Promise<Ac
         address: input.address?.trim() || null,
         hr_manager_name: input.hr_manager_name?.trim() || null,
         ceo_name: input.ceo_name?.trim() || null,
+        head_signature_url: input.head_signature_url || null,
         header_color1: input.header_color1 || '#1e40af',
         header_color2: input.header_color2 || '#1e40af',
         is_active: input.is_active ?? true,
@@ -2446,6 +2448,7 @@ export async function updateSoftwareHouse(id: string, input: SoftwareHouseInput)
         address: input.address?.trim() || null,
         hr_manager_name: input.hr_manager_name?.trim() || null,
         ceo_name: input.ceo_name?.trim() || null,
+        head_signature_url: input.head_signature_url || null,
         header_color1: input.header_color1 || '#1e40af',
         header_color2: input.header_color2 || '#1e40af',
         is_active: input.is_active ?? true,
@@ -2478,7 +2481,7 @@ export async function deleteSoftwareHouse(id: string): Promise<ActionResult<null
   }
 }
 
-export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size">;
+export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size" | "signature_url">;
 
 export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: string): Promise<ActionResult<SimpleCertificate>> {
   try {

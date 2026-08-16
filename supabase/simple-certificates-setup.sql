@@ -17,6 +17,7 @@ create table if not exists public.simple_certificates (
   text_color text not null default '#244b5e',
   template_style text not null default 'modern' check (template_style in ('modern', 'classic', 'executive')),
   logo_size integer not null default 64 check (logo_size between 32 and 180),
+  signature_url text,
   created_by uuid references auth.users(id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -29,6 +30,10 @@ alter table public.simple_certificates add column if not exists secondary_color 
 alter table public.simple_certificates add column if not exists text_color text not null default '#244b5e';
 alter table public.simple_certificates add column if not exists template_style text not null default 'modern';
 alter table public.simple_certificates add column if not exists logo_size integer not null default 64;
+alter table public.simple_certificates add column if not exists signature_url text;
+
+-- A reusable Head/CEO signature can be stored against each software house.
+alter table public.software_houses add column if not exists head_signature_url text;
 
 create index if not exists simple_certificates_roll_idx on public.simple_certificates (roll_number);
 create index if not exists simple_certificates_student_idx on public.simple_certificates using gin (to_tsvector('simple', student_name));

@@ -31,6 +31,7 @@ function buildDefault(): SoftwareHouseInput {
     address: "",
     hr_manager_name: "",
     ceo_name: "",
+    head_signature_url: "",
     header_color1: "#1e40af",
     header_color2: "#92400e",
     is_active: true,
@@ -52,6 +53,7 @@ function fromHouse(h: SoftwareHouse): SoftwareHouseInput {
     address: h.address ?? "",
     hr_manager_name: h.hr_manager_name ?? "",
     ceo_name: h.ceo_name ?? "",
+    head_signature_url: h.head_signature_url ?? "",
     header_color1: h.header_color1 ?? "#1e40af",
     header_color2: h.header_color2 ?? "#92400e",
     is_active: h.is_active,
@@ -59,7 +61,7 @@ function fromHouse(h: SoftwareHouse): SoftwareHouseInput {
   };
 }
 
-type UploadField = "logo_url" | "watermark_url";
+type UploadField = "logo_url" | "watermark_url" | "head_signature_url";
 
 export function SoftwareHousesManager() {
   const supabase = createSupabaseBrowserClient();
@@ -75,6 +77,7 @@ export function SoftwareHousesManager() {
   const clearToast = useCallback(() => setToast(null), []);
   const logoRef = useRef<HTMLInputElement>(null);
   const watermarkRef = useRef<HTMLInputElement>(null);
+  const signatureRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,7 +126,7 @@ export function SoftwareHousesManager() {
         setEditing((current) => current ? { ...current, [field]: upload.githubCdnUrl } : current);
       }
 
-      const label = field === "logo_url" ? "Logo" : "Watermark";
+      const label = field === "logo_url" ? "Logo" : field === "watermark_url" ? "Watermark" : "Head signature";
       setToast({ type: "success", message: editing ? `${label} uploaded and saved.` : `${label} uploaded. Click Add Software House to save it.` });
     } catch (error) {
       setToast({ type: "error", message: error instanceof Error ? error.message : "Upload failed." });
@@ -213,9 +216,9 @@ export function SoftwareHousesManager() {
                       <Icon name="image" className="text-base" /> Logo & Watermark
                     </h3>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      {(["logo_url", "watermark_url"] as UploadField[]).map((field) => {
-                        const label = field === "logo_url" ? "Company Logo" : "Watermark Image";
-                        const ref = field === "logo_url" ? logoRef : watermarkRef;
+                      {(["logo_url", "watermark_url", "head_signature_url"] as UploadField[]).map((field) => {
+                        const label = field === "logo_url" ? "Company Logo" : field === "watermark_url" ? "Watermark Image" : "Head / CEO Signature";
+                        const ref = field === "logo_url" ? logoRef : field === "watermark_url" ? watermarkRef : signatureRef;
                         const url = form[field];
                         return (
                           <div key={field}>
