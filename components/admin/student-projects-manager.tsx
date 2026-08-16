@@ -92,6 +92,15 @@ export function StudentProjectsManager() {
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-student-projects")
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_projects" }, () => { void load(); })
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
+  }, [load, supabase]);
+
   const names = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
 
@@ -190,7 +199,7 @@ export function StudentProjectsManager() {
 
   const filterOptions = [
     { value: "all", label: "All", count: rows.length },
-    { value: "submitted", label: "Submitted", count: rows.filter((row) => row.status === "submitted").length },
+    { value: "submitted", label: "Submitted / Resubmitted", count: rows.filter((row) => row.status === "submitted").length },
     { value: "revision_required", label: "Needs Improvement", count: rows.filter((row) => row.status === "revision_required").length },
     { value: "approved", label: "Approved", count: rows.filter((row) => row.status === "approved" && !row.promoted_product_id).length },
     { value: "published", label: "Published", count: rows.filter((row) => Boolean(row.promoted_product_id)).length },
@@ -210,6 +219,12 @@ export function StudentProjectsManager() {
         .some((value) => value?.toLocaleLowerCase().includes(query));
     })
     .sort((a, b) => {
+      if (filter === "submitted") {
+        const aResubmitted = Boolean(a.admin_feedback && !a.reviewed_at);
+        const bResubmitted = Boolean(b.admin_feedback && !b.reviewed_at);
+        if (aResubmitted !== bResubmitted) return aResubmitted ? -1 : 1;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
       if (filter !== "approved") return 0;
       const aReviewed = a.reviewed_at ? new Date(a.reviewed_at).getTime() : 0;
       const bReviewed = b.reviewed_at ? new Date(b.reviewed_at).getTime() : 0;
@@ -223,8 +238,15 @@ export function StudentProjectsManager() {
 
   if (loading) return <LoadingState label="Loading student projects..." />;
 
+  const resubmittedCount = rows.filter((row) => row.status === "submitted" && row.admin_feedback && !row.reviewed_at).length;
+
   return <div className="space-y-6">
     <PageHeader eyebrow="Portfolio Review" title="Student Projects" description="Review student work, then customize exactly what visitors see before publishing it as a product." />
+
+    {resubmittedCount ? <button type="button" onClick={() => setFilter("submitted")} className="flex w-full items-center justify-between gap-4 rounded-xl border border-sky-300 bg-sky-50 p-4 text-left text-sky-950">
+      <span><strong>{resubmittedCount} improved {resubmittedCount === 1 ? "project has" : "projects have"} been resubmitted</strong><span className="mt-1 block text-sm">Open the Submitted / Resubmitted tab to review and approve the updated work.</span></span>
+      <Icon name="arrow_forward" />
+    </button> : null}
 
     <div className="flex flex-wrap gap-2">
       {filterOptions.map((option) => <button key={option.value} type="button" onClick={() => setFilter(option.value)} className={filter === option.value ? "wc-primary-btn" : "wc-secondary-btn"}>
@@ -256,9 +278,11 @@ export function StudentProjectsManager() {
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-lg font-black">{row.title}</h2>
                 <StatusPill value={row.status} />
+                {row.status === "submitted" && row.admin_feedback && !row.reviewed_at ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">Resubmitted after improvements</span> : null}
                 {row.promoted_product_id ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Published as product</span> : null}
               </div>
               <p className="mt-1 truncate text-sm text-on-surface-variant">{student?.full_name ?? "Student"} &middot; {student?.email} &middot; {row.category}</p>
+              {row.status === "submitted" && row.admin_feedback && !row.reviewed_at ? <p className="mt-1 text-xs font-semibold text-sky-700">Updated {new Date(row.updated_at).toLocaleString()}</p> : null}
             </div>
             <span className="flex shrink-0 items-center gap-2 text-sm font-bold text-primary">
               {expanded ? "Collapse" : "Expand"}<Icon name={expanded ? "expand_less" : "expand_more"} />
