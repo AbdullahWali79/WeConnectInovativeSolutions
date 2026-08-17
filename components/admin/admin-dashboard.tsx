@@ -24,7 +24,7 @@ type DashboardData = {
 };
 
 type QuickAccessItem = { id: string; href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean };
-const defaultQuickAccessIds = ["fees", "tasks", "reports", "client-hunting"];
+const defaultQuickAccessIds = ["fees", "tasks", "reports", "client-hunting", "seat-reservations"];
 const quickAccessCatalog: QuickAccessItem[] = [
   { id: "dashboard", href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" },
   { id: "courses", href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
@@ -36,6 +36,7 @@ const quickAccessCatalog: QuickAccessItem[] = [
   { id: "applications", href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
   { id: "students", href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
   { id: "trainees", href: "/admin/trainees", label: "Trainees", icon: "school", permission: "trainees.view" },
+  { id: "seat-reservations", href: "/admin/seat-reservations", label: "Seat Reservations", icon: "event_seat", adminOnly: true },
   { id: "manual-enrollments", href: "/admin/manual-enrollments", label: "Manual Enrollments", icon: "how_to_reg", adminOnly: true },
   { id: "fees", href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
   { id: "products", href: "/admin/products", label: "Products", icon: "inventory_2", permission: "products.view" },
@@ -114,7 +115,12 @@ export function AdminDashboard({
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) setQuickAccessIds(parsed.filter((id): id is string => typeof id === "string"));
+      if (Array.isArray(parsed)) {
+        const savedIds = parsed.filter((id): id is string => typeof id === "string");
+        const nextIds = savedIds.includes("seat-reservations") ? savedIds : [...savedIds, "seat-reservations"];
+        setQuickAccessIds(nextIds);
+        localStorage.setItem("admin-dashboard-quick-access", JSON.stringify(nextIds));
+      }
     } catch {
       localStorage.removeItem("admin-dashboard-quick-access");
     }
@@ -405,6 +411,7 @@ export function AdminDashboard({
               {canUse("courses.view") ? <QuickLink href="/admin/courses" icon="school" label="Manage course catalog" /> : null}
               {canUse("submissions.view") ? <QuickLink href="/admin/submissions" icon="rate_review" label="Score submissions" /> : null}
               {isAdmin ? <QuickLink href="/admin/client-hunting" icon="manage_search" label="Review client hunting leads" /> : null}
+              {isAdmin ? <QuickLink href="/admin/seat-reservations" icon="event_seat" label="Manage seat reservations" /> : null}
             </div>
           </motion.div>
 

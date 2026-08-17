@@ -1,0 +1,78 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/icon";
+import { LoadingState } from "@/components/loading-state";
+import { PageHeader } from "@/components/page-header";
+import { Toast, type ToastState } from "@/components/toast";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+type Settings = { total_seats: number; default_fine: number; cancellation_minutes: number; block_on_unpaid_fine: boolean };
+type Slot = { id: string; slot_date: string; start_time: string; end_time: string; capacity: number | null; notes: string | null };
+type Reservation = { id: string; slot_id: string; status: string; created_at: string; seat_slots: Slot | null };
+type Fine = { id: string; amount: number; status: string; reason: string; created_at: string };
+type SlotCount = { slot_id: string; reserved_count: number };
+
+const today = new Date().toISOString().slice(0, 10);
+
+export function StudentSeatReservation() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [settings, setSettings] = useState<Settings>({ total_seats: 20, default_fine: 500, cancellation_minutes: 60, block_on_unpaid_fine: true });
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [counts, setCounts] = useState<SlotCount[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [fines, setFines] = useState<Fine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [settingsResult, slotsResult, reservationResult, finesResult, availabilityResult] = await Promise.all([
+      supabase.from("seat_reservation_settings").select("total_seats,default_fine,cancellation_minutes,block_on_unpaid_fine").eq("id", true).single(),
+      supabase.from("seat_slots").select("id,slot_date,start_time,end_time,capacity,notes").eq("is_active", true).gte("slot_date", today).order("slot_date").order("start_time"),
+      supabase.from("seat_reservations").select("id,slot_id,status,created_at,seat_slots(id,slot_date,start_time,end_time,capacity,notes)").order("created_at", { ascending: false }),
+      supabase.from("seat_fines").select("id,amount,status,reason,created_at").order("created_at", { ascending: false }),
+      supabase.rpc("get_seat_slot_availability"),
+    ]);
+    const availableSlots = (slotsResult.data ?? []) as Slot[];
+    const error = settingsResult.error || slotsResult.error || reservationResult.error || finesResult.error;
+    if (error) setToast({ type: "error", message: error.message });
+    if (settingsResult.data) setSettings(settingsResult.data as Settings);
+    setSlots(availableSlots); setCounts((availabilityResult.data ?? []) as SlotCount[]);
+    setReservations((reservationResult.data ?? []) as unknown as Reservation[]); setFines((finesResult.data ?? []) as Fine[]);
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => { void loadData(); }, [loadData]);
+
+  async function reserve(slotId: string) {
+    setBusyId(slotId); const { error } = await supabase.rpc("reserve_seat", { target_slot_id: slotId }); setBusyId(null);
+    if (error) return setToast({ type: "error", message: error.message });
+    setToast({ type: "success", message: "Your seat has been reserved." }); await loadData();
+  }
+
+  async function cancel(reservationId: string) {
+    if (!confirm("Cancel this seat reservation?")) return;
+    setBusyId(reservationId); const { error } = await supabase.rpc("cancel_seat_reservation", { target_reservation_id: reservationId }); setBusyId(null);
+    if (error) return setToast({ type: "error", message: error.message });
+    setToast({ type: "success", message: "Reservation cancelled. The seat is available again." }); await loadData();
+  }
+
+  if (loading) return <LoadingState label="Loading available seats..." />;
+  const unpaidTotal = fines.filter((fine) => fine.status === "unpaid").reduce((sum, fine) => sum + Number(fine.amount), 0);
+  return <>
+    <Toast toast={toast} onClear={() => setToast(null)} />
+    <PageHeader eyebrow="Student workspace" title="Reserve a seat" description="Choose an available time slot before coming to the software house." />
+    {unpaidTotal > 0 && <div className="mb-6 flex gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800"><Icon name="warning" className="text-2xl" /><div><p className="font-bold">Unpaid fine: PKR {unpaidTotal}</p><p className="text-sm">{settings.block_on_unpaid_fine ? "New reservations are blocked until this fine is cleared by admin." : "Please contact admin to clear this fine."}</p></div></div>}
+    <section className="mb-8"><h2 className="mb-4 text-lg font-bold text-on-surface">Available time slots</h2><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {slots.length === 0 ? <div className="wc-card col-span-full p-8 text-center text-on-surface-variant">No reservation slots are currently available.</div> : slots.map((slot) => {
+        const reserved = Number(counts.find((count) => count.slot_id === slot.id)?.reserved_count ?? 0); const capacity = slot.capacity ?? settings.total_seats; const remaining = Math.max(0, capacity - reserved);
+        const own = reservations.find((reservation) => reservation.slot_id === slot.id && ["reserved", "checked_in"].includes(reservation.status));
+        return <article key={slot.id} className="wc-card p-5"><div className="flex items-start justify-between gap-3"><div className="rounded-xl bg-primary-container p-3 text-primary"><Icon name="event_seat" className="text-2xl" /></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${remaining > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{remaining} of {capacity} left</span></div><h3 className="mt-4 font-bold text-on-surface">{new Date(`${slot.slot_date}T00:00:00`).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })}</h3><p className="mt-1 text-sm text-on-surface-variant">{slot.start_time.slice(0,5)} – {slot.end_time.slice(0,5)}</p>{slot.notes && <p className="mt-2 text-xs text-on-surface-variant">{slot.notes}</p>}{own ? <div className="mt-5"><p className="mb-2 text-sm font-bold text-green-700">✓ {own.status === "checked_in" ? "Checked in" : "Seat reserved"}</p>{own.status === "reserved" && <button disabled={busyId === own.id} onClick={() => cancel(own.id)} className="wc-secondary-btn w-full">Cancel reservation</button>}</div> : <button disabled={remaining === 0 || busyId === slot.id || unpaidTotal > 0 && settings.block_on_unpaid_fine} onClick={() => reserve(slot.id)} className="wc-primary-btn mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50">{busyId === slot.id ? "Reserving..." : remaining === 0 ? "Slot full" : "Reserve my seat"}</button>}</article>;
+      })}
+    </div></section>
+    <section><h2 className="mb-4 text-lg font-bold text-on-surface">My reservation history</h2><div className="wc-card overflow-hidden"><div className="divide-y divide-outline-variant">{reservations.length === 0 ? <p className="p-6 text-sm text-on-surface-variant">You have not reserved a seat yet.</p> : reservations.map((reservation) => <div key={reservation.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="font-bold text-on-surface">{reservation.seat_slots ? new Date(`${reservation.seat_slots.slot_date}T00:00:00`).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) : "Deleted slot"}</p><p className="text-xs text-on-surface-variant">{reservation.seat_slots?.start_time.slice(0,5)}–{reservation.seat_slots?.end_time.slice(0,5)}</p></div><span className="rounded-full bg-surface-container px-3 py-1 text-xs font-bold uppercase text-on-surface-variant">{reservation.status.replace("_", " ")}</span></div>)}</div></div></section>
+    <p className="mt-5 text-xs text-on-surface-variant">Cancellation is allowed until {settings.cancellation_minutes} minutes before the slot. Missing a reserved seat may result in a PKR {settings.default_fine} fine.</p>
+  </>;
+}
