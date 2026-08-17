@@ -459,6 +459,7 @@ export function StudentDashboard() {
     ];
 
     const quickLinks = [
+      { label: "Reserve a seat", href: "/student/seat-reservation", icon: "event_seat" },
       { label: "My tasks", href: "/student/tasks", icon: "assignment" },
       { label: "Syllabus", href: "/student/syllabus", icon: "menu_book" },
       { label: "Projects", href: "/student/projects", icon: "folder_special" },
@@ -476,9 +477,14 @@ export function StudentDashboard() {
             <p className="text-label-sm font-bold uppercase tracking-widest text-primary">Student Hub</p>
             <h1 className="mt-1 text-3xl font-black text-on-surface">Welcome, {firstName}</h1>
           </div>
-          <Link href="/student/tasks" className="wc-primary-btn shrink-0">
-             <Icon name="assignment" /> View Tasks
-          </Link>
+          <div className="grid w-full gap-2 sm:flex sm:w-auto">
+            <Link href="/student/seat-reservation" className="wc-primary-btn justify-center shrink-0">
+              <Icon name="event_seat" /> Reserve a Seat
+            </Link>
+            <Link href="/student/tasks" className="wc-secondary-btn justify-center shrink-0">
+              <Icon name="assignment" /> View Tasks
+            </Link>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
