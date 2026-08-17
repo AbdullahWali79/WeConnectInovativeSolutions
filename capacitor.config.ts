@@ -3,7 +3,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "pk.weconnect.studenthub",
   appName: "WeConnect Student Hub",
-  webDir: "public",
+  webDir: "mobile-web",
   server: {
     url: "https://weconnectinnovativesolutions.vercel.app/login?next=/student",
     cleartext: false,

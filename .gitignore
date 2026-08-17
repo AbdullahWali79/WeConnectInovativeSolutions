@@ -34,4 +34,3 @@ tmp/
 # Android signing secrets and generated APK copies
 android/keystore.properties
 android/signing/*.jks
-public/downloads/*.apk

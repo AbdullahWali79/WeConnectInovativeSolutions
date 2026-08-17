@@ -153,6 +153,14 @@ export default function LoginPage() {
                 <Icon name="send" className="text-lg" /> APPLY NOW
               </Link>
             </div>
+
+            <a
+              href="/downloads/weconnect-student-hub-v1.0.apk"
+              download
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-5 py-4 text-sm font-black text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white"
+            >
+              <Icon name="android" className="text-2xl" /> DOWNLOAD ANDROID APP (.APK)
+            </a>
           </form>
         </section>
       </div>
