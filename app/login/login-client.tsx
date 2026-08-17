@@ -93,9 +93,9 @@ export default function LoginPage() {
               <Icon name="lock_open" className="text-3xl text-[var(--wc-secondary)]" />
             </div>
           </div>
-          <p className="mt-10 text-xs font-bold uppercase tracking-[0.3em] text-[var(--wc-secondary)]">WeConnect-Innovation Access</p>
-          <h1 className="mt-3 text-4xl sm:text-5xl font-black leading-tight text-on-surface">Role-based login for admins and students.</h1>
-          <p className="mt-5 text-lg leading-relaxed text-[var(--wc-on-surface-variant)]">Admins sign in with password. Students can log in instantly with the password they set during their application, once approved.</p>
+          <p className="mt-10 text-xs font-bold uppercase tracking-[0.3em] text-[var(--wc-secondary)]">WeConnect Innovation</p>
+          <h1 className="mt-3 text-4xl sm:text-5xl font-black leading-tight text-on-surface">Student App</h1>
+          <p className="mt-5 text-lg leading-relaxed text-[var(--wc-on-surface-variant)]">Access your complete student portal, reserve a seat, view tasks, and track your progress from the WeConnect Student App.</p>
         </section>
 
         <section className="rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-6 shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-xl md:p-10">
@@ -159,7 +159,7 @@ export default function LoginPage() {
               download
               className="flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-5 py-4 text-sm font-black text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white"
             >
-              <Icon name="android" className="text-2xl" /> DOWNLOAD ANDROID APP (.APK)
+              <Icon name="android" className="text-2xl" /> DOWNLOAD STUDENT APP (.APK)
             </a>
           </form>
         </section>
