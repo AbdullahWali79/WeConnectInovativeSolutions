@@ -88,10 +88,19 @@ export default function LoginPage() {
           <Link href="/" className="inline-flex items-center gap-2 text-[var(--wc-on-surface-variant)] hover:text-[var(--wc-secondary)] transition-colors">
             <Icon name="arrow_back" className="text-lg" /> Back to landing page
           </Link>
-          <div className="mt-16 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--wc-secondary)] to-[var(--wc-primary)] p-[2px] shadow-[0_0_30px_rgba(var(--landing-accent-rgb),0.3)]">
-            <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-[var(--wc-bg)]">
-              <Icon name="lock_open" className="text-3xl text-[var(--wc-secondary)]" />
+          <div className="mt-16 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--wc-secondary)] to-[var(--wc-primary)] p-[2px] shadow-[0_0_30px_rgba(var(--landing-accent-rgb),0.3)]">
+              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-[var(--wc-bg)]">
+                <Icon name="lock_open" className="text-3xl text-[var(--wc-secondary)]" />
+              </div>
             </div>
+            <a
+              href="/downloads/weconnect-student-hub-v1.0.apk"
+              download
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white"
+            >
+              <Icon name="android" className="text-xl" /> DOWNLOAD STUDENT APP
+            </a>
           </div>
           <p className="mt-10 text-xs font-bold uppercase tracking-[0.3em] text-[var(--wc-secondary)]">WeConnect Innovation</p>
           <h1 className="mt-3 text-4xl sm:text-5xl font-black leading-tight text-on-surface">Student App</h1>
@@ -154,13 +163,6 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <a
-              href="/downloads/weconnect-student-hub-v1.0.apk"
-              download
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-5 py-4 text-sm font-black text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white"
-            >
-              <Icon name="android" className="text-2xl" /> DOWNLOAD STUDENT APP (.APK)
-            </a>
           </form>
         </section>
       </div>
