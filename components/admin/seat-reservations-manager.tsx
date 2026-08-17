@@ -25,6 +25,7 @@ export function SeatReservationsManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [openModal, setOpenModal] = useState<"settings" | "slot" | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -49,7 +50,9 @@ export function SeatReservationsManager() {
     event.preventDefault(); setSaving(true);
     const { error } = await supabase.from("seat_reservation_settings").update({ ...settings, updated_at: new Date().toISOString() }).eq("id", true);
     setSaving(false);
-    setToast(error ? { type: "error", message: error.message } : { type: "success", message: "Reservation settings saved." });
+    if (error) return setToast({ type: "error", message: error.message });
+    setToast({ type: "success", message: "Reservation settings saved." });
+    setOpenModal(null);
   }
 
   async function createSlot(event: React.FormEvent) {
@@ -57,7 +60,10 @@ export function SeatReservationsManager() {
     const { error } = await supabase.from("seat_slots").insert({ ...form, capacity: form.capacity ? Number(form.capacity) : null, notes: form.notes.trim() || null });
     setSaving(false);
     if (error) return setToast({ type: "error", message: error.message });
-    setToast({ type: "success", message: "New seat slot created." }); setForm((current) => ({ ...current, notes: "" })); await loadData();
+    setToast({ type: "success", message: "New seat slot created and activated." });
+    setForm((current) => ({ ...current, notes: "" }));
+    setOpenModal(null);
+    await loadData();
   }
 
   async function updateReservation(reservation: Reservation, status: "checked_in" | "no_show" | "cancelled") {
@@ -85,37 +91,45 @@ export function SeatReservationsManager() {
   if (loading) return <LoadingState label="Loading seat reservations..." />;
   return <>
     <Toast toast={toast} onClear={() => setToast(null)} />
-    <PageHeader eyebrow="Seat management" title="Seat reservations" description="Create time slots, monitor the 20-seat capacity, check students in, and manage no-show fines." />
-    <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-      <div className="space-y-6">
-        <form onSubmit={saveSettings} className="wc-card space-y-3 p-5">
-          <h2 className="font-bold text-on-surface">Reservation settings</h2>
-          <NumberField label="Total seats" value={settings.total_seats} onChange={(value) => setSettings((s) => ({ ...s, total_seats: value }))} />
-          <NumberField label="No-show fine (PKR)" value={settings.default_fine} onChange={(value) => setSettings((s) => ({ ...s, default_fine: value }))} />
-          <NumberField label="Cancellation deadline (minutes)" value={settings.cancellation_minutes} onChange={(value) => setSettings((s) => ({ ...s, cancellation_minutes: value }))} />
-          <NumberField label="Check-in grace period (minutes)" value={settings.grace_minutes} onChange={(value) => setSettings((s) => ({ ...s, grace_minutes: value }))} />
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.block_on_unpaid_fine} onChange={(e) => setSettings((s) => ({ ...s, block_on_unpaid_fine: e.target.checked }))} /> Block booking when fine is unpaid</label>
-          <button disabled={saving} className="wc-primary-btn w-full">Save settings</button>
-        </form>
-        <form onSubmit={createSlot} className="wc-card space-y-3 p-5">
-          <h2 className="font-bold text-on-surface">Create time slot</h2>
-          <label className="block"><span className="wc-label">Date</span><input type="date" min={today} required className="wc-input mt-2" value={form.slot_date} onChange={(e) => setForm((f) => ({ ...f, slot_date: e.target.value }))} /></label>
-          <div className="grid grid-cols-2 gap-3"><label><span className="wc-label">Starts</span><input type="time" required className="wc-input mt-2" value={form.start_time} onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))} /></label><label><span className="wc-label">Ends</span><input type="time" required className="wc-input mt-2" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))} /></label></div>
-          <label className="block"><span className="wc-label">Capacity (blank = {settings.total_seats})</span><input type="number" min="1" className="wc-input mt-2" value={form.capacity} onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))} /></label>
-          <label className="block"><span className="wc-label">Notes</span><input className="wc-input mt-2" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></label>
-          <button disabled={saving} className="wc-primary-btn w-full">Create slot</button>
-        </form>
-      </div>
-      <div className="space-y-5">{slots.length === 0 ? <div className="wc-card p-8 text-center text-on-surface-variant">No upcoming slots. Create the first one.</div> : slots.map((slot) => {
+    <PageHeader eyebrow="Seat management" title="Seat reservations" description="Create time slots, monitor the 20-seat capacity, check students in, and manage no-show fines." action={<div className="flex flex-wrap gap-2"><button type="button" onClick={() => setOpenModal("settings")} className="wc-secondary-btn"><Icon name="settings" /> Reservation Settings</button><button type="button" onClick={() => setOpenModal("slot")} className="wc-primary-btn"><Icon name="add" /> Create Time Slot</button></div>} />
+    <div className="space-y-5">{slots.length === 0 ? <div className="wc-card p-10 text-center"><Icon name="event_seat" className="mb-3 text-4xl text-primary" /><p className="font-bold text-on-surface">No upcoming slots</p><p className="mt-1 text-sm text-on-surface-variant">Use the Create Time Slot button above to activate seat reservations.</p></div> : slots.map((slot) => {
         const rows = reservations.filter((r) => r.slot_id === slot.id); const active = rows.filter((r) => ["reserved", "checked_in"].includes(r.status)).length; const capacity = slot.capacity ?? settings.total_seats;
         return <section key={slot.id} className="wc-card overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant p-4"><div><h2 className="font-bold text-on-surface">{new Date(`${slot.slot_date}T00:00:00`).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "short" })} · {slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</h2><p className="text-sm text-on-surface-variant">{capacity - active} seats available · {active}/{capacity} occupied</p></div><button onClick={() => toggleSlot(slot)} className="wc-secondary-btn">{slot.is_active ? "Close slot" : "Reopen"}</button></div>
           <div className="divide-y divide-outline-variant">{rows.length === 0 ? <p className="p-5 text-sm text-on-surface-variant">No reservations yet.</p> : rows.map((row) => { const fine = fines.find((f) => f.reservation_id === row.id); return <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="font-bold text-on-surface">{row.profiles?.full_name ?? "Student"}</p><p className="text-xs text-on-surface-variant">{row.profiles?.email} · <span className="uppercase">{row.status.replace("_", " ")}</span>{fine ? ` · Fine PKR ${fine.amount} (${fine.status})` : ""}</p></div><div className="flex flex-wrap gap-2">{row.status === "reserved" && <><button onClick={() => updateReservation(row, "checked_in")} className="wc-primary-btn"><Icon name="how_to_reg" /> Check in</button><button onClick={() => updateReservation(row, "no_show")} className="wc-secondary-btn">No-show</button><button onClick={() => updateReservation(row, "cancelled")} className="wc-secondary-btn">Cancel</button></>}{fine?.status === "unpaid" && <><button onClick={() => resolveFine(fine, "paid")} className="wc-primary-btn">Fine paid</button><button onClick={() => resolveFine(fine, "waived")} className="wc-secondary-btn">Waive</button></>}</div></div>; })}</div>
         </section>;
-      })}</div>
+      })}
     </div>
+    {openModal === "settings" ? <Modal title="Reservation settings" icon="settings" onClose={() => setOpenModal(null)}>
+      <form onSubmit={saveSettings} className="space-y-4">
+        <NumberField label="Total seats" value={settings.total_seats} onChange={(value) => setSettings((s) => ({ ...s, total_seats: value }))} />
+        <NumberField label="No-show fine (PKR)" value={settings.default_fine} onChange={(value) => setSettings((s) => ({ ...s, default_fine: value }))} />
+        <NumberField label="Cancellation deadline (minutes)" value={settings.cancellation_minutes} onChange={(value) => setSettings((s) => ({ ...s, cancellation_minutes: value }))} />
+        <NumberField label="Check-in grace period (minutes)" value={settings.grace_minutes} onChange={(value) => setSettings((s) => ({ ...s, grace_minutes: value }))} />
+        <label className="flex items-center gap-2 text-sm text-on-surface"><input type="checkbox" checked={settings.block_on_unpaid_fine} onChange={(e) => setSettings((s) => ({ ...s, block_on_unpaid_fine: e.target.checked }))} /> Block booking when fine is unpaid</label>
+        <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setOpenModal(null)} className="wc-secondary-btn">Cancel</button><button disabled={saving} className="wc-primary-btn">{saving ? "Saving..." : "Save Settings"}</button></div>
+      </form>
+    </Modal> : null}
+    {openModal === "slot" ? <Modal title="Create time slot" icon="event_seat" onClose={() => setOpenModal(null)}>
+      <form onSubmit={createSlot} className="space-y-4">
+        <label className="block"><span className="wc-label">Date</span><input type="date" min={today} required className="wc-input mt-2" value={form.slot_date} onChange={(e) => setForm((f) => ({ ...f, slot_date: e.target.value }))} /></label>
+        <div className="grid grid-cols-2 gap-3"><label><span className="wc-label">Starts</span><input type="time" required className="wc-input mt-2" value={form.start_time} onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))} /></label><label><span className="wc-label">Ends</span><input type="time" required className="wc-input mt-2" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))} /></label></div>
+        <label className="block"><span className="wc-label">Capacity (blank = {settings.total_seats})</span><input type="number" min="1" className="wc-input mt-2" value={form.capacity} onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))} /></label>
+        <label className="block"><span className="wc-label">Notes</span><textarea className="wc-input mt-2 min-h-20" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></label>
+        <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setOpenModal(null)} className="wc-secondary-btn">Cancel</button><button disabled={saving} className="wc-primary-btn">{saving ? "Creating..." : "Create & Activate Slot"}</button></div>
+      </form>
+    </Modal> : null}
   </>;
 }
 
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return <label className="block"><span className="wc-label">{label}</span><input type="number" min="0" required className="wc-input mt-2" value={value} onChange={(e) => onChange(Number(e.target.value))} /></label>;
+}
+
+function Modal({ title, icon, onClose, children }: { title: string; icon: string; onClose: () => void; children: React.ReactNode }) {
+  return <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-surface shadow-2xl">
+      <div className="flex items-center justify-between bg-primary px-5 py-4 text-white"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15"><Icon name={icon} /></span><h2 className="text-lg font-bold">{title}</h2></div><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25" aria-label="Close"><Icon name="close" /></button></div>
+      <div className="max-h-[75vh] overflow-y-auto p-5">{children}</div>
+    </div>
+  </div>;
 }
