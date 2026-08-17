@@ -163,7 +163,10 @@ export function AdminShell({
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex h-16 items-center justify-between px-4">
+          <div className={cn(
+            "flex items-center px-4 transition-[height] duration-300",
+            collapsed ? "h-24 flex-col justify-center gap-2" : "h-16 justify-between",
+          )}>
             <AnimatePresence mode="wait">
               {!collapsed ? (
                 <motion.div
