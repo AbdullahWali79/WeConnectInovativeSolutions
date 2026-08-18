@@ -12,6 +12,7 @@ import Image from "next/image";
 import { brandingToCssVars } from "@/lib/branding-settings";
 import type { BrandingSettingsSnapshot } from "@/lib/supabase/types";
 import { useBranding } from "@/components/branding-provider";
+import { StudentActivityTracker } from "@/components/student/student-activity-tracker";
 
 const nav = [
   { href: "/student", label: "My Dashboard", icon: "dashboard" },
@@ -55,6 +56,7 @@ export function StudentShell({ profile, branding, children }: { profile: Profile
 
   return (
     <div className="min-h-screen bg-background text-on-background lg:flex" style={activeBrandingStyle}>
+      <StudentActivityTracker />
       <AnimatePresence>
         {mobileOpen && (
           <motion.button

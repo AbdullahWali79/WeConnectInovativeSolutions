@@ -31,6 +31,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/helping-videos", label: "Helping Videos", icon: "smart_display", adminOnly: true },
   ]},
   { id: "students", label: "Students", icon: "groups", items: [
+    { href: "/admin/student-activity", label: "Activity Logs", icon: "manage_history", adminOnly: true },
     { href: "/admin/seat-reservations", label: "Seat Reservations", icon: "event_seat", adminOnly: true },
     { href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
     { href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },

@@ -712,6 +712,26 @@ export type StudentVideo = {
   updated_at: string;
 };
 
+export type StudentActivityDaily = {
+  id: string;
+  student_id: string;
+  activity_date: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  active_seconds: number;
+  page_views: number;
+  submit_actions: number;
+};
+
+export type StudentActivityEvent = {
+  id: number;
+  student_id: string;
+  event_type: "page_view" | "submit";
+  path: string;
+  label: string | null;
+  occurred_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -725,6 +745,18 @@ export type Database = {
         Row: UserPermission;
         Insert: Partial<UserPermission> & { user_id: string; permission_key: string };
         Update: Partial<UserPermission>;
+        Relationships: [];
+      };
+      student_activity_daily: {
+        Row: StudentActivityDaily;
+        Insert: Partial<StudentActivityDaily> & { student_id: string; activity_date: string };
+        Update: Partial<StudentActivityDaily>;
+        Relationships: [];
+      };
+      student_activity_events: {
+        Row: StudentActivityEvent;
+        Insert: Partial<StudentActivityEvent> & { student_id: string; event_type: "page_view" | "submit"; path: string };
+        Update: Partial<StudentActivityEvent>;
         Relationships: [];
       };
       teacher_course_assignments: {
@@ -1007,6 +1039,15 @@ export type Database = {
       };
     };
     Functions: {
+      record_student_activity: {
+        Args: {
+          p_event_type: "page_view" | "submit" | "heartbeat";
+          p_path: string;
+          p_label?: string | null;
+          p_active_seconds?: number;
+        };
+        Returns: null;
+      };
       approve_application: {
         Args: { application_id: string };
         Returns: null;
