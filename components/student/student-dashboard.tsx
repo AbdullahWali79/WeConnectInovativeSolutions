@@ -248,7 +248,7 @@ export function StudentDashboard() {
     const actionEnabled = isTaskActionEnabled(actionStatus);
 
     return (
-      <article key={task.id} className="wc-card p-6 transition hover:-translate-y-0.5 hover:shadow-2xl">
+      <article key={task.id} className="wc-card p-4 transition hover:-translate-y-0.5 hover:shadow-2xl sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -475,7 +475,7 @@ export function StudentDashboard() {
         <header className="flex flex-col justify-between gap-4 border-b border-outline-variant/50 pb-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-label-sm font-bold uppercase tracking-widest text-primary">Student Hub</p>
-            <h1 className="mt-1 text-3xl font-black text-on-surface">Welcome, {firstName}</h1>
+            <h1 className="mt-1 break-words text-2xl font-black text-on-surface sm:text-3xl">Welcome, {firstName}</h1>
           </div>
           <div className="grid w-full gap-2 sm:flex sm:w-auto">
             <Link href="/student/seat-reservation" className="wc-primary-btn justify-center shrink-0">
@@ -487,17 +487,17 @@ export function StudentDashboard() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Left Column: Stats and Quick Links */}
           <div className="space-y-6 lg:col-span-2">
             
             {/* Compact Stats */}
             <section aria-label="Key metrics">
-               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+               <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
                   {overviewStats.map(stat => (
                      <Link key={stat.label} href={stat.href} className={`flex flex-col rounded-2xl border p-4 transition-all hover:scale-[1.02] hover:shadow-md ${stat.color}`}>
                         <Icon name={stat.icon} className="mb-2 text-2xl opacity-80" />
-                        <span className="mb-1 text-3xl font-black">{stat.value}</span>
+                        <span className="mb-1 text-2xl font-black sm:text-3xl">{stat.value}</span>
                         <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{stat.label}</span>
                      </Link>
                   ))}
@@ -581,7 +581,7 @@ export function StudentDashboard() {
                    ))}
                 </div>
              ) : (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center shadow-sm">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center shadow-sm sm:p-8">
                    <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-200/50 text-slate-400">
                       <Icon name="notifications_off" className="text-3xl" />
                    </div>
@@ -627,7 +627,7 @@ export function StudentDashboard() {
         (() => {
           const topTaskActionStatus = submissionByTaskId.get(topTask.id)?.status ?? topTask.status;
           return (
-            <div className="mb-6 overflow-hidden rounded-3xl border border-primary/15 bg-[linear-gradient(135deg,rgba(37,99,235,0.08),rgba(255,255,255,0.92))] p-6 shadow-sm">
+            <div className="mb-5 overflow-hidden rounded-2xl border border-primary/15 bg-[linear-gradient(135deg,rgba(37,99,235,0.08),rgba(255,255,255,0.92))] p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
               <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0">
                   <p className="text-label-sm uppercase tracking-widest text-primary">Top Task</p>
@@ -902,7 +902,7 @@ export function StudentDashboard() {
 
       {editingTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="wc-card w-full max-w-lg p-6 md:p-8 space-y-6 shadow-2xl relative">
+          <div className="wc-card relative max-h-[90vh] w-full max-w-lg space-y-5 overflow-y-auto p-4 shadow-2xl sm:p-6 md:space-y-6 md:p-8">
             <button
               onClick={() => setEditingTask(null)}
               className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface"

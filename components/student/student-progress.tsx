@@ -463,10 +463,10 @@ export function StudentProgress() {
             const approvedProjects = projects.filter((project) => project.course_id === enrollment.course_id).length;
             return (
               <section key={enrollment.id} className="wc-card">
-                <div className="sticky top-0 z-20 rounded-t-2xl bg-primary p-6 text-white shadow-lg">
+                <div className="sticky top-0 z-20 rounded-t-2xl bg-primary p-4 text-white shadow-lg sm:p-6">
                   <p className="text-label-sm uppercase tracking-widest text-blue-100">{enrollment.status}</p>
-                  <h2 className="mt-2 text-3xl font-extrabold">{courseById.get(enrollment.course_id)?.title ?? "Course"}</h2>
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                  <h2 className="mt-2 break-words text-xl font-extrabold sm:text-3xl">{courseById.get(enrollment.course_id)?.title ?? "Course"}</h2>
+                  <div className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-4 xl:grid-cols-5">
                     <Metric label="Progress" value={`${progress}%`} />
                     <Metric label="Target Work" value={targetTasks} />
                     <Metric label="Tasks Completed" value={reviewedTasks} />
@@ -485,7 +485,7 @@ export function StudentProgress() {
                       .filter((row) => row.task.course_id === enrollment.course_id)
                       .map(({ task, submission }) => {
                       return (
-                        <div key={submission?.id ?? task.id} className="grid gap-4 p-6 md:grid-cols-[1fr_180px_180px_180px] md:items-center">
+                        <div key={submission?.id ?? task.id} className="grid gap-3 p-4 sm:p-6 md:grid-cols-[minmax(0,1fr)_180px_180px_180px] md:items-center">
                           <div className="min-w-0">
                             <p className="font-bold text-on-surface">{task.title}</p>
                             <p className="text-body-sm text-on-surface-variant">Deadline {formatDateTime(task.deadline)}</p>
@@ -504,7 +504,7 @@ export function StudentProgress() {
           })}
 
           <section className="wc-card overflow-hidden">
-            <div className="bg-surface-container-low p-6">
+            <div className="bg-surface-container-low p-4 sm:p-6">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">All submissions</p>
               <h2 className="mt-2 text-xl font-extrabold text-on-surface">Tasks submitted by you</h2>
               <p className="mt-2 text-sm text-on-surface-variant">
@@ -516,7 +516,7 @@ export function StudentProgress() {
                 <p className="p-6 text-body-md text-on-surface-variant">No submitted tasks found yet.</p>
               ) : (
                 submissionRows.map(({ submission, task, courseTitle }) => (
-                  <div key={submission.id} className="grid gap-4 p-6 md:grid-cols-[1fr_180px_180px_180px] md:items-center">
+                  <div key={submission.id} className="grid gap-3 p-4 sm:p-6 md:grid-cols-[minmax(0,1fr)_180px_180px_180px] md:items-center">
                     <div className="min-w-0">
                       <p className="font-bold text-on-surface">{task?.title ?? "Unknown task"}</p>
                       <p className="text-body-sm text-on-surface-variant">{courseTitle}</p>

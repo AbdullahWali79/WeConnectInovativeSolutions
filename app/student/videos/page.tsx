@@ -25,7 +25,7 @@ export default async function StudentVideosPage() {
         action={
           <Link
             href="/student/videos/new"
-            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 font-bold text-on-primary transition hover:brightness-110"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-on-primary transition hover:brightness-110 md:w-auto md:px-6"
           >
             <Icon name="add" className="text-xl" />
             Submit New Video
@@ -42,10 +42,10 @@ export default async function StudentVideosPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {videos.map((video) => (
-            <div key={video.id} className="flex flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-outline/10">
-              <div className="flex flex-1 flex-col p-5">
+            <div key={video.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-outline/10">
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
                 <div className="mb-3 flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-on-surface line-clamp-2">{video.title}</h3>
+                  <h3 className="min-w-0 break-words font-bold text-on-surface line-clamp-2">{video.title}</h3>
                   <StatusPill value={video.status} />
                 </div>
                 {video.description && (

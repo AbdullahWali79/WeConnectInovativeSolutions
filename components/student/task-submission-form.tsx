@@ -259,8 +259,8 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
           </Link>
         }
       />
-      <div className="grid gap-8 xl:grid-cols-[1fr_420px]">
-        <form onSubmit={submit} className="bg-white/70 backdrop-blur-md border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-3xl p-6 md:p-8 space-y-6 transition hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
+      <div className="grid min-w-0 gap-5 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <form onSubmit={submit} className="min-w-0 space-y-5 rounded-2xl border border-white/20 bg-white/70 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.05)] backdrop-blur-md transition hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] sm:rounded-3xl sm:p-6 md:space-y-6 md:p-8">
           {submission ? (
             <div className="rounded-3xl border border-primary/10 bg-gradient-to-r from-primary/5 to-blue-50/50 p-5 shadow-sm space-y-3">
               <div className="flex items-center gap-3">
@@ -302,7 +302,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
           <UrlInput label="Proof Link" value={form.proof_url} disabled={locked} onChange={(value) => updateField("proof_url", value)} required />
 
           {/* Optional Screenshot Section */}
-          <div className="rounded-3xl border border-outline-variant/60 bg-gradient-to-b from-surface-container-low to-white p-6 space-y-5">
+          <div className="space-y-4 rounded-2xl border border-outline-variant/60 bg-gradient-to-b from-surface-container-low to-white p-4 sm:space-y-5 sm:rounded-3xl sm:p-6">
             <div>
               <span className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
                 <Icon name="image" className="text-primary text-lg" /> Screenshots (Optional)
@@ -313,7 +313,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
             </div>
 
             {!locked && (
-              <div className="group relative border-2 border-dashed border-outline-variant/80 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-8 transition-all duration-300 flex flex-col items-center justify-center bg-white/50 cursor-pointer shadow-sm hover:shadow-md">
+              <div className="group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant/80 bg-white/50 p-5 text-center shadow-sm transition-all duration-300 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md sm:p-8">
                 <input
                   type="file"
                   multiple
@@ -330,7 +330,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
             )}
 
             {previews.length > 0 && (
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 md:grid-cols-5">
                 {previews.map((preview, index) => (
                   <div key={`preview-${index}`} className="relative group rounded-2xl border border-outline-variant/50 overflow-hidden aspect-video bg-surface-container-lowest shadow-sm hover:shadow-md transition">
                     <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
@@ -349,7 +349,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
             )}
 
             {locked && existingScreenshots.length > 0 && (
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 md:grid-cols-5">
                 {existingScreenshots.map((screen) => (
                   <div key={screen.id} className="relative rounded-2xl border border-outline-variant/50 overflow-hidden aspect-video bg-surface-container-lowest shadow-sm">
                     <img src={screen.cdn_url} alt={screen.original_filename} className="w-full h-full object-cover" />
@@ -386,7 +386,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
 
         <aside className="space-y-6">
           {/* Task Brief */}
-          <div className="wc-card overflow-hidden bg-gradient-to-br from-primary/[0.02] via-white to-white p-6 shadow-sm border border-outline-variant/40 rounded-3xl">
+          <div className="wc-card overflow-hidden rounded-2xl border border-outline-variant/40 bg-gradient-to-br from-primary/[0.02] via-white to-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
             <h2 className="text-title-lg text-on-surface flex items-center gap-2 font-bold">
               <Icon name="assignment" className="text-primary" /> Task Brief
             </h2>
@@ -412,7 +412,7 @@ export function TaskSubmissionForm({ taskId }: { taskId: string }) {
           </div>
 
           {/* Resources */}
-          <div className="wc-card p-6 shadow-sm border border-outline-variant/40 rounded-3xl">
+          <div className="wc-card rounded-2xl border border-outline-variant/40 p-4 shadow-sm sm:rounded-3xl sm:p-6">
             <h2 className="text-title-lg text-on-surface flex items-center gap-2 font-bold">
               <Icon name="folder_open" className="text-primary" /> Resources
             </h2>

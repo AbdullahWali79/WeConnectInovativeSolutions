@@ -49,7 +49,7 @@ export function StudentAssignedProjectsBoard({ studentId }: { studentId: string 
   if (loading) return <LoadingState label="Loading assigned projects..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Toast toast={toast} onClear={() => setToast(null)} />
       <PageHeader
         eyebrow="Assignments"
@@ -58,7 +58,7 @@ export function StudentAssignedProjectsBoard({ studentId }: { studentId: string 
       />
 
       {tasks.length === 0 ? (
-        <section className="rounded-2xl border border-outline-variant bg-surface p-12 text-center">
+        <section className="rounded-2xl border border-outline-variant bg-surface p-6 text-center sm:p-12">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-highest text-primary">
             <Icon name="assignment_turned_in" className="text-3xl" />
           </div>
@@ -75,11 +75,11 @@ export function StudentAssignedProjectsBoard({ studentId }: { studentId: string 
             const courseTitle = courseById.get(task.course_id)?.title ?? "Unknown Course";
 
             return (
-              <div key={task.id} className="wc-card flex flex-col p-5 shadow-sm">
+              <div key={task.id} className="wc-card flex min-w-0 flex-col p-4 shadow-sm sm:p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider text-primary">{courseTitle}</p>
-                    <h3 className="mt-1 text-lg font-bold leading-tight">{task.title}</h3>
+                    <h3 className="mt-1 break-words text-base font-bold leading-tight sm:text-lg">{task.title}</h3>
                   </div>
                   <StatusPill value={status} />
                 </div>
@@ -103,18 +103,18 @@ export function StudentAssignedProjectsBoard({ studentId }: { studentId: string 
 
                 <div className="mt-5 border-t border-outline-variant pt-4">
                   {status === "reviewed" ? (
-                    <button type="button" disabled className="wc-secondary-btn w-full opacity-50">
+                    <button type="button" disabled className="wc-secondary-btn w-full justify-center opacity-50">
                       <Icon name="check_circle" /> Completed
                     </button>
                   ) : status === "submitted" ? (
-                    <button type="button" disabled className="wc-secondary-btn w-full opacity-50">
+                    <button type="button" disabled className="wc-secondary-btn w-full justify-center opacity-50">
                       <Icon name="hourglass_empty" /> Pending Review
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setSubmissionTask(task)}
-                      className="wc-primary-btn w-full"
+                      className="wc-primary-btn w-full justify-center"
                     >
                       <Icon name="upload" /> 
                       {status === "revision_required" ? "Fix & Resubmit Project" : "Submit Project"}

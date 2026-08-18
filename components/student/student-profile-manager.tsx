@@ -99,8 +99,8 @@ export function StudentProfileManager({ profile }: { profile: Profile }) {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <form onSubmit={handleSubmit} className="wc-card space-y-5 p-5 md:p-6">
+      <div className="grid min-w-0 gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <form onSubmit={handleSubmit} className="wc-card min-w-0 space-y-4 p-4 sm:space-y-5 sm:p-5 md:p-6">
           {profileLinkFields.map((field) => {
             const keyMap: Record<string, keyof ProfileLinksForm> = {
               github_url: "githubUrl",

@@ -28,19 +28,19 @@ export default async function StudentSocialMediaPage() {
   const feedPosts = allPosts.map((post) => ({ ...post, authorName: profileMap.get(post.student_id) ?? "Student" }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader eyebrow="Weekly visibility" title="Social Media" description="Share your published work, complete the weekly target, and support posts from other students." />
-      <section className={`rounded-lg border p-5 shadow-card ${remaining ? "border-amber-300 bg-amber-50" : "border-emerald-300 bg-emerald-50"}`}>
+      <section className={`rounded-lg border p-4 shadow-card sm:p-5 ${remaining ? "border-amber-300 bg-amber-50" : "border-emerald-300 bg-emerald-50"}`}>
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
             <div className={`flex h-12 w-12 items-center justify-center rounded-lg text-white ${remaining ? "bg-amber-500" : "bg-emerald-600"}`}><Icon name={remaining ? "campaign" : "verified"} /></div>
             <div><p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">This week</p><h2 className="mt-1 text-xl font-black text-on-surface">{remaining ? `${remaining} post${remaining === 1 ? "" : "s"} remaining` : "Weekly target achieved"}</h2><p className="mt-1 text-sm text-on-surface-variant">Monday to Sunday, Pakistan time</p></div>
           </div>
-          <div className="min-w-64"><div className="flex justify-between text-sm font-black text-on-surface"><span>{weeklyCount}/{weeklyTarget} posts</span><span>{percent}%</span></div><div className="mt-2 h-3 overflow-hidden rounded-full bg-white"><div className={`h-full rounded-full ${remaining ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${percent}%` }} /></div></div>
+          <div className="w-full md:w-auto md:min-w-64"><div className="flex justify-between text-sm font-black text-on-surface"><span>{weeklyCount}/{weeklyTarget} posts</span><span>{percent}%</span></div><div className="mt-2 h-3 overflow-hidden rounded-full bg-white"><div className={`h-full rounded-full ${remaining ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${percent}%` }} /></div></div>
         </div>
       </section>
       <SocialSubmitForm />
-      <section><div className="mb-4"><h2 className="text-2xl font-black text-on-surface">Student community feed</h2><p className="mt-1 text-sm text-on-surface-variant">Open, support, and learn from posts shared by your peers.</p></div><SocialFeed posts={feedPosts} reactions={(reactions ?? []) as SocialMediaReaction[]} currentUserId={user.id} /></section>
+      <section><div className="mb-3 sm:mb-4"><h2 className="text-xl font-black text-on-surface sm:text-2xl">Student community feed</h2><p className="mt-1 text-sm text-on-surface-variant">Open, support, and learn from posts shared by your peers.</p></div><SocialFeed posts={feedPosts} reactions={(reactions ?? []) as SocialMediaReaction[]} currentUserId={user.id} /></section>
     </div>
   );
 }

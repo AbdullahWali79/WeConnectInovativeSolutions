@@ -32,10 +32,10 @@ export function ProjectsCatalog({ bundles, canAssign, canEdit }: Props) {
   return (
     <div>
       <Toast toast={toast} onClear={() => setToast(null)} />
-      <header className="mb-7">
-        <p className="text-sm font-bold uppercase tracking-widest text-primary">Project Roadmap</p>
-        <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">Projects Catalog</h1>
-        <p className="mt-3 max-w-4xl text-base text-on-surface-variant md:text-lg">
+      <header className="mb-5 sm:mb-7">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary sm:text-sm">Project Roadmap</p>
+        <h1 className="mt-1.5 text-2xl font-extrabold sm:mt-2 sm:text-3xl md:text-4xl">Projects Catalog</h1>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-on-surface-variant sm:mt-3 sm:text-base md:text-lg">
           Select a course to view, import (via Excel), or assign projects to enrolled students.
         </p>
       </header>
@@ -57,21 +57,21 @@ export function ProjectsCatalog({ bundles, canAssign, canEdit }: Props) {
                   type="button"
                   onClick={() => setOpenCourseId(isOpen ? null : bundle.course.id)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between gap-4 p-5 text-left hover:bg-surface-container-low"
+                className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-surface-container-low sm:gap-4 sm:p-5"
                 >
                   <span>
-                    <span className="block text-xl font-extrabold">{bundle.course.title}</span>
-                    <span className="mt-1 block text-sm text-on-surface-variant">
+                    <span className="block text-base font-extrabold leading-snug sm:text-xl">{bundle.course.title}</span>
+                    <span className="mt-1 block text-xs text-on-surface-variant sm:text-sm">
                       {bundle.projects.length} available projects
                     </span>
                   </span>
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-outline-variant text-primary">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant text-primary sm:h-11 sm:w-11">
                     <Icon name={isOpen ? "expand_less" : "expand_more"} />
                   </span>
                 </button>
 
                 {isOpen ? (
-                  <div className="border-t border-outline-variant p-4">
+                  <div className="border-t border-outline-variant p-2.5 sm:p-4">
                     <ProjectManager
                       course={bundle.course}
                       projects={bundle.projects}
@@ -290,11 +290,11 @@ function ProjectManager({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <h3 className="text-lg font-bold">Projects</h3>
         {canEdit && (
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
             <button
               type="button"
               onClick={() => {
@@ -303,18 +303,18 @@ function ProjectManager({
                 setNewDescription("");
                 setIsAddModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low"
+              className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-low sm:gap-2 sm:px-4 sm:text-sm"
             >
               <Icon name="add" className="text-[18px]" />
-              Add Project
+              Add
             </button>
             <button
               type="button"
               onClick={downloadTemplate}
-              className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low"
+              className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-low sm:gap-2 sm:px-4 sm:text-sm"
             >
               <Icon name="download" className="text-[18px]" />
-              Download Template
+              Template
             </button>
             <input
               type="file"
@@ -327,7 +327,7 @@ function ProjectManager({
               type="button"
               disabled={isImporting}
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="col-span-2 inline-flex min-w-0 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-xs font-bold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50 sm:px-4 sm:py-2 sm:text-sm"
             >
               <Icon name="upload" className="text-[18px]" />
               {isImporting ? "Importing..." : "Import from Excel"}
@@ -336,9 +336,9 @@ function ProjectManager({
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-outline-variant bg-surface-lowest">
-          <div className="border-b border-outline-variant p-4">
+          <div className="border-b border-outline-variant p-3 sm:p-4">
             <h4 className="font-bold">Available Projects</h4>
             <label className="relative mt-3 block">
               <span className="sr-only">Search projects</span>
@@ -352,14 +352,14 @@ function ProjectManager({
               />
             </label>
           </div>
-          <div className="max-h-[400px] overflow-y-auto p-2">
+          <div className="max-h-[360px] overflow-y-auto p-2 sm:max-h-[400px]">
             {visibleProjects.length === 0 ? (
               <p className="p-4 text-center text-sm text-on-surface-variant">{projects.length ? "No projects match your search." : "No projects available for this course. Import them via Excel."}</p>
             ) : (
               visibleProjects.map((project) => (
-                <div key={project.id} className="flex gap-2 mb-2 items-stretch">
+                <div key={project.id} className="mb-2 flex items-stretch gap-2">
                   <label
-                    className={`flex-1 flex cursor-pointer items-start gap-3 rounded-lg border border-outline-variant p-3 transition-colors hover:bg-surface-container-low ${
+                    className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-lg border border-outline-variant p-3 transition-colors hover:bg-surface-container-low sm:gap-3 ${
                       selectedProjectIds.includes(project.id) ? "bg-primary-container text-on-primary-container border-primary" : "bg-surface"
                     }`}
                   >
@@ -369,13 +369,13 @@ function ProjectManager({
                       checked={selectedProjectIds.includes(project.id)}
                       onChange={() => toggleValue(project.id, selectedProjectIds, setSelectedProjectIds)}
                     />
-                    <div className="flex-1 overflow-hidden">
-                      <p className="font-bold leading-tight">{project.title}</p>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="break-words text-sm font-bold leading-tight sm:text-base">{project.title}</p>
                       <p className="mt-1 line-clamp-2 text-xs opacity-80">{project.description}</p>
                     </div>
                   </label>
                   {canEdit && (
-                    <div className="flex flex-col gap-1 w-10 shrink-0">
+                    <div className="flex w-10 shrink-0 flex-col gap-1">
                       <button
                         title="Edit Project"
                         type="button"
@@ -406,7 +406,7 @@ function ProjectManager({
         </div>
 
         <div className="rounded-xl border border-outline-variant bg-surface-lowest flex flex-col">
-          <div className="border-b border-outline-variant p-4">
+          <div className="border-b border-outline-variant p-3 sm:p-4">
             <div className="flex items-center justify-between gap-4">
               <h4 className="font-bold">Enrolled Students</h4>
               <button
@@ -428,7 +428,7 @@ function ProjectManager({
               />
             </div>
           </div>
-          <div className="max-h-[320px] overflow-y-auto p-2 flex-1">
+          <div className="max-h-[300px] flex-1 overflow-y-auto p-2 sm:max-h-[320px]">
             {visibleStudents.length === 0 ? (
               <p className="p-4 text-center text-sm text-on-surface-variant">No students found.</p>
             ) : (
@@ -456,15 +456,15 @@ function ProjectManager({
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-xl bg-surface-container-lowest p-4 shadow-sm border border-outline-variant">
-        <p className="text-sm font-medium">
+      <div className="sticky bottom-2 z-20 flex flex-col gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest/95 p-3 shadow-lg backdrop-blur sm:static sm:flex-row sm:items-center sm:justify-between sm:p-4 sm:shadow-sm">
+        <p className="text-center text-xs font-medium sm:text-left sm:text-sm">
           {selectedProjectIds.length} project(s) • {selectedStudentIds.length} student(s)
         </p>
         <button
           type="button"
           disabled={assigning || selectedProjectIds.length === 0 || selectedStudentIds.length === 0}
           onClick={assignSelectedProjects}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 font-bold text-on-primary transition-all hover:scale-105 disabled:pointer-events-none disabled:opacity-50"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition-all hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-50 sm:w-auto sm:px-6"
         >
           {assigning ? <Icon name="sync" className="animate-spin text-[18px]" /> : <Icon name="send" className="text-[18px]" />}
           Assign Projects
@@ -472,9 +472,9 @@ function ProjectManager({
       </div>
 
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
-            <h2 className="text-xl font-bold">{editingProjectId ? "Edit Project" : "Add Project Manually"}</h2>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface p-4 shadow-xl sm:rounded-xl sm:p-6">
+            <h2 className="text-lg font-bold sm:text-xl">{editingProjectId ? "Edit Project" : "Add Project Manually"}</h2>
             <form onSubmit={handleAddProject} className="mt-4 space-y-4">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium">Project Name</span>
@@ -498,7 +498,7 @@ function ProjectManager({
                   placeholder="Enter detailed requirements"
                 />
               </label>
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-2 pt-2 sm:flex sm:justify-end sm:gap-3">
                 <button
                   type="button"
                   onClick={() => {

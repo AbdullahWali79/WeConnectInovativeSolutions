@@ -37,7 +37,7 @@ export default function NewStudentVideoPage() {
         description="Share your video by providing a YouTube or Google Drive link."
       />
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-outline/10 md:p-8">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5 rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-outline/10 sm:p-6 md:gap-6 md:p-8">
         {error && (
           <div className="rounded-xl bg-error/10 p-4 text-sm text-error">
             {error}
@@ -97,19 +97,19 @@ export default function NewStudentVideoPage() {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-outline/10 pt-6">
+        <div className="grid grid-cols-2 gap-2 border-t border-outline/10 pt-5 sm:flex sm:items-center sm:justify-end sm:gap-3 sm:pt-6">
           <button
             type="button"
             onClick={() => router.back()}
             disabled={loading}
-            className="rounded-xl px-6 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-variant disabled:opacity-50"
+            className="rounded-xl px-3 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-variant disabled:opacity-50 sm:px-6"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-on-primary transition hover:brightness-110 disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-on-primary transition hover:brightness-110 disabled:opacity-50 sm:px-6"
           >
             {loading ? (
               <Icon name="progress_activity" className="animate-spin text-lg" />
