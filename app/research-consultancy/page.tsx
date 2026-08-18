@@ -182,7 +182,7 @@ export default function ResearchConsultancyPage() {
                   Apply Now <Icon name="arrow_forward" className="text-lg" />
                 </Link>
                 <Link
-                  href="mailto:info@weconnect-innovation.com?subject=Research%20Consultancy%20Application"
+                  href="mailto:contact@weconnectinnovativesolutions.com?subject=Research%20Consultancy%20Application"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-8 py-4 text-sm font-bold text-on-surface transition-colors hover:bg-[var(--wc-surface-low)] sm:w-auto"
                 >
                   Email Application
