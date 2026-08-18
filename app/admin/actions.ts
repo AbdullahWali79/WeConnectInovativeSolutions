@@ -2387,6 +2387,8 @@ export interface SoftwareHouseInput {
   hr_contact_number: string;
   ceo_name: string;
   head_signature_url: string;
+  digital_stamp_url: string;
+  digital_stamp_size: number;
   header_color1: string;
   header_color2: string;
   is_active: boolean;
@@ -2416,6 +2418,8 @@ export async function createSoftwareHouse(input: SoftwareHouseInput): Promise<Ac
         hr_contact_number: input.hr_contact_number?.trim() || null,
         ceo_name: input.ceo_name?.trim() || null,
         head_signature_url: input.head_signature_url || null,
+        digital_stamp_url: input.digital_stamp_url || null,
+        digital_stamp_size: Math.min(180, Math.max(32, Number(input.digital_stamp_size) || 80)),
         header_color1: input.header_color1 || '#1e40af',
         header_color2: input.header_color2 || '#1e40af',
         is_active: input.is_active ?? true,
@@ -2455,6 +2459,8 @@ export async function updateSoftwareHouse(id: string, input: SoftwareHouseInput)
         hr_contact_number: input.hr_contact_number?.trim() || null,
         ceo_name: input.ceo_name?.trim() || null,
         head_signature_url: input.head_signature_url || null,
+        digital_stamp_url: input.digital_stamp_url || null,
+        digital_stamp_size: Math.min(180, Math.max(32, Number(input.digital_stamp_size) || 80)),
         header_color1: input.header_color1 || '#1e40af',
         header_color2: input.header_color2 || '#1e40af',
         is_active: input.is_active ?? true,
@@ -2487,7 +2493,7 @@ export async function deleteSoftwareHouse(id: string): Promise<ActionResult<null
   }
 }
 
-export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size" | "signature_url" | "hr_email" | "hr_contact_number">;
+export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size" | "signature_url" | "digital_stamp_url" | "digital_stamp_size" | "hr_email" | "hr_contact_number">;
 
 export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: string): Promise<ActionResult<SimpleCertificate>> {
   try {

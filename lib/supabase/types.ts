@@ -617,6 +617,8 @@ export type SoftwareHouse = {
   hr_contact_number: string | null;
   ceo_name: string | null;
   head_signature_url: string | null;
+  digital_stamp_url: string | null;
+  digital_stamp_size: number;
   header_color1: string | null;
   header_color2: string | null;
   is_active: boolean;
@@ -656,6 +658,8 @@ export type SimpleCertificate = {
   template_style: "modern" | "classic" | "executive";
   logo_size: number;
   signature_url: string | null;
+  digital_stamp_url: string | null;
+  digital_stamp_size: number;
   hr_email: string | null;
   hr_contact_number: string | null;
   created_by: string | null;

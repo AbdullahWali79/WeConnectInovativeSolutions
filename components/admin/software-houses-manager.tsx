@@ -33,6 +33,8 @@ function buildDefault(): SoftwareHouseInput {
     hr_contact_number: "",
     ceo_name: "",
     head_signature_url: "",
+    digital_stamp_url: "",
+    digital_stamp_size: 80,
     header_color1: "#1e40af",
     header_color2: "#92400e",
     is_active: true,
@@ -57,6 +59,8 @@ function fromHouse(h: SoftwareHouse): SoftwareHouseInput {
     hr_contact_number: h.hr_contact_number ?? "",
     ceo_name: h.ceo_name ?? "",
     head_signature_url: h.head_signature_url ?? "",
+    digital_stamp_url: h.digital_stamp_url ?? "",
+    digital_stamp_size: h.digital_stamp_size ?? 80,
     header_color1: h.header_color1 ?? "#1e40af",
     header_color2: h.header_color2 ?? "#92400e",
     is_active: h.is_active,
@@ -64,7 +68,7 @@ function fromHouse(h: SoftwareHouse): SoftwareHouseInput {
   };
 }
 
-type UploadField = "logo_url" | "watermark_url" | "head_signature_url";
+type UploadField = "logo_url" | "watermark_url" | "head_signature_url" | "digital_stamp_url";
 
 export function SoftwareHousesManager() {
   const supabase = createSupabaseBrowserClient();
@@ -81,6 +85,7 @@ export function SoftwareHousesManager() {
   const logoRef = useRef<HTMLInputElement>(null);
   const watermarkRef = useRef<HTMLInputElement>(null);
   const signatureRef = useRef<HTMLInputElement>(null);
+  const stampRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,7 +125,7 @@ export function SoftwareHousesManager() {
     try {
       if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5 MB or smaller.");
       const extension = file.name.split(".").pop()?.toLowerCase() || "png";
-      const folder = field === "logo_url" ? "software-house-logos" : field === "watermark_url" ? "software-house-watermarks" : "signatures";
+      const folder = field === "logo_url" ? "software-house-logos" : field === "watermark_url" ? "software-house-watermarks" : field === "digital_stamp_url" ? "stamps" : "signatures";
       const path = `${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
       const { error } = await supabase.storage.from("certificate-logos").upload(path, file, { upsert: false });
       if (error) throw new Error(error.message);
@@ -135,7 +140,7 @@ export function SoftwareHousesManager() {
         setEditing((current) => current ? { ...current, [field]: uploadedUrl } : current);
       }
 
-      const label = field === "logo_url" ? "Logo" : field === "watermark_url" ? "Watermark" : "Head signature";
+      const label = field === "logo_url" ? "Logo" : field === "watermark_url" ? "Watermark" : field === "digital_stamp_url" ? "Digital stamp" : "Head signature";
       setToast({ type: "success", message: editing ? `${label} uploaded and saved.` : `${label} uploaded. Click Add Software House to save it.` });
     } catch (error) {
       setToast({ type: "error", message: error instanceof Error ? error.message : "Upload failed." });
@@ -225,9 +230,9 @@ export function SoftwareHousesManager() {
                       <Icon name="image" className="text-base" /> Logo & Watermark
                     </h3>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      {(["logo_url", "watermark_url", "head_signature_url"] as UploadField[]).map((field) => {
-                        const label = field === "logo_url" ? "Company Logo" : field === "watermark_url" ? "Watermark Image" : "Head / CEO Signature";
-                        const ref = field === "logo_url" ? logoRef : field === "watermark_url" ? watermarkRef : signatureRef;
+                      {(["logo_url", "watermark_url", "head_signature_url", "digital_stamp_url"] as UploadField[]).map((field) => {
+                        const label = field === "logo_url" ? "Company Logo" : field === "watermark_url" ? "Watermark Image" : field === "digital_stamp_url" ? "Digital Stamp" : "Head / CEO Signature";
+                        const ref = field === "logo_url" ? logoRef : field === "watermark_url" ? watermarkRef : field === "digital_stamp_url" ? stampRef : signatureRef;
                         const url = form[field];
                         return (
                           <div key={field}>
@@ -274,6 +279,7 @@ export function SoftwareHousesManager() {
                         );
                       })}
                     </div>
+                    {form.digital_stamp_url && <label className="mt-4 block"><span className="wc-label mb-2 block">Default stamp size — {form.digital_stamp_size}px</span><input type="range" min={32} max={180} step={4} value={form.digital_stamp_size} onChange={(e) => update("digital_stamp_size", Number(e.target.value))} className="w-full accent-primary" /></label>}
                   </section>
 
                   {/* Basic Info */}
