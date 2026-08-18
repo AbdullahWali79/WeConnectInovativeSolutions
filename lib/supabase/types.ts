@@ -257,6 +257,8 @@ export type InternshipLetter = {
   total_marks: number;
   letter_date: string;
   hr_manager_name: string | null;
+  hr_email: string | null;
+  hr_contact_number: string | null;
   ceo_name: string | null;
   created_by: string | null;
   created_at: string;
@@ -611,6 +613,8 @@ export type SoftwareHouse = {
   email: string | null;
   address: string | null;
   hr_manager_name: string | null;
+  hr_email: string | null;
+  hr_contact_number: string | null;
   ceo_name: string | null;
   head_signature_url: string | null;
   header_color1: string | null;
@@ -652,6 +656,8 @@ export type SimpleCertificate = {
   template_style: "modern" | "classic" | "executive";
   logo_size: number;
   signature_url: string | null;
+  hr_email: string | null;
+  hr_contact_number: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

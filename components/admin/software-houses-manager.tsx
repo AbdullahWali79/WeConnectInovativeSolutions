@@ -29,6 +29,8 @@ function buildDefault(): SoftwareHouseInput {
     email: "",
     address: "",
     hr_manager_name: "",
+    hr_email: "",
+    hr_contact_number: "",
     ceo_name: "",
     head_signature_url: "",
     header_color1: "#1e40af",
@@ -51,6 +53,8 @@ function fromHouse(h: SoftwareHouse): SoftwareHouseInput {
     email: h.email ?? "",
     address: h.address ?? "",
     hr_manager_name: h.hr_manager_name ?? "",
+    hr_email: h.hr_email ?? "",
+    hr_contact_number: h.hr_contact_number ?? "",
     ceo_name: h.ceo_name ?? "",
     head_signature_url: h.head_signature_url ?? "",
     header_color1: h.header_color1 ?? "#1e40af",
@@ -326,6 +330,14 @@ export function SoftwareHousesManager() {
                       <div>
                         <label className="wc-label mb-1">CEO / Director Name</label>
                         <input className="wc-input w-full" value={form.ceo_name} onChange={(e) => update("ceo_name", e.target.value)} placeholder="CEO Name" />
+                      </div>
+                      <div>
+                        <label className="wc-label mb-1">HR Email (optional)</label>
+                        <input className="wc-input w-full" type="email" value={form.hr_email} onChange={(e) => update("hr_email", e.target.value)} placeholder="hr@example.com" />
+                      </div>
+                      <div>
+                        <label className="wc-label mb-1">HR Contact Number (optional)</label>
+                        <input className="wc-input w-full" type="tel" value={form.hr_contact_number} onChange={(e) => update("hr_contact_number", e.target.value)} placeholder="+92 300 1234567" />
                       </div>
                     </div>
                   </section>

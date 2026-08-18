@@ -2383,6 +2383,8 @@ export interface SoftwareHouseInput {
   email: string;
   address: string;
   hr_manager_name: string;
+  hr_email: string;
+  hr_contact_number: string;
   ceo_name: string;
   head_signature_url: string;
   header_color1: string;
@@ -2410,6 +2412,8 @@ export async function createSoftwareHouse(input: SoftwareHouseInput): Promise<Ac
         email: input.email?.trim() || null,
         address: input.address?.trim() || null,
         hr_manager_name: input.hr_manager_name?.trim() || null,
+        hr_email: input.hr_email?.trim() || null,
+        hr_contact_number: input.hr_contact_number?.trim() || null,
         ceo_name: input.ceo_name?.trim() || null,
         head_signature_url: input.head_signature_url || null,
         header_color1: input.header_color1 || '#1e40af',
@@ -2447,6 +2451,8 @@ export async function updateSoftwareHouse(id: string, input: SoftwareHouseInput)
         email: input.email?.trim() || null,
         address: input.address?.trim() || null,
         hr_manager_name: input.hr_manager_name?.trim() || null,
+        hr_email: input.hr_email?.trim() || null,
+        hr_contact_number: input.hr_contact_number?.trim() || null,
         ceo_name: input.ceo_name?.trim() || null,
         head_signature_url: input.head_signature_url || null,
         header_color1: input.header_color1 || '#1e40af',
@@ -2481,7 +2487,7 @@ export async function deleteSoftwareHouse(id: string): Promise<ActionResult<null
   }
 }
 
-export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size" | "signature_url">;
+export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size" | "signature_url" | "hr_email" | "hr_contact_number">;
 
 export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: string): Promise<ActionResult<SimpleCertificate>> {
   try {
@@ -2495,6 +2501,7 @@ export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: 
       software_house_name: input.software_house_name.trim(), duration_weeks: Math.max(1, Number(input.duration_weeks) || 8),
       software_house_id: input.software_house_id || null, logo_url: input.logo_url || null,
       signatory_name: input.signatory_name?.trim() || null, signatory_title: input.signatory_title?.trim() || null,
+      hr_email: input.hr_email?.trim() || null, hr_contact_number: input.hr_contact_number?.trim() || null,
       created_by: profile.id,
     };
     const db = createSupabaseServiceClient();
