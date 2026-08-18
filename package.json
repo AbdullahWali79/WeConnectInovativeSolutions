@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "android:sync": "cap sync android",
-    "android:release": "cap sync android && cd android && gradlew.bat assembleRelease"
+    "android:sync": "cd android && set \"JAVA_HOME=C:\\Program Files\\Android\\Android Studio\\jbr\" && gradlew.bat assembleDebug",
+    "android:release": "cd android && set \"JAVA_HOME=C:\\Program Files\\Android\\Android Studio\\jbr\" && gradlew.bat assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
