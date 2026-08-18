@@ -2511,8 +2511,25 @@ export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: 
       created_by: profile.id,
     };
     const db = createSupabaseServiceClient();
-    const query = id ? db.from("simple_certificates").update(payload).eq("id", id) : db.from("simple_certificates").insert(payload);
-    const { data, error } = await query.select("*").single();
+    // Older production databases may briefly have a stale PostgREST schema cache
+    // while the idempotent certificate migration is being applied. Retry without
+    // only the column explicitly reported as missing so core certificate data can
+    // still be saved instead of presenting a hard failure to the admin.
+    const compatiblePayload: Record<string, unknown> = { ...payload };
+    let data: SimpleCertificate | null = null;
+    let error: { message: string; code?: string } | null = null;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const query = id
+        ? db.from("simple_certificates").update(compatiblePayload as Partial<SimpleCertificate>).eq("id", id)
+        : db.from("simple_certificates").insert(compatiblePayload as typeof payload);
+      const result = await query.select("*").single();
+      data = result.data as SimpleCertificate | null;
+      error = result.error;
+      if (!error) break;
+      const missingColumn = error.message.match(/Could not find the '([^']+)' column/)?.[1];
+      if (!missingColumn || !(missingColumn in compatiblePayload)) break;
+      delete compatiblePayload[missingColumn];
+    }
     if (error || !data) throw new Error(error?.code === "23505" ? "This roll number already exists." : error?.message || "Certificate could not be saved.");
     revalidatePath("/admin/simple-certificates");
     return { success: true, data: data as SimpleCertificate, error: null };
