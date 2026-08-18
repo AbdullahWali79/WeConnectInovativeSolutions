@@ -39,6 +39,8 @@ export function SeatReservationsManager() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [openModal, setOpenModal] = useState<"settings" | "slot" | "holiday" | null>(null);
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
+  const [collapsedSlots, setCollapsedSlots] = useState<Set<string>>(() => new Set());
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -79,6 +81,60 @@ export function SeatReservationsManager() {
     setForm((current) => ({ ...current, notes: "" }));
     setOpenModal(null);
     await loadData();
+  }
+
+  function openCreateSlot() {
+    setEditingSlotId(null);
+    setForm({ slot_date: today, start_time: "09:00", end_time: "13:00", capacity: "", notes: "" });
+    setOpenModal("slot");
+  }
+
+  function openEditSlot(slot: Slot) {
+    setEditingSlotId(slot.id);
+    setForm({
+      slot_date: slot.slot_date,
+      start_time: slot.start_time.slice(0, 5),
+      end_time: slot.end_time.slice(0, 5),
+      capacity: slot.capacity?.toString() ?? "",
+      notes: slot.notes ?? "",
+    });
+    setOpenModal("slot");
+  }
+
+  async function updateSlot(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingSlotId) return;
+    setSaving(true);
+    const { error } = await supabase.from("seat_slots").update({
+      ...form,
+      capacity: form.capacity ? Number(form.capacity) : null,
+      notes: form.notes.trim() || null,
+    }).eq("id", editingSlotId);
+    setSaving(false);
+    if (error) return setToast({ type: "error", message: error.message });
+    setToast({ type: "success", message: "Time slot updated." });
+    setOpenModal(null);
+    setEditingSlotId(null);
+    await loadData();
+  }
+
+  async function deleteSlot(slot: Slot) {
+    const slotLabel = `${new Date(`${slot.slot_date}T00:00:00`).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}, ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`;
+    if (!confirm(`Delete the ${slotLabel} slot? All reservations and fines linked to this slot will also be permanently deleted.`)) return;
+    setSaving(true);
+    const { error } = await supabase.from("seat_slots").delete().eq("id", slot.id);
+    setSaving(false);
+    if (error) return setToast({ type: "error", message: error.message });
+    setToast({ type: "success", message: "Time slot deleted." });
+    await loadData();
+  }
+
+  function toggleCollapsed(slotId: string) {
+    setCollapsedSlots((current) => {
+      const next = new Set(current);
+      if (next.has(slotId)) next.delete(slotId); else next.add(slotId);
+      return next;
+    });
   }
 
   async function announceHoliday(event: React.FormEvent) {
@@ -122,13 +178,14 @@ export function SeatReservationsManager() {
   if (loading) return <LoadingState label="Loading seat reservations..." />;
   return <>
     <Toast toast={toast} onClear={() => setToast(null)} />
-    <PageHeader eyebrow="Seat management" title="Seat reservations" description="Create slots, monitor capacity, record attendance, and manage no-show fines." action={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap"><button type="button" onClick={() => setOpenModal("holiday")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="event_busy" /> Holiday</button><button type="button" onClick={() => setOpenModal("settings")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="settings" /> Settings</button><button type="button" onClick={() => setOpenModal("slot")} className="wc-primary-btn col-span-2 min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="add" /> Create Time Slot</button></div>} />
+    <PageHeader eyebrow="Seat management" title="Seat reservations" description="Create slots, monitor capacity, record attendance, and manage no-show fines." action={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap"><button type="button" onClick={() => setOpenModal("holiday")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="event_busy" /> Holiday</button><button type="button" onClick={() => setOpenModal("settings")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="settings" /> Settings</button><button type="button" onClick={openCreateSlot} className="wc-primary-btn col-span-2 min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="add" /> Create Time Slot</button></div>} />
     <div className="mb-5 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><Icon name="how_to_reg" className="mt-0.5 shrink-0 text-xl text-primary" /><div><p className="text-sm font-black">Attendance can be recorded later the same day</p><p className="mt-1 text-xs leading-5 text-blue-800">At 4 PM, open today&apos;s slot. Tap Check in for students who attended and No-show for students who did not.</p></div></div>
     {holidays.length > 0 ? <section className="mb-5 space-y-2">{holidays.map((holiday) => <div key={holiday.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900"><div className="flex gap-3"><Icon name="event_busy" className="text-2xl" /><div><p className="font-bold">{holiday.title} - {new Date(`${holiday.closure_date}T00:00:00`).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })}</p><p className="text-sm">{holiday.message}</p></div></div><button type="button" onClick={() => removeHoliday(holiday.id)} className="rounded-xl border border-amber-400 px-3 py-2 text-xs font-bold hover:bg-amber-100">Remove holiday</button></div>)}</section> : null}
     <div className="space-y-5">{slots.length === 0 ? <div className="wc-card p-10 text-center"><Icon name="event_seat" className="mb-3 text-4xl text-primary" /><p className="font-bold text-on-surface">No upcoming slots</p><p className="mt-1 text-sm text-on-surface-variant">Use the Create Time Slot button above to activate seat reservations.</p></div> : slots.map((slot) => {
         const rows = reservations.filter((r) => r.slot_id === slot.id); const active = rows.filter((r) => ["reserved", "checked_in"].includes(r.status)).length; const capacity = slot.capacity ?? settings.total_seats;
-        return <section key={slot.id} className="wc-card overflow-hidden"><div className="flex flex-col gap-3 border-b border-outline-variant p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><h2 className="text-base font-bold text-on-surface sm:text-lg">{new Date(`${slot.slot_date}T00:00:00`).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "short" })} · {slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</h2><p className="mt-1 text-sm text-on-surface-variant">{capacity - active} seats available · {active}/{capacity} occupied</p></div><button onClick={() => toggleSlot(slot)} className="wc-secondary-btn w-full justify-center px-3 py-2 text-xs sm:w-auto">{slot.is_active ? "Close slot" : "Reopen"}</button></div>
-          <div className="divide-y divide-outline-variant">{rows.length === 0 ? <p className="p-5 text-sm text-on-surface-variant">No reservations yet.</p> : rows.map((row) => { const fine = fines.find((f) => f.reservation_id === row.id); return <div key={row.id} className="p-4"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-bold text-on-surface">{row.profiles?.full_name ?? "Student"}</p><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${row.status === "checked_in" ? "bg-emerald-100 text-emerald-800" : row.status === "no_show" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{row.status.replace("_", " ")}</span></div><p className="mt-1 break-all text-xs text-on-surface-variant">{row.profiles?.email}</p>{row.checked_in_at ? <p className="mt-1 text-xs font-bold text-emerald-700">Attendance marked at {new Date(row.checked_in_at).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}</p> : null}{fine ? <p className="mt-1 text-xs font-bold text-red-700">Fine PKR {fine.amount} ({fine.status})</p> : null}</div><div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">{row.status === "reserved" && <><button onClick={() => updateReservation(row, "checked_in")} className="wc-primary-btn min-w-0 justify-center px-3 py-2 text-xs"><Icon name="how_to_reg" /> Check in</button><button onClick={() => updateReservation(row, "no_show")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs">No-show</button><button onClick={() => updateReservation(row, "cancelled")} className="wc-secondary-btn col-span-2 min-w-0 justify-center px-3 py-2 text-xs sm:col-auto">Cancel</button></>}{fine?.status === "unpaid" && <><button onClick={() => resolveFine(fine, "paid")} className="wc-primary-btn min-w-0 justify-center px-3 py-2 text-xs">Fine paid</button><button onClick={() => resolveFine(fine, "waived")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs">Waive</button></>}</div></div>; })}</div>
+        const isCollapsed = collapsedSlots.has(slot.id);
+        return <section key={slot.id} className="wc-card overflow-hidden"><div className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between ${isCollapsed ? "" : "border-b border-outline-variant"}`}><button type="button" onClick={() => toggleCollapsed(slot.id)} aria-expanded={!isCollapsed} aria-controls={`slot-${slot.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Icon name="expand_more" className={`shrink-0 text-2xl text-primary transition-transform ${isCollapsed ? "-rotate-90" : ""}`} /><div className="min-w-0"><h2 className="text-base font-bold text-on-surface sm:text-lg">{new Date(`${slot.slot_date}T00:00:00`).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "short" })} · {slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</h2><p className="mt-1 text-sm text-on-surface-variant">{capacity - active} seats available · {active}/{capacity} occupied</p></div></button><div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap"><button type="button" onClick={() => openEditSlot(slot)} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs"><Icon name="edit" /> Edit</button><button type="button" disabled={saving} onClick={() => deleteSlot(slot)} className="wc-secondary-btn min-w-0 justify-center border-red-300 px-3 py-2 text-xs text-red-700 hover:bg-red-50"><Icon name="delete" /> Delete</button><button type="button" onClick={() => toggleSlot(slot)} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs">{slot.is_active ? "Close" : "Reopen"}</button></div></div>
+          {!isCollapsed ? <div id={`slot-${slot.id}`} className="divide-y divide-outline-variant">{rows.length === 0 ? <p className="p-5 text-sm text-on-surface-variant">No reservations yet.</p> : rows.map((row) => { const fine = fines.find((f) => f.reservation_id === row.id); return <div key={row.id} className="p-4"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-bold text-on-surface">{row.profiles?.full_name ?? "Student"}</p><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${row.status === "checked_in" ? "bg-emerald-100 text-emerald-800" : row.status === "no_show" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{row.status.replace("_", " ")}</span></div><p className="mt-1 break-all text-xs text-on-surface-variant">{row.profiles?.email}</p>{row.checked_in_at ? <p className="mt-1 text-xs font-bold text-emerald-700">Attendance marked at {new Date(row.checked_in_at).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}</p> : null}{fine ? <p className="mt-1 text-xs font-bold text-red-700">Fine PKR {fine.amount} ({fine.status})</p> : null}</div><div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">{row.status === "reserved" && <><button onClick={() => updateReservation(row, "checked_in")} className="wc-primary-btn min-w-0 justify-center px-3 py-2 text-xs"><Icon name="how_to_reg" /> Check in</button><button onClick={() => updateReservation(row, "no_show")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs">No-show</button><button onClick={() => updateReservation(row, "cancelled")} className="wc-secondary-btn col-span-2 min-w-0 justify-center px-3 py-2 text-xs sm:col-auto">Cancel</button></>}{fine?.status === "unpaid" && <><button onClick={() => resolveFine(fine, "paid")} className="wc-primary-btn min-w-0 justify-center px-3 py-2 text-xs">Fine paid</button><button onClick={() => resolveFine(fine, "waived")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs">Waive</button></>}</div></div>; })}</div> : null}
         </section>;
       })}
     </div>
@@ -142,13 +199,13 @@ export function SeatReservationsManager() {
         <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setOpenModal(null)} className="wc-secondary-btn">Cancel</button><button disabled={saving} className="wc-primary-btn">{saving ? "Saving..." : "Save Settings"}</button></div>
       </form>
     </Modal> : null}
-    {openModal === "slot" ? <Modal title="Create time slot" icon="event_seat" onClose={() => setOpenModal(null)}>
-      <form onSubmit={createSlot} className="space-y-4">
+    {openModal === "slot" ? <Modal title={editingSlotId ? "Edit time slot" : "Create time slot"} icon={editingSlotId ? "edit" : "event_seat"} onClose={() => { setOpenModal(null); setEditingSlotId(null); }}>
+      <form onSubmit={editingSlotId ? updateSlot : createSlot} className="space-y-4">
         <label className="block"><span className="wc-label">Date</span><input type="date" min={today} required className="wc-input mt-2" value={form.slot_date} onChange={(e) => setForm((f) => ({ ...f, slot_date: e.target.value }))} /><span className="mt-2 flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-sm font-bold text-primary"><Icon name="calendar_today" className="text-base" />{formatSelectedDate(form.slot_date)}</span></label>
         <div className="grid grid-cols-2 gap-3"><label><span className="wc-label">Starts</span><input type="time" required className="wc-input mt-2" value={form.start_time} onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))} /></label><label><span className="wc-label">Ends</span><input type="time" required className="wc-input mt-2" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))} /></label></div>
         <label className="block"><span className="wc-label">Capacity (blank = {settings.total_seats})</span><input type="number" min="1" className="wc-input mt-2" value={form.capacity} onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))} /></label>
         <label className="block"><span className="wc-label">Notes</span><textarea className="wc-input mt-2 min-h-20" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></label>
-        <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setOpenModal(null)} className="wc-secondary-btn">Cancel</button><button disabled={saving} className="wc-primary-btn">{saving ? "Creating..." : "Create & Activate Slot"}</button></div>
+        <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => { setOpenModal(null); setEditingSlotId(null); }} className="wc-secondary-btn">Cancel</button><button disabled={saving} className="wc-primary-btn">{saving ? "Saving..." : editingSlotId ? "Save Changes" : "Create & Activate Slot"}</button></div>
       </form>
     </Modal> : null}
     {openModal === "holiday" ? <Modal title="Announce holiday" icon="event_busy" onClose={() => setOpenModal(null)}>
