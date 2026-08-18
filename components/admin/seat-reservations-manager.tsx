@@ -16,6 +16,16 @@ type Holiday = { id: string; closure_date: string; title: string; message: strin
 const today = new Date().toISOString().slice(0, 10);
 const defaultSettings: Settings = { total_seats: 20, default_fine: 500, cancellation_minutes: 60, grace_minutes: 30, block_on_unpaid_fine: true };
 
+function formatSelectedDate(date: string) {
+  if (!date) return "Select a date to see its day";
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-PK", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export function SeatReservationsManager() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [settings, setSettings] = useState(defaultSettings);
@@ -133,7 +143,7 @@ export function SeatReservationsManager() {
     </Modal> : null}
     {openModal === "slot" ? <Modal title="Create time slot" icon="event_seat" onClose={() => setOpenModal(null)}>
       <form onSubmit={createSlot} className="space-y-4">
-        <label className="block"><span className="wc-label">Date</span><input type="date" min={today} required className="wc-input mt-2" value={form.slot_date} onChange={(e) => setForm((f) => ({ ...f, slot_date: e.target.value }))} /></label>
+        <label className="block"><span className="wc-label">Date</span><input type="date" min={today} required className="wc-input mt-2" value={form.slot_date} onChange={(e) => setForm((f) => ({ ...f, slot_date: e.target.value }))} /><span className="mt-2 flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-sm font-bold text-primary"><Icon name="calendar_today" className="text-base" />{formatSelectedDate(form.slot_date)}</span></label>
         <div className="grid grid-cols-2 gap-3"><label><span className="wc-label">Starts</span><input type="time" required className="wc-input mt-2" value={form.start_time} onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))} /></label><label><span className="wc-label">Ends</span><input type="time" required className="wc-input mt-2" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))} /></label></div>
         <label className="block"><span className="wc-label">Capacity (blank = {settings.total_seats})</span><input type="number" min="1" className="wc-input mt-2" value={form.capacity} onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))} /></label>
         <label className="block"><span className="wc-label">Notes</span><textarea className="wc-input mt-2 min-h-20" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></label>
@@ -142,7 +152,7 @@ export function SeatReservationsManager() {
     </Modal> : null}
     {openModal === "holiday" ? <Modal title="Announce holiday" icon="event_busy" onClose={() => setOpenModal(null)}>
       <form onSubmit={announceHoliday} className="space-y-4">
-        <label className="block"><span className="wc-label">Holiday date</span><input type="date" min={today} required className="wc-input mt-2" value={holidayForm.closure_date} onChange={(e) => setHolidayForm((f) => ({ ...f, closure_date: e.target.value }))} /></label>
+        <label className="block"><span className="wc-label">Holiday date</span><input type="date" min={today} required className="wc-input mt-2" value={holidayForm.closure_date} onChange={(e) => setHolidayForm((f) => ({ ...f, closure_date: e.target.value }))} /><span className="mt-2 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800"><Icon name="calendar_today" className="text-base" />{formatSelectedDate(holidayForm.closure_date)}</span></label>
         <label className="block"><span className="wc-label">Title</span><input required className="wc-input mt-2" value={holidayForm.title} onChange={(e) => setHolidayForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Public Holiday" /></label>
         <label className="block"><span className="wc-label">Message for students</span><textarea required className="wc-input mt-2 min-h-24" value={holidayForm.message} onChange={(e) => setHolidayForm((f) => ({ ...f, message: e.target.value }))} /></label>
         <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">Students will see this notice and will not be able to reserve a seat for this date.</p>
