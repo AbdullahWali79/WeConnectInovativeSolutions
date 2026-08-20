@@ -41,12 +41,14 @@ export function SeatReservationsManager() {
   const [openModal, setOpenModal] = useState<"settings" | "slot" | "holiday" | null>(null);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [collapsedSlots, setCollapsedSlots] = useState<Set<string>>(() => new Set());
+  const [view, setView] = useState<"upcoming" | "history">("upcoming");
+  const [historyMonth, setHistoryMonth] = useState(today.slice(0, 7));
 
   const loadData = useCallback(async () => {
     setLoading(true);
     const [settingsResult, slotsResult, reservationsResult, finesResult, holidaysResult] = await Promise.all([
       supabase.from("seat_reservation_settings").select("total_seats,default_fine,cancellation_minutes,grace_minutes,block_on_unpaid_fine").eq("id", true).single(),
-      supabase.from("seat_slots").select("*").gte("slot_date", today).order("slot_date").order("start_time"),
+      supabase.from("seat_slots").select("*").order("slot_date", { ascending: false }).order("start_time"),
       supabase.from("seat_reservations").select("id,slot_id,student_id,status,created_at,checked_in_at,profiles!seat_reservations_student_id_fkey(full_name,email)").order("created_at", { ascending: false }),
       supabase.from("seat_fines").select("id,reservation_id,student_id,amount,status"),
       supabase.from("seat_holiday_closures").select("id,closure_date,title,message").gte("closure_date", today).order("closure_date"),
@@ -119,6 +121,10 @@ export function SeatReservationsManager() {
   }
 
   async function deleteSlot(slot: Slot) {
+    if (slot.slot_date < today) {
+      setToast({ type: "error", message: "Past slots are retained for monthly analysis and cannot be deleted." });
+      return;
+    }
     const slotLabel = `${new Date(`${slot.slot_date}T00:00:00`).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}, ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`;
     if (!confirm(`Delete the ${slotLabel} slot? All reservations and fines linked to this slot will also be permanently deleted.`)) return;
     setSaving(true);
@@ -176,12 +182,19 @@ export function SeatReservationsManager() {
   }
 
   if (loading) return <LoadingState label="Loading seat reservations..." />;
+  const upcomingSlots = slots.filter((slot) => slot.slot_date >= today).sort((a, b) => a.slot_date.localeCompare(b.slot_date) || a.start_time.localeCompare(b.start_time));
+  const historySlots = slots.filter((slot) => slot.slot_date < today && slot.slot_date.startsWith(historyMonth));
+  const visibleSlots = view === "upcoming" ? upcomingSlots : historySlots;
+  const historySlotIds = new Set(historySlots.map((slot) => slot.id));
+  const historyRows = reservations.filter((reservation) => historySlotIds.has(reservation.slot_id));
   return <>
     <Toast toast={toast} onClear={() => setToast(null)} />
     <PageHeader eyebrow="Seat management" title="Seat reservations" description="Create slots, monitor capacity, record attendance, and manage no-show fines." action={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap"><button type="button" onClick={() => setOpenModal("holiday")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="event_busy" /> Holiday</button><button type="button" onClick={() => setOpenModal("settings")} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="settings" /> Settings</button><button type="button" onClick={openCreateSlot} className="wc-primary-btn col-span-2 min-w-0 justify-center px-3 py-2 text-xs sm:text-sm"><Icon name="add" /> Create Time Slot</button></div>} />
     <div className="mb-5 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><Icon name="how_to_reg" className="mt-0.5 shrink-0 text-xl text-primary" /><div><p className="text-sm font-black">Attendance can be recorded later the same day</p><p className="mt-1 text-xs leading-5 text-blue-800">At 4 PM, open today&apos;s slot. Tap Check in for students who attended and No-show for students who did not.</p></div></div>
     {holidays.length > 0 ? <section className="mb-5 space-y-2">{holidays.map((holiday) => <div key={holiday.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900"><div className="flex gap-3"><Icon name="event_busy" className="text-2xl" /><div><p className="font-bold">{holiday.title} - {new Date(`${holiday.closure_date}T00:00:00`).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })}</p><p className="text-sm">{holiday.message}</p></div></div><button type="button" onClick={() => removeHoliday(holiday.id)} className="rounded-xl border border-amber-400 px-3 py-2 text-xs font-bold hover:bg-amber-100">Remove holiday</button></div>)}</section> : null}
-    <div className="space-y-5">{slots.length === 0 ? <div className="wc-card p-10 text-center"><Icon name="event_seat" className="mb-3 text-4xl text-primary" /><p className="font-bold text-on-surface">No upcoming slots</p><p className="mt-1 text-sm text-on-surface-variant">Use the Create Time Slot button above to activate seat reservations.</p></div> : slots.map((slot) => {
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="inline-flex rounded-xl bg-surface-container p-1"><button type="button" onClick={() => setView("upcoming")} className={`rounded-lg px-4 py-2 text-sm font-bold ${view === "upcoming" ? "bg-surface text-primary shadow-sm" : "text-on-surface-variant"}`}>Upcoming ({upcomingSlots.length})</button><button type="button" onClick={() => setView("history")} className={`rounded-lg px-4 py-2 text-sm font-bold ${view === "history" ? "bg-surface text-primary shadow-sm" : "text-on-surface-variant"}`}>History</button></div>{view === "history" ? <label className="flex items-center gap-2 text-sm font-bold text-on-surface"><span>Month</span><input type="month" max={today.slice(0, 7)} value={historyMonth} onChange={(event) => setHistoryMonth(event.target.value)} className="wc-input w-auto py-2" /></label> : null}</div>
+    {view === "history" ? <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5"><SummaryCard label="Slots" value={historySlots.length} /><SummaryCard label="Reservations" value={historyRows.length} /><SummaryCard label="Checked in" value={historyRows.filter((row) => row.status === "checked_in").length} /><SummaryCard label="No-shows" value={historyRows.filter((row) => row.status === "no_show").length} /><SummaryCard label="Cancelled" value={historyRows.filter((row) => row.status === "cancelled").length} /></section> : null}
+    <div className="space-y-5">{visibleSlots.length === 0 ? <div className="wc-card p-10 text-center"><Icon name={view === "history" ? "history" : "event_seat"} className="mb-3 text-4xl text-primary" /><p className="font-bold text-on-surface">{view === "history" ? "No records for this month" : "No upcoming slots"}</p><p className="mt-1 text-sm text-on-surface-variant">{view === "history" ? "Choose another month to review older reservations." : "Use the Create Time Slot button above to activate seat reservations."}</p></div> : visibleSlots.map((slot) => {
         const rows = reservations.filter((r) => r.slot_id === slot.id); const active = rows.filter((r) => ["reserved", "checked_in"].includes(r.status)).length; const capacity = slot.capacity ?? settings.total_seats;
         const isCollapsed = collapsedSlots.has(slot.id);
         return <section key={slot.id} className="wc-card overflow-hidden"><div className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between ${isCollapsed ? "" : "border-b border-outline-variant"}`}><button type="button" onClick={() => toggleCollapsed(slot.id)} aria-expanded={!isCollapsed} aria-controls={`slot-${slot.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Icon name="expand_more" className={`shrink-0 text-2xl text-primary transition-transform ${isCollapsed ? "-rotate-90" : ""}`} /><div className="min-w-0"><h2 className="text-base font-bold text-on-surface sm:text-lg">{new Date(`${slot.slot_date}T00:00:00`).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "short" })} · {slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</h2><p className="mt-1 text-sm text-on-surface-variant">{capacity - active} seats available · {active}/{capacity} occupied</p></div></button><div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap"><button type="button" onClick={() => openEditSlot(slot)} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs"><Icon name="edit" /> Edit</button><button type="button" disabled={saving} onClick={() => deleteSlot(slot)} className="wc-secondary-btn min-w-0 justify-center border-red-300 px-3 py-2 text-xs text-red-700 hover:bg-red-50"><Icon name="delete" /> Delete</button><button type="button" onClick={() => toggleSlot(slot)} className="wc-secondary-btn min-w-0 justify-center px-3 py-2 text-xs">{slot.is_active ? "Close" : "Reopen"}</button></div></div>
@@ -222,6 +235,10 @@ export function SeatReservationsManager() {
 
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return <label className="block"><span className="wc-label">{label}</span><input type="number" min="0" required className="wc-input mt-2" value={value} onChange={(e) => onChange(Number(e.target.value))} /></label>;
+}
+
+function SummaryCard({ label, value }: { label: string; value: number }) {
+  return <div className="wc-card p-4"><p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">{label}</p><p className="mt-1 text-2xl font-black text-on-surface">{value}</p></div>;
 }
 
 function Modal({ title, icon, onClose, children }: { title: string; icon: string; onClose: () => void; children: React.ReactNode }) {
