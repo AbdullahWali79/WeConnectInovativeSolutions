@@ -7,16 +7,16 @@ import { absoluteUrl, getSiteUrl, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: { default: "AI Automation Agency | We Connect Innovative Solutions", template: `%s | ${SITE_NAME}` },
-  description: "AI automation agency building n8n, Make.com, ChatGPT, Claude, Gemini and custom workflow integrations for businesses worldwide.",
+  title: { default: "Custom Software & AI Automation Company | We Connect", template: `%s | ${SITE_NAME}` },
+  description: "Custom software, web and mobile app development plus AI automation with n8n, Make.com, ChatGPT, Claude and Gemini for businesses worldwide.",
   applicationName: SITE_NAME,
   authors: [{ name: SITE_NAME, url: absoluteUrl("/") }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
   category: "technology",
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
-  openGraph: { type: "website", locale: "en_US", siteName: SITE_NAME, url: absoluteUrl("/"), title: "AI Automation Agency | We Connect Innovative Solutions", description: "Custom n8n, Make.com and AI automation solutions for businesses worldwide." },
-  twitter: { card: "summary_large_image", title: "AI Automation Agency | We Connect Innovative Solutions", description: "Custom n8n, Make.com and AI automation solutions for businesses worldwide." },
+  openGraph: { type: "website", locale: "en_US", siteName: SITE_NAME, url: absoluteUrl("/"), title: "Custom Software & AI Automation Company | We Connect", description: "Custom software, web and mobile development with n8n, Make.com and AI automation for businesses worldwide." },
+  twitter: { card: "summary_large_image", title: "Custom Software & AI Automation Company | We Connect", description: "Custom software, web and mobile development with n8n, Make.com and AI automation for businesses worldwide." },
   icons: {
     icon: "/icon.jpeg",
     shortcut: "/icon.jpeg",

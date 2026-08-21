@@ -11,10 +11,10 @@ import { automationServices } from "@/lib/automation-services";
 import { absoluteUrl, createPageMetadata, SITE_NAME } from "@/lib/seo";
 
 export const metadata = createPageMetadata({
-  title: "AI Automation Agency for n8n, Make.com & Custom AI",
-  description: "We build n8n, Make.com, ChatGPT, Claude, Gemini and custom business automation solutions for companies worldwide.",
+  title: "Custom Software Development & AI Automation Company",
+  description: "We build custom software, websites, mobile apps and AI automation with n8n, Make.com, ChatGPT, Claude and Gemini for businesses worldwide.",
   path: "/",
-  keywords: ["AI automation agency", "n8n automation services", "Make.com automation", "custom AI automation", "workflow automation company"],
+  keywords: ["custom software development company", "web development services", "mobile app development company", "AI automation agency", "n8n automation services", "Make.com automation", "custom AI automation", "workflow automation company"],
 });
 
 export const revalidate = 300;
@@ -38,7 +38,7 @@ export default async function LandingPage() {
     name: SITE_NAME,
     url: absoluteUrl("/"),
     email: CONTACT_EMAIL,
-    description: "An AI automation and software development company serving businesses worldwide.",
+    description: "A custom software development and AI automation company helping businesses move from idea to scalable digital brand.",
     sameAs: ["https://www.facebook.com/groups/weconnectinnovativesolutions", "https://www.linkedin.com/company/weconnect-innovative-solutions-pvt-ltd/"],
   };
 
@@ -83,7 +83,7 @@ export default async function LandingPage() {
               </span>
             </div>
             <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.5vw,4.35rem)] font-black leading-[0.96] tracking-[-0.055em]">
-              <span className="landing-hero-title block">AI Automation That Helps Businesses</span>
+              <span className="landing-hero-title block">From Business Idea to a Powerful Digital Brand</span>
               <span className="relative mt-4 inline-flex flex-wrap items-center justify-center gap-4 leading-none">
                 <span
                   className="absolute inset-x-[-1.25rem] top-1/2 -z-10 h-[72%] -translate-y-1/2 rounded-full blur-3xl"
@@ -100,7 +100,7 @@ export default async function LandingPage() {
                 >
                 <span className="inline-flex h-full items-center justify-center bg-clip-text leading-[0] text-transparent" style={{ backgroundImage: "linear-gradient(90deg, var(--wc-primary), var(--wc-secondary))" }}>
                     <TypingText
-                      text={["Save Time.", "Scale With Confidence.", "Convert More Leads.", "Automate Operations.", "Serve Customers Faster."]}
+                      text={["Custom Software.", "Web Experiences.", "Mobile Apps.", "AI Automation.", "Scalable Products."]}
                       speed={72}
                       startDelay={250}
                       holdDelay={2200}
@@ -111,7 +111,7 @@ export default async function LandingPage() {
               </span>
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-pretty text-lg leading-8 sm:text-xl sm:leading-9" style={{ color: "var(--wc-on-surface-variant)" }}>
-              Custom n8n, Make.com, ChatGPT, Claude and Gemini workflows—designed, integrated and supported for teams worldwide.
+              We build custom software, websites, mobile apps and AI automations with n8n, Make.com, ChatGPT, Claude and Gemini—helping businesses launch, grow and scale.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Link
@@ -125,15 +125,15 @@ export default async function LandingPage() {
               >
                 Start Your Project <Icon name="arrow_forward" className="text-xl" />
               </Link>
-              <Link href="#portfolio" className="landing-hero-secondary inline-flex items-center justify-center rounded-xl border px-8 py-4 text-base font-bold backdrop-blur-sm transition-colors">
-                View Our Work
+              <Link href="/services" className="landing-hero-secondary inline-flex items-center justify-center rounded-xl border px-8 py-4 text-base font-bold backdrop-blur-sm transition-colors">
+                Explore Our Solutions
               </Link>
             </div>
             <div className="landing-hero-features mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border p-3 text-left backdrop-blur-sm sm:grid-cols-3 sm:text-center">
               {[
-                ["lightbulb", "Strategy-led solutions"],
-                ["rocket_launch", "Built to scale cleanly"],
-                ["handshake", "Client-first delivery"],
+                ["lightbulb", "Strategy & brand foundation"],
+                ["rocket_launch", "Software built to scale"],
+                ["handshake", "Long-term technology partner"],
               ].map(([icon, label]) => (
                 <div key={label} className="landing-hero-feature flex items-center justify-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold">
                   <Icon name={icon} className="text-[19px] text-[var(--wc-secondary)]" />
@@ -145,10 +145,41 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      <section className="bg-[var(--wc-surface-lowest)] py-16 sm:py-20" aria-labelledby="digital-solutions-heading">
+        <div className="homepage-wide-container">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="wc-section-label mb-4"><Icon name="hub" className="text-sm" /> Complete Digital Solutions</div>
+            <h2 id="digital-solutions-heading" className="text-3xl font-extrabold sm:text-4xl lg:text-5xl" style={{ color: "var(--wc-on-surface)" }}>
+              One technology partner from strategy to scale
+            </h2>
+            <p className="mt-4 text-base leading-7 text-on-surface-variant sm:text-lg">
+              We combine product strategy, design, engineering and automation to turn business requirements into reliable digital products.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["web", "Web Development", "Fast, conversion-focused websites, e-commerce experiences and scalable web applications.", "/services/web-development-services"],
+              ["phone_iphone", "Mobile App Development", "Polished iOS, Android and cross-platform apps connected to your business systems.", "/services/mobile-app-development"],
+              ["deployed_code", "Custom Software", "SaaS products, portals, dashboards and internal systems built around your operations.", "/services/custom-software-development"],
+              ["automation", "AI Automation", "n8n, Make.com and AI-powered workflows that reduce manual work and speed up delivery.", "/services/n8n-automation-services"],
+              ["design_services", "UI/UX & Product Design", "Clear digital experiences shaped around your users, goals and brand identity.", "/contact"],
+              ["trending_up", "Growth & Ongoing Support", "Technical improvement, integrations and long-term support as your business grows.", "/contact"],
+            ].map(([icon, title, description, href]) => (
+              <Link key={title} href={href} className="group rounded-2xl border border-outline-variant/60 bg-[var(--wc-bg)] p-6 transition hover:-translate-y-1 hover:border-[var(--wc-secondary)]/50 hover:shadow-xl">
+                <Icon name={icon} className="text-3xl text-[var(--wc-secondary)]" />
+                <h3 className="mt-5 text-xl font-black text-on-surface">{title}</h3>
+                <p className="mt-3 text-sm leading-6 text-on-surface-variant">{description}</p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-extrabold text-primary">Learn more <Icon name="arrow_forward" /></span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="border-y border-outline-variant/50 bg-[var(--wc-surface)] py-16 sm:py-20">
         <div className="homepage-wide-container">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="wc-section-label mb-4"><Icon name="automation" className="text-sm" /> Automation Services</div>
+            <div className="wc-section-label mb-4"><Icon name="automation" className="text-sm" /> AI Automation Services</div>
             <h2 className="text-3xl font-extrabold sm:text-4xl lg:text-5xl" style={{ color: "var(--wc-on-surface)" }}>Connect your tools. Automate the work. Scale your team.</h2>
             <p className="mt-4 text-base leading-7 text-on-surface-variant sm:text-lg">From a single workflow to an AI-enabled operations system, we build automation around your real business process.</p>
           </div>
