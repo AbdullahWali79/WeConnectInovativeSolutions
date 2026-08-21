@@ -7,6 +7,15 @@ import { TypingText } from "@/components/public/typing-text";
 import { ProcessShowcase } from "@/components/public/process-showcase";
 import { FadeIn, ScrollProgress } from "@/components/public/animations";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
+import { automationServices } from "@/lib/automation-services";
+import { absoluteUrl, createPageMetadata, SITE_NAME } from "@/lib/seo";
+
+export const metadata = createPageMetadata({
+  title: "AI Automation Agency for n8n, Make.com & Custom AI",
+  description: "We build n8n, Make.com, ChatGPT, Claude, Gemini and custom business automation solutions for companies worldwide.",
+  path: "/",
+  keywords: ["AI automation agency", "n8n automation services", "Make.com automation", "custom AI automation", "workflow automation company"],
+});
 
 export const revalidate = 300;
 
@@ -23,11 +32,21 @@ export default async function LandingPage() {
 
   const products = featuredProducts ?? [];
   const productCount = totalProductsCount ?? products.length;
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: absoluteUrl("/"),
+    email: CONTACT_EMAIL,
+    description: "An AI automation and software development company serving businesses worldwide.",
+    sameAs: ["https://www.facebook.com/groups/weconnectinnovativesolutions", "https://www.linkedin.com/company/weconnect-innovative-solutions-pvt-ltd/"],
+  };
 
   return (
     <main className="overflow-x-clip bg-background text-on-background">
       <ScrollProgress />
       <PublicHeader />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c") }} />
 
       {/* Agency Vision Hero */}
       <section
@@ -64,7 +83,7 @@ export default async function LandingPage() {
               </span>
             </div>
             <h1 className="mx-auto max-w-6xl text-balance text-[clamp(2.05rem,4.5vw,4.35rem)] font-black leading-[0.96] tracking-[-0.055em]">
-              <span className="landing-hero-title block">We Build Digital Products That</span>
+              <span className="landing-hero-title block">AI Automation That Helps Businesses</span>
               <span className="relative mt-4 inline-flex flex-wrap items-center justify-center gap-4 leading-none">
                 <span
                   className="absolute inset-x-[-1.25rem] top-1/2 -z-10 h-[72%] -translate-y-1/2 rounded-full blur-3xl"
@@ -81,7 +100,7 @@ export default async function LandingPage() {
                 >
                 <span className="inline-flex h-full items-center justify-center bg-clip-text leading-[0] text-transparent" style={{ backgroundImage: "linear-gradient(90deg, var(--wc-primary), var(--wc-secondary))" }}>
                     <TypingText
-                      text={["Grow Businesses.", "Scale With Confidence.", "Convert More Customers.", "Automate Your Operations.", "Move Your Brand Forward."]}
+                      text={["Save Time.", "Scale With Confidence.", "Convert More Leads.", "Automate Operations.", "Serve Customers Faster."]}
                       speed={72}
                       startDelay={250}
                       holdDelay={2200}
@@ -92,7 +111,7 @@ export default async function LandingPage() {
               </span>
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-pretty text-lg leading-8 sm:text-xl sm:leading-9" style={{ color: "var(--wc-on-surface-variant)" }}>
-              Custom software, web platforms and intelligent automation—from strategy to launch.
+              Custom n8n, Make.com, ChatGPT, Claude and Gemini workflows—designed, integrated and supported for teams worldwide.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Link
@@ -123,6 +142,26 @@ export default async function LandingPage() {
               ))}
             </div>
           </FadeIn>
+        </div>
+      </section>
+
+      <section className="border-y border-outline-variant/50 bg-[var(--wc-surface)] py-16 sm:py-20">
+        <div className="homepage-wide-container">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="wc-section-label mb-4"><Icon name="automation" className="text-sm" /> Automation Services</div>
+            <h2 className="text-3xl font-extrabold sm:text-4xl lg:text-5xl" style={{ color: "var(--wc-on-surface)" }}>Connect your tools. Automate the work. Scale your team.</h2>
+            <p className="mt-4 text-base leading-7 text-on-surface-variant sm:text-lg">From a single workflow to an AI-enabled operations system, we build automation around your real business process.</p>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {automationServices.map((service) => (
+              <Link key={service.slug} href={`/services/${service.slug}`} className="group rounded-2xl border border-outline-variant/60 bg-[var(--wc-bg)] p-6 transition hover:-translate-y-1 hover:border-[var(--wc-secondary)]/50 hover:shadow-xl">
+                <Icon name="arrow_outward" className="text-2xl text-[var(--wc-secondary)]" />
+                <h3 className="mt-5 text-xl font-black text-on-surface">{service.shortName}</h3>
+                <p className="mt-3 text-sm leading-6 text-on-surface-variant">{service.description}</p>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-8 text-center"><Link href="/services" className="inline-flex items-center gap-2 font-extrabold text-primary">Explore all services <Icon name="arrow_forward" /></Link></div>
         </div>
       </section>
 

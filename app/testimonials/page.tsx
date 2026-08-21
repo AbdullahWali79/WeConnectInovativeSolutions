@@ -5,6 +5,13 @@ import { Icon } from "@/components/icon";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { feedbackAudienceOptions, feedbackCategoriesByAudience } from "@/lib/feedback";
 import type { FeedbackEntry } from "@/lib/supabase/types";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata = createPageMetadata({
+  title: "Client & Student Testimonials",
+  description: "Read verified feedback about We Connect Innovative Solutions, our technology services and practical training programs.",
+  path: "/testimonials",
+});
 
 export const revalidate = 300;
 

@@ -2,6 +2,13 @@ import { Icon } from "@/components/icon";
 import { PublicHeader } from "@/components/public/public-header";
 import { ContactQueryForm } from "@/components/public/contact-query-form";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata = createPageMetadata({
+  title: "Contact Our AI Automation Team",
+  description: "Discuss your n8n, Make.com, AI agent, ChatGPT, Claude, Gemini or custom automation project with our international delivery team.",
+  path: "/contact",
+});
 
 export const revalidate = 300;
 

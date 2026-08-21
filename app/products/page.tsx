@@ -2,6 +2,13 @@ import { ProductsCatalog, fallbackProducts } from "@/components/public/products-
 import { PublicHeader } from "@/components/public/public-header";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { getWhatsAppSettingsOrDefaults } from "@/lib/whatsapp/settings";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata = createPageMetadata({
+  title: "Software Products & Automation Portfolio",
+  description: "Explore software products, business tools and digital solutions built by We Connect Innovative Solutions.",
+  path: "/products",
+});
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

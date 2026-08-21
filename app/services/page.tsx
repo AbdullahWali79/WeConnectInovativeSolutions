@@ -4,6 +4,15 @@ import { PublicHeader } from "@/components/public/public-header";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { fallbackServices } from "@/lib/services";
 import type { Service } from "@/lib/supabase/types";
+import { automationServices } from "@/lib/automation-services";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata = createPageMetadata({
+  title: "AI Automation & Software Development Services",
+  description: "Explore n8n, Make.com, ChatGPT, Claude, Gemini, custom automation and software development services for businesses worldwide.",
+  path: "/services",
+  keywords: ["AI automation services", "n8n automation", "Make.com automation", "custom software development", "workflow automation agency"],
+});
 
 export const dynamic = "force-dynamic";
 
@@ -39,10 +48,10 @@ export default async function ServicesPage() {
               <Icon name="design_services" /> Digital services
             </div>
             <h1 className="mt-7 max-w-4xl text-4xl font-black leading-[1.08] text-white sm:text-5xl lg:text-7xl">
-              Strategy, technology and talent—connected.
+              AI automation and software built for business growth.
             </h1>
             <p className="mt-7 max-w-2xl text-base leading-8 text-blue-100/85 md:text-lg">
-              We turn ambitious ideas into practical digital products, intelligent workflows and measurable growth—supported by the same specialists who shape our products and training programs.
+              From n8n and Make.com workflows to custom AI agents and software, we connect your tools, data and teams with reliable solutions built for measurable outcomes.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/contact" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--wc-secondary)] px-6 py-3 font-extrabold text-white shadow-xl shadow-black/15 transition hover:-translate-y-0.5">
@@ -62,6 +71,28 @@ export default async function ServicesPage() {
                 <p className="mt-7 text-xs font-bold uppercase tracking-wider text-blue-200">{service.category}</p>
                 <h2 className="mt-2 text-lg font-extrabold">{service.title}</h2>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-outline-variant/50 bg-surface-low px-5 py-20 md:px-margin-page md:py-24">
+        <div className="mx-auto max-w-container-max">
+          <div className="max-w-3xl">
+            <p className="text-xs font-extrabold uppercase tracking-[.2em] text-[var(--wc-secondary)]">AI & workflow automation</p>
+            <h2 className="mt-3 text-3xl font-black leading-tight md:text-5xl">Choose the automation expertise your workflow needs.</h2>
+            <p className="mt-5 text-base leading-7 text-on-surface-variant">We work with businesses worldwide to remove repetitive work, connect disconnected systems and introduce AI with practical safeguards.</p>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {automationServices.map((service) => (
+              <article key={service.slug} className="group rounded-3xl border border-outline-variant/60 bg-surface p-7 transition hover:-translate-y-1 hover:shadow-xl">
+                <Icon name="automation" className="text-3xl text-[var(--wc-secondary)]" />
+                <h3 className="mt-5 text-2xl font-black">{service.shortName}</h3>
+                <p className="mt-4 leading-7 text-on-surface-variant">{service.metaDescription}</p>
+                <Link href={`/services/${service.slug}`} className="mt-6 inline-flex items-center gap-2 text-sm font-extrabold text-primary transition group-hover:gap-3">
+                  Explore service <Icon name="arrow_forward" />
+                </Link>
+              </article>
             ))}
           </div>
         </div>
