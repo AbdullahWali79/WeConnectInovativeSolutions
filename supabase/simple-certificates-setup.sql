@@ -31,6 +31,7 @@ alter table public.simple_certificates add column if not exists text_color text 
 alter table public.simple_certificates add column if not exists template_style text not null default 'modern';
 alter table public.simple_certificates add column if not exists logo_size integer not null default 64;
 alter table public.simple_certificates add column if not exists signature_url text;
+alter table public.simple_certificates add column if not exists digital_stamp_opacity numeric(4,3) not null default 0.15;
 
 -- A reusable Head/CEO signature can be stored against each software house.
 alter table public.software_houses add column if not exists head_signature_url text;
