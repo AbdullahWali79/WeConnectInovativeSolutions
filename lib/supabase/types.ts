@@ -660,6 +660,7 @@ export type SimpleCertificate = {
   signature_url: string | null;
   digital_stamp_url: string | null;
   digital_stamp_size: number;
+  digital_stamp_opacity: number;
   hr_email: string | null;
   hr_contact_number: string | null;
   created_by: string | null;
