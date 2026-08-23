@@ -7,12 +7,13 @@ import { publicClientHuntSlug } from "@/lib/public-client-hunt";
 
 const refresh = () => revalidatePath("/admin/forms/client-hunt");
 
-export async function savePublicClientHuntForm(input: { id?: string; title: string; slug: string; description: string; isActive: boolean }) {
+export async function savePublicClientHuntForm(input: { id?: string; title: string; slug: string; description: string; isActive: boolean; dailyTarget: number }) {
   const admin = await requireAdminOnly();
   const title = input.title.trim();
   const slug = publicClientHuntSlug(input.slug || title);
   if (!title || !slug) return { success: false as const, error: "Form title and a valid share-link slug are required." };
-  const payload = { title, slug, description: input.description.trim() || null, is_active: input.isActive, created_by: admin.id, updated_at: new Date().toISOString() };
+  const dailyTarget = Math.min(Math.max(Math.round(Number(input.dailyTarget) || 3), 1), 100);
+  const payload = { title, slug, description: input.description.trim() || null, is_active: input.isActive, daily_target: dailyTarget, created_by: admin.id, updated_at: new Date().toISOString() };
   const supabase = createSupabaseServiceClient();
   const { error } = input.id ? await supabase.from("public_client_hunt_forms").update(payload).eq("id", input.id) : await supabase.from("public_client_hunt_forms").insert(payload);
   if (error) return { success: false as const, error: error.code === "23505" ? "This share-link slug is already in use." : error.message };

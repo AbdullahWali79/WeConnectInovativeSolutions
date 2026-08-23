@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { submitGuestClientHunt } from "@/app/client-hunt-form/[slug]/actions";
+import { getGuestClientHuntProgress, submitGuestClientHunt } from "@/app/client-hunt-form/[slug]/actions";
 import { PUBLIC_CLIENT_HUNT_SERVICES } from "@/lib/public-client-hunt";
 import type { PublicClientHuntForm, PublicClientHuntKeyword, PublicClientHuntService } from "@/lib/supabase/types";
 
@@ -10,6 +10,7 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
   const [fields, setFields] = useState({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "" as "" | "yes" | "no", keywordId: "", keywordText: "", serviceRequired: "" as PublicClientHuntService | "", notes: "" });
   const [state, setState] = useState<{ type: "success" | "error"; message: string; registered?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ completed: number; target: number; remaining: number; message: string } | null>(null);
   const update = (key: keyof typeof fields, value: string) => {
     setFields((current) => ({ ...current, [key]: value }));
     if (key === "submitterName") localStorage.setItem("guest-client-hunt-name", value);
@@ -21,6 +22,16 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
     const savedPhone = localStorage.getItem("guest-client-hunt-phone") || "";
     setFields((current) => ({ ...current, submitterName: savedName, submitterPhone: savedPhone }));
   }, []);
+
+  useEffect(() => {
+    if (!fields.submitterName.trim() || fields.submitterPhone.replace(/\D/g, "").length < 7) { setProgress(null); return; }
+    const timer = window.setTimeout(() => {
+      void getGuestClientHuntProgress(form.id, fields.submitterPhone, fields.submitterName).then((result) => {
+        if (result.success) setProgress(result.progress);
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [fields.submitterName, fields.submitterPhone, form.id]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -34,6 +45,7 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
     }
     localStorage.setItem("guest-client-hunt-name", fields.submitterName);
     localStorage.setItem("guest-client-hunt-phone", fields.submitterPhone);
+    setProgress(result.progress);
     setFields((current) => ({ ...current, clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "", keywordId: "", keywordText: "", serviceRequired: "", notes: "" }));
     setState({ type: "success", message: "Client lead submitted successfully. Thank you!" });
   }
@@ -50,6 +62,7 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
       {keywords.length > 0 ? <label><span className="wc-label">Search keyword *</span><select className="wc-input mt-2" value={fields.keywordId} onChange={(e) => update("keywordId", e.target.value)} required><option value="">Select keyword</option>{keywords.map((keyword) => <option key={keyword.id} value={keyword.id}>{keyword.keyword}</option>)}</select></label> : <label><span className="wc-label">Search keyword *</span><input className="wc-input mt-2" value={fields.keywordText} onChange={(e) => update("keywordText", e.target.value)} placeholder="e.g. gym in London" required /></label>}
       <label><span className="wc-label">Service client needs *</span><select className="wc-input mt-2" value={fields.serviceRequired} onChange={(e) => update("serviceRequired", e.target.value)} required><option value="">Select service</option>{PUBLIC_CLIENT_HUNT_SERVICES.map((service) => <option key={service.value} value={service.value}>{service.label}</option>)}</select></label>
     </div>
+    {progress ? <div className="overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-emerald-50 p-5 text-slate-900"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-widest text-blue-700">Today&apos;s Client Hunt Progress</p><p className="mt-1 text-2xl font-black">{progress.completed} / {progress.target} clients found</p></div><span className={`rounded-full px-4 py-2 text-sm font-black ${progress.remaining === 0 ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-800"}`}>{progress.remaining === 0 ? "Target Complete" : `${progress.remaining} remaining`}</span></div><div className="mt-4 h-3 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all" style={{ width: `${Math.min((progress.completed / progress.target) * 100, 100)}%` }} /></div><p className="mt-4 font-bold leading-6">✨ {progress.message}</p></div> : null}
     <label className="block"><span className="wc-label">Notes (optional)</span><textarea className="wc-input mt-2 min-h-24" value={fields.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Why does this client need the selected service?" /></label>
     {state ? <div role="alert" className={`rounded-xl border p-4 text-sm font-bold ${state.type === "success" ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-red-300 bg-red-50 text-red-800"}`}>{state.message}{state.registered ? <div className="mt-3"><Link className="underline" href="/login?next=/student/client-hunting">Open Student Portal</Link></div> : null}</div> : null}
     <button className="wc-primary-btn w-full" disabled={busy}>{busy ? "Submitting..." : "Submit Client Lead"}</button>

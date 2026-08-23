@@ -21,6 +21,37 @@ export type GuestClientHuntInput = {
 
 const normalizePhone = (value: string) => value.replace(/\D/g, "");
 
+function pakistanDayRange() {
+  const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const start = new Date(`${date}T00:00:00+05:00`);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function motivation(completed: number, target: number, name: string) {
+  const remaining = Math.max(target - completed, 0);
+  if (completed >= target) return `Excellent ${name}! Aaj ka target complete ho gaya. Aap ki consistency hi aap ki success banegi!`;
+  if (completed === 0) return `${name}, har successful client journey pehli search se shuru hoti hai. Energy ke sath aaj ka pehla lead find karein!`;
+  if (remaining === 1) return `Great work ${name}! Sirf 1 client aur — aap target complete karne ke bohat qareeb hain!`;
+  return `Shabash ${name}! Momentum bana hua hai. ${remaining} aur quality clients find karein aur aaj ka target complete karein!`;
+}
+
+async function progressData(formId: string, phone: string, name: string) {
+  const supabase = createSupabaseServiceClient();
+  const { data: form } = await supabase.from("public_client_hunt_forms").select("daily_target").eq("id", formId).maybeSingle();
+  const target = Math.max(form?.daily_target ?? 3, 1);
+  const { start, end } = pakistanDayRange();
+  const { data } = await supabase.from("public_client_hunt_submissions").select("submitter_phone").eq("form_id", formId).gte("submitted_at", start).lt("submitted_at", end);
+  const normalized = normalizePhone(phone);
+  const completed = (data ?? []).filter((item) => normalizePhone(item.submitter_phone) === normalized).length;
+  return { completed, target, remaining: Math.max(target - completed, 0), message: motivation(completed, target, name.trim() || "Student") };
+}
+
+export async function getGuestClientHuntProgress(formId: string, phone: string, name: string) {
+  if (!formId || normalizePhone(phone).length < 7 || !name.trim()) return { success: false as const };
+  return { success: true as const, progress: await progressData(formId, phone, name) };
+}
+
 export async function submitGuestClientHunt(input: GuestClientHuntInput) {
   const submitterName = input.submitterName.trim();
   const submitterPhone = input.submitterPhone.trim();
@@ -75,5 +106,5 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
     notes: input.notes?.trim() || null,
   });
   if (error) return { success: false as const, error: "Submission could not be saved. Please try again." };
-  return { success: true as const };
+  return { success: true as const, progress: await progressData(input.formId, submitterPhone, submitterName) };
 }

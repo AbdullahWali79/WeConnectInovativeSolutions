@@ -717,6 +717,7 @@ export type PublicClientHuntForm = {
   slug: string;
   description: string | null;
   is_active: boolean;
+  daily_target: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;
