@@ -15,7 +15,7 @@ export default async function PublicClientHuntFormPage({ params }: { params: Pro
   return <main className="min-h-screen bg-background px-4 py-10 text-on-background">
     <div className="mx-auto max-w-3xl">
       <div className="mb-7 text-center"><p className="text-sm font-black uppercase tracking-[0.2em] text-secondary">We Connect Innovative Solutions</p><h1 className="mt-3 text-3xl font-black sm:text-5xl">{form.title}</h1><p className="mx-auto mt-4 max-w-2xl text-on-surface-variant">{form.description || "Find a potential client and submit the lead details below."}</p></div>
-      {keywords.length ? <GuestClientHuntForm form={form} keywords={keywords} /> : <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center font-bold text-amber-800">This form has no active keywords yet. Please contact the administrator.</div>}
+      <GuestClientHuntForm form={form} keywords={keywords} />
     </div>
   </main>;
 }

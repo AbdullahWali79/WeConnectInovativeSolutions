@@ -10,7 +10,8 @@ export type GuestClientHuntInput = {
   submitterPhone: string;
   clientName?: string;
   websiteUrl: string;
-  keywordId: string;
+  keywordId?: string;
+  keywordText?: string;
   serviceRequired: PublicClientHuntService;
   notes?: string;
 };
@@ -23,7 +24,8 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
   const phoneDigits = normalizePhone(submitterPhone);
   const websiteUrl = input.websiteUrl.trim();
 
-  if (!submitterName || phoneDigits.length < 7 || !websiteUrl || !input.keywordId) {
+  const keywordText = input.keywordText?.trim() || "";
+  if (!submitterName || phoneDigits.length < 7 || !websiteUrl || (!input.keywordId && !keywordText)) {
     return { success: false as const, error: "Name, valid phone number, website URL and keyword are required." };
   }
   if (!PUBLIC_CLIENT_HUNT_SERVICES.some((item) => item.value === input.serviceRequired)) {
@@ -49,13 +51,14 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
   const { data: form } = await supabase.from("public_client_hunt_forms").select("id,is_active").eq("id", input.formId).maybeSingle();
   if (!form?.is_active) return { success: false as const, error: "This form is not accepting submissions." };
 
-  const { data: keyword } = await supabase.from("public_client_hunt_keywords").select("id,keyword,is_active,form_id").eq("id", input.keywordId).maybeSingle();
-  if (!keyword?.is_active || keyword.form_id !== input.formId) return { success: false as const, error: "The selected keyword is not available." };
+  const { data: activeKeywords } = await supabase.from("public_client_hunt_keywords").select("id,keyword,is_active,form_id").eq("form_id", input.formId).eq("is_active", true);
+  const keyword = input.keywordId ? activeKeywords?.find((item) => item.id === input.keywordId) : null;
+  if ((activeKeywords?.length ?? 0) > 0 && !keyword) return { success: false as const, error: "Please select an available keyword." };
 
   const { error } = await supabase.from("public_client_hunt_submissions").insert({
     form_id: input.formId,
-    keyword_id: keyword.id,
-    keyword_snapshot: keyword.keyword,
+    keyword_id: keyword?.id ?? null,
+    keyword_snapshot: keyword?.keyword ?? keywordText,
     submitter_name: submitterName,
     submitter_phone: submitterPhone,
     client_name: input.clientName?.trim() || null,
