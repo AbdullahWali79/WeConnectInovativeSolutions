@@ -745,6 +745,7 @@ export type PublicClientHuntSubmission = {
   client_phone: string | null;
   client_has_whatsapp: boolean | null;
   service_required: PublicClientHuntService;
+  services_required: PublicClientHuntService[];
   notes: string | null;
   submitted_at: string;
 };

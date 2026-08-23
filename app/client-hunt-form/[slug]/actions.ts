@@ -15,7 +15,7 @@ export type GuestClientHuntInput = {
   clientHasWhatsapp?: boolean | null;
   keywordId?: string;
   keywordText?: string;
-  serviceRequired: PublicClientHuntService;
+  servicesRequired: PublicClientHuntService[];
   notes?: string;
 };
 
@@ -64,8 +64,9 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
   if (!submitterName || phoneDigits.length < 7 || !websiteUrl || !clientGmbUrl || normalizePhone(clientPhone).length < 7 || input.clientHasWhatsapp === null || input.clientHasWhatsapp === undefined || (!input.keywordId && !keywordText)) {
     return { success: false as const, error: "Name, phone, website, client GMB URL, client phone, WhatsApp status and keyword are required." };
   }
-  if (!PUBLIC_CLIENT_HUNT_SERVICES.some((item) => item.value === input.serviceRequired)) {
-    return { success: false as const, error: "Please select a valid required service." };
+  const servicesRequired = [...new Set(input.servicesRequired ?? [])];
+  if (servicesRequired.length === 0 || servicesRequired.some((service) => !PUBLIC_CLIENT_HUNT_SERVICES.some((item) => item.value === service))) {
+    return { success: false as const, error: "Please select at least one valid required service." };
   }
   try {
     new URL(/^https?:\/\//i.test(websiteUrl) ? websiteUrl : `https://${websiteUrl}`);
@@ -103,7 +104,8 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
     client_gmb_url: clientGmbUrl ? (/^https?:\/\//i.test(clientGmbUrl) ? clientGmbUrl : `https://${clientGmbUrl}`) : null,
     client_phone: clientPhone,
     client_has_whatsapp: input.clientHasWhatsapp,
-    service_required: input.serviceRequired,
+    service_required: servicesRequired[0],
+    services_required: servicesRequired,
     notes: input.notes?.trim() || null,
   });
   if (error) return { success: false as const, error: "Submission could not be saved. Please try again." };

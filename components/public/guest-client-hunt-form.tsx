@@ -8,7 +8,7 @@ import type { PublicClientHuntForm, PublicClientHuntKeyword, PublicClientHuntSer
 
 export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHuntForm; keywords: PublicClientHuntKeyword[] }) {
   const [keywordIndex, setKeywordIndex] = useState(0);
-  const [fields, setFields] = useState({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "" as "" | "yes" | "no", keywordId: keywords[0]?.id ?? "", keywordText: "", serviceRequired: "" as PublicClientHuntService | "", notes: "" });
+  const [fields, setFields] = useState({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "" as "" | "yes" | "no", keywordId: keywords[0]?.id ?? "", keywordText: "", servicesRequired: [] as PublicClientHuntService[], notes: "" });
   const [state, setState] = useState<{ type: "success" | "error"; message: string; registered?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; target: number; remaining: number; message: string } | null>(null);
@@ -45,7 +45,7 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
     event.preventDefault();
     setBusy(true);
     setState(null);
-    const result = await submitGuestClientHunt({ ...fields, formId: form.id, serviceRequired: fields.serviceRequired as PublicClientHuntService, clientHasWhatsapp: fields.clientHasWhatsapp === "" ? null : fields.clientHasWhatsapp === "yes" });
+    const result = await submitGuestClientHunt({ ...fields, formId: form.id, clientHasWhatsapp: fields.clientHasWhatsapp === "" ? null : fields.clientHasWhatsapp === "yes" });
     setBusy(false);
     if (!result.success) {
       setState({ type: "error", message: result.error, registered: "registered" in result && result.registered });
@@ -54,7 +54,7 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
     localStorage.setItem("guest-client-hunt-name", fields.submitterName);
     localStorage.setItem("guest-client-hunt-phone", fields.submitterPhone);
     setProgress(result.progress);
-    setFields((current) => ({ ...current, clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "", keywordId: keywords[keywordIndex]?.id ?? "", keywordText: "", serviceRequired: "", notes: "" }));
+    setFields((current) => ({ ...current, clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "", keywordId: keywords[keywordIndex]?.id ?? "", keywordText: "", servicesRequired: [], notes: "" }));
     setState({ type: "success", message: "Client lead submitted successfully. Thank you!" });
   }
 
@@ -77,7 +77,7 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
       <label><span className="wc-label">Client GMB URL *</span><input className="wc-input mt-2" type="text" value={fields.clientGmbUrl} onChange={(e) => update("clientGmbUrl", e.target.value)} placeholder="https://maps.app.goo.gl/AbCd1234" required /></label>
       <label><span className="wc-label">Client phone *</span><input className="wc-input mt-2" type="tel" value={fields.clientPhone} onChange={(e) => update("clientPhone", e.target.value)} placeholder="e.g. +44 20 1234 5678" required /></label>
       <label><span className="wc-label">Client has WhatsApp? *</span><select className="wc-input mt-2" value={fields.clientHasWhatsapp} onChange={(e) => update("clientHasWhatsapp", e.target.value)} required><option value="">Select Yes or No</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-      <label><span className="wc-label">Service client needs *</span><select className="wc-input mt-2" value={fields.serviceRequired} onChange={(e) => update("serviceRequired", e.target.value)} required><option value="">Select service</option>{PUBLIC_CLIENT_HUNT_SERVICES.map((service) => <option key={service.value} value={service.value}>{service.label}</option>)}</select></label>
+      <fieldset className="sm:col-span-2"><legend className="wc-label">Services client needs *</legend><div className="mt-2 grid gap-3 rounded-xl border border-outline-variant p-4 sm:grid-cols-2">{PUBLIC_CLIENT_HUNT_SERVICES.map((service) => <label key={service.value} className="flex cursor-pointer items-center gap-3 rounded-lg p-2 font-semibold hover:bg-surface-container-low"><input type="checkbox" className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary" checked={fields.servicesRequired.includes(service.value)} onChange={(event) => setFields((current) => ({ ...current, servicesRequired: event.target.checked ? [...current.servicesRequired, service.value] : current.servicesRequired.filter((value) => value !== service.value) }))} /><span>{service.label}</span></label>)}</div></fieldset>
     </div>
     {progress ? <div className="overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-emerald-50 p-5 text-slate-900"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-widest text-blue-700">Today&apos;s Client Hunt Progress</p><p className="mt-1 text-2xl font-black">{progress.completed} / {progress.target} clients found</p></div><span className={`rounded-full px-4 py-2 text-sm font-black ${progress.remaining === 0 ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-800"}`}>{progress.remaining === 0 ? "Target Complete" : `${progress.remaining} remaining`}</span></div><div className="mt-4 h-3 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all" style={{ width: `${Math.min((progress.completed / progress.target) * 100, 100)}%` }} /></div><p className="mt-4 font-bold leading-6">✨ {progress.message}</p></div> : null}
     <label className="block"><span className="wc-label">Notes (optional)</span><textarea className="wc-input mt-2 min-h-24" value={fields.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Why does this client need the selected service?" /></label>
