@@ -62,3 +62,22 @@ export async function deletePublicClientHuntSubmission(id: string) {
   refresh();
   return { success: true as const };
 }
+
+export async function getOrCreatePublicClientHuntShortCode(formId: string) {
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
+  const { data: existing, error: readError } = await supabase.from("public_client_hunt_forms").select("short_code").eq("id", formId).maybeSingle();
+  if (readError) return { success: false as const, error: readError.message };
+  if (existing?.short_code) return { success: true as const, shortCode: existing.short_code };
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const shortCode = crypto.randomUUID().replaceAll("-", "").slice(0, 6);
+    const { error } = await supabase.from("public_client_hunt_forms").update({ short_code: shortCode, updated_at: new Date().toISOString() }).eq("id", formId).is("short_code", null);
+    if (!error) {
+      const { data } = await supabase.from("public_client_hunt_forms").select("short_code").eq("id", formId).single();
+      if (data?.short_code) { refresh(); return { success: true as const, shortCode: data.short_code }; }
+    }
+    if (error?.code !== "23505") return { success: false as const, error: error?.message || "Tiny URL could not be created." };
+  }
+  return { success: false as const, error: "A unique tiny URL could not be created. Please try again." };
+}

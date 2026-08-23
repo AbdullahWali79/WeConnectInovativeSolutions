@@ -456,6 +456,7 @@ export type Service = {
   id: string;
   title: string;
   slug: string;
+  short_code: string | null;
   category: string;
   icon: string;
   short_description: string;

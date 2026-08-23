@@ -7,7 +7,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { Icon } from "@/components/icon";
 import { PUBLIC_CLIENT_HUNT_SERVICES, publicClientHuntServiceLabel, publicClientHuntSlug } from "@/lib/public-client-hunt";
 import type { PublicClientHuntForm, PublicClientHuntKeyword, PublicClientHuntSubmission } from "@/lib/supabase/types";
-import { addPublicClientHuntKeyword, deletePublicClientHuntForm, deletePublicClientHuntKeyword, deletePublicClientHuntSubmission, savePublicClientHuntForm, togglePublicClientHuntKeyword } from "@/app/admin/forms/client-hunt/actions";
+import { addPublicClientHuntKeyword, deletePublicClientHuntForm, deletePublicClientHuntKeyword, deletePublicClientHuntSubmission, getOrCreatePublicClientHuntShortCode, savePublicClientHuntForm, togglePublicClientHuntKeyword } from "@/app/admin/forms/client-hunt/actions";
 
 type Modal = "editor" | "forms" | null;
 
@@ -33,10 +33,20 @@ export function PublicClientHuntFormsManager({ forms, keywords, submissions, set
   function createForm() { setEditingId(null); setFormDraft({ title: "External Client Hunt Form", slug: "external-client-hunt", description: "", isActive: true, dailyTarget: 3 }); setModal("editor"); }
   function edit(form: PublicClientHuntForm) { setEditingId(form.id); setSelectedFormId(form.id); setFormDraft({ title: form.title, slug: form.slug, description: form.description ?? "", isActive: form.is_active, dailyTarget: form.daily_target || 3 }); setModal("editor"); }
   function copyLink(form: PublicClientHuntForm) { void navigator.clipboard.writeText(shareUrl(form.slug)).then(() => setToast({ type: "success", message: "Shareable link copied. You can send it to non-registered students." })); }
+  function copyTinyLink(form: PublicClientHuntForm) {
+    startTransition(async () => {
+      const result = await getOrCreatePublicClientHuntShortCode(form.id);
+      if (!result.success) { setToast({ type: "error", message: result.error }); return; }
+      const tinyUrl = `${window.location.origin}/h/${result.shortCode}`;
+      await navigator.clipboard.writeText(tinyUrl);
+      setToast({ type: "success", message: `Tiny URL copied: ${tinyUrl}` });
+      router.refresh();
+    });
+  }
 
   return <>
     <Toast toast={toast} onClear={() => setToast(null)} />
-    <PageHeader eyebrow="Shareable tools" title="Forms · Client Hunt" description="Create public links for non-registered students, control search keywords, and review every submitted client lead." action={<div className="flex flex-wrap gap-2"><button className="wc-primary-btn" onClick={createForm}><Icon name="add" /> Create Form</button><button className="wc-secondary-btn" onClick={() => setModal("forms")}><Icon name="dynamic_form" /> Manage Forms</button>{currentForm ? <button className="wc-secondary-btn" onClick={() => copyLink(currentForm)}><Icon name="content_copy" /> Copy Shareable Link</button> : null}</div>} />
+    <PageHeader eyebrow="Shareable tools" title="Forms · Client Hunt" description="Create public links for non-registered students, control search keywords, and review every submitted client lead." action={<div className="flex flex-wrap gap-2"><button className="wc-primary-btn" onClick={createForm}><Icon name="add" /> Create Form</button><button className="wc-secondary-btn" onClick={() => setModal("forms")}><Icon name="dynamic_form" /> Manage Forms</button>{currentForm ? <><button className="wc-secondary-btn" onClick={() => copyTinyLink(currentForm)} disabled={pending}><Icon name="link" /> {currentForm.short_code ? "Copy Tiny URL" : "Create Tiny URL"}</button><button className="wc-secondary-btn" onClick={() => copyLink(currentForm)}><Icon name="content_copy" /> Copy Shareable Link</button></> : null}</div>} />
     {setupError ? <div className="mb-5 rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm font-bold text-orange-800">Database migration is required: {setupError}</div> : null}
 
     <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-card">
