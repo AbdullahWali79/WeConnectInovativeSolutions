@@ -80,7 +80,7 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
       setForm({ ...initialForm, course_id: initialCourseId });
       showResult({
         type: result.warning ? "info" : "success",
-        message: result.warning ?? "Application submitted successfully. Admin will review it soon.",
+        message: result.warning ?? "Application submitted successfully. A confirmation email has been sent to you, and admin will review your application soon.",
       });
     } catch (error) {
       console.error("Application submission failed", error);

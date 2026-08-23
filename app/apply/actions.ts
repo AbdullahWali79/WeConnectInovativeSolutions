@@ -2,6 +2,7 @@
 
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { sendStudentRegistrationAlert } from "@/lib/mail/send-student-registration-alert";
+import { sendStudentApplicationConfirmation } from "@/lib/mail/send-student-application-confirmation";
 
 export type SubmitStudentApplicationInput = {
   full_name: string;
@@ -98,23 +99,37 @@ async function createStudentApplication(input: SubmitStudentApplicationInput): P
 
   const warnings: string[] = [];
 
-  try {
-    await sendStudentRegistrationAlert({
+  const registeredAt = new Date().toISOString();
+  const mailResults = await Promise.allSettled([
+    sendStudentRegistrationAlert({
       studentName: fullName,
       studentEmail: email,
       courseName: course?.title ?? "Not selected",
-      registeredAt: new Date().toISOString(),
-    });
-  } catch (mailError) {
-    console.error("Student registration email failed", mailError);
-    warnings.push(`admin email failed: ${mailError instanceof Error ? mailError.message : "Unknown mail error"}`);
+      registeredAt,
+    }),
+    sendStudentApplicationConfirmation({
+      studentName: fullName,
+      studentEmail: email,
+      courseName: course?.title,
+      appliedAt: registeredAt,
+    }),
+  ]);
+
+  if (mailResults[0].status === "rejected") {
+    console.error("Student registration admin email failed", mailResults[0].reason);
+    warnings.push("the admin notification email could not be sent");
+  }
+
+  if (mailResults[1].status === "rejected") {
+    console.error("Student application confirmation email failed", mailResults[1].reason);
+    warnings.push("the confirmation email could not be sent");
   }
 
   if (warnings.length > 0) {
     return {
       success: true,
       error: null,
-      warning: `Application submitted, but ${warnings.join("; ")}.`,
+      warning: `Application submitted successfully, but ${warnings.join(" and ")}. Our team still received your application.`,
     };
   }
 
