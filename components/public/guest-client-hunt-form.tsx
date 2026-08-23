@@ -51,14 +51,23 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
   }
 
   return <form onSubmit={submit} className="space-y-5 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl sm:p-8">
+    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm leading-6 text-slate-800">
+      <p className="font-black text-blue-800">Client details submit karne se pehle:</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5">
+        <li>Client ki official website aur Google Business Profile (GMB) Google Maps se open karein.</li>
+        <li>GMB ka <strong>Share</strong> button press karke business link copy karein.</li>
+        <li>Example GMB link: <span className="break-all font-bold text-blue-700">https://maps.app.goo.gl/AbCd1234</span></li>
+        <li>Client ka contact number add karein aur confirm karein ke us number par WhatsApp available hai ya nahi.</li>
+      </ul>
+    </div>
     <div className="grid gap-5 sm:grid-cols-2">
       <label><span className="wc-label">Your name *</span><input className="wc-input mt-2" value={fields.submitterName} onChange={(e) => update("submitterName", e.target.value)} required /></label>
       <label><span className="wc-label">Phone number *</span><input className="wc-input mt-2" type="tel" value={fields.submitterPhone} onChange={(e) => update("submitterPhone", e.target.value)} placeholder="+92 300 0000000" required /></label>
       <label><span className="wc-label">Client name (optional)</span><input className="wc-input mt-2" value={fields.clientName} onChange={(e) => update("clientName", e.target.value)} /></label>
       <label><span className="wc-label">Website URL *</span><input className="wc-input mt-2" type="text" value={fields.websiteUrl} onChange={(e) => update("websiteUrl", e.target.value)} placeholder="example.com" required /></label>
-      <label><span className="wc-label">Client GMB URL (optional)</span><input className="wc-input mt-2" type="text" value={fields.clientGmbUrl} onChange={(e) => update("clientGmbUrl", e.target.value)} placeholder="Google Maps business link" /></label>
-      <label><span className="wc-label">Client phone (optional)</span><input className="wc-input mt-2" type="tel" value={fields.clientPhone} onChange={(e) => update("clientPhone", e.target.value)} placeholder="Client contact number" /></label>
-      <label><span className="wc-label">Client has WhatsApp?</span><select className="wc-input mt-2" value={fields.clientHasWhatsapp} onChange={(e) => update("clientHasWhatsapp", e.target.value)}><option value="">Not checked</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      <label><span className="wc-label">Client GMB URL *</span><input className="wc-input mt-2" type="text" value={fields.clientGmbUrl} onChange={(e) => update("clientGmbUrl", e.target.value)} placeholder="https://maps.app.goo.gl/AbCd1234" required /></label>
+      <label><span className="wc-label">Client phone *</span><input className="wc-input mt-2" type="tel" value={fields.clientPhone} onChange={(e) => update("clientPhone", e.target.value)} placeholder="e.g. +44 20 1234 5678" required /></label>
+      <label><span className="wc-label">Client has WhatsApp? *</span><select className="wc-input mt-2" value={fields.clientHasWhatsapp} onChange={(e) => update("clientHasWhatsapp", e.target.value)} required><option value="">Select Yes or No</option><option value="yes">Yes</option><option value="no">No</option></select></label>
       {keywords.length > 0 ? <label><span className="wc-label">Search keyword *</span><select className="wc-input mt-2" value={fields.keywordId} onChange={(e) => update("keywordId", e.target.value)} required><option value="">Select keyword</option>{keywords.map((keyword) => <option key={keyword.id} value={keyword.id}>{keyword.keyword}</option>)}</select></label> : <label><span className="wc-label">Search keyword *</span><input className="wc-input mt-2" value={fields.keywordText} onChange={(e) => update("keywordText", e.target.value)} placeholder="e.g. gym in London" required /></label>}
       <label><span className="wc-label">Service client needs *</span><select className="wc-input mt-2" value={fields.serviceRequired} onChange={(e) => update("serviceRequired", e.target.value)} required><option value="">Select service</option>{PUBLIC_CLIENT_HUNT_SERVICES.map((service) => <option key={service.value} value={service.value}>{service.label}</option>)}</select></label>
     </div>

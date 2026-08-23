@@ -58,10 +58,11 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
   const phoneDigits = normalizePhone(submitterPhone);
   const websiteUrl = input.websiteUrl.trim();
   const clientGmbUrl = input.clientGmbUrl?.trim() || "";
+  const clientPhone = input.clientPhone?.trim() || "";
 
   const keywordText = input.keywordText?.trim() || "";
-  if (!submitterName || phoneDigits.length < 7 || !websiteUrl || (!input.keywordId && !keywordText)) {
-    return { success: false as const, error: "Name, valid phone number, website URL and keyword are required." };
+  if (!submitterName || phoneDigits.length < 7 || !websiteUrl || !clientGmbUrl || normalizePhone(clientPhone).length < 7 || input.clientHasWhatsapp === null || input.clientHasWhatsapp === undefined || (!input.keywordId && !keywordText)) {
+    return { success: false as const, error: "Name, phone, website, client GMB URL, client phone, WhatsApp status and keyword are required." };
   }
   if (!PUBLIC_CLIENT_HUNT_SERVICES.some((item) => item.value === input.serviceRequired)) {
     return { success: false as const, error: "Please select a valid required service." };
@@ -100,8 +101,8 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
     client_name: input.clientName?.trim() || null,
     website_url: /^https?:\/\//i.test(websiteUrl) ? websiteUrl : `https://${websiteUrl}`,
     client_gmb_url: clientGmbUrl ? (/^https?:\/\//i.test(clientGmbUrl) ? clientGmbUrl : `https://${clientGmbUrl}`) : null,
-    client_phone: input.clientPhone?.trim() || null,
-    client_has_whatsapp: input.clientHasWhatsapp ?? null,
+    client_phone: clientPhone,
+    client_has_whatsapp: input.clientHasWhatsapp,
     service_required: input.serviceRequired,
     notes: input.notes?.trim() || null,
   });
