@@ -7,7 +7,8 @@ import { PUBLIC_CLIENT_HUNT_SERVICES } from "@/lib/public-client-hunt";
 import type { PublicClientHuntForm, PublicClientHuntKeyword, PublicClientHuntService } from "@/lib/supabase/types";
 
 export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHuntForm; keywords: PublicClientHuntKeyword[] }) {
-  const [fields, setFields] = useState({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "" as "" | "yes" | "no", keywordId: "", keywordText: "", serviceRequired: "" as PublicClientHuntService | "", notes: "" });
+  const [keywordIndex, setKeywordIndex] = useState(0);
+  const [fields, setFields] = useState({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "" as "" | "yes" | "no", keywordId: keywords[0]?.id ?? "", keywordText: "", serviceRequired: "" as PublicClientHuntService | "", notes: "" });
   const [state, setState] = useState<{ type: "success" | "error"; message: string; registered?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; target: number; remaining: number; message: string } | null>(null);
@@ -22,6 +23,13 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
     const savedPhone = localStorage.getItem("guest-client-hunt-phone") || "";
     setFields((current) => ({ ...current, submitterName: savedName, submitterPhone: savedPhone }));
   }, []);
+
+  useEffect(() => {
+    if (keywords.length === 0) return;
+    const safeIndex = Math.min(keywordIndex, keywords.length - 1);
+    if (safeIndex !== keywordIndex) setKeywordIndex(safeIndex);
+    setFields((current) => ({ ...current, keywordId: keywords[safeIndex].id }));
+  }, [keywordIndex, keywords]);
 
   useEffect(() => {
     if (!fields.submitterName.trim() || fields.submitterPhone.replace(/\D/g, "").length < 7) { setProgress(null); return; }
@@ -46,11 +54,12 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
     localStorage.setItem("guest-client-hunt-name", fields.submitterName);
     localStorage.setItem("guest-client-hunt-phone", fields.submitterPhone);
     setProgress(result.progress);
-    setFields((current) => ({ ...current, clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "", keywordId: "", keywordText: "", serviceRequired: "", notes: "" }));
+    setFields((current) => ({ ...current, clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "", keywordId: keywords[keywordIndex]?.id ?? "", keywordText: "", serviceRequired: "", notes: "" }));
     setState({ type: "success", message: "Client lead submitted successfully. Thank you!" });
   }
 
   return <form onSubmit={submit} className="space-y-5 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl sm:p-8">
+    {keywords.length > 0 ? <section className="rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 to-secondary/10 p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-4"><div className="min-w-0 flex-1"><p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Your search keyword</p><p className="mt-2 break-words text-xl font-black text-on-surface sm:text-2xl">{keywords[keywordIndex]?.keyword}</p><p className="mt-2 text-xs font-bold text-on-surface-variant">Keyword {keywordIndex + 1} of {keywords.length}</p></div>{keywords.length > 1 ? <div className="flex gap-2"><button type="button" className="wc-secondary-btn" disabled={keywordIndex === 0} onClick={() => setKeywordIndex((current) => Math.max(0, current - 1))}>Previous</button><button type="button" className="wc-primary-btn" disabled={keywordIndex === keywords.length - 1} onClick={() => setKeywordIndex((current) => Math.min(keywords.length - 1, current + 1))}>Next</button></div> : null}</div></section> : <label className="block"><span className="wc-label">Search keyword *</span><input className="wc-input mt-2" value={fields.keywordText} onChange={(e) => update("keywordText", e.target.value)} placeholder="e.g. gym in London" required /></label>}
     <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm leading-6 text-slate-800">
       <p className="font-black text-blue-800">Client details submit karne se pehle:</p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -68,7 +77,6 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
       <label><span className="wc-label">Client GMB URL *</span><input className="wc-input mt-2" type="text" value={fields.clientGmbUrl} onChange={(e) => update("clientGmbUrl", e.target.value)} placeholder="https://maps.app.goo.gl/AbCd1234" required /></label>
       <label><span className="wc-label">Client phone *</span><input className="wc-input mt-2" type="tel" value={fields.clientPhone} onChange={(e) => update("clientPhone", e.target.value)} placeholder="e.g. +44 20 1234 5678" required /></label>
       <label><span className="wc-label">Client has WhatsApp? *</span><select className="wc-input mt-2" value={fields.clientHasWhatsapp} onChange={(e) => update("clientHasWhatsapp", e.target.value)} required><option value="">Select Yes or No</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-      {keywords.length > 0 ? <label><span className="wc-label">Search keyword *</span><select className="wc-input mt-2" value={fields.keywordId} onChange={(e) => update("keywordId", e.target.value)} required><option value="">Select keyword</option>{keywords.map((keyword) => <option key={keyword.id} value={keyword.id}>{keyword.keyword}</option>)}</select></label> : <label><span className="wc-label">Search keyword *</span><input className="wc-input mt-2" value={fields.keywordText} onChange={(e) => update("keywordText", e.target.value)} placeholder="e.g. gym in London" required /></label>}
       <label><span className="wc-label">Service client needs *</span><select className="wc-input mt-2" value={fields.serviceRequired} onChange={(e) => update("serviceRequired", e.target.value)} required><option value="">Select service</option>{PUBLIC_CLIENT_HUNT_SERVICES.map((service) => <option key={service.value} value={service.value}>{service.label}</option>)}</select></label>
     </div>
     {progress ? <div className="overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-emerald-50 p-5 text-slate-900"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-widest text-blue-700">Today&apos;s Client Hunt Progress</p><p className="mt-1 text-2xl font-black">{progress.completed} / {progress.target} clients found</p></div><span className={`rounded-full px-4 py-2 text-sm font-black ${progress.remaining === 0 ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-800"}`}>{progress.remaining === 0 ? "Target Complete" : `${progress.remaining} remaining`}</span></div><div className="mt-4 h-3 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all" style={{ width: `${Math.min((progress.completed / progress.target) * 100, 100)}%` }} /></div><p className="mt-4 font-bold leading-6">✨ {progress.message}</p></div> : null}

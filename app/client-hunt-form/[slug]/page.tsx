@@ -9,7 +9,7 @@ export default async function PublicClientHuntFormPage({ params }: { params: Pro
   const { data } = await supabase.from("public_client_hunt_forms").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
   if (!data) notFound();
   const form = data as PublicClientHuntForm;
-  const { data: keywordData } = await supabase.from("public_client_hunt_keywords").select("*").eq("form_id", form.id).eq("is_active", true).order("keyword");
+  const { data: keywordData } = await supabase.from("public_client_hunt_keywords").select("*").eq("form_id", form.id).eq("is_active", true).order("created_at", { ascending: true });
   const keywords = (keywordData ?? []) as PublicClientHuntKeyword[];
 
   return <main className="min-h-screen bg-background px-4 py-10 text-on-background">
