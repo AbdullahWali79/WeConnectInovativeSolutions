@@ -24,6 +24,7 @@ export type ClientHuntSpecialization =
   | "ecommerce"
   | "other";
 export type ClientHuntLeadStatus = "pending" | "approved" | "rejected" | "duplicate";
+export type PublicClientHuntService = "website_development" | "chatbot" | "mobile_app" | "social_media_marketing" | "seo" | "ecommerce" | "automation" | "other";
 export type SocialReactionType = "support" | "insightful" | "celebrate";
 
 export type Profile = {
@@ -710,6 +711,39 @@ export type ClientHuntLead = {
   updated_at: string;
 };
 
+export type PublicClientHuntForm = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PublicClientHuntKeyword = {
+  id: string;
+  form_id: string;
+  keyword: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type PublicClientHuntSubmission = {
+  id: string;
+  form_id: string;
+  keyword_id: string | null;
+  keyword_snapshot: string;
+  submitter_name: string;
+  submitter_phone: string;
+  client_name: string | null;
+  website_url: string;
+  service_required: PublicClientHuntService;
+  notes: string | null;
+  submitted_at: string;
+};
+
 export type StudentVideo = {
   id: string;
   student_id: string;
@@ -1003,6 +1037,24 @@ export type Database = {
             business_name: string;
           };
         Update: Partial<ClientHuntLead>;
+        Relationships: [];
+      };
+      public_client_hunt_forms: {
+        Row: PublicClientHuntForm;
+        Insert: Partial<PublicClientHuntForm> & { title: string; slug: string };
+        Update: Partial<PublicClientHuntForm>;
+        Relationships: [];
+      };
+      public_client_hunt_keywords: {
+        Row: PublicClientHuntKeyword;
+        Insert: Partial<PublicClientHuntKeyword> & { form_id: string; keyword: string };
+        Update: Partial<PublicClientHuntKeyword>;
+        Relationships: [];
+      };
+      public_client_hunt_submissions: {
+        Row: PublicClientHuntSubmission;
+        Insert: Partial<PublicClientHuntSubmission> & { form_id: string; keyword_snapshot: string; submitter_name: string; submitter_phone: string; website_url: string; service_required: PublicClientHuntService };
+        Update: Partial<PublicClientHuntSubmission>;
         Relationships: [];
       };
       student_videos: {

@@ -1,0 +1,63 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireAdminOnly } from "@/lib/admin-access";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { publicClientHuntSlug } from "@/lib/public-client-hunt";
+
+const refresh = () => revalidatePath("/admin/forms/client-hunt");
+
+export async function savePublicClientHuntForm(input: { id?: string; title: string; slug: string; description: string; isActive: boolean }) {
+  const admin = await requireAdminOnly();
+  const title = input.title.trim();
+  const slug = publicClientHuntSlug(input.slug || title);
+  if (!title || !slug) return { success: false as const, error: "Form title and a valid share-link slug are required." };
+  const payload = { title, slug, description: input.description.trim() || null, is_active: input.isActive, created_by: admin.id, updated_at: new Date().toISOString() };
+  const supabase = createSupabaseServiceClient();
+  const { error } = input.id ? await supabase.from("public_client_hunt_forms").update(payload).eq("id", input.id) : await supabase.from("public_client_hunt_forms").insert(payload);
+  if (error) return { success: false as const, error: error.code === "23505" ? "This share-link slug is already in use." : error.message };
+  refresh();
+  return { success: true as const };
+}
+
+export async function deletePublicClientHuntForm(id: string) {
+  await requireAdminOnly();
+  const { error } = await createSupabaseServiceClient().from("public_client_hunt_forms").delete().eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  refresh();
+  return { success: true as const };
+}
+
+export async function addPublicClientHuntKeyword(formId: string, keywordValue: string) {
+  await requireAdminOnly();
+  const keyword = keywordValue.trim();
+  if (!keyword) return { success: false as const, error: "Keyword is required." };
+  const { error } = await createSupabaseServiceClient().from("public_client_hunt_keywords").insert({ form_id: formId, keyword });
+  if (error) return { success: false as const, error: error.code === "23505" ? "This keyword already exists on the form." : error.message };
+  refresh();
+  return { success: true as const };
+}
+
+export async function togglePublicClientHuntKeyword(id: string, isActive: boolean) {
+  await requireAdminOnly();
+  const { error } = await createSupabaseServiceClient().from("public_client_hunt_keywords").update({ is_active: isActive }).eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  refresh();
+  return { success: true as const };
+}
+
+export async function deletePublicClientHuntKeyword(id: string) {
+  await requireAdminOnly();
+  const { error } = await createSupabaseServiceClient().from("public_client_hunt_keywords").delete().eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  refresh();
+  return { success: true as const };
+}
+
+export async function deletePublicClientHuntSubmission(id: string) {
+  await requireAdminOnly();
+  const { error } = await createSupabaseServiceClient().from("public_client_hunt_submissions").delete().eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  refresh();
+  return { success: true as const };
+}

@@ -53,6 +53,9 @@ const navGroups: NavGroup[] = [
     { href: "/admin/social-media", label: "Social Media", icon: "share", adminOnly: true },
     { href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
   ]},
+  { id: "forms", label: "Forms", icon: "dynamic_form", items: [
+    { href: "/admin/forms/client-hunt", label: "Client Hunt Form", icon: "travel_explore", adminOnly: true },
+  ]},
   { id: "certificates", label: "Certificates & Letters", icon: "workspace_premium", items: [
     { href: "/admin/simple-certificates", label: "Simple Certificates", icon: "card_membership", adminOnly: true },
     { href: "/admin/completions", label: "Completion", icon: "workspace_premium", adminOnly: true },
