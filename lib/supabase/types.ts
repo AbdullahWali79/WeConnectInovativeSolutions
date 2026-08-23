@@ -456,7 +456,6 @@ export type Service = {
   id: string;
   title: string;
   slug: string;
-  short_code: string | null;
   category: string;
   icon: string;
   short_description: string;
@@ -716,6 +715,7 @@ export type PublicClientHuntForm = {
   id: string;
   title: string;
   slug: string;
+  short_code: string | null;
   description: string | null;
   is_active: boolean;
   daily_target: number;
