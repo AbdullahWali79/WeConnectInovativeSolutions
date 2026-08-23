@@ -1,28 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { submitGuestClientHunt } from "@/app/client-hunt-form/[slug]/actions";
 import { PUBLIC_CLIENT_HUNT_SERVICES } from "@/lib/public-client-hunt";
 import type { PublicClientHuntForm, PublicClientHuntKeyword, PublicClientHuntService } from "@/lib/supabase/types";
 
 export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHuntForm; keywords: PublicClientHuntKeyword[] }) {
-  const [fields, setFields] = useState({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", keywordId: "", keywordText: "", serviceRequired: "" as PublicClientHuntService | "", notes: "" });
+  const [fields, setFields] = useState({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "" as "" | "yes" | "no", keywordId: "", keywordText: "", serviceRequired: "" as PublicClientHuntService | "", notes: "" });
   const [state, setState] = useState<{ type: "success" | "error"; message: string; registered?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
-  const update = (key: keyof typeof fields, value: string) => setFields((current) => ({ ...current, [key]: value }));
+  const update = (key: keyof typeof fields, value: string) => {
+    setFields((current) => ({ ...current, [key]: value }));
+    if (key === "submitterName") localStorage.setItem("guest-client-hunt-name", value);
+    if (key === "submitterPhone") localStorage.setItem("guest-client-hunt-phone", value);
+  };
+
+  useEffect(() => {
+    const savedName = localStorage.getItem("guest-client-hunt-name") || "";
+    const savedPhone = localStorage.getItem("guest-client-hunt-phone") || "";
+    setFields((current) => ({ ...current, submitterName: savedName, submitterPhone: savedPhone }));
+  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     setState(null);
-    const result = await submitGuestClientHunt({ ...fields, formId: form.id, serviceRequired: fields.serviceRequired as PublicClientHuntService });
+    const result = await submitGuestClientHunt({ ...fields, formId: form.id, serviceRequired: fields.serviceRequired as PublicClientHuntService, clientHasWhatsapp: fields.clientHasWhatsapp === "" ? null : fields.clientHasWhatsapp === "yes" });
     setBusy(false);
     if (!result.success) {
       setState({ type: "error", message: result.error, registered: "registered" in result && result.registered });
       return;
     }
-    setFields({ submitterName: "", submitterPhone: "", clientName: "", websiteUrl: "", keywordId: "", keywordText: "", serviceRequired: "", notes: "" });
+    localStorage.setItem("guest-client-hunt-name", fields.submitterName);
+    localStorage.setItem("guest-client-hunt-phone", fields.submitterPhone);
+    setFields((current) => ({ ...current, clientName: "", websiteUrl: "", clientGmbUrl: "", clientPhone: "", clientHasWhatsapp: "", keywordId: "", keywordText: "", serviceRequired: "", notes: "" }));
     setState({ type: "success", message: "Client lead submitted successfully. Thank you!" });
   }
 
@@ -32,6 +44,9 @@ export function GuestClientHuntForm({ form, keywords }: { form: PublicClientHunt
       <label><span className="wc-label">Phone number *</span><input className="wc-input mt-2" type="tel" value={fields.submitterPhone} onChange={(e) => update("submitterPhone", e.target.value)} placeholder="+92 300 0000000" required /></label>
       <label><span className="wc-label">Client name (optional)</span><input className="wc-input mt-2" value={fields.clientName} onChange={(e) => update("clientName", e.target.value)} /></label>
       <label><span className="wc-label">Website URL *</span><input className="wc-input mt-2" type="text" value={fields.websiteUrl} onChange={(e) => update("websiteUrl", e.target.value)} placeholder="example.com" required /></label>
+      <label><span className="wc-label">Client GMB URL (optional)</span><input className="wc-input mt-2" type="text" value={fields.clientGmbUrl} onChange={(e) => update("clientGmbUrl", e.target.value)} placeholder="Google Maps business link" /></label>
+      <label><span className="wc-label">Client phone (optional)</span><input className="wc-input mt-2" type="tel" value={fields.clientPhone} onChange={(e) => update("clientPhone", e.target.value)} placeholder="Client contact number" /></label>
+      <label><span className="wc-label">Client has WhatsApp?</span><select className="wc-input mt-2" value={fields.clientHasWhatsapp} onChange={(e) => update("clientHasWhatsapp", e.target.value)}><option value="">Not checked</option><option value="yes">Yes</option><option value="no">No</option></select></label>
       {keywords.length > 0 ? <label><span className="wc-label">Search keyword *</span><select className="wc-input mt-2" value={fields.keywordId} onChange={(e) => update("keywordId", e.target.value)} required><option value="">Select keyword</option>{keywords.map((keyword) => <option key={keyword.id} value={keyword.id}>{keyword.keyword}</option>)}</select></label> : <label><span className="wc-label">Search keyword *</span><input className="wc-input mt-2" value={fields.keywordText} onChange={(e) => update("keywordText", e.target.value)} placeholder="e.g. gym in London" required /></label>}
       <label><span className="wc-label">Service client needs *</span><select className="wc-input mt-2" value={fields.serviceRequired} onChange={(e) => update("serviceRequired", e.target.value)} required><option value="">Select service</option>{PUBLIC_CLIENT_HUNT_SERVICES.map((service) => <option key={service.value} value={service.value}>{service.label}</option>)}</select></label>
     </div>

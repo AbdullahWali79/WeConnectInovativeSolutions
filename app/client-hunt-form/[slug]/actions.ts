@@ -10,6 +10,9 @@ export type GuestClientHuntInput = {
   submitterPhone: string;
   clientName?: string;
   websiteUrl: string;
+  clientGmbUrl?: string;
+  clientPhone?: string;
+  clientHasWhatsapp?: boolean | null;
   keywordId?: string;
   keywordText?: string;
   serviceRequired: PublicClientHuntService;
@@ -23,6 +26,7 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
   const submitterPhone = input.submitterPhone.trim();
   const phoneDigits = normalizePhone(submitterPhone);
   const websiteUrl = input.websiteUrl.trim();
+  const clientGmbUrl = input.clientGmbUrl?.trim() || "";
 
   const keywordText = input.keywordText?.trim() || "";
   if (!submitterName || phoneDigits.length < 7 || !websiteUrl || (!input.keywordId && !keywordText)) {
@@ -33,8 +37,9 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
   }
   try {
     new URL(/^https?:\/\//i.test(websiteUrl) ? websiteUrl : `https://${websiteUrl}`);
+    if (clientGmbUrl) new URL(/^https?:\/\//i.test(clientGmbUrl) ? clientGmbUrl : `https://${clientGmbUrl}`);
   } catch {
-    return { success: false as const, error: "Please enter a valid website URL." };
+    return { success: false as const, error: "Please enter valid website and GMB URLs." };
   }
 
   const supabase = createSupabaseServiceClient();
@@ -63,6 +68,9 @@ export async function submitGuestClientHunt(input: GuestClientHuntInput) {
     submitter_phone: submitterPhone,
     client_name: input.clientName?.trim() || null,
     website_url: /^https?:\/\//i.test(websiteUrl) ? websiteUrl : `https://${websiteUrl}`,
+    client_gmb_url: clientGmbUrl ? (/^https?:\/\//i.test(clientGmbUrl) ? clientGmbUrl : `https://${clientGmbUrl}`) : null,
+    client_phone: input.clientPhone?.trim() || null,
+    client_has_whatsapp: input.clientHasWhatsapp ?? null,
     service_required: input.serviceRequired,
     notes: input.notes?.trim() || null,
   });

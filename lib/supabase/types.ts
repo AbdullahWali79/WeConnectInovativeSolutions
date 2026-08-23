@@ -739,6 +739,9 @@ export type PublicClientHuntSubmission = {
   submitter_phone: string;
   client_name: string | null;
   website_url: string;
+  client_gmb_url: string | null;
+  client_phone: string | null;
+  client_has_whatsapp: boolean | null;
   service_required: PublicClientHuntService;
   notes: string | null;
   submitted_at: string;
