@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Icon } from "@/components/icon";
 import { useBranding } from "@/components/branding-provider";
+import { usePathname } from "next/navigation";
 
 type Message = { id: string; type: "user" | "bot"; text: string };
 type ChatCta = { href: string; label: string; icon: string };
@@ -29,6 +30,8 @@ function getAnswerCtas(text: string): ChatCta[] {
 }
 
 export function Chatbot() {
+  const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith("/admin");
   const [isOpen, setIsOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -43,6 +46,16 @@ export function Chatbot() {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isTyping]);
+  useEffect(() => {
+    const openAssistant = () => { setFaqOpen(false); setToolsOpen(false); setIsOpen(true); };
+    const openFaq = () => { setIsOpen(false); setToolsOpen(false); setFaqOpen(true); };
+    window.addEventListener("weconnect:open-assistant", openAssistant);
+    window.addEventListener("weconnect:open-faq", openFaq);
+    return () => {
+      window.removeEventListener("weconnect:open-assistant", openAssistant);
+      window.removeEventListener("weconnect:open-faq", openFaq);
+    };
+  }, []);
   useEffect(() => {
     void fetch("/api/ai-assistant/chat", { cache: "no-store" }).then((response) => response.json()).then((config: { enabled?: boolean; assistantName?: string; welcomeMessage?: string }) => {
       setAiEnabled(Boolean(config.enabled));
@@ -76,7 +89,7 @@ export function Chatbot() {
   }
 
   return <>
-    <AnimatePresence>{!isOpen && !faqOpen ? <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} onMouseEnter={() => setToolsOpen(true)} onMouseLeave={() => setToolsOpen(false)} className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-2 pb-1">
+    <AnimatePresence>{!isAdminRoute && !isOpen && !faqOpen ? <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} onMouseEnter={() => setToolsOpen(true)} onMouseLeave={() => setToolsOpen(false)} className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-2 pb-1">
       <AnimatePresence>{toolsOpen ? <>
         <motion.button initial={{ opacity: 0, y: 16, scale: 0.75 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.75 }} transition={{ delay: 0.08 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.94 }} type="button" onClick={() => { setToolsOpen(false); setIsOpen(true); }} aria-label="Open AI assistant" title="Ask AI" className="public-chatbot-button flex h-12 w-12 items-center justify-center rounded-full text-on-primary shadow-lg"><Icon name="smart_toy" className="text-2xl" /></motion.button>
         <motion.button initial={{ opacity: 0, y: 16, scale: 0.75 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.75 }} transition={{ delay: 0.04 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.94 }} type="button" onClick={() => { setToolsOpen(false); setFaqOpen(true); }} aria-label="Open frequently asked questions" title="Frequently asked questions" className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-surface-lowest)] text-[var(--wc-secondary)] shadow-lg"><Icon name="help" className="text-2xl" /></motion.button>

@@ -96,6 +96,7 @@ export function AdminShell({
   const activeBrandingStyle = brandingToCssVars(activeBranding);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [quickToolsOpen, setQuickToolsOpen] = useState(false);
   const canSeeItem = (item: NavItem) => {
     if (!profile) return item.adminOnly;
     if (profile.role === "admin") return true;
@@ -275,6 +276,28 @@ export function AdminShell({
               );
             })}
           </nav>
+
+          <div className="border-t border-white/10 px-3 py-3">
+            <button
+              type="button"
+              onClick={() => setQuickToolsOpen((current) => !current)}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-blue-100 transition hover:bg-white/10 hover:text-white"
+              title={collapsed ? "Quick tools" : undefined}
+              aria-expanded={quickToolsOpen}
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center"><Icon name={quickToolsOpen ? "close" : "add"} className="text-[22px]" /></span>
+              {!collapsed ? <><span className="flex-1 text-left">Quick Tools</span><Icon name="expand_less" className={`transition-transform ${quickToolsOpen ? "" : "rotate-180"}`} /></> : null}
+            </button>
+            <AnimatePresence initial={false}>
+              {quickToolsOpen && !collapsed ? <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                <div className="mt-1 space-y-1 border-l border-white/15 pl-3">
+                  <button type="button" onClick={() => window.dispatchEvent(new Event("weconnect:open-assistant"))} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-blue-100 hover:bg-white/10 hover:text-white"><Icon name="smart_toy" /> AI Assistant</button>
+                  <button type="button" onClick={() => window.dispatchEvent(new Event("weconnect:open-faq"))} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-blue-100 hover:bg-white/10 hover:text-white"><Icon name="help" /> FAQs</button>
+                  <button type="button" onClick={() => setQuickToolsOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-blue-100 hover:bg-white/10 hover:text-white"><Icon name="visibility_off" /> Hide Tools</button>
+                </div>
+              </motion.div> : null}
+            </AnimatePresence>
+          </div>
 
           {/* Footer */}
           <div className="px-3 py-4">
