@@ -15,7 +15,14 @@ export async function savePublicClientHuntForm(input: { id?: string; title: stri
   const dailyTarget = Math.min(Math.max(Math.round(Number(input.dailyTarget) || 3), 1), 100);
   const payload = { title, slug, description: input.description.trim() || null, is_active: input.isActive, daily_target: dailyTarget, created_by: admin.id, updated_at: new Date().toISOString() };
   const supabase = createSupabaseServiceClient();
-  const { error } = input.id ? await supabase.from("public_client_hunt_forms").update(payload).eq("id", input.id) : await supabase.from("public_client_hunt_forms").insert(payload);
+  let { error } = input.id ? await supabase.from("public_client_hunt_forms").update(payload).eq("id", input.id) : await supabase.from("public_client_hunt_forms").insert(payload);
+
+  // Keep form editing functional while an older production database is still
+  // waiting for the daily_target migration. The database will use target 3.
+  if (error?.code === "PGRST204" && error.message.includes("daily_target")) {
+    const legacyPayload = { title, slug, description: input.description.trim() || null, is_active: input.isActive, created_by: admin.id, updated_at: new Date().toISOString() };
+    ({ error } = input.id ? await supabase.from("public_client_hunt_forms").update(legacyPayload).eq("id", input.id) : await supabase.from("public_client_hunt_forms").insert(legacyPayload));
+  }
   if (error) return { success: false as const, error: error.code === "23505" ? "This share-link slug is already in use." : error.message };
   refresh();
   return { success: true as const };

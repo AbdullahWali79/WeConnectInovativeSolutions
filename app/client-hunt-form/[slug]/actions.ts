@@ -38,7 +38,10 @@ function motivation(completed: number, target: number, name: string) {
 
 async function progressData(formId: string, phone: string, name: string) {
   const supabase = createSupabaseServiceClient();
-  const { data: form } = await supabase.from("public_client_hunt_forms").select("daily_target").eq("id", formId).maybeSingle();
+  const { data: form, error: formError } = await supabase.from("public_client_hunt_forms").select("daily_target").eq("id", formId).maybeSingle();
+  // Older databases do not have daily_target yet; use the original default
+  // instead of breaking progress loading for the guest form.
+  if (formError && !(formError.code === "PGRST204" && formError.message.includes("daily_target"))) throw formError;
   const target = Math.max(form?.daily_target ?? 3, 1);
   const { start, end } = pakistanDayRange();
   const { data } = await supabase.from("public_client_hunt_submissions").select("submitter_phone").eq("form_id", formId).gte("submitted_at", start).lt("submitted_at", end);
