@@ -47,6 +47,7 @@ const quickAccessCatalog: QuickAccessItem[] = [
   { id: "blogs", href: "/admin/blogs", label: "Blogs", icon: "article", adminOnly: true },
   { id: "social-media", href: "/admin/social-media", label: "Social Media", icon: "share", adminOnly: true },
   { id: "promotions", href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
+  { id: "forms", href: "/admin/forms/client-hunt", label: "Forms", icon: "dynamic_form", adminOnly: true },
   { id: "completion", href: "/admin/completions", label: "Completion", icon: "workspace_premium", adminOnly: true },
   { id: "simple-certificates", href: "/admin/simple-certificates", label: "Simple Certificates", icon: "card_membership", adminOnly: true },
   { id: "internship-letters", href: "/admin/internship-letters", label: "Internship Letters", icon: "description", adminOnly: true },
