@@ -7,6 +7,7 @@ import { getBlogBySlug, getRelatedBlogs } from "@/lib/blogs";
 import { normalizeImageUrl } from "@/lib/image-url";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import { formatDate } from "@/lib/utils";
+import { absoluteUrl, SITE_NAME } from "@/lib/seo";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -24,14 +25,25 @@ export async function generateMetadata({ params }: BlogDetailProps): Promise<Met
   }
 
   const coverImageUrl = normalizeImageUrl(blog.cover_image_cdn_url ?? blog.cover_image_url);
+  const canonicalUrl = absoluteUrl(`/blogs/${blog.slug}`);
 
   return {
     title: blog.seo_title || blog.title,
     description: blog.seo_description || blog.excerpt || undefined,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
+      type: "article",
+      siteName: SITE_NAME,
+      url: canonicalUrl,
       title: blog.seo_title || blog.title,
       description: blog.seo_description || blog.excerpt || undefined,
       images: coverImageUrl ? [{ url: coverImageUrl }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: blog.seo_title || blog.title,
+      description: blog.seo_description || blog.excerpt || undefined,
+      images: coverImageUrl ? [coverImageUrl] : undefined,
     },
   };
 }

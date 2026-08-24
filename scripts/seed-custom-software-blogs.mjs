@@ -5,7 +5,7 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error("Supabase environment variables are required.");
 
 const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-const site = "https://weconnectinovativesolutions.vercel.app";
+const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://weconnectinnovativesolutions.com").replace(/\/+$/, "");
 
 const posts = [
   {

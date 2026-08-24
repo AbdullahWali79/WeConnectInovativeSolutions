@@ -11,7 +11,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const siteUrl = "https://weconnectinovativesolutions.vercel.app";
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://weconnectinnovativesolutions.com").replace(/\/+$/, "");
 
 const posts = [
   {
