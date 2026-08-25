@@ -2,16 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Profile } from "@/lib/supabase/types";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,57 +20,7 @@ export default function LoginPage() {
   );
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
   const clearToast = useCallback(() => setToast(null), []);
-
-  useEffect(() => {
-    const standalone = window.matchMedia("(display-mode: standalone)").matches ||
-      ("standalone" in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
-    setIsInstalled(standalone);
-
-    const captureInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
-    };
-    const markInstalled = () => {
-      setIsInstalled(true);
-      setInstallPrompt(null);
-    };
-
-    window.addEventListener("beforeinstallprompt", captureInstallPrompt);
-    window.addEventListener("appinstalled", markInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", captureInstallPrompt);
-      window.removeEventListener("appinstalled", markInstalled);
-    };
-  }, []);
-
-  async function installPwa() {
-    if (isInstalled) {
-      router.push("/student");
-      return;
-    }
-
-    if (installPrompt) {
-      await installPrompt.prompt();
-      const choice = await installPrompt.userChoice;
-      setInstallPrompt(null);
-      setToast({
-        type: "info",
-        message: choice.outcome === "accepted" ? "Student App installed successfully." : "Installation was cancelled. You can try again anytime.",
-      });
-      return;
-    }
-
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    setToast({
-      type: "info",
-      message: isIos
-        ? "On iPhone/iPad: tap Share, then choose Add to Home Screen."
-        : "Open your browser menu and choose Install app or Add to Home screen.",
-    });
-  }
 
   function updateField(name: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -149,14 +94,12 @@ export default function LoginPage() {
                 <Icon name="lock_open" className="text-3xl text-[var(--wc-secondary)]" />
               </div>
             </div>
-            <button
-              type="button"
-              onClick={installPwa}
+            <Link
+              href="/student-app"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white"
             >
-              <Icon name={isInstalled ? "open_in_new" : "install_mobile"} className="text-xl" />
-              {isInstalled ? "OPEN STUDENT APP" : "INSTALL STUDENT APP"}
-            </button>
+              <Icon name="install_mobile" className="text-xl" /> INSTALL STUDENT APP
+            </Link>
           </div>
           <p className="mt-10 text-xs font-bold uppercase tracking-[0.3em] text-[var(--wc-secondary)]">WeConnect Innovation</p>
           <h1 className="mt-3 text-4xl sm:text-5xl font-black leading-tight text-on-surface">Student App</h1>
