@@ -98,7 +98,7 @@ export default function LoginPage() {
               href="/student-app"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white"
             >
-              <Icon name="install_mobile" className="text-xl" /> INSTALL STUDENT APP
+              <Icon name="download" className="text-xl" /> DOWNLOAD STUDENT APP
             </Link>
           </div>
           <p className="mt-10 text-xs font-bold uppercase tracking-[0.3em] text-[var(--wc-secondary)]">WeConnect Innovation</p>

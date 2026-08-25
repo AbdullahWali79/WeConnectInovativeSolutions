@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { StudentAppInstaller } from "./student-app-installer";
 
 export const metadata: Metadata = {
-  title: "Install WeConnect Student App",
-  description: "Install the WeConnect Student App and access courses, tasks, projects, and progress from your phone or computer.",
+  title: "Download WeConnect Student App",
+  description: "Download the WeConnect Student App and access courses, tasks, projects, and progress from your phone or computer.",
   alternates: { canonical: "/student-app" },
   openGraph: {
-    title: "Install WeConnect Student App",
+    title: "Download WeConnect Student App",
     description: "Get the WeConnect Student App for courses, tasks, projects, and progress tracking.",
     url: "/student-app",
     type: "website",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Install WeConnect Student App",
+    title: "Download WeConnect Student App",
     description: "Get the WeConnect Student App for courses, tasks, projects, and progress tracking.",
     images: ["/icons/icon-512.png"],
   },

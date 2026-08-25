@@ -82,13 +82,13 @@ export function StudentAppInstaller() {
 
         <Image src="/icons/icon-192.png" width={128} height={128} priority alt="WeConnect Student App" className="mt-10 rounded-3xl shadow-xl" />
         <p className="mt-7 text-xs font-black uppercase tracking-[0.28em] text-[var(--wc-secondary)]">WeConnect Innovation</p>
-        <h1 className="mt-3 text-4xl font-black sm:text-5xl">Install Student App</h1>
+        <h1 className="mt-3 text-4xl font-black sm:text-5xl">Download Student App</h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--wc-on-surface-variant)]">
           Install the app on Android, iPhone, Windows, or Mac and quickly access your courses, tasks, projects, and progress.
         </p>
 
         <button onClick={install} className="wc-primary-btn mt-8 w-full max-w-md py-4 text-base">
-          <Icon name={installed ? "open_in_new" : "install_mobile"} /> {installed ? "OPEN STUDENT APP" : "INSTALL STUDENT APP"}
+          <Icon name={installed ? "open_in_new" : "download"} /> {installed ? "OPEN STUDENT APP" : "DOWNLOAD STUDENT APP"}
         </button>
         {notice && <p role="status" className="mt-4 rounded-xl bg-[var(--wc-surface-low)] px-5 py-3 text-sm font-bold">{notice}</p>}
 
