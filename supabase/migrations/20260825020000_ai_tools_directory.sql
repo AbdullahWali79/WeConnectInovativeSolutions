@@ -4,6 +4,7 @@ create table if not exists public.ai_tools (
   url text not null,
   benefits text not null check (char_length(trim(benefits)) between 10 and 2000),
   image_url text not null,
+  youtube_url text,
   submitted_by uuid references public.profiles(id) on delete set null,
   submitter_email text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
@@ -35,4 +36,3 @@ create policy "Students can submit AI tools" on public.ai_tools for insert to au
 
 grant select on public.ai_tools to anon, authenticated;
 grant insert on public.ai_tools to authenticated;
-

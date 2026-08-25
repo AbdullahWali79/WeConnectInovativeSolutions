@@ -795,6 +795,7 @@ export type AIToolRow = {
   url: string;
   benefits: string;
   image_url: string;
+  youtube_url: string | null;
   submitted_by: string | null;
   submitter_email: string | null;
   status: "pending" | "approved" | "rejected";
