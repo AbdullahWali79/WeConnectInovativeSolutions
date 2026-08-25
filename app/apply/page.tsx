@@ -37,8 +37,8 @@ export default async function ApplyPage({
               Fill out your details, choose a course, and set a password. Your application will appear in the admin panel for review at{" "}
               <a href={CONTACT_EMAIL_HREF} className="text-on-surface underline underline-offset-4">{CONTACT_EMAIL}</a>.
             </p>
-            <a href="/downloads/weconnect-student-hub-v1.0.apk" download className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-emerald-500">
-              <Icon name="android" className="text-xl" /> Download WeConnect Student App
+            <a href="/student-app" className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-emerald-500">
+              <Icon name="install_mobile" className="text-xl" /> Install WeConnect Student App
             </a>
           </div>
         </div>
