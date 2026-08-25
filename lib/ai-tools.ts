@@ -6,6 +6,7 @@ export type AITool = {
   id: string; name: string; url: string; benefits: string; image_url: string; youtube_url: string | null;
   submitted_by: string | null; submitter_email: string | null; status: AIToolStatus;
   admin_note: string | null; published_at: string | null; created_at: string;
+  submitter_role?: "admin" | "student";
 };
 
 export function validateAITool(input: { name: string; url: string; benefits: string; image_url: string; youtube_url?: string }) {
