@@ -656,7 +656,10 @@ export type SimpleCertificate = {
   primary_color: string;
   secondary_color: string;
   text_color: string;
-  template_style: "modern" | "classic" | "executive";
+  template_style: "modern" | "classic" | "executive" | "minimal" | "geometric" | "prestige";
+  punctuality_percentage: number;
+  task_completion_percentage: number;
+  project_involvement_percentage: number;
   logo_size: number;
   signature_url: string | null;
   digital_stamp_url: string | null;

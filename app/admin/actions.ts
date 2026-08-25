@@ -2493,7 +2493,7 @@ export async function deleteSoftwareHouse(id: string): Promise<ActionResult<null
   }
 }
 
-export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size" | "signature_url" | "digital_stamp_url" | "digital_stamp_size" | "digital_stamp_opacity" | "digital_stamp_offset_x" | "hr_email" | "hr_contact_number">;
+export type SimpleCertificateInput = Pick<SimpleCertificate, "roll_number" | "student_name" | "course_name" | "duration_weeks" | "start_date" | "end_date" | "software_house_id" | "software_house_name" | "logo_url" | "signatory_name" | "signatory_title" | "primary_color" | "secondary_color" | "text_color" | "template_style" | "logo_size" | "signature_url" | "digital_stamp_url" | "digital_stamp_size" | "digital_stamp_opacity" | "digital_stamp_offset_x" | "hr_email" | "hr_contact_number" | "punctuality_percentage" | "task_completion_percentage" | "project_involvement_percentage">;
 
 export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: string): Promise<ActionResult<SimpleCertificate>> {
   try {
@@ -2509,6 +2509,9 @@ export async function saveSimpleCertificate(input: SimpleCertificateInput, id?: 
       signatory_name: input.signatory_name?.trim() || null, signatory_title: input.signatory_title?.trim() || null,
       digital_stamp_opacity: Math.min(1, Math.max(0, Number(input.digital_stamp_opacity) || 0)),
       digital_stamp_offset_x: Math.min(240, Math.max(-240, Number(input.digital_stamp_offset_x) || 0)),
+      punctuality_percentage: Math.min(100, Math.max(0, Number(input.punctuality_percentage) || 0)),
+      task_completion_percentage: Math.min(100, Math.max(0, Number(input.task_completion_percentage) || 0)),
+      project_involvement_percentage: Math.min(100, Math.max(0, Number(input.project_involvement_percentage) || 0)),
       hr_email: input.hr_email?.trim() || null, hr_contact_number: input.hr_contact_number?.trim() || null,
       created_by: profile.id,
     };
