@@ -19,6 +19,8 @@ create table if not exists public.simple_certificates (
   punctuality_percentage integer not null default 100 check (punctuality_percentage between 0 and 100),
   task_completion_percentage integer not null default 100 check (task_completion_percentage between 0 and 100),
   project_involvement_percentage integer not null default 100 check (project_involvement_percentage between 0 and 100),
+  software_house_name_position_x integer not null default 9 check (software_house_name_position_x between 2 and 80),
+  software_house_name_position_y integer not null default 9 check (software_house_name_position_y between 2 and 80),
   logo_size integer not null default 64 check (logo_size between 32 and 180),
   signature_url text,
   created_by uuid references auth.users(id) on delete set null default auth.uid(),

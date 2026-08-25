@@ -660,6 +660,8 @@ export type SimpleCertificate = {
   punctuality_percentage: number;
   task_completion_percentage: number;
   project_involvement_percentage: number;
+  software_house_name_position_x: number;
+  software_house_name_position_y: number;
   logo_size: number;
   signature_url: string | null;
   digital_stamp_url: string | null;
