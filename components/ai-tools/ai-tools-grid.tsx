@@ -58,8 +58,8 @@ export function AIToolsGrid({ tools }: { tools: AITool[] }) {
 
 function ToolCard({ tool, onSelect }: { tool: AITool; onSelect: () => void }) {
   return <article className="wc-card group cursor-pointer overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-xl" onClick={onSelect}>
-    <div className="relative aspect-[16/9] overflow-hidden bg-surface-container">
-      <Image src={tool.image_url} alt={`${tool.name} preview`} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" unoptimized />
+    <div className="relative aspect-[16/9] overflow-hidden bg-surface-container p-2">
+      <Image src={tool.image_url} alt={`${tool.name} preview`} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-contain p-2 transition duration-500 group-hover:scale-[1.02]" unoptimized />
       {tool.youtube_url && <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white backdrop-blur"><Icon name="play_circle" className="text-base" /> Tutorial</span>}
     </div>
     <div className="p-5">
@@ -77,7 +77,7 @@ function ToolDetailsModal({ tool, onClose }: { tool: AITool; onClose: () => void
         <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container text-on-surface transition hover:scale-110 hover:bg-secondary hover:text-on-primary" aria-label="Close tool details"><Icon name="close" /></button>
       </div>
       <div className="flex-1 overflow-y-auto p-5 sm:p-8">
-        <div className="relative mb-8 aspect-video w-full overflow-hidden rounded-2xl bg-surface-container"><Image src={tool.image_url} alt={`${tool.name} preview`} fill sizes="(max-width: 896px) 100vw, 896px" className="object-cover" unoptimized />{tool.youtube_url && <span className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-2 text-xs font-black text-white"><Icon name="play_circle" /> Tutorial available</span>}</div>
+        <div className="relative mb-8 aspect-video w-full overflow-hidden rounded-2xl border border-outline-variant bg-surface-container p-3"><Image src={tool.image_url} alt={`${tool.name} preview`} fill sizes="(max-width: 896px) 100vw, 896px" className="object-contain p-3" unoptimized />{tool.youtube_url && <span className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-2 text-xs font-black text-white"><Icon name="play_circle" /> Tutorial available</span>}</div>
         <section><h3 className="mb-4 text-xl font-black text-on-surface">Benefits & Description</h3><div className="whitespace-pre-line rounded-2xl border border-outline-variant bg-surface-container p-5 text-sm leading-7 text-on-surface-variant sm:p-6">{tool.benefits}</div></section>
         <div className="mt-8 grid gap-3 sm:grid-cols-2"><a href={tool.url} target="_blank" rel="noopener noreferrer" className="wc-primary-btn justify-center py-3"><Icon name="open_in_new" /> Open AI Tool</a>{tool.youtube_url && <a href={tool.youtube_url} target="_blank" rel="noopener noreferrer" className="wc-secondary-btn justify-center py-3"><Icon name="play_circle" /> Learn on YouTube</a>}</div>
       </div>
