@@ -5,8 +5,8 @@ import { createAdminAITool, deleteAITool, getAllAITools, reviewAITool, updateAIT
 import { PageHeader } from "@/components/page-header";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
-import { normalizeImageUrl } from "@/lib/image-url";
 import type { AITool } from "@/lib/ai-tools";
+import { AIToolsGrid } from "@/components/ai-tools/ai-tools-grid";
 
 const empty = { name: "", url: "", benefits: "", image_url: "", youtube_url: "" };
 
@@ -67,29 +67,18 @@ export function AIToolsManager() {
       <button disabled={saving} className="wc-primary-btn md:w-fit"><Icon name="publish" />{saving ? "Publishing..." : "Publish tool"}</button>
     </form>
 
-    <ToolSection title="Admin Published Tools" subtitle="Tools added directly by administrators." rows={adminTools} empty="No admin tools published yet." onReview={review} onEditVideo={editVideo} onDelete={remove} />
+    <CollapsibleToolSection title="Admin Published Tools" subtitle="Tools added directly by administrators." rows={adminTools} defaultOpen renderActions={(row) => <><button onClick={() => void editVideo(row)} className="wc-secondary-btn text-sm"><Icon name="play_circle" />{row.youtube_url ? "Edit video" : "Add video"}</button><button onClick={() => void remove(row.id)} className="wc-secondary-btn text-sm text-error"><Icon name="delete" />Delete</button></>} />
 
     <section>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div><h2 className="text-2xl font-black">Student Submissions</h2><p className="mt-1 text-sm text-on-surface-variant">Student suggestions requiring admin review.</p></div>
         <select className="wc-input w-auto" value={studentFilter} onChange={(e) => setStudentFilter(e.target.value)}><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select>
       </div>
-      <ToolCards rows={shownStudents} empty={`No ${studentFilter} student submissions.`} onReview={review} onEditVideo={editVideo} onDelete={remove} />
+      <CollapsibleToolSection title={`${studentFilter === "all" ? "All" : studentFilter[0].toUpperCase() + studentFilter.slice(1)} Student Tools`} subtitle="Click a card to view complete details and review it." rows={shownStudents} defaultOpen renderActions={(row) => <><button onClick={() => void editVideo(row)} className="wc-secondary-btn text-sm"><Icon name="play_circle" />{row.youtube_url ? "Edit video" : "Add video"}</button>{row.status !== "approved" && <button onClick={() => void review(row.id, "approved")} className="wc-primary-btn text-sm"><Icon name="check" />Approve</button>}{row.status !== "rejected" && <button onClick={() => void review(row.id, "rejected")} className="wc-secondary-btn text-sm"><Icon name="close" />Reject</button>}<button onClick={() => void remove(row.id)} className="wc-secondary-btn text-sm text-error"><Icon name="delete" />Delete</button></>} />
     </section>
   </div>;
 }
 
-function ToolSection({ title, subtitle, rows, empty, onReview, onEditVideo, onDelete }: { title: string; subtitle: string; rows: AITool[]; empty: string; onReview: (id: string, status: "approved" | "rejected") => Promise<void>; onEditVideo: (row: AITool) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
-  return <section><div className="mb-4"><h2 className="text-2xl font-black">{title} ({rows.length})</h2><p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p></div><ToolCards rows={rows} empty={empty} onReview={onReview} onEditVideo={onEditVideo} onDelete={onDelete} /></section>;
-}
-
-function ToolCards({ rows, empty, onReview, onEditVideo, onDelete }: { rows: AITool[]; empty: string; onReview: (id: string, status: "approved" | "rejected") => Promise<void>; onEditVideo: (row: AITool) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
-  if (!rows.length) return <div className="wc-card p-10 text-center text-on-surface-variant">{empty}</div>;
-  return <div className="grid gap-4">{rows.map((row) => <article key={row.id} className="wc-card grid overflow-hidden md:grid-cols-[180px_1fr]">
-    <div className="relative min-h-40 bg-surface-container"><img src={normalizeImageUrl(row.image_url) ?? row.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" /></div>
-    <div className="p-5"><div className="flex flex-wrap justify-between gap-2"><div><h3 className="text-xl font-black">{row.name}</h3><p className="text-xs text-on-surface-variant">{row.submitter_role === "admin" ? "Published by Admin" : `Submitted by ${row.submitter_email ?? "Student"}`}</p></div><span className="text-xs font-black uppercase">{row.status}</span></div>
-      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-on-surface-variant">{row.benefits}</p><a className="mt-2 inline-block text-sm font-bold text-secondary" href={row.url} target="_blank" rel="noreferrer">Open tool ↗</a>
-      <div className="mt-4 flex flex-wrap gap-2"><button onClick={() => void onEditVideo(row)} className="wc-secondary-btn text-sm"><Icon name="play_circle" />{row.youtube_url ? "Edit video" : "Add video"}</button>{row.submitter_role !== "admin" && row.status !== "approved" && <button onClick={() => void onReview(row.id, "approved")} className="wc-primary-btn text-sm"><Icon name="check" />Approve</button>}{row.submitter_role !== "admin" && row.status !== "rejected" && <button onClick={() => void onReview(row.id, "rejected")} className="wc-secondary-btn text-sm"><Icon name="close" />Reject</button>}<button onClick={() => void onDelete(row.id)} className="wc-secondary-btn text-sm text-error"><Icon name="delete" />Delete</button></div>
-    </div>
-  </article>)}</div>;
+function CollapsibleToolSection({ title, subtitle, rows, defaultOpen = false, renderActions }: { title: string; subtitle: string; rows: AITool[]; defaultOpen?: boolean; renderActions: (row: AITool) => React.ReactNode }) {
+  return <details className="group wc-card overflow-hidden" open={defaultOpen}><summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5"><div><h3 className="text-xl font-black">{title} ({rows.length})</h3><p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p></div><Icon name="expand_more" className="text-2xl transition group-open:rotate-180" /></summary><div className="border-t border-outline-variant p-4 sm:p-5"><AIToolsGrid tools={rows} showStatus renderActions={renderActions} /></div></details>;
 }

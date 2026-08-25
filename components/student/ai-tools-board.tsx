@@ -6,6 +6,7 @@ import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import { normalizeImageUrl } from "@/lib/image-url";
 import type { AITool } from "@/lib/ai-tools";
+import { AIToolsGrid } from "@/components/ai-tools/ai-tools-grid";
 
 const empty = { name: "", url: "", benefits: "", image_url: "", youtube_url: "" };
 export function AIToolsBoard() {
@@ -21,7 +22,7 @@ export function AIToolsBoard() {
     <label className="space-y-1 md:col-span-2"><span className="wc-label">YouTube learning video</span><input type="url" className="wc-input" value={form.youtube_url} onChange={e => setForm({...form,youtube_url:e.target.value})} placeholder="https://www.youtube.com/watch?v=..." /><span className="block text-xs text-on-surface-variant">Optional tutorial. It will only appear publicly after admin approval.</span></label>
     {preview && <div className="relative aspect-video max-w-md overflow-hidden rounded-xl bg-surface-container md:col-span-2"><img src={preview} alt="Tool preview" className="h-full w-full object-cover" /></div>}
     <button disabled={saving} className="wc-primary-btn md:col-span-2 md:w-fit"><Icon name="send" />{saving ? "Submitting..." : "Submit for approval"}</button></form>
-    <section><h2 className="mb-3 text-xl font-black">My submissions</h2><div className="grid gap-3">{rows.length ? rows.map(row => <div key={row.id} className="wc-card flex flex-wrap items-center justify-between gap-3 p-4"><div><h3 className="font-black">{row.name}</h3><p className="text-xs text-on-surface-variant">{new Date(row.created_at).toLocaleDateString()}</p>{row.admin_note && <p className="mt-2 text-sm">Admin: {row.admin_note}</p>}</div><span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${row.status === "approved" ? "bg-green-100 text-green-800" : row.status === "rejected" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{row.status}</span></div>) : <div className="wc-card p-8 text-center text-on-surface-variant">No tools submitted yet.</div>}</div></section>
+    <details className="group wc-card overflow-hidden" open><summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5"><div><h2 className="text-xl font-black">My Tool Submissions ({rows.length})</h2><p className="mt-1 text-sm text-on-surface-variant">Expand to search, filter videos, and view submission details.</p></div><Icon name="expand_more" className="text-2xl transition group-open:rotate-180" /></summary><div className="border-t border-outline-variant p-4 sm:p-5"><AIToolsGrid tools={rows} showStatus /></div></details>
   </div>;
 }
 
