@@ -16,6 +16,7 @@ import { StudentActivityTracker } from "@/components/student/student-activity-tr
 
 const nav = [
   { href: "/student", label: "My Dashboard", icon: "dashboard" },
+  { href: "/student/ai-tools", label: "AI Tools", icon: "smart_toy" },
   { href: "/student/seat-reservation", label: "Reserve a Seat", icon: "event_seat" },
   { href: "/student/syllabus", label: "Syllabus", icon: "menu_book" },
   { href: "/student/client-hunting", label: "Client Hunting", icon: "manage_search" },

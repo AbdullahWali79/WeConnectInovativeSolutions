@@ -789,9 +789,32 @@ export type StudentActivityEvent = {
   occurred_at: string;
 };
 
+export type AIToolRow = {
+  id: string;
+  name: string;
+  url: string;
+  benefits: string;
+  image_url: string;
+  submitted_by: string | null;
+  submitter_email: string | null;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
+      ai_tools: {
+        Row: AIToolRow;
+        Insert: Partial<AIToolRow> & { name: string; url: string; benefits: string; image_url: string };
+        Update: Partial<AIToolRow>;
+        Relationships: [];
+      };
       profiles: {
         Row: Profile;
         Insert: Partial<Profile> & { id: string };
