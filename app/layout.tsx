@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/components/branding-provider";
 import { brandingToCssVars, getDefaultBrandingSettingsMap, loadBrandingSettingsMap, LOGO_LANDING_SETTINGS } from "@/lib/branding-settings";
 import { absoluteUrl, getSiteUrl, SITE_NAME } from "@/lib/seo";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-manrope",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -53,15 +60,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block"
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning style={brandingToCssVars(LOGO_LANDING_SETTINGS)}>
+      <body className={manrope.variable} suppressHydrationWarning style={brandingToCssVars(LOGO_LANDING_SETTINGS)}>
         <ThemeProvider>
           <BrandingProvider initialSettings={initialBranding}>
             {children}

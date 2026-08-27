@@ -68,7 +68,7 @@ body {
   min-height: 100vh;
   background: var(--wc-bg);
   color: var(--wc-on-bg);
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
