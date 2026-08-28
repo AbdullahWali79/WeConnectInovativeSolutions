@@ -514,6 +514,39 @@ export type Blog = {
   updated_at: string;
 };
 
+export type GoogleDriveSettings = {
+  id: boolean;
+  refresh_token_encrypted: string | null;
+  account_email: string | null;
+  folder_id: string | null;
+  folder_name: string | null;
+  enabled: boolean;
+  max_image_mb: number;
+  max_video_mb: number;
+  connected_at: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type GoogleFormProjectSettings = {
+  id: boolean;
+  enabled: boolean;
+  form_url: string | null;
+  title: string;
+  instructions: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type ProjectSubmissionSettings = {
+  id: boolean;
+  shared_folder_enabled: boolean;
+  shared_folder_url: string | null;
+  shared_folder_instructions: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
 export type Trainee = {
   id: string;
   name: string;
@@ -970,6 +1003,24 @@ export type Database = {
         Row: AiAssistantSettings;
         Insert: Partial<AiAssistantSettings>;
         Update: Partial<AiAssistantSettings>;
+        Relationships: [];
+      };
+      google_drive_settings: {
+        Row: GoogleDriveSettings;
+        Insert: Partial<GoogleDriveSettings>;
+        Update: Partial<GoogleDriveSettings>;
+        Relationships: [];
+      };
+      google_form_project_settings: {
+        Row: GoogleFormProjectSettings;
+        Insert: Partial<GoogleFormProjectSettings>;
+        Update: Partial<GoogleFormProjectSettings>;
+        Relationships: [];
+      };
+      project_submission_settings: {
+        Row: ProjectSubmissionSettings;
+        Insert: Partial<ProjectSubmissionSettings>;
+        Update: Partial<ProjectSubmissionSettings>;
         Relationships: [];
       };
       deepseek_assistant_settings: {

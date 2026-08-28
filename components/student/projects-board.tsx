@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { cleanExternalUrl, getGoogleDriveFileId } from "@/lib/image-url";
+import { uploadProjectFileToDrive } from "@/lib/media/google-drive-upload";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Course, StudentProject } from "@/lib/supabase/types";
 
@@ -21,15 +22,21 @@ export function StudentProjectsBoard() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [driveUpload, setDriveUpload] = useState({ configured: false, maxImageMb: 15, maxVideoMb: 500 });
+  const [sharedFolder, setSharedFolder] = useState<{ enabled: boolean; url: string | null; instructions: string | null }>({ enabled: false, url: null, instructions: null });
   const [toast, setToast] = useState<ToastState>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const load = useCallback(async () => {
-    const [projectsResult, productsResult, enrollmentsResult, coursesResult] = await Promise.all([
+    const [projectsResult, productsResult, enrollmentsResult, coursesResult, driveResult, submissionSettings] = await Promise.all([
       supabase.from("student_projects").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("category").eq("status", "active").order("category"),
       supabase.from("enrollments").select("course_id"),
       supabase.from("courses").select("id,title").eq("status", "active").order("title"),
+      fetch("/api/uploads/google-drive/status", { cache: "no-store" }).then((response) => response.ok ? response.json() : null),
+      fetch("/api/project-submissions/status", { cache: "no-store" }).then((response) => response.ok ? response.json() : null),
     ]);
     const error = projectsResult.error ?? productsResult.error ?? enrollmentsResult.error ?? coursesResult.error;
     if (error) setToast({ type: "error", message: error.message });
@@ -37,6 +44,8 @@ export function StudentProjectsBoard() {
     setCategories(Array.from(new Set((productsResult.data ?? []).map((product) => product.category.trim()).filter(Boolean))));
     const enrolledCourseIds = new Set((enrollmentsResult.data ?? []).map((enrollment) => enrollment.course_id));
     setCourseOptions((coursesResult.data ?? []).filter((course) => enrolledCourseIds.has(course.id)));
+    if (driveResult) setDriveUpload(driveResult);
+    if (submissionSettings) setSharedFolder({ enabled: Boolean(submissionSettings.sharedFolderEnabled), url: submissionSettings.sharedFolderUrl, instructions: submissionSettings.sharedFolderInstructions });
     setLoading(false);
   }, [supabase]);
 
@@ -64,6 +73,24 @@ export function StudentProjectsBoard() {
     setForm(emptyForm);
   }
 
+  async function uploadFiles(files: FileList | null, kind: "image" | "video") {
+    if (!files?.length) return;
+    if (!driveUpload.configured) return setToast({ type: "error", message: "Admin has not enabled Google Drive uploads yet." });
+    const selected = Array.from(files);
+    if (kind === "video" && selected.length > 1) return setToast({ type: "error", message: "Upload one project video at a time." });
+    try {
+      for (const file of selected) {
+        setUploading(file.name); setUploadProgress(0);
+        const uploaded = await uploadProjectFileToDrive(file, setUploadProgress);
+        if (kind === "image") setForm((current) => ({ ...current, image_urls: [...current.image_urls.filter(Boolean), uploaded.url] }));
+        else setForm((current) => ({ ...current, live_url: uploaded.url }));
+      }
+      setToast({ type: "success", message: `${selected.length} ${kind}${selected.length > 1 ? "s" : ""} uploaded to the admin Google Drive.` });
+    } catch (error) {
+      setToast({ type: "error", message: error instanceof Error ? error.message : "Google Drive upload failed." });
+    } finally { setUploading(null); setUploadProgress(0); }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const githubUrl = form.github_url.trim();
@@ -72,7 +99,7 @@ export function StudentProjectsBoard() {
     if (!imageUrls.length) {
       return setToast({ type: "error", message: "At least one public Google Drive project image is required." });
     }
-    if (imageUrls.some((url) => !getGoogleDriveFileId(url))) return setToast({ type: "error", message: "Every image must use a valid public Google Drive file URL." });
+    if (imageUrls.some((url) => !getGoogleDriveFileId(url))) return setToast({ type: "error", message: "Every image must use a valid Google Drive file URL." });
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     const projectPayload = {
@@ -111,6 +138,9 @@ export function StudentProjectsBoard() {
 
   return <div className="space-y-6">
     <PageHeader eyebrow="Portfolio" title="My Projects" description="Submit at least one public Google Drive screenshot. GitHub, YouTube, and live demo links can be added as optional proof." />
+    {sharedFolder.enabled && sharedFolder.url ? <section className="wc-card border-2 border-primary/30 p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Icon name="folder_shared" className="text-primary" /><h2 className="font-black">Upload files to the shared project folder</h2></div><p className="mt-2 max-w-3xl text-sm leading-6 text-on-surface-variant">{sharedFolder.instructions || "Create a folder using your project name, upload images/videos, set each file to Anyone with the link — Viewer, then paste the links below."}</p></div><a className="wc-primary-btn shrink-0" href={sharedFolder.url} target="_blank" rel="noreferrer"><Icon name="open_in_new" /> Open Upload Folder</a></div>
+    </section> : null}
     <form ref={formRef} onSubmit={submit} className="wc-card grid scroll-mt-6 gap-4 p-5 md:grid-cols-2">
       {editingId ? <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
         <div>
@@ -143,10 +173,12 @@ export function StudentProjectsBoard() {
         {!categories.length ? <p className="mt-2 text-xs font-semibold text-error">Ask admin to add an active product category first.</p> : null}
       </div>
       <input className="wc-input md:col-span-2" type="url" placeholder="GitHub project URL (optional)" value={form.github_url} onChange={(e) => setForm({...form,github_url:e.target.value})} />
-      <input className="wc-input md:col-span-2" type="url" placeholder="YouTube or public Google Drive video / live demo URL (optional)" value={form.live_url} onChange={(e) => setForm({...form,live_url:e.target.value})} />
+      <div className="md:col-span-2 space-y-3 rounded-xl bg-surface-container-low p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="wc-label">Project video (optional)</p><p className="mt-1 text-xs text-on-surface-variant">Upload MP4, WEBM or MOV up to {driveUpload.maxVideoMb} MB, or paste a YouTube/live demo URL.</p></div><label className={`wc-secondary-btn cursor-pointer ${uploading ? "pointer-events-none opacity-60" : ""}`}><Icon name="video_file" /> Upload Video<input className="hidden" type="file" accept="video/mp4,video/webm,video/quicktime" disabled={Boolean(uploading)} onChange={(e) => { void uploadFiles(e.target.files, "video"); e.currentTarget.value = ""; }} /></label></div>
+        <input className="wc-input" type="url" placeholder="Uploaded video, YouTube, or live demo URL (optional)" value={form.live_url} onChange={(e) => setForm({...form,live_url:e.target.value})} />
+      </div>
       <p className="md:col-span-2 text-xs leading-5 text-on-surface-variant">
-        A public Google Drive project image is compulsory. YouTube, GitHub, and live demo links are optional.
-        For a Google Drive video, sharing must be <strong>Anyone with the link</strong>.
+        At least one project image is compulsory. Files uploaded here are stored in the admin Drive and automatically shared as <strong>Anyone with the link — Viewer</strong>.
       </p>
       <input className="wc-input md:col-span-2" placeholder="Technologies, comma separated" value={form.technologies} onChange={(e) => setForm({...form,technologies:e.target.value})} />
       <input className="wc-input md:col-span-2" required placeholder="Short description" value={form.short_description} onChange={(e) => setForm({...form,short_description:e.target.value})} />
@@ -155,22 +187,15 @@ export function StudentProjectsBoard() {
         <p className="mt-2 text-xs leading-5 text-on-surface-variant">Formatting is automatic. Paste headings, bullet or numbered lists, Markdown tables, or tab-separated tables copied from a sheet.</p>
       </div>
       <div className="md:col-span-2 rounded-xl bg-surface-container-low p-4">
-        <p className="wc-label">Google Drive screenshots <span className="text-error">*</span></p>
-        <div className="mt-3 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950">
-          <Icon name="warning" className="mt-0.5 shrink-0 text-xl text-amber-600" />
-          <div>
-            <p className="text-sm font-black">Google Drive access must be: Anyone with the link</p>
-            <p className="mt-1 text-xs leading-5">
-              Before pasting each image URL, open Google Drive Sharing, change General access from Restricted to Anyone with the link, and keep the role as Viewer. Private or restricted images cannot be previewed by admin.
-            </p>
-          </div>
-        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="wc-label">Project screenshots <span className="text-error">*</span></p><p className="mt-1 text-xs text-on-surface-variant">JPG, PNG, WEBP or GIF, maximum {driveUpload.maxImageMb} MB each.</p></div><label className={`wc-primary-btn cursor-pointer ${!driveUpload.configured || uploading ? "pointer-events-none opacity-60" : ""}`}><Icon name="cloud_upload" /> Upload Images<input className="hidden" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" disabled={!driveUpload.configured || Boolean(uploading)} onChange={(e) => { void uploadFiles(e.target.files, "image"); e.currentTarget.value = ""; }} /></label></div>
+        {!driveUpload.configured ? <div className="mt-3 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950"><Icon name="warning" className="shrink-0 text-amber-600" /><p className="text-sm">Uploads are currently unavailable. Ask admin to connect and mount Google Drive.</p></div> : null}
+        {uploading ? <div className="mt-3"><div className="flex justify-between text-xs font-bold"><span className="truncate">Uploading {uploading}</span><span>{uploadProgress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} /></div></div> : null}
         <div className="mt-3 grid gap-3">
-          {form.image_urls.map((url,index) => <div key={index} className="flex gap-2"><input className="wc-input flex-1" type="url" required={index === 0} placeholder={"Public Google Drive image URL " + (index+1) + (index === 0 ? " (required)" : " (optional)")} value={url} onChange={(e)=>setForm({...form,image_urls:form.image_urls.map((item,i)=>i===index?e.target.value:item)})}/>{form.image_urls.length>1?<button type="button" className="wc-secondary-btn" onClick={()=>setForm({...form,image_urls:form.image_urls.filter((_,i)=>i!==index)})}><Icon name="delete"/></button>:null}</div>)}
+          {form.image_urls.map((url,index) => <div key={index} className="flex gap-2"><input className="wc-input flex-1" type="url" readOnly={driveUpload.configured} required={index === 0} placeholder={driveUpload.configured ? "Upload an image using the button above" : "Google Drive image URL"} value={url} onChange={(e)=>setForm({...form,image_urls:form.image_urls.map((item,i)=>i===index?e.target.value:item)})}/>{url || form.image_urls.length>1?<button type="button" className="wc-secondary-btn" aria-label="Remove image" onClick={()=>setForm({...form,image_urls:form.image_urls.filter((_,i)=>i!==index).length ? form.image_urls.filter((_,i)=>i!==index) : [""]})}><Icon name="delete"/></button>:null}</div>)}
         </div>
-        <button type="button" className="wc-secondary-btn mt-3" onClick={()=>setForm({...form,image_urls:[...form.image_urls,""]})}><Icon name="add"/> Add Image URL</button>
+        {!driveUpload.configured ? <button type="button" className="wc-secondary-btn mt-3" onClick={()=>setForm({...form,image_urls:[...form.image_urls,""]})}><Icon name="add"/> Add Image URL</button> : null}
       </div>
-      <button disabled={saving} className="wc-primary-btn md:col-span-2"><Icon name="send"/> {saving ? "Submitting..." : editingId ? "Update & Resubmit Project" : "Submit Project"}</button>
+      <button disabled={saving || Boolean(uploading)} className="wc-primary-btn md:col-span-2"><Icon name="send"/> {saving ? "Submitting..." : editingId ? "Update & Resubmit Project" : "Submit Project"}</button>
     </form>
     {rows.some((row) => row.status === "revision_required") ? <section className="wc-card overflow-hidden border border-amber-300">
       <div className="border-b border-amber-300 bg-amber-50 p-4">

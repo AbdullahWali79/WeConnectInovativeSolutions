@@ -75,6 +75,9 @@ With built-in tracking for tasks, applications, and completions, along with auto
 
    # Email Notifications (Google Script Webhook)
    GOOGLE_SCRIPT_MAIL_WEBHOOK=your-mail-webhook
+   GOOGLE_DRIVE_CLIENT_ID=your-google-oauth-client-id
+   GOOGLE_DRIVE_CLIENT_SECRET=your-google-oauth-client-secret
+   GOOGLE_DRIVE_TOKEN_ENCRYPTION_KEY=a-long-random-secret
    ADMIN_NOTIFICATION_EMAIL=your-admin-email
    MAIL_WEBHOOK_SECRET=your-mail-secret
 
