@@ -40,6 +40,11 @@ type TaskSubmissionRow = {
   courseTitle: string;
 };
 
+type ProgressCourse = {
+  courseId: string;
+  enrollment: Enrollment | null;
+};
+
 function formatDateOnly(value: string | null | undefined) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value));
@@ -291,30 +296,47 @@ export function StudentProgress() {
       });
   }, [courseById, submissions, tasks]);
 
+  const progressCourses = useMemo<ProgressCourse[]>(() => {
+    const courseIds = new Set<string>();
+    enrollments.forEach((item) => courseIds.add(item.course_id));
+    reports.forEach((item) => courseIds.add(item.course_id));
+    tasks.forEach((item) => {
+      if (item.workflow_type !== "daily") courseIds.add(item.course_id);
+    });
+    projects.forEach((item) => {
+      if (item.course_id) courseIds.add(item.course_id);
+    });
+
+    return [...courseIds].map((courseId) => ({
+      courseId,
+      enrollment: enrollments.find((item) => item.course_id === courseId) ?? null,
+    }));
+  }, [enrollments, projects, reports, tasks]);
+
   const reportRows = useMemo(() => {
     const startMs = reportStart ? new Date(`${reportStart}T00:00:00`).getTime() : null;
     const endMs = reportEnd ? new Date(`${reportEnd}T23:59:59.999`).getTime() : null;
 
-    return submissionRows
-      .filter(({ submission }) => {
-        const submittedMs = toDateMs(submission.submitted_at);
-        return (startMs === null || submittedMs >= startMs) && (endMs === null || submittedMs <= endMs);
+    return taskSubmissionRows
+      .filter(({ task, submission }) => {
+        const activityMs = toDateMs(submission?.submitted_at ?? task.created_at);
+        return (startMs === null || activityMs >= startMs) && (endMs === null || activityMs <= endMs);
       })
       .map(({ submission, task, courseTitle }) => ({
-        sortKey: submission.submitted_at,
-        date: formatDateOnly(submission.submitted_at),
+        sortKey: submission?.submitted_at ?? task.created_at,
+        date: formatDateOnly(submission?.submitted_at ?? task.created_at),
         course: courseTitle,
-        task: task?.title ?? "Unknown task",
-        feedback: submission.feedback?.trim() || "No feedback yet.",
-        status: formatReportStatus(submission.status),
-        deadline: formatDateOnly(task?.deadline),
-        submitted_at: formatDateOnly(submission.submitted_at),
-        reviewed_at: formatDateOnly(submission.reviewed_at),
-        score: String(submission.score ?? 0),
-        max_score: task?.max_score ?? 100,
+        task: task.title,
+        feedback: submission?.feedback?.trim() || "No feedback yet.",
+        status: formatReportStatus(submission?.status ?? task.status),
+        deadline: formatDateOnly(task.deadline),
+        submitted_at: formatDateOnly(submission?.submitted_at),
+        reviewed_at: formatDateOnly(submission?.reviewed_at),
+        score: String(submission?.score ?? 0),
+        max_score: task.max_score ?? 100,
       }))
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-  }, [reportEnd, reportStart, submissionRows]);
+  }, [reportEnd, reportStart, taskSubmissionRows]);
 
   const reportSummary = useMemo(() => {
     const uniqueCourses = new Set(reportRows.map((row) => row.course));
@@ -449,23 +471,29 @@ export function StudentProgress() {
           {missingLinks.length > 0 ? <p className="mt-2 text-xs font-semibold">Missing: {missingLinks.map((item) => item.label).join(", ")}</p> : null}
         </div>
       ) : null}
-      {enrollments.length === 0 ? (
-        <EmptyState title="No enrollments yet" description="Your enrollments will appear after admin approval." icon="monitoring" />
+      {progressCourses.length === 0 ? (
+        <EmptyState title="No progress yet" description="Your assigned tasks and reviewed work will appear here." icon="monitoring" />
       ) : (
       <div className="space-y-8">
-          {enrollments.map((enrollment) => {
-            const report = reports.find((item) => item.course_id === enrollment.course_id);
-            const courseTasks = tasks.filter((task) => task.course_id === enrollment.course_id && task.workflow_type !== "daily");
-            const targetTasks = report?.target_tasks ?? enrollment.target_tasks ?? 100;
-            const progress = report?.progress_percentage ?? enrollment.progress_percentage;
-            const averageScore = profileComplete ? (report?.average_score ?? enrollment.final_score) : "Pending";
-            const reviewedTasks = report?.completed_tasks ?? courseTasks.filter((task) => task.status === "reviewed").length;
-            const approvedProjects = projects.filter((project) => project.course_id === enrollment.course_id).length;
+          {progressCourses.map(({ courseId, enrollment }) => {
+            const report = reports.find((item) => item.course_id === courseId);
+            const courseSubmissions = taskSubmissionRows.filter((row) => row.task.course_id === courseId);
+            const targetTasks = report?.target_tasks ?? enrollment?.target_tasks ?? 100;
+            const reviewedSubmissions = courseSubmissions.filter((row) => row.submission?.status === "reviewed");
+            const reviewedTasks = report?.completed_tasks ?? reviewedSubmissions.length;
+            const approvedProjects = projects.filter((project) => project.course_id === courseId).length;
+            const completedWork = reviewedTasks + approvedProjects;
+            const progress = report?.progress_percentage ?? enrollment?.progress_percentage ?? Math.min(100, Math.round((completedWork / Math.max(targetTasks, 1)) * 100));
+            const scoredSubmissions = reviewedSubmissions.filter((row) => row.submission?.score != null);
+            const derivedAverage = scoredSubmissions.length
+              ? Math.round((scoredSubmissions.reduce((total, row) => total + (row.submission?.score ?? 0), 0) / scoredSubmissions.length) * 100) / 100
+              : 0;
+            const averageScore = profileComplete ? (report?.average_score ?? enrollment?.final_score ?? derivedAverage) : "Pending";
             return (
-              <section key={enrollment.id} className="wc-card">
+              <section key={courseId} className="wc-card">
                 <div className="sticky top-0 z-20 rounded-t-2xl bg-primary p-4 text-white shadow-lg sm:p-6">
-                  <p className="text-label-sm uppercase tracking-widest text-blue-100">{enrollment.status}</p>
-                  <h2 className="mt-2 break-words text-xl font-extrabold sm:text-3xl">{courseById.get(enrollment.course_id)?.title ?? "Course"}</h2>
+                  <p className="text-label-sm uppercase tracking-widest text-blue-100">{enrollment?.status ?? "Assigned work"}</p>
+                  <h2 className="mt-2 break-words text-xl font-extrabold sm:text-3xl">{courseById.get(courseId)?.title ?? "Course"}</h2>
                   <div className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-4 xl:grid-cols-5">
                     <Metric label="Progress" value={`${progress}%`} />
                     <Metric label="Target Work" value={targetTasks} />
@@ -478,11 +506,10 @@ export function StudentProgress() {
                 </div>
 
                 <div className="overflow-hidden rounded-b-2xl divide-y divide-outline-variant/70">
-                  {taskSubmissionRows.filter((row) => row.task.course_id === enrollment.course_id).length === 0 ? (
+                  {courseSubmissions.length === 0 ? (
                     <p className="p-6 text-body-md text-on-surface-variant">No submitted tasks for this course yet.</p>
                   ) : (
-                    taskSubmissionRows
-                      .filter((row) => row.task.course_id === enrollment.course_id)
+                    courseSubmissions
                       .map(({ task, submission }) => {
                       return (
                         <div key={submission?.id ?? task.id} className="grid gap-3 p-4 sm:p-6 md:grid-cols-[minmax(0,1fr)_180px_180px_180px] md:items-center">
