@@ -1355,7 +1355,8 @@ export async function setStudentLifecycleStatus(input: {
     } else if (input.status === "completed") {
       const { error } = await supabase
         .from("profiles")
-        .update({ status: "approved", admin_status: "completed" })
+        // Keep the student in the admin Completed tab, but block portal login.
+        .update({ status: "rejected", admin_status: "completed" })
         .eq("id", input.studentId)
         .eq("role", "student");
 
@@ -1431,6 +1432,19 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
         return { success: false, error: error.message };
       }
 
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ status: "rejected", admin_status: "completed" })
+        .eq("id", studentId)
+        .eq("role", "student");
+
+      if (profileError) {
+        return { success: false, error: profileError.message };
+      }
+
+      revalidatePath("/admin/students");
+      revalidatePath("/admin/student-reports");
+      revalidatePath("/trainees");
       return { success: true };
     }
 
@@ -1455,6 +1469,16 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
       return { success: false, error: completedResult.error.message };
     }
 
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ status: "approved", admin_status: "active" })
+      .eq("id", studentId)
+      .eq("role", "student");
+
+    if (profileError) {
+      return { success: false, error: profileError.message };
+    }
+
     const { error: progressError } = await supabase.rpc("refresh_student_progress", {
       target_student_id: studentId,
       target_course_id: courseId,
@@ -1464,6 +1488,9 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
       return { success: false, error: progressError.message };
     }
 
+    revalidatePath("/admin/students");
+    revalidatePath("/admin/student-reports");
+    revalidatePath("/trainees");
     return { success: true };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Failed to update completion status." };

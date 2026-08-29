@@ -195,8 +195,6 @@ export function StudentsManager({
       if (!student.admin_status) {
         if (student.status === "rejected") {
           displayStatus = "inactive";
-        } else if (student.enrollments.some((enrollment) => enrollment.status === "completed")) {
-          displayStatus = "completed";
         } else if (hasFeeData && (latestFee?.status === "paid" || latestFee?.status === "waived")) {
           displayStatus = "active";
         } else {
