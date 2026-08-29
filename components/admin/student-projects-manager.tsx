@@ -62,7 +62,7 @@ function draftFrom(row: StudentProject, product?: Product): ProductDraft {
   };
 }
 
-export function StudentProjectsManager() {
+export function StudentProjectsManager({ initialStudentId }: { initialStudentId?: string } = {}) {
   const supabase = createSupabaseBrowserClient();
   const [rows, setRows] = useState<StudentProject[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -206,6 +206,7 @@ export function StudentProjectsManager() {
     { value: "rejected", label: "Rejected", count: rows.filter((row) => row.status === "rejected").length },
   ];
   const visible = rows
+    .filter((row) => !initialStudentId || row.student_id === initialStudentId)
     .filter((row) => {
       if (filter === "published") return Boolean(row.promoted_product_id);
       if (filter === "approved") return row.status === "approved" && !row.promoted_product_id;
@@ -242,6 +243,7 @@ export function StudentProjectsManager() {
 
   return <div className="space-y-6">
     <PageHeader eyebrow="Portfolio Review" title="Student Projects" description="Review student work, then customize exactly what visitors see before publishing it as a product." />
+    {initialStudentId ? <a href="/admin/student-reports" className="wc-secondary-btn inline-flex"><Icon name="arrow_back" /> Back to student reports</a> : null}
 
     {resubmittedCount ? <button type="button" onClick={() => setFilter("submitted")} className="flex w-full items-center justify-between gap-4 rounded-xl border border-sky-300 bg-sky-50 p-4 text-left text-sky-950">
       <span><strong>{resubmittedCount} improved {resubmittedCount === 1 ? "project has" : "projects have"} been resubmitted</strong><span className="mt-1 block text-sm">Open the Submitted / Resubmitted tab to review and approve the updated work.</span></span>

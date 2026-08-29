@@ -34,9 +34,11 @@ type ReviewForm = { score: string; feedback: string; status: SubmissionStatus };
 export function SubmissionsReview({
   currentRole = "admin",
   permissions = [],
+  initialStudentId,
 }: {
   currentRole?: Profile["role"];
   permissions?: PermissionKey[];
+  initialStudentId?: string;
 }) {
   const supabase = createSupabaseBrowserClient();
   const canGrade = currentRole === "admin" || permissions.includes("submissions.grade");
@@ -123,9 +125,10 @@ export function SubmissionsReview({
         !selectedStatus ||
         submission.status === selectedStatus;
 
-      return matchesSearch && matchesCourse && matchesStatus;
+      const matchesStudent = !initialStudentId || submission.student_id === initialStudentId;
+      return matchesSearch && matchesCourse && matchesStatus && matchesStudent;
     });
-  }, [submissions, searchTerm, selectedCourseId, selectedStatus, taskById, studentById, courseScope]);
+  }, [submissions, searchTerm, selectedCourseId, selectedStatus, taskById, studentById, courseScope, initialStudentId]);
 
   function updateForm(submissionId: string, patch: Partial<ReviewForm>) {
     setForms((current) => ({ ...current, [submissionId]: { ...current[submissionId], ...patch } }));
@@ -190,6 +193,7 @@ export function SubmissionsReview({
     <>
       <Toast toast={toast} onClear={clearToast} />
       <PageHeader eyebrow="Submission Review" title="Review and score submissions" description="Score submissions, add feedback, or request revision. Saving updates task status and progress reports automatically." />
+      {initialStudentId ? <a href="/admin/student-reports" className="wc-secondary-btn mb-4 inline-flex"><Icon name="arrow_back" /> Back to student reports</a> : null}
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         {submissions.length === 0 ? (
