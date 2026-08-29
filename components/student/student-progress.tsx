@@ -169,6 +169,7 @@ function DateWiseProgressReportPdf({
   summary: {
     courses: number;
     tasks: number;
+    projects: number;
     reviewed: number;
     averageScore: number;
   };
@@ -182,6 +183,7 @@ function DateWiseProgressReportPdf({
           <View style={pdfStyles.metaRow}>
             <Text style={pdfStyles.metaChip}>Courses: {summary.courses}</Text>
             <Text style={pdfStyles.metaChip}>Tasks: {summary.tasks}</Text>
+            <Text style={pdfStyles.metaChip}>Projects: {summary.projects}</Text>
             <Text style={pdfStyles.metaChip}>Reviewed: {summary.reviewed}</Text>
             <Text style={pdfStyles.metaChip}>Avg Score: {summary.averageScore}</Text>
           </View>
@@ -201,7 +203,7 @@ function DateWiseProgressReportPdf({
               <View key={`${row.date}-${row.task}-${index}`} style={pdfStyles.tableRow} wrap={false}>
                 <Text style={[pdfStyles.tableCell, { width: "27%" }]}>{row.task}{"\n"}<Text style={pdfStyles.muted}>{row.course} - {row.date}</Text></Text>
                 <Text style={[pdfStyles.tableCell, { width: "41%" }]}>{row.feedback}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "14%" }]}>{row.score}/{row.max_score}</Text>
+                <Text style={[pdfStyles.tableCell, { width: "14%" }]}>{row.max_score > 0 ? `${row.score}/${row.max_score}` : "N/A"}</Text>
                 <Text style={[pdfStyles.tableCell, { width: "18%" }]}>{row.status}</Text>
               </View>
             ))}
@@ -280,7 +282,7 @@ export function StudentProgress() {
       const title = task.title.trim().toLowerCase();
       if (title.includes("client hunting")) return false;
       if (task.workflow_type === "daily") return false;
-      return ["submitted", "reviewed", "revision_required", "rejected"].includes(task.status) || submissions.some((submission) => submission.task_id === task.id);
+      return true;
     });
 
     return visibleTasks
@@ -317,7 +319,7 @@ export function StudentProgress() {
     const startMs = reportStart ? new Date(`${reportStart}T00:00:00`).getTime() : null;
     const endMs = reportEnd ? new Date(`${reportEnd}T23:59:59.999`).getTime() : null;
 
-    return taskSubmissionRows
+    const taskRows: DateWiseReportRow[] = taskSubmissionRows
       .filter(({ task, submission }) => {
         const activityMs = toDateMs(submission?.submitted_at ?? task.created_at);
         return (startMs === null || activityMs >= startMs) && (endMs === null || activityMs <= endMs);
@@ -334,9 +336,29 @@ export function StudentProgress() {
         reviewed_at: formatDateOnly(submission?.reviewed_at),
         score: String(submission?.score ?? 0),
         max_score: task.max_score ?? 100,
-      }))
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-  }, [reportEnd, reportStart, taskSubmissionRows]);
+      }));
+
+    const projectRows: DateWiseReportRow[] = projects
+      .filter((project) => {
+        const activityMs = toDateMs(project.reviewed_at ?? project.updated_at ?? project.created_at);
+        return (startMs === null || activityMs >= startMs) && (endMs === null || activityMs <= endMs);
+      })
+      .map((project) => ({
+        sortKey: project.reviewed_at ?? project.updated_at ?? project.created_at,
+        date: formatDateOnly(project.reviewed_at ?? project.updated_at ?? project.created_at),
+        course: project.course_id ? courseById.get(project.course_id)?.title ?? "Unknown course" : "Projects",
+        task: `[Project] ${project.title}`,
+        feedback: project.admin_feedback?.trim() || "No feedback yet.",
+        status: formatReportStatus(project.status),
+        deadline: "-",
+        submitted_at: formatDateOnly(project.created_at),
+        reviewed_at: formatDateOnly(project.reviewed_at),
+        score: "N/A",
+        max_score: 0,
+      }));
+
+    return [...taskRows, ...projectRows].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  }, [courseById, projects, reportEnd, reportStart, taskSubmissionRows]);
 
   const reportSummary = useMemo(() => {
     const uniqueCourses = new Set(reportRows.map((row) => row.course));
@@ -350,7 +372,8 @@ export function StudentProgress() {
 
     return {
       courses: uniqueCourses.size,
-      tasks: reportRows.length,
+      tasks: reportRows.filter((row) => !row.task.startsWith("[Project] ")).length,
+      projects: reportRows.filter((row) => row.task.startsWith("[Project] ")).length,
       reviewed: reviewedCount,
       averageScore,
     };
@@ -383,6 +406,7 @@ export function StudentProgress() {
         ["Report Period", getReportPeriod(reportStart, reportEnd)],
         ["Courses", reportSummary.courses],
         ["Tasks", reportSummary.tasks],
+        ["Projects", reportSummary.projects],
         ["Reviewed", reportSummary.reviewed],
         ["Average Score", reportSummary.averageScore],
       ]);
@@ -481,7 +505,8 @@ export function StudentProgress() {
             const targetTasks = report?.target_tasks ?? enrollment?.target_tasks ?? 100;
             const reviewedSubmissions = courseSubmissions.filter((row) => row.submission?.status === "reviewed");
             const reviewedTasks = report?.completed_tasks ?? reviewedSubmissions.length;
-            const approvedProjects = projects.filter((project) => project.course_id === courseId).length;
+            const courseProjects = projects.filter((project) => project.course_id === courseId || (!project.course_id && progressCourses.length === 1));
+            const approvedProjects = courseProjects.length;
             const completedWork = reviewedTasks + approvedProjects;
             const progress = report?.progress_percentage ?? enrollment?.progress_percentage ?? Math.min(100, Math.round((completedWork / Math.max(targetTasks, 1)) * 100));
             const scoredSubmissions = reviewedSubmissions.filter((row) => row.submission?.score != null);
@@ -525,6 +550,25 @@ export function StudentProgress() {
                       );
                     })
                   )}
+                  {courseProjects.length > 0 ? (
+                    <div className="border-t-4 border-primary/20">
+                      <div className="bg-surface-container-low px-4 py-3 sm:px-6">
+                        <p className="text-xs font-black uppercase tracking-widest text-primary">Completed projects ({courseProjects.length})</p>
+                      </div>
+                      {courseProjects.map((project) => (
+                        <div key={project.id} className="grid gap-3 border-t border-outline-variant/70 p-4 sm:p-6 md:grid-cols-[minmax(0,1fr)_180px_180px_180px] md:items-center">
+                          <div className="min-w-0">
+                            <p className="font-bold text-on-surface">{project.title}</p>
+                            <p className="text-body-sm text-on-surface-variant">Project</p>
+                          </div>
+                          <StatusPill value={project.status} />
+                          <p className="text-body-sm text-on-surface-variant">{formatDateTime(project.reviewed_at ?? project.updated_at)}</p>
+                          <p className="text-body-sm text-on-surface-variant">Project completed</p>
+                          <TaskFeedback feedback={project.admin_feedback} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </section>
             );
