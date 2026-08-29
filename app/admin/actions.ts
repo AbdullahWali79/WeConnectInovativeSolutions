@@ -77,6 +77,31 @@ export type StudentTaskDetail = {
   taskStatus?: string | null;
 };
 
+async function updateStudentLifecycleProfile(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  studentId: string,
+  status: "approved" | "rejected",
+  adminStatus: "approved" | "active" | "completed" | "inactive",
+) {
+  const result = await supabase
+    .from("profiles")
+    .update({ status, admin_status: adminStatus })
+    .eq("id", studentId)
+    .eq("role", "student");
+
+  // Keep account controls working on production databases that predate the
+  // optional lifecycle column, until the migration is applied there.
+  if (result.error?.message.toLowerCase().includes("admin_status")) {
+    return supabase
+      .from("profiles")
+      .update({ status })
+      .eq("id", studentId)
+      .eq("role", "student");
+  }
+
+  return result;
+}
+
 export type CourseTopicInput = {
   id: string;
   day_number: number;
@@ -1335,30 +1360,16 @@ export async function setStudentLifecycleStatus(input: {
     }
 
     if (input.status === "inactive") {
-      const { error } = await supabase
-        .from("profiles")
-        // `status` blocks authentication while `admin_status` preserves the
-        // lifecycle label used by admin-facing student lists and reports.
-        .update({ status: "rejected", admin_status: "inactive" })
-        .eq("id", input.studentId)
-        .eq("role", "student");
+      const { error } = await updateStudentLifecycleProfile(supabase, input.studentId, "rejected", "inactive");
 
       if (error) return { success: false, data: null, error: error.message };
     } else if (input.status === "approved") {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ status: "approved", admin_status: "approved" })
-        .eq("id", input.studentId)
-        .eq("role", "student");
+      const { error } = await updateStudentLifecycleProfile(supabase, input.studentId, "approved", "approved");
 
       if (error) return { success: false, data: null, error: error.message };
     } else if (input.status === "completed") {
-      const { error } = await supabase
-        .from("profiles")
-        // Keep the student in the admin Completed tab, but block portal login.
-        .update({ status: "rejected", admin_status: "completed" })
-        .eq("id", input.studentId)
-        .eq("role", "student");
+      // Keep the student in the admin Completed tab, but block portal login.
+      const { error } = await updateStudentLifecycleProfile(supabase, input.studentId, "rejected", "completed");
 
       if (error) return { success: false, data: null, error: error.message };
 
@@ -1370,11 +1381,7 @@ export async function setStudentLifecycleStatus(input: {
         if (error) return { success: false, data: null, error: error.message };
       }
     } else if (input.status === "active") {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ status: "approved", admin_status: "active" })
-        .eq("id", input.studentId)
-        .eq("role", "student");
+      const { error } = await updateStudentLifecycleProfile(supabase, input.studentId, "approved", "active");
 
       if (error) return { success: false, data: null, error: error.message };
 
@@ -1432,11 +1439,7 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
         return { success: false, error: error.message };
       }
 
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ status: "rejected", admin_status: "completed" })
-        .eq("id", studentId)
-        .eq("role", "student");
+      const { error: profileError } = await updateStudentLifecycleProfile(supabase, studentId, "rejected", "completed");
 
       if (profileError) {
         return { success: false, error: profileError.message };
@@ -1469,11 +1472,7 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
       return { success: false, error: completedResult.error.message };
     }
 
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ status: "approved", admin_status: "active" })
-      .eq("id", studentId)
-      .eq("role", "student");
+    const { error: profileError } = await updateStudentLifecycleProfile(supabase, studentId, "approved", "active");
 
     if (profileError) {
       return { success: false, error: profileError.message };
