@@ -464,8 +464,9 @@ export function StudentProgress({ targetStudentId, adminMode = false }: { target
         eyebrow={adminMode ? "Student Reports" : "My Progress"}
         title={adminMode ? `${profile?.full_name || profile?.email || "Student"} report` : "Progress report"}
         description={adminMode ? "Download this student's complete task and project reports in the same format available in the student portal." : "Your target tasks and completion percentages update automatically after admin reviews submissions."}
-        action={
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+      />
+      <section className="wc-card mb-6 p-4 sm:p-5">
+          <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(160px,220px)_minmax(160px,220px)_minmax(0,1fr)] xl:items-end">
             <label className="block">
               <span className="wc-label">From</span>
               <input className="wc-input mt-2" type="date" value={reportStart} onChange={(event) => setReportStart(event.target.value)} />
@@ -474,7 +475,7 @@ export function StudentProgress({ targetStudentId, adminMode = false }: { target
               <span className="wc-label">To</span>
               <input className="wc-input mt-2" type="date" value={reportEnd} onChange={(event) => setReportEnd(event.target.value)} />
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex min-w-0 flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => void exportReport("pdf")}
@@ -509,8 +510,7 @@ export function StudentProgress({ targetStudentId, adminMode = false }: { target
               </button>
             </div>
           </div>
-        }
-      />
+      </section>
       {!profileComplete ? (
         <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
           <p className="font-bold">Profile links incomplete</p>

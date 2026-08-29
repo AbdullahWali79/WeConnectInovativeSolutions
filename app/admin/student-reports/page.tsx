@@ -14,7 +14,6 @@ export default async function StudentReportsPage() {
     .from("profiles")
     .select("*")
     .eq("role", "student")
-    .eq("status", "approved")
     .order("full_name", { ascending: true });
 
   if (error) throw new Error(error.message);

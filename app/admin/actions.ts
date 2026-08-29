@@ -1337,7 +1337,9 @@ export async function setStudentLifecycleStatus(input: {
     if (input.status === "inactive") {
       const { error } = await supabase
         .from("profiles")
-        .update({ status: "rejected" })
+        // `status` blocks authentication while `admin_status` preserves the
+        // lifecycle label used by admin-facing student lists and reports.
+        .update({ status: "rejected", admin_status: "inactive" })
         .eq("id", input.studentId)
         .eq("role", "student");
 
@@ -1345,7 +1347,7 @@ export async function setStudentLifecycleStatus(input: {
     } else if (input.status === "approved") {
       const { error } = await supabase
         .from("profiles")
-        .update({ status: "approved" })
+        .update({ status: "approved", admin_status: "approved" })
         .eq("id", input.studentId)
         .eq("role", "student");
 
@@ -1405,6 +1407,8 @@ export async function setStudentLifecycleStatus(input: {
     revalidatePath("/admin/tasks");
     revalidatePath("/admin/progress");
     revalidatePath("/admin/task-analytics");
+    revalidatePath("/admin/student-reports");
+    revalidatePath("/trainees");
     return { success: true, data: null, error: null };
   } catch (err) {
     return { success: false, data: null, error: err instanceof Error ? err.message : "Failed to update student lifecycle status." };
