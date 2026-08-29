@@ -12,7 +12,7 @@ import { formatDateTime } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
 
-type ExportFormat = "pdf" | "xlsx" | "projects-pdf";
+type ExportFormat = "pdf" | "xlsx" | "projects-pdf" | "projects-xlsx";
 
 type DateWiseReportRow = {
   sortKey: string;
@@ -209,7 +209,7 @@ function DateWiseProgressReportPdf({
   );
 }
 
-export function StudentProgress() {
+export function StudentProgress({ targetStudentId, adminMode = false }: { targetStudentId?: string; adminMode?: boolean } = {}) {
   const supabase = createSupabaseBrowserClient();
   const [reports, setReports] = useState<ProgressReport[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -225,13 +225,25 @@ export function StudentProgress() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    let reportQuery = supabase.from("progress_reports").select("*").order("updated_at", { ascending: false });
+    let enrollmentQuery = supabase.from("enrollments").select("*");
+    let taskQuery = supabase.from("tasks").select("*").order("created_at", { ascending: false });
+    let submissionQuery = supabase.from("submissions").select("*").order("submitted_at", { ascending: false });
+    let projectQuery = supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false });
+    if (targetStudentId) {
+      reportQuery = reportQuery.eq("student_id", targetStudentId);
+      enrollmentQuery = enrollmentQuery.eq("student_id", targetStudentId);
+      taskQuery = taskQuery.eq("student_id", targetStudentId);
+      submissionQuery = submissionQuery.eq("student_id", targetStudentId);
+      projectQuery = projectQuery.eq("student_id", targetStudentId);
+    }
     const [reportResult, courseResult, enrollmentResult, taskResult, submissionResult, projectResult, userResult] = await Promise.all([
-      supabase.from("progress_reports").select("*").order("updated_at", { ascending: false }),
+      reportQuery,
       supabase.from("courses").select("*"),
-      supabase.from("enrollments").select("*"),
-      supabase.from("tasks").select("*").order("created_at", { ascending: false }),
-      supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
-      supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
+      enrollmentQuery,
+      taskQuery,
+      submissionQuery,
+      projectQuery,
       supabase.auth.getUser(),
     ]);
     setReports(reportResult.data ?? []);
@@ -240,7 +252,7 @@ export function StudentProgress() {
     setTasks(taskResult.data ?? []);
     setSubmissions(submissionResult.data ?? []);
     setProjects((projectResult.data ?? []) as StudentProject[]);
-    const userId = userResult.data.user?.id;
+    const userId = targetStudentId ?? userResult.data.user?.id;
     if (userId) {
       const { data: profileData } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       setProfile(profileData as Profile | null);
@@ -248,7 +260,7 @@ export function StudentProgress() {
       setProfile(null);
     }
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, targetStudentId]);
 
   useEffect(() => {
     void loadData();
@@ -374,7 +386,7 @@ export function StudentProgress() {
     setExporting(format);
 
     try {
-      const isProjectsOnly = format === "projects-pdf";
+      const isProjectsOnly = format === "projects-pdf" || format === "projects-xlsx";
       const exportRows = isProjectsOnly
         ? reportRows.filter((row) => row.task.startsWith("[Project] "))
         : reportRows;
@@ -411,7 +423,7 @@ export function StudentProgress() {
       ]);
       summarySheet["!cols"] = [{ wch: 22 }, { wch: 28 }];
 
-      const detailSheet = XLSX.utils.json_to_sheet(reportRows.map((row) => ({
+      const detailSheet = XLSX.utils.json_to_sheet(exportRows.map((row) => ({
         "Task / Project": row.task,
         Score: row.score,
         "Max Score": row.max_score,
@@ -449,9 +461,9 @@ export function StudentProgress() {
   return (
     <>
       <PageHeader
-        eyebrow="My Progress"
-        title="Progress report"
-        description="Your target tasks and completion percentages update automatically after admin reviews submissions."
+        eyebrow={adminMode ? "Student Reports" : "My Progress"}
+        title={adminMode ? `${profile?.full_name || profile?.email || "Student"} report` : "Progress report"}
+        description={adminMode ? "Download this student's complete task and project reports in the same format available in the student portal." : "Your target tasks and completion percentages update automatically after admin reviews submissions."}
         action={
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
             <label className="block">
@@ -486,6 +498,14 @@ export function StudentProgress() {
                 className="wc-secondary-btn text-sm py-2 px-4 disabled:opacity-60"
               >
                 {exporting === "projects-pdf" ? "Preparing Projects..." : "Download Projects PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void exportReport("projects-xlsx")}
+                disabled={exporting !== null || reportSummary.projects === 0}
+                className="wc-secondary-btn text-sm py-2 px-4 disabled:opacity-60"
+              >
+                {exporting === "projects-xlsx" ? "Preparing Projects..." : "Download Projects Excel"}
               </button>
             </div>
           </div>
