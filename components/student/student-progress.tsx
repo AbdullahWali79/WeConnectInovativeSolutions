@@ -12,7 +12,7 @@ import { formatDateTime } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
 
-type ExportFormat = "pdf" | "xlsx";
+type ExportFormat = "pdf" | "xlsx" | "projects-pdf";
 
 type DateWiseReportRow = {
   sortKey: string;
@@ -181,7 +181,9 @@ function DateWiseProgressReportPdf({
             <Text style={pdfStyles.title}>{studentName}</Text>
             <Text style={pdfStyles.subtitle}>{skillName}</Text>
           </View>
-          <Image src={logoUrl} style={pdfStyles.logo} alt="WeConnect logo" />
+          {/* @react-pdf/renderer Image does not support the DOM alt property. */}
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          <Image src={logoUrl} style={pdfStyles.logo} />
         </View>
 
         {rows.length === 0 ? (
@@ -372,16 +374,24 @@ export function StudentProgress() {
     setExporting(format);
 
     try {
-      const fileBase = reportStart || reportEnd
+      const isProjectsOnly = format === "projects-pdf";
+      const exportRows = isProjectsOnly
+        ? reportRows.filter((row) => row.task.startsWith("[Project] "))
+        : reportRows;
+      const fileBase = isProjectsOnly
+        ? (reportStart || reportEnd ? `projects-report-${reportStart || "start"}-to-${reportEnd || "latest"}` : "complete-projects-report")
+        : reportStart || reportEnd
         ? `progress-report-${reportStart || "start"}-to-${reportEnd || "latest"}`
         : "complete-progress-report";
 
-      if (format === "pdf") {
+      if (format === "pdf" || format === "projects-pdf") {
         const blob = await pdf(
           <DateWiseProgressReportPdf
-            rows={reportRows}
+            rows={exportRows}
             studentName={profile?.full_name?.trim() || profile?.email || "Student"}
-            skillName={[...new Set(reportRows.map((row) => row.course).filter((course) => course !== "Projects" && course !== "Unknown course"))].join(", ") || "Skills Progress Report"}
+            skillName={isProjectsOnly
+              ? "Completed Projects"
+              : [...new Set(reportRows.map((row) => row.course).filter((course) => course !== "Projects" && course !== "Unknown course"))].join(", ") || "Skills Progress Report"}
             logoUrl={`${window.location.origin}/logo.jpeg`}
           />,
         ).toBlob();
@@ -452,7 +462,7 @@ export function StudentProgress() {
               <span className="wc-label">To</span>
               <input className="wc-input mt-2" type="date" value={reportEnd} onChange={(event) => setReportEnd(event.target.value)} />
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => void exportReport("pdf")}
@@ -468,6 +478,14 @@ export function StudentProgress() {
                 className="wc-secondary-btn text-sm py-2 px-4 disabled:opacity-60"
               >
                 {exporting === "xlsx" ? "Preparing Excel..." : "Download Excel"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void exportReport("projects-pdf")}
+                disabled={exporting !== null || reportSummary.projects === 0}
+                className="wc-secondary-btn text-sm py-2 px-4 disabled:opacity-60"
+              >
+                {exporting === "projects-pdf" ? "Preparing Projects..." : "Download Projects PDF"}
               </button>
             </div>
           </div>
