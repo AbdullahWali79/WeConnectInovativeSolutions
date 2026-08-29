@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+import { Document, Image, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
@@ -92,7 +92,12 @@ const pdfStyles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "#1d4ed8",
     color: "#ffffff",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  headerText: { flexGrow: 1 },
+  logo: { width: 44, height: 44, marginLeft: 12, borderRadius: 8, objectFit: "contain", backgroundColor: "#ffffff" },
   title: {
     fontSize: 15,
     fontWeight: 700,
@@ -158,35 +163,25 @@ const pdfStyles = StyleSheet.create({
 });
 
 function DateWiseProgressReportPdf({
-  dateFrom,
-  dateTo,
   rows,
-  summary,
+  studentName,
+  skillName,
+  logoUrl,
 }: {
-  dateFrom: string;
-  dateTo: string;
   rows: DateWiseReportRow[];
-  summary: {
-    courses: number;
-    tasks: number;
-    projects: number;
-    reviewed: number;
-    averageScore: number;
-  };
+  studentName: string;
+  skillName: string;
+  logoUrl: string;
 }) {
   return (
     <Document>
       <Page size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.header}>
-          <Text style={pdfStyles.title}>We Connect Innovative Solutions</Text>
-          <Text style={pdfStyles.subtitle}>{getReportPeriod(dateFrom, dateTo)}</Text>
-          <View style={pdfStyles.metaRow}>
-            <Text style={pdfStyles.metaChip}>Courses: {summary.courses}</Text>
-            <Text style={pdfStyles.metaChip}>Tasks: {summary.tasks}</Text>
-            <Text style={pdfStyles.metaChip}>Projects: {summary.projects}</Text>
-            <Text style={pdfStyles.metaChip}>Reviewed: {summary.reviewed}</Text>
-            <Text style={pdfStyles.metaChip}>Avg Score: {summary.averageScore}</Text>
+          <View style={pdfStyles.headerText}>
+            <Text style={pdfStyles.title}>{studentName}</Text>
+            <Text style={pdfStyles.subtitle}>{skillName}</Text>
           </View>
+          <Image src={logoUrl} style={pdfStyles.logo} alt="WeConnect logo" />
         </View>
 
         {rows.length === 0 ? (
@@ -200,7 +195,7 @@ function DateWiseProgressReportPdf({
             </View>
             {rows.map((row, index) => (
               <View key={`${row.date}-${row.task}-${index}`} style={pdfStyles.tableRow} wrap={false}>
-                <Text style={[pdfStyles.tableCell, { width: "55%" }]}>{row.task}{"\n"}<Text style={pdfStyles.muted}>{row.course} - {row.date}</Text></Text>
+                <Text style={[pdfStyles.tableCell, { width: "55%" }]}>{row.task}</Text>
                 <Text style={[pdfStyles.tableCell, { width: "20%" }]}>{row.max_score > 0 ? `${row.score}/${row.max_score}` : "N/A"}</Text>
                 <Text style={[pdfStyles.tableCell, { width: "25%" }]}>{row.status}</Text>
               </View>
@@ -384,10 +379,10 @@ export function StudentProgress() {
       if (format === "pdf") {
         const blob = await pdf(
           <DateWiseProgressReportPdf
-            dateFrom={reportStart}
-            dateTo={reportEnd}
             rows={reportRows}
-            summary={reportSummary}
+            studentName={profile?.full_name?.trim() || profile?.email || "Student"}
+            skillName={[...new Set(reportRows.map((row) => row.course).filter((course) => course !== "Projects" && course !== "Unknown course"))].join(", ") || "Skills Progress Report"}
+            logoUrl={`${window.location.origin}/logo.jpeg`}
           />,
         ).toBlob();
         downloadBlob(blob, `${fileBase}.pdf`);
