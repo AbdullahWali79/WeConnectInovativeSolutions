@@ -363,6 +363,11 @@ export function TasksManager({
       return;
     }
 
+    if (!bulkReviewFeedback.trim()) {
+      setToast({ type: "error", message: "Admin feedback is required before accepting selected tasks." });
+      return;
+    }
+
     const taskWithLowerMax = selectedTasks.find((task) => score > task.max_score);
     if (taskWithLowerMax) {
       setToast({ type: "error", message: `Marks cannot exceed ${taskWithLowerMax.max_score} for ${taskWithLowerMax.title}.` });
@@ -380,7 +385,7 @@ export function TasksManager({
       .update({
         status: "reviewed",
         score,
-        feedback: bulkReviewFeedback.trim() || null,
+        feedback: bulkReviewFeedback.trim(),
         reviewed_at: reviewedAt,
       })
       .in("id", selectedSubmissions.map((submission) => submission.id));
@@ -426,8 +431,8 @@ export function TasksManager({
     if (!form) return;
 
     const status = forcedStatus ?? form.status;
-    if ((status === "revision_required" || status === "rejected") && !form.feedback.trim()) {
-      setToast({ type: "error", message: `${status === "rejected" ? "Reject" : "Revision"} feedback is required.` });
+    if (!form.feedback.trim()) {
+      setToast({ type: "error", message: "Admin feedback is required before saving a review." });
       return;
     }
     const score = status === "reviewed" ? toNumber(form.score, 0) : 0;

@@ -194,17 +194,15 @@ function DateWiseProgressReportPdf({
         ) : (
           <View style={pdfStyles.table}>
             <View style={pdfStyles.tableHeader}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "27%" }]}>Task</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "41%" }]}>Admin Feedback</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "14%" }]}>Score</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: "18%" }]}>Status</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: "55%" }]}>Task / Project</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: "20%" }]}>Score</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: "25%" }]}>Status</Text>
             </View>
             {rows.map((row, index) => (
               <View key={`${row.date}-${row.task}-${index}`} style={pdfStyles.tableRow} wrap={false}>
-                <Text style={[pdfStyles.tableCell, { width: "27%" }]}>{row.task}{"\n"}<Text style={pdfStyles.muted}>{row.course} - {row.date}</Text></Text>
-                <Text style={[pdfStyles.tableCell, { width: "41%" }]}>{row.feedback}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "14%" }]}>{row.max_score > 0 ? `${row.score}/${row.max_score}` : "N/A"}</Text>
-                <Text style={[pdfStyles.tableCell, { width: "18%" }]}>{row.status}</Text>
+                <Text style={[pdfStyles.tableCell, { width: "55%" }]}>{row.task}{"\n"}<Text style={pdfStyles.muted}>{row.course} - {row.date}</Text></Text>
+                <Text style={[pdfStyles.tableCell, { width: "20%" }]}>{row.max_score > 0 ? `${row.score}/${row.max_score}` : "N/A"}</Text>
+                <Text style={[pdfStyles.tableCell, { width: "25%" }]}>{row.status}</Text>
               </View>
             ))}
           </View>
@@ -269,7 +267,6 @@ export function StudentProgress() {
         const task = tasks.find((item) => item.id === submission.task_id);
         const title = task?.title?.trim().toLowerCase() ?? "";
         if (title.includes("client hunting")) return null;
-        if (task?.workflow_type === "daily") return null;
         const courseTitle = task ? courseById.get(task.course_id)?.title ?? "Unknown course" : "Unknown course";
         return { submission, task, courseTitle };
       })
@@ -281,7 +278,6 @@ export function StudentProgress() {
     const visibleTasks = tasks.filter((task) => {
       const title = task.title.trim().toLowerCase();
       if (title.includes("client hunting")) return false;
-      if (task.workflow_type === "daily") return false;
       return true;
     });
 
@@ -302,9 +298,7 @@ export function StudentProgress() {
     const courseIds = new Set<string>();
     enrollments.forEach((item) => courseIds.add(item.course_id));
     reports.forEach((item) => courseIds.add(item.course_id));
-    tasks.forEach((item) => {
-      if (item.workflow_type !== "daily") courseIds.add(item.course_id);
-    });
+    tasks.forEach((item) => courseIds.add(item.course_id));
     projects.forEach((item) => {
       if (item.course_id) courseIds.add(item.course_id);
     });
@@ -413,8 +407,7 @@ export function StudentProgress() {
       summarySheet["!cols"] = [{ wch: 22 }, { wch: 28 }];
 
       const detailSheet = XLSX.utils.json_to_sheet(reportRows.map((row) => ({
-        Task: row.task,
-        Feedback: row.feedback,
+        "Task / Project": row.task,
         Score: row.score,
         "Max Score": row.max_score,
         Status: row.status,
@@ -426,7 +419,6 @@ export function StudentProgress() {
       })));
       detailSheet["!cols"] = [
         { wch: 34 },
-        { wch: 52 },
         { wch: 10 },
         { wch: 12 },
         { wch: 18 },

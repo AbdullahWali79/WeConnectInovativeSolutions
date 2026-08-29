@@ -139,8 +139,8 @@ export function SubmissionsReview({
     const form = forms[submission.id];
     if (!form) return;
     const status = forcedStatus ?? form.status;
-    if ((status === "revision_required" || status === "rejected") && !form.feedback.trim()) {
-      setToast({ type: "error", message: `${status === "rejected" ? "Reject" : "Revision"} feedback is required.` });
+    if (!form.feedback.trim()) {
+      setToast({ type: "error", message: "Admin feedback is required before saving a review." });
       return;
     }
     const score = status === "reviewed" ? toNumber(form.score, 0) : 0;
