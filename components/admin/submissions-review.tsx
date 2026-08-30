@@ -101,21 +101,19 @@ export function SubmissionsReview({
   }, [loadData]);
 
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
+  const submissionByTaskId = useMemo(() => new Map(submissions.map((submission) => [submission.task_id, submission])), [submissions]);
   const studentById = useMemo(() => new Map(students.map((student) => [student.id, student])), [students]);
   const courseById = useMemo(() => new Map(courses.map((course) => [course.id, course])), [courses]);
   const selectedStudent = initialStudentId ? studentById.get(initialStudentId) : null;
-  const selectedStudentSubmissionCount = initialStudentId
-    ? submissions.filter((submission) => submission.student_id === initialStudentId).length
-    : submissions.length;
-  const studentSubmissions = initialStudentId
-    ? submissions.filter((submission) => submission.student_id === initialStudentId)
-    : submissions;
+  const studentTasks = initialStudentId ? tasks.filter((task) => task.student_id === initialStudentId) : tasks;
+  const taskReviewStatus = (task: Task) => submissionByTaskId.get(task.id)?.status ?? task.status;
+  const selectedStudentTaskCount = studentTasks.length;
   const taskStatusOptions = [
-    { value: "", label: "All", count: studentSubmissions.length },
-    { value: "submitted", label: "Submitted", count: studentSubmissions.filter((submission) => submission.status === "submitted").length },
-    { value: "revision_required", label: "Needs Improvement", count: studentSubmissions.filter((submission) => submission.status === "revision_required").length },
-    { value: "reviewed", label: "Accepted", count: studentSubmissions.filter((submission) => submission.status === "reviewed").length },
-    { value: "rejected", label: "Rejected", count: studentSubmissions.filter((submission) => submission.status === "rejected").length },
+    { value: "", label: "All", count: studentTasks.length },
+    { value: "submitted", label: "Submitted", count: studentTasks.filter((task) => taskReviewStatus(task) === "submitted").length },
+    { value: "revision_required", label: "Needs Improvement", count: studentTasks.filter((task) => taskReviewStatus(task) === "revision_required").length },
+    { value: "reviewed", label: "Accepted", count: studentTasks.filter((task) => taskReviewStatus(task) === "reviewed").length },
+    { value: "rejected", label: "Rejected", count: studentTasks.filter((task) => taskReviewStatus(task) === "rejected").length },
   ];
 
   // Client-side filtering logic
@@ -143,6 +141,16 @@ export function SubmissionsReview({
       return matchesSearch && matchesCourse && matchesStatus && matchesStudent;
     });
   }, [submissions, searchTerm, selectedCourseId, selectedStatus, taskById, studentById, courseScope, initialStudentId]);
+
+  const filteredTasksWithoutSubmissions = useMemo(() => tasks.filter((task) => {
+    if (submissionByTaskId.has(task.id)) return false;
+    if (initialStudentId && task.student_id !== initialStudentId) return false;
+    if (selectedCourseId && task.course_id !== selectedCourseId) return false;
+    if (selectedStatus && task.status !== selectedStatus) return false;
+    const student = studentById.get(task.student_id);
+    const query = searchTerm.trim().toLowerCase();
+    return !query || task.title.toLowerCase().includes(query) || student?.full_name?.toLowerCase().includes(query) || student?.email?.toLowerCase().includes(query);
+  }), [initialStudentId, searchTerm, selectedCourseId, selectedStatus, studentById, submissionByTaskId, tasks]);
 
   function updateForm(submissionId: string, patch: Partial<ReviewForm>) {
     setForms((current) => ({ ...current, [submissionId]: { ...current[submissionId], ...patch } }));
@@ -211,14 +219,14 @@ export function SubmissionsReview({
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Selected student</p>
           <p className="mt-1 font-bold text-on-surface">{selectedStudent?.full_name ?? "Student"} <span className="font-normal text-on-surface-variant">{selectedStudent?.email ? `(${selectedStudent.email})` : ""}</span></p>
-          <p className="mt-1 text-sm text-on-surface-variant">Only this student&apos;s {selectedStudentSubmissionCount} submitted tasks are shown below for review.</p>
+          <p className="mt-1 text-sm text-on-surface-variant">All {selectedStudentTaskCount} tasks for this student are shown, including accepted historical tasks.</p>
         </div>
         <a href="/admin/student-reports" className="wc-secondary-btn inline-flex"><Icon name="arrow_back" /> Back to student reports</a>
       </div> : null}
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        {submissions.length === 0 ? (
-          <EmptyState title="No submissions yet" description="Student submissions will appear here after assigned tasks are submitted." icon="rate_review" />
+        {tasks.length === 0 ? (
+          <EmptyState title="No tasks yet" description="This student does not have any assigned or daily tasks yet." icon="rate_review" />
         ) : (
           <div className="space-y-6">
             <div className="flex flex-wrap gap-2">
@@ -294,7 +302,7 @@ export function SubmissionsReview({
               </div>
             </div>
 
-            {filteredSubmissions.length === 0 ? (
+            {filteredSubmissions.length === 0 && filteredTasksWithoutSubmissions.length === 0 ? (
               <EmptyState
                 title="No matches found"
                 description="Try adjusting your search terms or filters to find what you are looking for."
@@ -302,6 +310,25 @@ export function SubmissionsReview({
               />
             ) : (
               <div className="grid gap-4">
+                {filteredTasksWithoutSubmissions.map((task) => (
+                  <article key={task.id} className="wc-card overflow-hidden">
+                    <div className="p-4">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <h2 className="text-sm font-bold text-on-surface">{task.title}</h2>
+                        <StatusPill value={task.status} />
+                        <span className="rounded-full bg-surface-container px-3 py-1 text-[10px] font-bold text-on-surface-variant">Historical task</span>
+                      </div>
+                      <p className="text-sm text-on-surface-variant">{task.description || "No task explanation was saved."}</p>
+                      <div className="mt-3 grid gap-2 text-xs text-on-surface-variant md:grid-cols-2">
+                        <p><b>Student:</b> {studentById.get(task.student_id)?.full_name ?? "Unknown"}</p>
+                        <p><b>Course:</b> {courseById.get(task.course_id)?.title ?? "Unknown"}</p>
+                        <p><b>Created:</b> {formatDateTime(task.created_at)}</p>
+                        <p><b>Max score:</b> {task.max_score ?? 100}</p>
+                      </div>
+                      <p className="mt-3 rounded-xl bg-surface-container-low p-3 text-xs text-on-surface-variant">This task has no separate submission record. Its saved task status is still included in the student&apos;s complete task history and counts.</p>
+                    </div>
+                  </article>
+                ))}
                 {filteredSubmissions.map((submission) => {
                   const task = taskById.get(submission.task_id);
                   const proofLinks = Array.isArray(submission.proof_links)
