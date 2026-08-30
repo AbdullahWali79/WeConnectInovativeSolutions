@@ -275,7 +275,7 @@ export function StudentsManager({
     () => filteredStudents.filter((student) => student.displayStatus !== "completed" && student.displayStatus !== "inactive" && student.progress.some((report) => {
       const target = Number(report.target_tasks ?? 100);
       const completed = Number(report.completed_tasks ?? 0);
-      return target > 0 && completed < target && completed / target >= 0.9;
+      return target > 0 && completed >= 90 && completed < target;
     })),
     [filteredStudents],
   );
