@@ -12,7 +12,7 @@ import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { filterCoursesByScope, filterEnrollmentsByScope, loadTeacherCourseScope, courseInScope, type CourseScope } from "@/lib/admin-course-scope";
-import { deleteStudentAccount, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary } from "@/app/admin/actions";
+import { deleteStudentAccount, renewStudentInternship, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary } from "@/app/admin/actions";
 import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Application, Course, Enrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task } from "@/lib/supabase/types";
 import { normalizeProfileLinkUrl } from "@/lib/profile-links";
@@ -496,6 +496,29 @@ export function StudentsManager({
     await loadData();
   }
 
+  async function renewInternship(student: StudentRow, courseId: string, currentTarget: number, completedTasks: number) {
+    if (!canEditStudents) return;
+    const suggestedTarget = Math.max(currentTarget + 50, completedTasks + 50);
+    const enteredTarget = prompt(
+      `Renew ${student.full_name ?? student.email ?? "student"}'s internship. Enter the new total task target:`,
+      String(suggestedTarget),
+    );
+    if (enteredTarget === null) return;
+    const targetTasks = Number(enteredTarget);
+    if (!Number.isInteger(targetTasks) || targetTasks <= completedTasks) {
+      setToast({ type: "error", message: `Task target must be a whole number greater than ${completedTasks}.` });
+      return;
+    }
+    const result = await renewStudentInternship({ studentId: student.id, courseId, targetTasks });
+    if (!result.success) {
+      setToast({ type: "error", message: result.error ?? "Failed to renew internship." });
+      return;
+    }
+    setToast({ type: "success", message: `Internship renewed. New task target: ${targetTasks}. Student login is active again.` });
+    setStudentListTab("active");
+    await loadData();
+  }
+
   function getStudentProgress(student: StudentRow) {
     const activeEnrollment = student.enrollments.find((enrollment) => enrollment.status === "active") ?? student.enrollments[0] ?? null;
     const progressReport = activeEnrollment
@@ -695,6 +718,7 @@ export function StudentsManager({
                     cancelProgressEditor={cancelProgressEditor}
                     saveStudentProgress={saveStudentProgress}
                     toggleCompletion={toggleCompletion}
+                    renewInternship={renewInternship}
                     deleteStudent={deleteStudent}
                     canEditStudents={canEditStudents}
                     canDeleteStudents={canDeleteStudents}
@@ -730,6 +754,7 @@ export function StudentsManager({
                     cancelProgressEditor={cancelProgressEditor}
                     saveStudentProgress={saveStudentProgress}
                     toggleCompletion={toggleCompletion}
+                    renewInternship={renewInternship}
                     deleteStudent={deleteStudent}
                     canEditStudents={canEditStudents}
                     canDeleteStudents={canDeleteStudents}
@@ -965,6 +990,7 @@ function StudentTable({
   cancelProgressEditor,
   saveStudentProgress,
   toggleCompletion,
+  renewInternship,
   deleteStudent,
   canEditStudents,
   canDeleteStudents,
@@ -998,6 +1024,7 @@ function StudentTable({
   cancelProgressEditor: () => void;
   saveStudentProgress: (student: StudentRow) => Promise<void>;
   toggleCompletion: (student: StudentRow, completed: boolean, courseId?: string | null) => Promise<void>;
+  renewInternship: (student: StudentRow, courseId: string, currentTarget: number, completedTasks: number) => Promise<void>;
   deleteStudent: (student: StudentRow) => Promise<void>;
   canEditStudents: boolean;
   canDeleteStudents: boolean;
@@ -1236,6 +1263,16 @@ function StudentTable({
                               <button type="button" onClick={() => setResetModal({ open: true, student })} className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-3 py-2 text-xs font-bold text-primary">
                                 <Icon name="lock_reset" className="text-sm" />
                                 Password
+                              </button>
+                            ) : null}
+                            {canEditStudents && student.displayStatus === "completed" && activeEnrollment ? (
+                              <button
+                                type="button"
+                                onClick={() => void renewInternship(student, activeEnrollment.course_id, targetTasks, completedTasks)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800"
+                              >
+                                <Icon name="autorenew" className="text-sm" />
+                                Renew Internship
                               </button>
                             ) : null}
                             {canEditStudents ? (

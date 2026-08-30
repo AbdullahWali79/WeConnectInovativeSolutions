@@ -1496,6 +1496,64 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
   }
 }
 
+export async function renewStudentInternship(input: { studentId: string; courseId: string; targetTasks: number }) {
+  try {
+    await requirePermission("students.edit");
+    const targetTasks = Math.max(1, Math.floor(Number(input.targetTasks)));
+    if (!Number.isFinite(targetTasks)) return { success: false, error: "Enter a valid task target." };
+
+    const supabase = createSupabaseServiceClient();
+    const { data: progress, error: progressLoadError } = await supabase
+      .from("progress_reports")
+      .select("completed_tasks,average_score")
+      .eq("student_id", input.studentId)
+      .eq("course_id", input.courseId)
+      .maybeSingle();
+    if (progressLoadError) return { success: false, error: progressLoadError.message };
+
+    const completedTasks = Math.max(0, Number(progress?.completed_tasks ?? 0));
+    if (targetTasks <= completedTasks) {
+      return { success: false, error: `New target must be greater than completed tasks (${completedTasks}).` };
+    }
+    const progressPercentage = Math.min(99, Math.round((completedTasks / targetTasks) * 100));
+
+    const [enrollmentResult, progressResult, completionResult] = await Promise.all([
+      supabase.from("enrollments").update({
+        status: "active",
+        completed_at: null,
+        target_tasks: targetTasks,
+        progress_percentage: progressPercentage,
+      }).eq("student_id", input.studentId).eq("course_id", input.courseId),
+      supabase.from("progress_reports").upsert({
+        student_id: input.studentId,
+        course_id: input.courseId,
+        total_tasks: targetTasks,
+        target_tasks: targetTasks,
+        completed_tasks: completedTasks,
+        pending_tasks: targetTasks - completedTasks,
+        average_score: Number(progress?.average_score ?? 0),
+        progress_percentage: progressPercentage,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "student_id,course_id" }),
+      supabase.from("completed_students").delete().eq("student_id", input.studentId).eq("course_id", input.courseId),
+    ]);
+    const renewalError = enrollmentResult.error ?? progressResult.error ?? completionResult.error;
+    if (renewalError) return { success: false, error: renewalError.message };
+
+    const { error: profileError } = await updateStudentLifecycleProfile(supabase, input.studentId, "approved", "active");
+    if (profileError) return { success: false, error: profileError.message };
+
+    revalidatePath("/admin/students");
+    revalidatePath("/admin/progress");
+    revalidatePath("/admin/student-reports");
+    revalidatePath("/student/progress");
+    revalidatePath("/trainees");
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Failed to renew internship." };
+  }
+}
+
 export async function updateEnrollmentTargetTasks(input: {
   studentId: string;
   courseId: string;
