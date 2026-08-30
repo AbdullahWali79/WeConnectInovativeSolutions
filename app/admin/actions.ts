@@ -1723,6 +1723,32 @@ export async function updateStudentProgressSummary(input: {
       return { success: false, error: error.message };
     }
 
+    // Materialize aggregated accepted-task counts for the detailed review UI.
+    const { count: reviewedTaskCount, error: reviewedCountError } = await supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("student_id", input.studentId)
+      .eq("course_id", input.courseId)
+      .eq("status", "reviewed");
+    if (reviewedCountError) return { success: false, error: reviewedCountError.message };
+
+    const savedReviewedCount = reviewedTaskCount ?? 0;
+    const missingAcceptedTasks = Math.max(completedTasks - savedReviewedCount, 0);
+    if (missingAcceptedTasks > 0) {
+      const { error: historyError } = await supabase.from("tasks").insert(
+        Array.from({ length: missingAcceptedTasks }, (_, index) => ({
+          student_id: input.studentId,
+          course_id: input.courseId,
+          workflow_type: "daily" as const,
+          title: `Historical accepted task ${savedReviewedCount + index + 1}`,
+          description: "Imported from the previously saved manual progress summary. Original submission details were not stored.",
+          max_score: 100,
+          status: "reviewed" as const,
+        })),
+      );
+      if (historyError) return { success: false, error: historyError.message };
+    }
+
     revalidatePath("/admin/students");
     revalidatePath("/admin/progress");
     revalidatePath("/admin/completions");
