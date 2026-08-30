@@ -34,23 +34,37 @@ where pr.student_id = cs.student_id
   and cs.completion_type = 'automatic'
   and coalesce(pr.completed_tasks, 0) < coalesce(pr.target_tasks, 100);
 
-update public.profiles p
-set admin_status = 'active',
-    status = 'approved'
-where p.role = 'student'
-  and p.admin_status = 'completed'
-  and not exists (
+-- admin_status is optional on older production databases.
+do $$
+begin
+  if exists (
     select 1
-    from public.completed_students cs
-    where cs.student_id = p.id
-      and (
-        cs.completion_type = 'forced'
-        or exists (
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'admin_status'
+  ) then
+    execute $sql$
+      update public.profiles p
+      set admin_status = 'active',
+          status = 'approved'
+      where p.role = 'student'
+        and p.admin_status = 'completed'
+        and not exists (
           select 1
-          from public.progress_reports pr
-          where pr.student_id = cs.student_id
-            and pr.course_id = cs.course_id
-            and coalesce(pr.completed_tasks, 0) >= coalesce(pr.target_tasks, 100)
+          from public.completed_students cs
+          where cs.student_id = p.id
+            and (
+              cs.completion_type = 'forced'
+              or exists (
+                select 1
+                from public.progress_reports pr
+                where pr.student_id = cs.student_id
+                  and pr.course_id = cs.course_id
+                  and coalesce(pr.completed_tasks, 0) >= coalesce(pr.target_tasks, 100)
+              )
+            )
         )
-      )
-  );
+    $sql$;
+  end if;
+end $$;
