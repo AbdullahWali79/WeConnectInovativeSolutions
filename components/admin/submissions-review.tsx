@@ -103,6 +103,20 @@ export function SubmissionsReview({
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   const studentById = useMemo(() => new Map(students.map((student) => [student.id, student])), [students]);
   const courseById = useMemo(() => new Map(courses.map((course) => [course.id, course])), [courses]);
+  const selectedStudent = initialStudentId ? studentById.get(initialStudentId) : null;
+  const selectedStudentSubmissionCount = initialStudentId
+    ? submissions.filter((submission) => submission.student_id === initialStudentId).length
+    : submissions.length;
+  const studentSubmissions = initialStudentId
+    ? submissions.filter((submission) => submission.student_id === initialStudentId)
+    : submissions;
+  const taskStatusOptions = [
+    { value: "", label: "All", count: studentSubmissions.length },
+    { value: "submitted", label: "Submitted", count: studentSubmissions.filter((submission) => submission.status === "submitted").length },
+    { value: "revision_required", label: "Needs Improvement", count: studentSubmissions.filter((submission) => submission.status === "revision_required").length },
+    { value: "reviewed", label: "Accepted", count: studentSubmissions.filter((submission) => submission.status === "reviewed").length },
+    { value: "rejected", label: "Rejected", count: studentSubmissions.filter((submission) => submission.status === "rejected").length },
+  ];
 
   // Client-side filtering logic
   const filteredSubmissions = useMemo(() => {
@@ -193,13 +207,34 @@ export function SubmissionsReview({
     <>
       <Toast toast={toast} onClear={clearToast} />
       <PageHeader eyebrow="Submission Review" title="Review and score submissions" description="Score submissions, add feedback, or request revision. Saving updates task status and progress reports automatically." />
-      {initialStudentId ? <a href="/admin/student-reports" className="wc-secondary-btn mb-4 inline-flex"><Icon name="arrow_back" /> Back to student reports</a> : null}
+      {initialStudentId ? <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Selected student</p>
+          <p className="mt-1 font-bold text-on-surface">{selectedStudent?.full_name ?? "Student"} <span className="font-normal text-on-surface-variant">{selectedStudent?.email ? `(${selectedStudent.email})` : ""}</span></p>
+          <p className="mt-1 text-sm text-on-surface-variant">Only this student&apos;s {selectedStudentSubmissionCount} submitted tasks are shown below for review.</p>
+        </div>
+        <a href="/admin/student-reports" className="wc-secondary-btn inline-flex"><Icon name="arrow_back" /> Back to student reports</a>
+      </div> : null}
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         {submissions.length === 0 ? (
           <EmptyState title="No submissions yet" description="Student submissions will appear here after assigned tasks are submitted." icon="rate_review" />
         ) : (
           <div className="space-y-6">
+            <div className="flex flex-wrap gap-2">
+              {taskStatusOptions.map((option) => (
+                <button
+                  key={option.value || "all"}
+                  type="button"
+                  onClick={() => setSelectedStatus(option.value)}
+                  className={selectedStatus === option.value ? "wc-primary-btn" : "wc-secondary-btn"}
+                >
+                  {option.label}
+                  <span className="rounded-full bg-current/10 px-2 py-0.5 text-xs">{option.count}</span>
+                </button>
+              ))}
+            </div>
+
             {/* Search & Filter Controls */}
             <div className="grid gap-4 sm:grid-cols-3 bg-surface-container-low p-4 rounded-2xl border border-outline-variant/60 shadow-sm">
               <div className="relative">

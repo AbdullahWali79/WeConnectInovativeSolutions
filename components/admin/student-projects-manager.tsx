@@ -197,16 +197,17 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
     await load();
   }
 
+  const studentRows = rows.filter((row) => !initialStudentId || row.student_id === initialStudentId);
+  const selectedStudent = initialStudentId ? names.get(initialStudentId) : null;
   const filterOptions = [
-    { value: "all", label: "All", count: rows.length },
-    { value: "submitted", label: "Submitted / Resubmitted", count: rows.filter((row) => row.status === "submitted").length },
-    { value: "revision_required", label: "Needs Improvement", count: rows.filter((row) => row.status === "revision_required").length },
-    { value: "approved", label: "Approved", count: rows.filter((row) => row.status === "approved" && !row.promoted_product_id).length },
-    { value: "published", label: "Published", count: rows.filter((row) => Boolean(row.promoted_product_id)).length },
-    { value: "rejected", label: "Rejected", count: rows.filter((row) => row.status === "rejected").length },
+    { value: "all", label: "All", count: studentRows.length },
+    { value: "submitted", label: "Submitted / Resubmitted", count: studentRows.filter((row) => row.status === "submitted").length },
+    { value: "revision_required", label: "Needs Improvement", count: studentRows.filter((row) => row.status === "revision_required").length },
+    { value: "approved", label: "Approved", count: studentRows.filter((row) => row.status === "approved" && !row.promoted_product_id).length },
+    { value: "published", label: "Published", count: studentRows.filter((row) => Boolean(row.promoted_product_id)).length },
+    { value: "rejected", label: "Rejected", count: studentRows.filter((row) => row.status === "rejected").length },
   ];
-  const visible = rows
-    .filter((row) => !initialStudentId || row.student_id === initialStudentId)
+  const visible = studentRows
     .filter((row) => {
       if (filter === "published") return Boolean(row.promoted_product_id);
       if (filter === "approved") return row.status === "approved" && !row.promoted_product_id;
@@ -239,11 +240,18 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
 
   if (loading) return <LoadingState label="Loading student projects..." />;
 
-  const resubmittedCount = rows.filter((row) => row.status === "submitted" && row.admin_feedback && !row.reviewed_at).length;
+  const resubmittedCount = studentRows.filter((row) => row.status === "submitted" && row.admin_feedback && !row.reviewed_at).length;
 
   return <div className="space-y-6">
     <PageHeader eyebrow="Portfolio Review" title="Student Projects" description="Review student work, then customize exactly what visitors see before publishing it as a product." />
-    {initialStudentId ? <a href="/admin/student-reports" className="wc-secondary-btn inline-flex"><Icon name="arrow_back" /> Back to student reports</a> : null}
+    {initialStudentId ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wider text-primary">Selected student</p>
+        <p className="mt-1 font-bold text-on-surface">{selectedStudent?.full_name ?? "Student"} <span className="font-normal text-on-surface-variant">{selectedStudent?.email ? `(${selectedStudent.email})` : ""}</span></p>
+        <p className="mt-1 text-sm text-on-surface-variant">Only this student&apos;s {studentRows.length} projects are shown below.</p>
+      </div>
+      <a href="/admin/student-reports" className="wc-secondary-btn inline-flex"><Icon name="arrow_back" /> Back to student reports</a>
+    </div> : null}
 
     {resubmittedCount ? <button type="button" onClick={() => setFilter("submitted")} className="flex w-full items-center justify-between gap-4 rounded-xl border border-sky-300 bg-sky-50 p-4 text-left text-sky-950">
       <span><strong>{resubmittedCount} improved {resubmittedCount === 1 ? "project has" : "projects have"} been resubmitted</strong><span className="mt-1 block text-sm">Open the Submitted / Resubmitted tab to review and approve the updated work.</span></span>
