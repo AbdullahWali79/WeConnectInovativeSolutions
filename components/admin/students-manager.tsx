@@ -191,8 +191,11 @@ export function StudentsManager({
       const hasSecondMonthFeePending = Boolean(
         latestFee && ["pending", "partial", "overdue"].includes(latestFee.status),
       );
-      let displayStatus: StudentViewRow["displayStatus"] = student.admin_status ?? "approved";
-      if (!student.admin_status) {
+      const hasCompletedEnrollment = student.enrollments.some((enrollment) => enrollment.status === "completed");
+      let displayStatus: StudentViewRow["displayStatus"] = hasCompletedEnrollment
+        ? "completed"
+        : student.admin_status ?? "approved";
+      if (!hasCompletedEnrollment && !student.admin_status) {
         if (student.status === "rejected") {
           displayStatus = "inactive";
         } else if (hasFeeData && (latestFee?.status === "paid" || latestFee?.status === "waived")) {

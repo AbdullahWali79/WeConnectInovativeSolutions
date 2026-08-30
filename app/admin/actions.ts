@@ -1368,18 +1368,29 @@ export async function setStudentLifecycleStatus(input: {
 
       if (error) return { success: false, data: null, error: error.message };
     } else if (input.status === "completed") {
-      // Keep the student in the admin Completed tab, but block portal login.
-      const { error } = await updateStudentLifecycleProfile(supabase, input.studentId, "rejected", "completed");
-
-      if (error) return { success: false, data: null, error: error.message };
-
       for (const enrollment of enrollments ?? []) {
-        const { error } = await supabase.rpc("mark_course_completed", {
-          target_student_id: input.studentId,
-          target_course_id: enrollment.course_id,
-        });
-        if (error) return { success: false, data: null, error: error.message };
+        const completedAt = new Date().toISOString();
+        const [enrollmentResult, completedResult] = await Promise.all([
+          supabase
+            .from("enrollments")
+            .update({ status: "completed", progress_percentage: 100, completed_at: completedAt })
+            .eq("student_id", input.studentId)
+            .eq("course_id", enrollment.course_id),
+          supabase.from("completed_students").upsert({
+            student_id: input.studentId,
+            course_id: enrollment.course_id,
+            progress_percentage: 100,
+            is_public: true,
+            completed_at: completedAt,
+          }, { onConflict: "student_id,course_id" }),
+        ]);
+
+        if (enrollmentResult.error) return { success: false, data: null, error: enrollmentResult.error.message };
+        if (completedResult.error) return { success: false, data: null, error: completedResult.error.message };
       }
+
+      const { error } = await updateStudentLifecycleProfile(supabase, input.studentId, "approved", "completed");
+      if (error) return { success: false, data: null, error: error.message };
     } else if (input.status === "active") {
       const { error } = await updateStudentLifecycleProfile(supabase, input.studentId, "approved", "active");
 
@@ -1493,7 +1504,7 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
         return { success: false, error: completedResult.error.message };
       }
 
-      const { error: profileError } = await updateStudentLifecycleProfile(supabase, studentId, "rejected", "completed");
+      const { error: profileError } = await updateStudentLifecycleProfile(supabase, studentId, "approved", "completed");
 
       if (profileError) {
         return { success: false, error: profileError.message };
