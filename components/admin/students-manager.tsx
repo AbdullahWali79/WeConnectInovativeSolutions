@@ -14,7 +14,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { filterCoursesByScope, filterEnrollmentsByScope, loadTeacherCourseScope, courseInScope, type CourseScope } from "@/lib/admin-course-scope";
 import { deleteStudentAccount, renewStudentInternship, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary } from "@/app/admin/actions";
 import type { PermissionKey } from "@/lib/admin-permissions";
-import type { Application, Course, Enrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task } from "@/lib/supabase/types";
+import type { Application, CompletedStudent, Course, Enrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task } from "@/lib/supabase/types";
 import { normalizeProfileLinkUrl } from "@/lib/profile-links";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
@@ -85,6 +85,7 @@ export function StudentsManager({
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [progressReports, setProgressReports] = useState<ProgressReport[]>([]);
+  const [completionRecords, setCompletionRecords] = useState<CompletedStudent[]>([]);
   const [feeRecords, setFeeRecords] = useState<StudentFeeRecord[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -116,7 +117,7 @@ export function StudentsManager({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [studentListTab, setStudentListTab] = useState<"total" | "active" | "completed" | "inactive" | "second_month_pending">("total");
+  const [studentListTab, setStudentListTab] = useState<"total" | "active" | "near_completion" | "completed" | "inactive" | "second_month_pending">("total");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -128,18 +129,19 @@ export function StudentsManager({
       setToast({ type: "error", message: error instanceof Error ? error.message : "Failed to load course scope." });
       scope = [];
     }
-    const [profileResult, enrollmentResult, courseResult, progressResult, applicationResult, taskResult, submissionResult, projectResult, feeResult] = await Promise.all([
+    const [profileResult, enrollmentResult, courseResult, progressResult, completionResult, applicationResult, taskResult, submissionResult, projectResult, feeResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "student").order("created_at", { ascending: false }),
       supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
       supabase.from("courses").select("*").order("title"),
       supabase.from("progress_reports").select("*").order("updated_at", { ascending: false }),
+      supabase.from("completed_students").select("*").order("completed_at", { ascending: false }),
       supabase.from("applications").select("*").eq("status", "approved").order("created_at", { ascending: false }),
       supabase.from("tasks").select("*").order("created_at", { ascending: false }),
       supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
       supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
       supabase.from("student_fee_records").select("*").order("month_key", { ascending: false }),
     ]);
-    const error = profileResult.error ?? enrollmentResult.error ?? courseResult.error ?? progressResult.error ?? applicationResult.error ?? taskResult.error ?? submissionResult.error ?? projectResult.error ?? feeResult.error;
+    const error = profileResult.error ?? enrollmentResult.error ?? courseResult.error ?? progressResult.error ?? completionResult.error ?? applicationResult.error ?? taskResult.error ?? submissionResult.error ?? projectResult.error ?? feeResult.error;
     if (error) setToast({ type: "error", message: error.message });
     const scopedEnrollments = filterEnrollmentsByScope(enrollmentResult.data ?? [], scope);
     const scopedStudentIds = new Set(scopedEnrollments.map((enrollment) => enrollment.student_id));
@@ -148,6 +150,7 @@ export function StudentsManager({
     setEnrollments(scopedEnrollments);
     setCourses(filterCoursesByScope(courseResult.data ?? [], scope));
     setProgressReports((progressResult.data ?? []).filter((report) => courseInScope(report.course_id, scope)));
+    setCompletionRecords((completionResult.data ?? []).filter((record) => courseInScope(record.course_id, scope)) as CompletedStudent[]);
     setFeeRecords((feeResult.data ?? []).filter((fee) => scopedStudentIds.has(fee.student_id)));
     setTasks((taskResult.data ?? []).filter((task) => courseInScope(task.course_id, scope)));
     setProjects((projectResult.data ?? []).filter((project) => courseInScope(project.course_id, scope)) as StudentProject[]);
@@ -191,11 +194,13 @@ export function StudentsManager({
       const hasSecondMonthFeePending = Boolean(
         latestFee && ["pending", "partial", "overdue"].includes(latestFee.status),
       );
-      const hasCompletedEnrollment = student.enrollments.some((enrollment) => enrollment.status === "completed");
-      let displayStatus: StudentViewRow["displayStatus"] = hasCompletedEnrollment
+      const hasForcedCompletion = completionRecords.some((record) => record.student_id === student.id && record.completion_type === "forced");
+      const hasReachedTarget = student.progress.some((report) => Number(report.target_tasks ?? 100) > 0 && Number(report.completed_tasks ?? 0) >= Number(report.target_tasks ?? 100));
+      const hasValidCompletion = hasForcedCompletion || hasReachedTarget;
+      let displayStatus: StudentViewRow["displayStatus"] = hasValidCompletion
         ? "completed"
-        : student.admin_status ?? "approved";
-      if (!hasCompletedEnrollment && !student.admin_status) {
+        : student.admin_status === "completed" ? "active" : student.admin_status ?? "approved";
+      if (!hasValidCompletion && !student.admin_status) {
         if (student.status === "rejected") {
           displayStatus = "inactive";
         } else if (hasFeeData && (latestFee?.status === "paid" || latestFee?.status === "waived")) {
@@ -214,7 +219,7 @@ export function StudentsManager({
         hasSecondMonthFeePending,
       };
     });
-  }, [feeRecords, students]);
+  }, [completionRecords, feeRecords, students]);
 
   const approvedApplications: ApprovedApplicationRow[] = useMemo(
     () => applications
@@ -266,6 +271,14 @@ export function StudentsManager({
     () => filteredStudents.filter((student) => student.displayStatus === "completed"),
     [filteredStudents],
   );
+  const nearCompletionStudents = useMemo(
+    () => filteredStudents.filter((student) => student.displayStatus !== "completed" && student.displayStatus !== "inactive" && student.progress.some((report) => {
+      const target = Number(report.target_tasks ?? 100);
+      const completed = Number(report.completed_tasks ?? 0);
+      return target > 0 && completed < target && completed / target >= 0.9;
+    })),
+    [filteredStudents],
+  );
   const inactiveStudents = useMemo(() => filteredStudents.filter((student) => student.displayStatus === "inactive"), [filteredStudents]);
   const secondMonthPendingStudents = useMemo(
     () => filteredStudents.filter((student) => student.hasSecondMonthFeePending && student.displayStatus === "active"),
@@ -275,6 +288,8 @@ export function StudentsManager({
   const visibleStudents =
     studentListTab === "active"
       ? activeStudents
+      : studentListTab === "near_completion"
+        ? nearCompletionStudents
       : studentListTab === "completed"
         ? completedStudents
       : studentListTab === "inactive"
@@ -640,6 +655,20 @@ export function StudentsManager({
               </button>
               <button
                 type="button"
+                onClick={() => setStudentListTab("near_completion")}
+                className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                  studentListTab === "near_completion"
+                    ? "bg-amber-600 text-white shadow-sm"
+                    : "bg-transparent text-amber-800 hover:bg-amber-50"
+                }`}
+              >
+                Near to Complete
+                <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] ${studentListTab === "near_completion" ? "bg-white/20" : "bg-amber-100 text-amber-800"}`}>
+                  {nearCompletionStudents.length}
+                </span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setStudentListTab("completed")}
                 className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
                   studentListTab === "completed"
@@ -728,7 +757,7 @@ export function StudentsManager({
                   />
                 ) : visibleStudents.length > 0 ? (
                   <StudentTable
-                    title={studentListTab === "active" ? "Active Students" : studentListTab === "completed" ? "Completed Students" : studentListTab === "second_month_pending" ? "2nd Month Fee Pending Students" : "Inactive Students"}
+                    title={studentListTab === "active" ? "Active Students" : studentListTab === "near_completion" ? "Near to Complete Students" : studentListTab === "completed" ? "Completed Students" : studentListTab === "second_month_pending" ? "2nd Month Fee Pending Students" : "Inactive Students"}
                     students={visibleStudents}
                     projects={projects}
                     getStudentProgress={getStudentProgress}

@@ -239,6 +239,7 @@ export type CompletedStudent = {
   final_score: number;
   progress_percentage: number;
   is_public: boolean;
+  completion_type: "automatic" | "forced";
   completed_at: string;
 };
 

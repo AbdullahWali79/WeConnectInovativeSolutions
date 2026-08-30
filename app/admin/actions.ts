@@ -1381,6 +1381,7 @@ export async function setStudentLifecycleStatus(input: {
             course_id: enrollment.course_id,
             progress_percentage: 100,
             is_public: true,
+            completion_type: "forced",
             completed_at: completedAt,
           }, { onConflict: "student_id,course_id" }),
         ]);
@@ -1492,6 +1493,7 @@ export async function toggleStudentCompletion(studentId: string, courseId: strin
           final_score: finalScore,
           progress_percentage: 100,
           is_public: true,
+          completion_type: "forced",
           completed_at: completedAt,
         }, { onConflict: "student_id,course_id" }),
       ]);
