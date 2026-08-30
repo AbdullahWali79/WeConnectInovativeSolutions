@@ -1425,18 +1425,72 @@ export async function setStudentLifecycleStatus(input: {
 
 export async function toggleStudentCompletion(studentId: string, courseId: string, markCompleted: boolean) {
   try {
-    await requirePermission("students.edit");
+    await requireAdminOnly();
 
     const supabase = createSupabaseServiceClient();
 
     if (markCompleted) {
-      const { error } = await supabase.rpc("mark_course_completed", {
+      const { data: enrollment, error: enrollmentLoadError } = await supabase
+        .from("enrollments")
+        .select("student_id,course_id")
+        .eq("student_id", studentId)
+        .eq("course_id", courseId)
+        .maybeSingle();
+
+      if (enrollmentLoadError) {
+        return { success: false, error: enrollmentLoadError.message };
+      }
+
+      if (!enrollment) {
+        return { success: false, error: "No course enrollment found for this student." };
+      }
+
+      // This action is an explicit admin override. Refresh any available score,
+      // but do not require assigned/reviewed tasks before manual completion.
+      const { error: refreshError } = await supabase.rpc("refresh_student_progress", {
         target_student_id: studentId,
         target_course_id: courseId,
       });
 
-      if (error) {
-        return { success: false, error: error.message };
+      if (refreshError) {
+        return { success: false, error: refreshError.message };
+      }
+
+      const { data: progress, error: progressError } = await supabase
+        .from("progress_reports")
+        .select("average_score")
+        .eq("student_id", studentId)
+        .eq("course_id", courseId)
+        .maybeSingle();
+
+      if (progressError) {
+        return { success: false, error: progressError.message };
+      }
+
+      const completedAt = new Date().toISOString();
+      const finalScore = Number(progress?.average_score ?? 0);
+      const [enrollmentResult, completedResult] = await Promise.all([
+        supabase
+          .from("enrollments")
+          .update({ status: "completed", progress_percentage: 100, final_score: finalScore, completed_at: completedAt })
+          .eq("student_id", studentId)
+          .eq("course_id", courseId),
+        supabase.from("completed_students").upsert({
+          student_id: studentId,
+          course_id: courseId,
+          final_score: finalScore,
+          progress_percentage: 100,
+          is_public: true,
+          completed_at: completedAt,
+        }, { onConflict: "student_id,course_id" }),
+      ]);
+
+      if (enrollmentResult.error) {
+        return { success: false, error: enrollmentResult.error.message };
+      }
+
+      if (completedResult.error) {
+        return { success: false, error: completedResult.error.message };
       }
 
       const { error: profileError } = await updateStudentLifecycleProfile(supabase, studentId, "rejected", "completed");
