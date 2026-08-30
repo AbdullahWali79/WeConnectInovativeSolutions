@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { extractGoogleMapsHint, isGoogleMapsUrl, normalizeGoogleMapsUrl } from "@/lib/google-maps";
-import type { Profile } from "@/lib/supabase/types";
+import type { Enrollment, Profile } from "@/lib/supabase/types";
 import { validateProfileLink } from "@/lib/profile-links";
 import { CLIENT_HUNTING_SPECIALIZATIONS, type ClientHuntSpecialization } from "@/lib/client-hunting";
 
@@ -35,6 +35,72 @@ async function requireStudentProfile() {
 
 function actionError(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+export async function ensureStudentActiveEnrollment(): Promise<ActionResult<Enrollment | null>> {
+  try {
+    const { profile } = await requireStudentProfile();
+    if (profile.status !== "approved") throw new Error("Student account is not approved.");
+
+    const supabase = createSupabaseServiceClient();
+    const { data: existing, error: enrollmentError } = await supabase
+      .from("enrollments")
+      .select("*")
+      .eq("student_id", profile.id)
+      .order("created_at", { ascending: false });
+    if (enrollmentError) throw new Error(enrollmentError.message);
+
+    const active = (existing ?? []).find((enrollment) => enrollment.status === "active");
+    if (active) return { success: true, data: active as Enrollment, error: null };
+
+    // Recover a stale automatic completion when the task target is not met.
+    for (const enrollment of existing ?? []) {
+      if (enrollment.status !== "completed") continue;
+      const [{ data: completion }, { data: progress }] = await Promise.all([
+        supabase.from("completed_students").select("completion_type").eq("student_id", profile.id).eq("course_id", enrollment.course_id).maybeSingle(),
+        supabase.from("progress_reports").select("completed_tasks,target_tasks,progress_percentage").eq("student_id", profile.id).eq("course_id", enrollment.course_id).maybeSingle(),
+      ]);
+      const completedTasks = Number(progress?.completed_tasks ?? 0);
+      const targetTasks = Number(progress?.target_tasks ?? enrollment.target_tasks ?? 100);
+      if (completion?.completion_type !== "forced" && completedTasks < targetTasks) {
+        const { data: recovered, error } = await supabase
+          .from("enrollments")
+          .update({ status: "active", progress_percentage: Number(progress?.progress_percentage ?? 0), completed_at: null })
+          .eq("id", enrollment.id)
+          .select("*")
+          .single();
+        if (error) throw new Error(error.message);
+        await supabase.from("completed_students").delete().eq("student_id", profile.id).eq("course_id", enrollment.course_id);
+        return { success: true, data: recovered as Enrollment, error: null };
+      }
+    }
+
+    // Older approvals can have a selected course but no enrollment row.
+    const { data: application, error: applicationError } = await supabase
+      .from("applications")
+      .select("course_id")
+      .eq("status", "approved")
+      .ilike("email", profile.email ?? "")
+      .not("course_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (applicationError) throw new Error(applicationError.message);
+    if (!application?.course_id) return { success: true, data: null, error: null };
+
+    const { data: course } = await supabase.from("courses").select("id,status").eq("id", application.course_id).maybeSingle();
+    if (!course || course.status !== "active") return { success: true, data: null, error: null };
+
+    const { data: enrollment, error: createError } = await supabase
+      .from("enrollments")
+      .upsert({ student_id: profile.id, course_id: application.course_id, status: "active", completed_at: null }, { onConflict: "student_id,course_id" })
+      .select("*")
+      .single();
+    if (createError) throw new Error(createError.message);
+    return { success: true, data: enrollment as Enrollment, error: null };
+  } catch (error) {
+    return { success: false, data: null, error: actionError(error, "Could not restore the selected course enrollment.") };
+  }
 }
 
 function getGoogleMapsApiKey() {

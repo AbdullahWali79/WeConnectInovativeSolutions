@@ -16,6 +16,7 @@ import { formatDateTime } from "@/lib/utils";
 import { getMissingProfileLinks, isStudentProfileComplete } from "@/lib/profile-links";
 import { getProofLinkError } from "@/lib/proof-links";
 import { SyllabusTaskSubmissionModal } from "@/components/student/syllabus-task-submission-modal";
+import { ensureStudentActiveEnrollment } from "@/app/student/actions";
 
 export function StudentDashboard() {
   const supabase = createSupabaseBrowserClient();
@@ -54,6 +55,10 @@ export function StudentDashboard() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    const enrollmentRepair = await ensureStudentActiveEnrollment();
+    if (!enrollmentRepair.success) {
+      setToast({ type: "error", message: enrollmentRepair.error });
+    }
     const [taskResult, resourceResult, submissionResult, clientHuntResult, enrollmentResult, courseResult, reportResult, announcementResult, userResult] = await Promise.all([
       supabase.from("tasks").select("*").order("deadline", { ascending: true, nullsFirst: false }),
       supabase.from("task_resources").select("*").order("created_at", { ascending: true }),
