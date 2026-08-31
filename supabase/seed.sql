@@ -56,3 +56,24 @@ begin
   select app_id, 'Flutter App Development', 'Build cross-platform mobile apps with Flutter, Firebase/Supabase, and deployment basics.', '10 weeks', 'Intermediate', 'active'
   where not exists (select 1 from public.courses where lower(title) = lower('Flutter App Development'));
 end $$;
+
+-- Keep Social Media Marketing aligned with the Advanced Digital Marketing syllabus.
+with source_course as (
+  select id from public.courses
+  where lower(btrim(title)) = lower('Advanced Digital Marketing')
+  order by created_at asc limit 1
+), target_course as (
+  select id from public.courses
+  where lower(btrim(title)) = lower('Social Media Marketing')
+  order by created_at asc limit 1
+)
+insert into public.course_topics (course_id, day_number, title, english_video, urdu_video, practice_project)
+select target_course.id, topic.day_number, topic.title, topic.english_video, topic.urdu_video, topic.practice_project
+from source_course
+join public.course_topics topic on topic.course_id = source_course.id
+cross join target_course
+on conflict (course_id, day_number) do update set
+  title = excluded.title,
+  english_video = excluded.english_video,
+  urdu_video = excluded.urdu_video,
+  practice_project = excluded.practice_project;

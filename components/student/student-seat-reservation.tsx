@@ -30,6 +30,7 @@ export function StudentSeatReservation() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    const { error: scheduleError } = await supabase.rpc("ensure_regular_seat_slots", { days_ahead: 90 });
     const [settingsResult, slotsResult, reservationResult, finesResult, availabilityResult, holidaysResult] = await Promise.all([
       supabase.from("seat_reservation_settings").select("total_seats,default_fine,cancellation_minutes,block_on_unpaid_fine").eq("id", true).single(),
       supabase.from("seat_slots").select("id,slot_date,start_time,end_time,capacity,notes").eq("is_active", true).gte("slot_date", today).order("slot_date").order("start_time"),
@@ -39,7 +40,7 @@ export function StudentSeatReservation() {
       supabase.from("seat_holiday_closures").select("id,closure_date,title,message").gte("closure_date", today).order("closure_date"),
     ]);
     const availableSlots = (slotsResult.data ?? []) as Slot[];
-    const error = settingsResult.error || slotsResult.error || reservationResult.error || finesResult.error || holidaysResult.error;
+    const error = scheduleError || settingsResult.error || slotsResult.error || reservationResult.error || finesResult.error || holidaysResult.error;
     if (error) setToast({ type: "error", message: error.message });
     if (settingsResult.data) setSettings(settingsResult.data as Settings);
     setSlots(availableSlots); setCounts((availabilityResult.data ?? []) as SlotCount[]);
