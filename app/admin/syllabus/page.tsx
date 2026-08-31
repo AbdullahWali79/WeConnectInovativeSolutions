@@ -2,7 +2,7 @@ import { AccessDenied } from "@/components/admin/access-denied";
 import { SyllabusCatalog, type SyllabusBundle } from "@/components/admin/syllabus-catalog";
 import { requirePermissionPage } from "@/lib/admin-access";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import type { Course, CourseTopic, Enrollment, Profile, StudentFeeRecord, Task } from "@/lib/supabase/types";
+import type { Course, CourseTopic, Enrollment, Profile, Task } from "@/lib/supabase/types";
 
 export default async function AdminSyllabusPage() {
   const access = await requirePermissionPage("/admin/syllabus", "courses.view");
@@ -42,40 +42,14 @@ export default async function AdminSyllabusPage() {
     const relevantCourseIds = [
       ...new Set([...equivalentCourseIds.values()].flat()),
     ];
-    const [enrollmentsResult, tasksResult, feesResult] = await Promise.all([
+    const [enrollmentsResult, tasksResult] = await Promise.all([
       supabase.from("enrollments").select("*").in("course_id", relevantCourseIds).eq("status", "active"),
       supabase.from("tasks").select("*").in("course_id", relevantCourseIds),
-      supabase.from("student_fee_records").select("*").in("course_id", relevantCourseIds),
     ]);
 
     const enrollments = (enrollmentsResult.data ?? []) as Enrollment[];
     const tasks = (tasksResult.data ?? []) as Task[];
-    const feeRecords = (feesResult.data ?? []) as StudentFeeRecord[];
-    const paidEnrollmentIds = new Set(
-      feeRecords
-        .filter(
-          (record) =>
-            record.status === "paid" ||
-            (record.status === "partial" && Number(record.amount_paid) > 0),
-        )
-        .map((record) => record.enrollment_id)
-        .filter((id): id is string => Boolean(id)),
-    );
-    const paidStudentCourseKeys = new Set(
-      feeRecords
-        .filter(
-          (record) =>
-            record.status === "paid" ||
-            (record.status === "partial" && Number(record.amount_paid) > 0),
-        )
-        .map((record) => `${record.student_id}:${record.course_id}`),
-    );
-    const paidEnrollments = enrollments.filter(
-      (enrollment) =>
-        paidEnrollmentIds.has(enrollment.id) ||
-        paidStudentCourseKeys.has(`${enrollment.student_id}:${enrollment.course_id}`),
-    );
-    const studentIds = [...new Set(paidEnrollments.map((enrollment) => enrollment.student_id))];
+    const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.student_id))];
     let students: Profile[] = [];
 
     if (studentIds.length > 0) {
@@ -94,7 +68,7 @@ export default async function AdminSyllabusPage() {
 
     bundles = courses.map((course) => {
       const matchingCourseIds = new Set(equivalentCourseIds.get(course.id) ?? [course.id]);
-      const matchingEnrollments = paidEnrollments.filter((enrollment) =>
+      const matchingEnrollments = enrollments.filter((enrollment) =>
         matchingCourseIds.has(enrollment.course_id),
       );
       const enrollmentByStudent = new Map<string, Enrollment>();
