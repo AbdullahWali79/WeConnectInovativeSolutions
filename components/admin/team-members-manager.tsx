@@ -103,7 +103,7 @@ export function TeamMembersManager({
     return students.filter((student) => `${student.full_name ?? ""} ${student.email ?? ""} ${student.phone ?? ""}`.toLowerCase().includes(needle)).slice(0, 12);
   }, [students, studentQuery]);
 
-  function useStudentProfile(student: Profile) {
+  function selectStudentProfile(student: Profile) {
     const existing = rows.find((row) => row.profile_id === student.id);
     if (existing) {
       setToast({ type: "error", message: "This student is already a team member." });
@@ -301,7 +301,7 @@ export function TeamMembersManager({
             {studentQuery.trim() ? <div className="mt-2 max-h-52 space-y-1 overflow-y-auto">
               {matchingStudents.length ? matchingStudents.map((student) => {
                 const alreadyAdded = rows.some((row) => row.profile_id === student.id);
-                return <button key={student.id} type="button" disabled={alreadyAdded} onClick={() => useStudentProfile(student)} className="flex w-full items-center justify-between rounded-lg border border-outline-variant bg-surface px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50">
+                return <button key={student.id} type="button" disabled={alreadyAdded} onClick={() => selectStudentProfile(student)} className="flex w-full items-center justify-between rounded-lg border border-outline-variant bg-surface px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50">
                   <span><span className="block text-sm font-bold text-on-surface">{student.full_name || "Unnamed student"}</span><span className="block text-xs text-on-surface-variant">{student.email || student.phone || "No contact information"}</span></span>
                   <span className="text-xs font-bold text-primary">{alreadyAdded ? "Added" : "Select"}</span>
                 </button>;
