@@ -8,7 +8,7 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { HelpingVideo } from "@/lib/supabase/types";
+import type { Course, HelpingVideo } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from "@/lib/youtube";
 
@@ -16,13 +16,15 @@ const defaultForm = {
   title: "",
   youtube_url: "",
   description: "",
+  audience: "must_watch",
+  course_ids: [] as string[],
   status: "active",
   display_order: "0",
 };
 
-type HelpingVideoRow = Pick<HelpingVideo, "id" | "title" | "youtube_url" | "description" | "status" | "display_order" | "created_at">;
+type HelpingVideoRow = Pick<HelpingVideo, "id" | "title" | "youtube_url" | "description" | "status" | "display_order" | "created_at" | "course_id" | "is_must_watch"> & { course_ids: string[] };
 
-export function HelpingVideosManager() {
+export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
   const supabase = createSupabaseBrowserClient();
   const [rows, setRows] = useState<HelpingVideoRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +33,7 @@ export function HelpingVideosManager() {
   const [form, setForm] = useState(defaultForm);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [audienceFilter, setAudienceFilter] = useState("all");
   const [toast, setToast] = useState<ToastState>(null);
 
   const clearToast = useCallback(() => setToast(null), []);
@@ -39,12 +42,15 @@ export function HelpingVideosManager() {
     setLoading(true);
     const { data, error } = await supabase
       .from("helping_videos")
-      .select("id,title,youtube_url,description,status,display_order,created_at")
+      .select("id,title,youtube_url,description,status,display_order,created_at,course_id,is_must_watch,helping_video_courses(course_id)")
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false });
 
     if (error) setToast({ type: "error", message: error.message });
-    setRows((data ?? []) as HelpingVideoRow[]);
+    setRows((data ?? []).map((row) => ({
+      ...row,
+      course_ids: (row.helping_video_courses ?? []).map((assignment: { course_id: string }) => assignment.course_id),
+    })) as HelpingVideoRow[]);
     setLoading(false);
   }, [supabase]);
 
@@ -58,9 +64,10 @@ export function HelpingVideosManager() {
         const text = `${row.title} ${row.description ?? ""} ${row.youtube_url}`.toLowerCase();
         const queryMatch = text.includes(query.trim().toLowerCase());
         const statusMatch = statusFilter === "all" || row.status === statusFilter;
-        return queryMatch && statusMatch;
+        const audienceMatch = audienceFilter === "all" || (audienceFilter === "must_watch" ? row.is_must_watch : row.course_ids.includes(audienceFilter));
+        return queryMatch && statusMatch && audienceMatch;
       }),
-    [rows, query, statusFilter],
+    [rows, query, statusFilter, audienceFilter],
   );
 
   function resetForm() {
@@ -74,6 +81,8 @@ export function HelpingVideosManager() {
       title: row.title,
       youtube_url: row.youtube_url,
       description: row.description ?? "",
+      audience: row.is_must_watch ? "must_watch" : "course",
+      course_ids: row.course_ids,
       status: row.status,
       display_order: String(row.display_order ?? 0),
     });
@@ -84,6 +93,10 @@ export function HelpingVideosManager() {
 
     if (!form.title.trim() || !form.youtube_url.trim()) {
       setToast({ type: "error", message: "Title and YouTube link are required." });
+      return;
+    }
+    if (form.audience === "course" && form.course_ids.length === 0) {
+      setToast({ type: "error", message: "Please select at least one course for this video." });
       return;
     }
 
@@ -98,13 +111,35 @@ export function HelpingVideosManager() {
       title: form.title.trim(),
       youtube_url: form.youtube_url.trim(),
       description: form.description.trim() || null,
+      is_must_watch: form.audience === "must_watch",
+      course_id: null,
       status: form.status,
       display_order: Number(form.display_order || 0),
       updated_at: new Date().toISOString(),
     };
 
-    const request = editingId ? supabase.from("helping_videos").update(payload).eq("id", editingId) : supabase.from("helping_videos").insert(payload);
-    const { error } = await request;
+    const request = editingId
+      ? supabase.from("helping_videos").update(payload).eq("id", editingId).select("id").single()
+      : supabase.from("helping_videos").insert(payload).select("id").single();
+    const { data: savedVideo, error } = await request;
+    if (!error && savedVideo) {
+      const { error: clearError } = await supabase.from("helping_video_courses").delete().eq("video_id", savedVideo.id);
+      if (clearError) {
+        setSaving(false);
+        setToast({ type: "error", message: clearError.message });
+        return;
+      }
+      if (form.audience === "course") {
+        const { error: assignmentError } = await supabase.from("helping_video_courses").insert(
+          form.course_ids.map((courseId) => ({ video_id: savedVideo.id, course_id: courseId })),
+        );
+        if (assignmentError) {
+          setSaving(false);
+          setToast({ type: "error", message: assignmentError.message });
+          return;
+        }
+      }
+    }
     setSaving(false);
 
     if (error) {
@@ -166,6 +201,21 @@ export function HelpingVideosManager() {
             <textarea className="wc-input mt-2 min-h-24" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Explain what the student will learn" />
           </label>
 
+          <div className="rounded-xl border border-outline-variant bg-surface-container-low p-3">
+            <span className="wc-label">Who should see this video?</span>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setForm((current) => ({ ...current, audience: "must_watch", course_ids: [] }))} className={form.audience === "must_watch" ? "wc-primary-btn" : "wc-secondary-btn"}>Must Watch — Everyone</button>
+              <button type="button" onClick={() => setForm((current) => ({ ...current, audience: "course" }))} className={form.audience === "course" ? "wc-primary-btn" : "wc-secondary-btn"}>Course Specific</button>
+            </div>
+            {form.audience === "course" ? <div className="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-lg border border-outline-variant bg-surface p-3">
+              <p className="text-xs font-bold text-on-surface-variant">Select all courses that should receive this video:</p>
+              {courses.map((course) => <label key={course.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-container">
+                <input type="checkbox" checked={form.course_ids.includes(course.id)} onChange={(event) => setForm((current) => ({ ...current, course_ids: event.target.checked ? [...current.course_ids, course.id] : current.course_ids.filter((id) => id !== course.id) }))} />
+                <span className="text-sm font-medium text-on-surface">{course.title}</span>
+              </label>)}
+            </div> : <p className="mt-2 text-xs text-on-surface-variant">This video will appear in every student&apos;s Must Watch tab.</p>}
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="wc-label">Status</span>
@@ -215,12 +265,16 @@ export function HelpingVideosManager() {
         </form>
 
         <section className="wc-card overflow-hidden">
-          <div className="grid gap-2 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-2">
+          <div className="grid gap-2 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-3">
             <input className="wc-input" placeholder="Search title or link" value={query} onChange={(event) => setQuery(event.target.value)} />
             <select className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+            </select>
+            <select className="wc-input" value={audienceFilter} onChange={(event) => setAudienceFilter(event.target.value)}>
+              <option value="all">All Audiences</option><option value="must_watch">Must Watch — Everyone</option>
+              {courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
             </select>
           </div>
 
@@ -236,6 +290,7 @@ export function HelpingVideosManager() {
                     <th className="px-4 py-3">Title</th>
                     <th className="px-4 py-3">YouTube Link</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Audience</th>
                     <th className="px-4 py-3">Order</th>
                     <th className="px-4 py-3">Created</th>
                     <th className="px-4 py-3 text-right">Actions</th>
@@ -256,6 +311,7 @@ export function HelpingVideosManager() {
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-3 py-1 text-xs font-bold ${row.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-700"}`}>{row.status}</span>
                       </td>
+                      <td className="px-4 py-3 text-xs font-semibold text-on-surface-variant">{row.is_must_watch ? "Must Watch — Everyone" : row.course_ids.map((id) => courses.find((course) => course.id === id)?.title).filter(Boolean).join(", ") || "Course not selected"}</td>
                       <td className="px-4 py-3 text-xs text-on-surface-variant">{row.display_order}</td>
                       <td className="px-4 py-3 text-xs text-on-surface-variant">{formatDate(row.created_at)}</td>
                       <td className="px-4 py-3">

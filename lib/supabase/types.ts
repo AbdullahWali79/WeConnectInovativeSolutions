@@ -568,6 +568,8 @@ export type Trainee = {
 
 export type HelpingVideo = {
   id: string;
+  course_id: string | null;
+  is_must_watch: boolean;
   title: string;
   youtube_url: string;
   description: string | null;
@@ -1065,6 +1067,12 @@ export type Database = {
         Row: HelpingVideo;
         Insert: Partial<HelpingVideo> & { title: string; youtube_url: string };
         Update: Partial<HelpingVideo>;
+        Relationships: [];
+      };
+      helping_video_courses: {
+        Row: { video_id: string; course_id: string; created_at: string };
+        Insert: { video_id: string; course_id: string; created_at?: string };
+        Update: { video_id?: string; course_id?: string; created_at?: string };
         Relationships: [];
       };
       manual_enrollments: {

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { HelpingVideosManager } from "@/components/admin/helping-videos-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Profile } from "@/lib/supabase/types";
+import type { Course, Profile } from "@/lib/supabase/types";
 
 export default async function AdminHelpingVideosPage() {
   const supabase = await createSupabaseServerClient();
@@ -20,5 +20,7 @@ export default async function AdminHelpingVideosPage() {
     redirect("/admin");
   }
 
-  return <HelpingVideosManager />;
+  const { data: coursesData } = await supabase.from("courses").select("*").eq("status", "active").order("title");
+
+  return <HelpingVideosManager courses={(coursesData ?? []) as Course[]} />;
 }

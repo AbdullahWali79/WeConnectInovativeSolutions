@@ -5,14 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
-import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { HelpingVideo } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from "@/lib/youtube";
 
-type HelpingVideoRow = Pick<HelpingVideo, "id" | "title" | "youtube_url" | "description" | "display_order" | "created_at">;
+type HelpingVideoRow = Pick<HelpingVideo, "id" | "title" | "youtube_url" | "description" | "display_order" | "created_at" | "course_id" | "is_must_watch"> & { course_ids: string[] };
 
 export function HelpingVideosBoard() {
   const supabase = createSupabaseBrowserClient();
@@ -20,19 +19,34 @@ export function HelpingVideosBoard() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
   const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"course" | "must_watch">("course");
+  const [courseIds, setCourseIds] = useState<string[]>([]);
   const clearToast = useCallback(() => setToast(null), []);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data: authData } = await supabase.auth.getUser();
+    const studentId = authData.user?.id;
+    const enrollmentsRequest = studentId
+      ? supabase.from("enrollments").select("course_id").eq("student_id", studentId).eq("status", "active")
+      : Promise.resolve({ data: [], error: null });
+    const [videosResult, enrollmentsResult] = await Promise.all([
+      supabase
       .from("helping_videos")
-      .select("id,title,youtube_url,description,display_order,created_at")
+      .select("id,title,youtube_url,description,display_order,created_at,course_id,is_must_watch,helping_video_courses(course_id)")
       .eq("status", "active")
       .order("display_order", { ascending: true })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }),
+      enrollmentsRequest,
+    ]);
 
-    if (error) setToast({ type: "error", message: error.message });
-    setRows((data ?? []) as HelpingVideoRow[]);
+    if (videosResult.error) setToast({ type: "error", message: videosResult.error.message });
+    else if (enrollmentsResult.error) setToast({ type: "error", message: enrollmentsResult.error.message });
+    setRows((videosResult.data ?? []).map((row) => ({
+      ...row,
+      course_ids: (row.helping_video_courses ?? []).map((assignment: { course_id: string }) => assignment.course_id),
+    })) as HelpingVideoRow[]);
+    setCourseIds([...(new Set((enrollmentsResult.data ?? []).map((item) => item.course_id)))].filter(Boolean));
     setLoading(false);
   }, [supabase]);
 
@@ -42,13 +56,19 @@ export function HelpingVideosBoard() {
 
   const filteredRows = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return rows;
-
     return rows.filter((video) => {
+      const belongsToTab = activeTab === "must_watch"
+        ? video.is_must_watch
+        : !video.is_must_watch && video.course_ids.some((courseId) => courseIds.includes(courseId));
+      if (!belongsToTab) return false;
+      if (!needle) return true;
       const haystacks = [video.title, video.description, video.youtube_url].filter(Boolean);
       return haystacks.some((value) => value.toLowerCase().includes(needle));
     });
-  }, [query, rows]);
+  }, [activeTab, courseIds, query, rows]);
+
+  const courseCount = rows.filter((video) => !video.is_must_watch && video.course_ids.some((courseId) => courseIds.includes(courseId))).length;
+  const mustWatchCount = rows.filter((video) => video.is_must_watch).length;
 
   if (loading) return <LoadingState label="Loading helping videos..." />;
 
@@ -84,10 +104,19 @@ export function HelpingVideosBoard() {
         </div>
       </div>
 
+      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-outline-variant bg-surface p-2 sm:inline-grid sm:min-w-[480px]">
+        <button type="button" onClick={() => setActiveTab("course")} className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold transition ${activeTab === "course" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}>
+          <Icon name="school" /> My Course Videos <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{courseCount}</span>
+        </button>
+        <button type="button" onClick={() => setActiveTab("must_watch")} className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold transition ${activeTab === "must_watch" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}>
+          <Icon name="priority_high" /> Must Watch <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{mustWatchCount}</span>
+        </button>
+      </div>
+
       {filteredRows.length === 0 ? (
         <EmptyState
-          title={rows.length === 0 ? "No helping videos yet" : "No videos match your search"}
-          description={rows.length === 0 ? "Admin will add useful videos here for students." : "Try a different keyword or clear the search."}
+          title={query ? "No videos match your search" : activeTab === "course" ? "No videos for your course yet" : "No must-watch videos yet"}
+          description={query ? "Try a different keyword or clear the search." : activeTab === "course" ? "Only videos assigned to your active course appear here." : "Universal guidance videos will appear in this tab."}
           icon="smart_display"
         />
       ) : (
