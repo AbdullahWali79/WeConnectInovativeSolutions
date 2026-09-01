@@ -366,6 +366,7 @@ export type Announcement = {
 
 export type TeamMember = {
   id: string;
+  profile_id?: string | null;
   name: string;
   role: string;
   department: string | null;

@@ -14,6 +14,7 @@ import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Profile, TeamMember } from "@/lib/supabase/types";
 
 const defaultForm = {
+  profile_id: "",
   name: "",
   role: "",
   department: "",
@@ -34,9 +35,11 @@ const defaultForm = {
 export function TeamMembersManager({
   currentRole = "admin",
   permissions = [],
+  students = [],
 }: {
   currentRole?: Profile["role"];
   permissions?: PermissionKey[];
+  students?: Profile[];
 }) {
   const supabase = createSupabaseBrowserClient();
   const canUse = useCallback((permission: PermissionKey) => currentRole === "admin" || permissions.includes(permission), [currentRole, permissions]);
@@ -53,6 +56,8 @@ export function TeamMembersManager({
   const [deptFilter, setDeptFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [leadFilter, setLeadFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [studentQuery, setStudentQuery] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
 
   const clearToast = useCallback(() => setToast(null), []);
@@ -88,8 +93,33 @@ export function TeamMembersManager({
     const statusMatch = statusFilter === "all" || row.status === statusFilter;
     const leadName = row.reports_to ? byId.get(row.reports_to)?.name ?? "" : "";
     const leadMatch = leadFilter === "all" || leadName === leadFilter;
-    return queryMatch && roleMatch && deptMatch && statusMatch && leadMatch;
-  }), [rows, query, roleFilter, deptFilter, statusFilter, leadFilter, byId]);
+    const sourceMatch = sourceFilter === "all" || (sourceFilter === "student" ? Boolean(row.profile_id) : !row.profile_id);
+    return queryMatch && roleMatch && deptMatch && statusMatch && leadMatch && sourceMatch;
+  }), [rows, query, roleFilter, deptFilter, statusFilter, leadFilter, sourceFilter, byId]);
+
+  const matchingStudents = useMemo(() => {
+    const needle = studentQuery.trim().toLowerCase();
+    if (!needle) return students.slice(0, 8);
+    return students.filter((student) => `${student.full_name ?? ""} ${student.email ?? ""} ${student.phone ?? ""}`.toLowerCase().includes(needle)).slice(0, 12);
+  }, [students, studentQuery]);
+
+  function useStudentProfile(student: Profile) {
+    const existing = rows.find((row) => row.profile_id === student.id);
+    if (existing) {
+      setToast({ type: "error", message: "This student is already a team member." });
+      return;
+    }
+    setEditingId(null);
+    setForm({
+      ...defaultForm,
+      profile_id: student.id,
+      name: student.full_name ?? "",
+      email: student.email ?? "",
+      phone: student.phone ?? "",
+      portfolio_url: student.linkedin_url ?? student.github_url ?? "",
+    });
+    setToast({ type: "success", message: "Student profile selected. Add designation and save the team member." });
+  }
 
   function startEdit(row: TeamMember) {
     if (!canEdit) {
@@ -98,6 +128,7 @@ export function TeamMembersManager({
     }
     setEditingId(row.id);
     setForm({
+      profile_id: row.profile_id ?? "",
       name: row.name,
       role: row.role,
       department: row.department ?? "",
@@ -187,6 +218,7 @@ export function TeamMembersManager({
 
     setSaving(true);
     const payload = {
+      profile_id: form.profile_id || null,
       name: form.name.trim(),
       role: form.role.trim(),
       department: form.department.trim() || null,
@@ -260,6 +292,24 @@ export function TeamMembersManager({
       <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
         {(canCreate || editingId) ? <form onSubmit={saveRow} className="wc-card space-y-3 p-4">
           <h2 className="text-base font-bold text-on-surface">{editingId ? "Edit Member" : "Add Member"}</h2>
+          {!editingId ? <div className="rounded-xl border border-outline-variant bg-surface-container-low p-3">
+            <p className="text-sm font-bold text-on-surface">Add from student profile</p>
+            <div className="relative mt-2">
+              <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+              <input className="wc-input pl-10" placeholder="Search student by name, email or phone" value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} />
+            </div>
+            {studentQuery.trim() ? <div className="mt-2 max-h-52 space-y-1 overflow-y-auto">
+              {matchingStudents.length ? matchingStudents.map((student) => {
+                const alreadyAdded = rows.some((row) => row.profile_id === student.id);
+                return <button key={student.id} type="button" disabled={alreadyAdded} onClick={() => useStudentProfile(student)} className="flex w-full items-center justify-between rounded-lg border border-outline-variant bg-surface px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50">
+                  <span><span className="block text-sm font-bold text-on-surface">{student.full_name || "Unnamed student"}</span><span className="block text-xs text-on-surface-variant">{student.email || student.phone || "No contact information"}</span></span>
+                  <span className="text-xs font-bold text-primary">{alreadyAdded ? "Added" : "Select"}</span>
+                </button>;
+              }) : <p className="py-3 text-center text-sm text-on-surface-variant">No student found.</p>}
+            </div> : null}
+            <p className="mt-2 text-xs text-on-surface-variant">Or fill the fields below to add a member manually.</p>
+          </div> : null}
+          {form.profile_id ? <div className="flex items-center justify-between rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"><span>Linked with student profile</span><button type="button" onClick={() => setForm((current) => ({ ...current, profile_id: "" }))} className="underline">Use manual entry</button></div> : null}
           <input className="wc-input" placeholder="Name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
           <input className="wc-input" placeholder="Role / designation" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))} required />
           <input className="wc-input" placeholder="Department" value={form.department} onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))} />
@@ -297,10 +347,11 @@ export function TeamMembersManager({
         )}
 
         <section className="wc-card overflow-hidden">
-          <div className="grid gap-2 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-5">
+          <div className="grid gap-2 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-6">
             <input className="wc-input md:col-span-2" placeholder="Search name/email" value={query} onChange={(event) => setQuery(event.target.value)} />
             <select className="wc-input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="all">All Roles</option>{roles.map((item) => <option key={item}>{item}</option>)}</select>
             <select className="wc-input" value={deptFilter} onChange={(event) => setDeptFilter(event.target.value)}><option value="all">All Departments</option>{departments.map((item) => <option key={item}>{item}</option>)}</select>
+            <select className="wc-input" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="all">All Sources</option><option value="student">Student Profiles</option><option value="manual">Manual Members</option></select>
             <div className="grid grid-cols-2 gap-2">
               <select className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
               <select className="wc-input" value={leadFilter} onChange={(event) => setLeadFilter(event.target.value)}><option value="all">All Leads</option>{leads.map((item) => <option key={item}>{item}</option>)}</select>
@@ -329,7 +380,7 @@ export function TeamMembersManager({
                           {(row.image_cdn_url ?? row.image_url) ? <Image src={row.image_cdn_url ?? row.image_url ?? ""} alt={row.name} width={40} height={40} unoptimized className="h-full w-full object-cover" /> : null}
                         </div>
                       </td>
-                      <td className="px-4 py-3"><p className="text-sm font-bold text-on-surface">{row.name}</p><p className="text-xs text-on-surface-variant">{row.email ?? "-"}</p></td>
+                      <td className="px-4 py-3"><p className="text-sm font-bold text-on-surface">{row.name}</p><p className="text-xs text-on-surface-variant">{row.email ?? "-"}</p>{row.profile_id ? <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Student profile</span> : null}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.role}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.department ?? "-"}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.reports_to ? byId.get(row.reports_to)?.name ?? "-" : "-"}</td>
