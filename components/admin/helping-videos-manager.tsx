@@ -40,16 +40,26 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
 
   const loadRows = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("helping_videos")
-      .select("id,title,youtube_url,description,status,display_order,created_at,course_id,is_must_watch,helping_video_courses(course_id)")
-      .order("display_order", { ascending: true })
-      .order("created_at", { ascending: false });
+    const [videosResult, assignmentsResult] = await Promise.all([
+      supabase
+        .from("helping_videos")
+        .select("id,title,youtube_url,description,status,display_order,created_at,course_id,is_must_watch")
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: false }),
+      supabase.from("helping_video_courses").select("video_id,course_id"),
+    ]);
 
-    if (error) setToast({ type: "error", message: error.message });
-    setRows((data ?? []).map((row) => ({
+    if (videosResult.error) setToast({ type: "error", message: videosResult.error.message });
+    else if (assignmentsResult.error) setToast({ type: "error", message: assignmentsResult.error.message });
+    const assignmentsByVideo = new Map<string, string[]>();
+    for (const assignment of assignmentsResult.data ?? []) {
+      const courseAssignments = assignmentsByVideo.get(assignment.video_id) ?? [];
+      courseAssignments.push(assignment.course_id);
+      assignmentsByVideo.set(assignment.video_id, courseAssignments);
+    }
+    setRows((videosResult.data ?? []).map((row) => ({
       ...row,
-      course_ids: (row.helping_video_courses ?? []).map((assignment: { course_id: string }) => assignment.course_id),
+      course_ids: assignmentsByVideo.get(row.id) ?? (row.course_id ? [row.course_id] : []),
     })) as HelpingVideoRow[]);
     setLoading(false);
   }, [supabase]);

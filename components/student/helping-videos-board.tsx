@@ -30,21 +30,29 @@ export function HelpingVideosBoard() {
     const enrollmentsRequest = studentId
       ? supabase.from("enrollments").select("course_id").eq("student_id", studentId).eq("status", "active")
       : Promise.resolve({ data: [], error: null });
-    const [videosResult, enrollmentsResult] = await Promise.all([
+    const [videosResult, assignmentsResult, enrollmentsResult] = await Promise.all([
       supabase
       .from("helping_videos")
-      .select("id,title,youtube_url,description,display_order,created_at,course_id,is_must_watch,helping_video_courses(course_id)")
+      .select("id,title,youtube_url,description,display_order,created_at,course_id,is_must_watch")
       .eq("status", "active")
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false }),
+      supabase.from("helping_video_courses").select("video_id,course_id"),
       enrollmentsRequest,
     ]);
 
     if (videosResult.error) setToast({ type: "error", message: videosResult.error.message });
+    else if (assignmentsResult.error) setToast({ type: "error", message: assignmentsResult.error.message });
     else if (enrollmentsResult.error) setToast({ type: "error", message: enrollmentsResult.error.message });
+    const assignmentsByVideo = new Map<string, string[]>();
+    for (const assignment of assignmentsResult.data ?? []) {
+      const courseAssignments = assignmentsByVideo.get(assignment.video_id) ?? [];
+      courseAssignments.push(assignment.course_id);
+      assignmentsByVideo.set(assignment.video_id, courseAssignments);
+    }
     setRows((videosResult.data ?? []).map((row) => ({
       ...row,
-      course_ids: (row.helping_video_courses ?? []).map((assignment: { course_id: string }) => assignment.course_id),
+      course_ids: assignmentsByVideo.get(row.id) ?? (row.course_id ? [row.course_id] : []),
     })) as HelpingVideoRow[]);
     setCourseIds([...(new Set((enrollmentsResult.data ?? []).map((item) => item.course_id)))].filter(Boolean));
     setLoading(false);
