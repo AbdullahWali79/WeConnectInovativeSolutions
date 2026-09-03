@@ -173,6 +173,7 @@ export function StudentDashboard() {
     return clientHuntLeads.filter((lead) => lead.student_id === profile.id);
   }, [clientHuntLeads, profile]);
   const activeEnrollments = useMemo(() => enrollments.filter((enrollment) => enrollment.status === "active"), [enrollments]);
+  const activeEnrollment = activeEnrollments[0] ?? null;
   const myTasks = useMemo(() => {
     if (!profile) return [];
     return tasks.filter((task) => task.student_id === profile.id);
@@ -331,10 +332,11 @@ export function StudentDashboard() {
   }
 
   useEffect(() => {
-    if (!taskForm.course_id && activeEnrollments.length > 0) {
-      setTaskForm((current) => ({ ...current, course_id: activeEnrollments[0].course_id }));
+    const enrolledCourseId = activeEnrollment?.course_id ?? "";
+    if (taskForm.course_id !== enrolledCourseId) {
+      setTaskForm((current) => ({ ...current, course_id: enrolledCourseId }));
     }
-  }, [activeEnrollments, taskForm.course_id]);
+  }, [activeEnrollment, taskForm.course_id]);
 
   function updateTaskForm(name: keyof typeof taskForm, value: string) {
     setTaskForm((current) => ({ ...current, [name]: value }));
@@ -342,7 +344,7 @@ export function StudentDashboard() {
 
   function resetTaskForm() {
     setTaskForm({
-      course_id: activeEnrollments[0]?.course_id ?? "",
+      course_id: activeEnrollment?.course_id ?? "",
       title: "",
       description: "",
       proof_url: "",
@@ -813,14 +815,11 @@ export function StudentDashboard() {
         <div className="grid flex-1 gap-4 overflow-y-auto px-5 py-5 sm:grid-cols-2 sm:px-6">
           <label className="block">
             <span className="wc-label">Course</span>
-            <select className="wc-input mt-2" value={taskForm.course_id} onChange={(event) => updateTaskForm("course_id", event.target.value)} required>
-              <option value="">Choose an active course</option>
-              {activeEnrollments.map((enrollment) => (
-                <option key={`${enrollment.course_id}-${enrollment.id}`} value={enrollment.course_id}>
-                  {courseById.get(enrollment.course_id)?.title ?? "Unknown course"}
-                </option>
-              ))}
-            </select>
+            <div className="wc-input mt-2 flex items-center bg-surface-container-low font-semibold text-on-surface" aria-live="polite">
+              {activeEnrollment
+                ? courseById.get(activeEnrollment.course_id)?.title ?? "Assigned course"
+                : "No active course assigned"}
+            </div>
           </label>
           <label className="block">
             <span className="wc-label">Task Title</span>
