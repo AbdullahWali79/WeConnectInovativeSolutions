@@ -58,16 +58,16 @@ export async function ensureStudentActiveEnrollment(): Promise<ActionResult<Enro
     // completed_tasks value as the source of truth here.
     for (const enrollment of existing ?? []) {
       if (enrollment.status !== "completed") continue;
-      const [{ data: completion }, { data: progress }, reviewedTasksResult, approvedProjectsResult] = await Promise.all([
+      const [{ data: completion }, { data: progress }, reviewedTasksResult] = await Promise.all([
         supabase.from("completed_students").select("completion_type").eq("student_id", profile.id).eq("course_id", enrollment.course_id).maybeSingle(),
         supabase.from("progress_reports").select("completed_tasks,target_tasks,progress_percentage").eq("student_id", profile.id).eq("course_id", enrollment.course_id).maybeSingle(),
         supabase.from("tasks").select("id", { count: "exact", head: true }).eq("student_id", profile.id).eq("course_id", enrollment.course_id).eq("status", "reviewed"),
-        supabase.from("student_projects").select("id", { count: "exact", head: true }).eq("student_id", profile.id).eq("course_id", enrollment.course_id).eq("status", "approved"),
       ]);
       if (reviewedTasksResult.error) throw new Error(reviewedTasksResult.error.message);
-      if (approvedProjectsResult.error) throw new Error(approvedProjectsResult.error.message);
 
-      const completedTasks = Number(reviewedTasksResult.count ?? 0) + Number(approvedProjectsResult.count ?? 0);
+      // target_tasks is the reviewed task target. Portfolio projects have their
+      // own workflow and must not complete/lock a student's task enrollment.
+      const completedTasks = Number(reviewedTasksResult.count ?? 0);
       const targetTasks = Number(progress?.target_tasks ?? enrollment.target_tasks ?? 100);
       if (completion?.completion_type !== "forced" && completedTasks < targetTasks) {
         const progressPercentage = Math.min(100, Math.floor((completedTasks / Math.max(targetTasks, 1)) * 100));
