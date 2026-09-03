@@ -53,24 +53,42 @@ export async function ensureStudentActiveEnrollment(): Promise<ActionResult<Enro
     const active = (existing ?? []).find((enrollment) => enrollment.status === "active");
     if (active) return { success: true, data: active as Enrollment, error: null };
 
-    // Recover a stale automatic completion when the task target is not met.
+    // Recover a stale automatic completion when the real reviewed-work target
+    // is not met. Progress reports can be stale, so never use their cached
+    // completed_tasks value as the source of truth here.
     for (const enrollment of existing ?? []) {
       if (enrollment.status !== "completed") continue;
-      const [{ data: completion }, { data: progress }] = await Promise.all([
+      const [{ data: completion }, { data: progress }, reviewedTasksResult, approvedProjectsResult] = await Promise.all([
         supabase.from("completed_students").select("completion_type").eq("student_id", profile.id).eq("course_id", enrollment.course_id).maybeSingle(),
         supabase.from("progress_reports").select("completed_tasks,target_tasks,progress_percentage").eq("student_id", profile.id).eq("course_id", enrollment.course_id).maybeSingle(),
+        supabase.from("tasks").select("id", { count: "exact", head: true }).eq("student_id", profile.id).eq("course_id", enrollment.course_id).eq("status", "reviewed"),
+        supabase.from("student_projects").select("id", { count: "exact", head: true }).eq("student_id", profile.id).eq("course_id", enrollment.course_id).eq("status", "approved"),
       ]);
-      const completedTasks = Number(progress?.completed_tasks ?? 0);
+      if (reviewedTasksResult.error) throw new Error(reviewedTasksResult.error.message);
+      if (approvedProjectsResult.error) throw new Error(approvedProjectsResult.error.message);
+
+      const completedTasks = Number(reviewedTasksResult.count ?? 0) + Number(approvedProjectsResult.count ?? 0);
       const targetTasks = Number(progress?.target_tasks ?? enrollment.target_tasks ?? 100);
       if (completion?.completion_type !== "forced" && completedTasks < targetTasks) {
+        const progressPercentage = Math.min(100, Math.floor((completedTasks / Math.max(targetTasks, 1)) * 100));
         const { data: recovered, error } = await supabase
           .from("enrollments")
-          .update({ status: "active", progress_percentage: Number(progress?.progress_percentage ?? 0), completed_at: null })
+          .update({ status: "active", progress_percentage: progressPercentage, completed_at: null })
           .eq("id", enrollment.id)
           .select("*")
           .single();
         if (error) throw new Error(error.message);
-        await supabase.from("completed_students").delete().eq("student_id", profile.id).eq("course_id", enrollment.course_id);
+        const [progressUpdate, completionDelete] = await Promise.all([
+          supabase.from("progress_reports").update({
+            completed_tasks: Number(reviewedTasksResult.count ?? 0),
+            pending_tasks: Math.max(targetTasks - completedTasks, 0),
+            progress_percentage: progressPercentage,
+            updated_at: new Date().toISOString(),
+          }).eq("student_id", profile.id).eq("course_id", enrollment.course_id),
+          supabase.from("completed_students").delete().eq("student_id", profile.id).eq("course_id", enrollment.course_id),
+        ]);
+        if (progressUpdate.error) throw new Error(progressUpdate.error.message);
+        if (completionDelete.error) throw new Error(completionDelete.error.message);
         return { success: true, data: recovered as Enrollment, error: null };
       }
     }
