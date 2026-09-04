@@ -35,6 +35,7 @@ function HeaderChevron({ expanded = false, className = "" }: { expanded?: boolea
 
 const navCategories: NavCategory[] = [
   { label: "Services", href: "/services", path: "/services" },
+  { label: "Study Abroad", href: "/research-consultancy", path: "/research-consultancy" },
   {
     label: "Work",
     items: [
@@ -49,7 +50,6 @@ const navCategories: NavCategory[] = [
       { href: "/#overview", path: "/", label: "Overview" },
       { href: "/team", path: "/team", label: "Team" },
       { href: "/mous", path: "/mous", label: "Partners" },
-      { href: "/research-consultancy", path: "/research-consultancy", label: "Research Consultancy" },
     ],
   },
   {
