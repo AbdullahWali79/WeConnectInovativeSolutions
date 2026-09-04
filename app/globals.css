@@ -508,6 +508,26 @@ html[data-branding-scope="landing"][data-landing-palette="logo"] {
     transform: translateX(-50%) scaleX(1);
   }
 
+  .public-header-attention {
+    margin-inline: -7px;
+    padding-inline: 7px;
+    border-radius: 9px;
+    animation: public-nav-attention 2.8s ease-in-out infinite;
+  }
+
+  @keyframes public-nav-attention {
+    0%, 58%, 100% {
+      background-color: transparent;
+      color: color-mix(in srgb, var(--wc-on-bg) 74%, transparent);
+      box-shadow: 0 0 0 0 transparent;
+    }
+    70%, 84% {
+      background-color: color-mix(in srgb, var(--wc-secondary) 12%, transparent);
+      color: var(--wc-secondary);
+      box-shadow: 0 0 16px color-mix(in srgb, var(--wc-secondary) 18%, transparent);
+    }
+  }
+
   .public-header-feedback {
     position: relative;
     display: inline-flex;
@@ -769,6 +789,30 @@ html[data-branding-scope="landing"][data-landing-palette="logo"] {
 
   .public-mobile-category-button .material-symbols-outlined {
     color: #64748b;
+  }
+
+  .public-mobile-attention {
+    animation: public-mobile-nav-attention 2.8s ease-in-out infinite;
+  }
+
+  @keyframes public-mobile-nav-attention {
+    0%, 58%, 100% {
+      background-color: transparent;
+      color: #17233b;
+    }
+    70%, 84% {
+      background-color: color-mix(in srgb, var(--wc-secondary) 13%, white);
+      color: var(--wc-secondary);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .public-header-attention,
+    .public-mobile-attention {
+      animation: none;
+      background-color: color-mix(in srgb, var(--wc-secondary) 10%, transparent);
+      color: var(--wc-secondary);
+    }
   }
 
   .public-mobile-submenu {
