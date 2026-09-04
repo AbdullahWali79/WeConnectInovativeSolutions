@@ -175,7 +175,7 @@ export function PublicHeader() {
                   key={cat.label}
                   href={cat.href}
                   onClick={() => handleNavigate(cat.path || cat.href!)}
-                  className={`public-header-link flex items-center gap-1 ${isActiveCategory ? "font-bold" : ""}`}
+                  className={`public-header-link flex items-center gap-1 ${cat.path === "/research-consultancy" ? "public-header-attention" : ""} ${isActiveCategory ? "font-bold" : ""}`}
                   style={isActiveCategory ? { color: "var(--wc-on-bg)" } : undefined}
                 >
                   {cat.label}
@@ -252,7 +252,7 @@ export function PublicHeader() {
                     href={cat.href}
                     prefetch
                     onClick={() => handleNavigate(cat.path || cat.href!)}
-                    className="public-mobile-category-button"
+                    className={`public-mobile-category-button ${cat.path === "/research-consultancy" ? "public-mobile-attention" : ""}`}
                     style={active ? { color: "var(--wc-secondary)" } : undefined}
                   >
                     {cat.label}
