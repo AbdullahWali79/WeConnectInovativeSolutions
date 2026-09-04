@@ -13,17 +13,19 @@ export const metadata = createPageMetadata({
 });
 
 const destinations = [
-  ["MY", "Malaysia", "Affordable, diverse and internationally connected"],
-  ["CN", "China", "Strong STEM, business and scholarship options"],
   ["GB", "United Kingdom", "Globally respected degrees and focused programs"],
-  ["IT", "Italy", "Historic universities and English-taught options"],
+  ["AU", "Australia", "A leading choice for Pakistani students with globally recognized degrees"],
+  ["DE", "Germany", "Affordable, research-led learning and strong technical education"],
+  ["HU", "Hungary", "Highly sought-after government scholarships for Pakistani students"],
+  ["CN", "China", "Strong STEM, business and scholarship options"],
+  ["MY", "Malaysia", "Affordable, diverse and internationally connected"],
   ["US", "USA", "Flexible pathways and wide-ranging specializations"],
   ["CA", "Canada", "Career-focused education in a multicultural setting"],
-  ["DE", "Germany", "Research-led learning and technical education"],
+  ["IT", "Italy", "Historic universities and English-taught options"],
   ["CY", "Cyprus", "Accessible European study pathways"],
   ["KR", "South Korea", "Innovation, technology and modern campuses"],
-  ["SG", "Singapore", "Asia's global education and business hub"],
   ["SA", "Saudi Arabia", "Expanding universities and scholarship opportunities"],
+  ["SG", "Singapore", "Asia's global education and business hub"],
 ] as const;
 
 const studentServices = [
@@ -73,7 +75,7 @@ export default function EducationConsultancyPage() {
             <div className="rounded-[2rem] border border-white/15 bg-white/10 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
               <div className="flex items-center gap-3 border-b border-white/10 pb-5"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ffd24a] text-[#081735]"><Icon name="school" /></span><div><p className="font-black text-white">Two audiences. One trusted bridge.</p><p className="text-sm text-blue-200">Students + international universities</p></div></div>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                {[["person_search", "For Students", "Personalized admission guidance"], ["account_balance", "For Universities", "Responsible local representation"], ["language", "11 Destinations", "Global study opportunities"], ["support_agent", "End-to-end", "From planning to departure"]].map(([icon, title, text]) => (
+                {[["person_search", "For Students", "Personalized admission guidance"], ["account_balance", "For Universities", "Responsible local representation"], ["language", `${destinations.length} Destinations`, "Global study opportunities"], ["support_agent", "End-to-end", "From planning to departure"]].map(([icon, title, text]) => (
                   <div key={title} className="rounded-2xl border border-white/10 bg-[#061735]/45 p-4"><Icon name={icon} className="text-2xl text-[#ffd24a]" /><h2 className="mt-3 font-black text-white">{title}</h2><p className="mt-1 text-xs leading-5 text-blue-200">{text}</p></div>
                 ))}
               </div>
