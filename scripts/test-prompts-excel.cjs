@@ -268,3 +268,13 @@ test('bulk save publishes or holds for review and only refreshes after successfu
   const result = await loadTs('app/admin/prompts/actions.ts', failure.mocks).importAdminPrompts(JSON.stringify([valid]), 'approved');
   assert.equal(result.ok, false);
 });
+
+const { PROMPT_SUBMISSION_GOOGLE_URL, promptSubmissionEmbedUrl } = loadTs('lib/prompt-submission-form.ts');
+test('prompt submission embeds the supplied responder form and rejects arbitrary frame sources', () => {
+  const embedded = new URL(promptSubmissionEmbedUrl(PROMPT_SUBMISSION_GOOGLE_URL));
+  assert.equal(embedded.searchParams.get('embedded'), 'true');
+  assert.equal(embedded.pathname, '/forms/d/e/1FAIpQLScfgjTuQHt9cdCcu5Ha8hIFN2_FtZaA_pGklBGion_sPpF1mw/viewform');
+  for (const url of ['https://evil.test/forms/d/e/abc/viewform', 'https://docs.google.com.evil.test/forms/d/e/abc/viewform', 'http://docs.google.com/forms/d/e/abc/viewform', 'https://docs.google.com/forms/d/e/abc/edit', 'javascript:alert(1)']) {
+    assert.throws(() => promptSubmissionEmbedUrl(url));
+  }
+});

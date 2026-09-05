@@ -20,6 +20,10 @@ export default function SubmitPromptPage() {
         <p className="mt-3 text-sm text-on-surface-variant">For Google Drive previews, set file sharing to Anyone with the link.</p>
       </header>
       {embedUrl ? <>
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-outline-variant bg-surface p-5">
+          <p className="max-w-xl text-sm text-on-surface-variant">This form may ask you to sign in to Google. If sign-in or cookies prevent it from loading here, open it in a new tab.</p>
+          <a href={PROMPT_SUBMISSION_GOOGLE_URL} target="_blank" rel="noopener noreferrer" className="rounded-full border border-primary px-5 py-3 text-sm font-semibold text-primary">Open Google Form</a>
+        </div>
         <section aria-label="Prompt submission form" className="overflow-hidden rounded-3xl border border-outline-variant bg-surface shadow-sm">
           <iframe src={embedUrl} title="WeConnect prompt submission form" loading="eager" className="h-[1800px] min-h-[80vh] w-full border-0" />
         </section>
