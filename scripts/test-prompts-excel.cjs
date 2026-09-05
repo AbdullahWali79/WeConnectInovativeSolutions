@@ -27,10 +27,34 @@ function loadTs(relative, mocks = {}, cache = new Map()) {
   return loaded.exports;
 }
 
-const { createPromptWorkbook, readPromptWorkbook } = loadTs('lib/prompt-excel.ts');
+const { createPromptWorkbook, readPromptWorkbook, inspectPromptWorkbook, suggestPromptColumns } = loadTs('lib/prompt-excel.ts');
 const { parsePromptImportPayload } = loadTs('lib/prompt-import.ts');
 const valid = { title: 'Campaign prompt', description: 'Create a complete campaign for a business.', category: 'Marketing', model: 'ChatGPT', template: 'Write ads for {{BusinessName}}.\nOffer: {{Offer}} — اردو', price: 0, purchase_url: '', media_urls: ['https://drive.google.com/file/d/abcdefghijk123/view'] };
 const bytes = (workbook) => XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+
+test('Google Form sheet matches reordered question headings and ignores timestamp/email columns', () => {
+  const workbook = XLSX.utils.book_new();
+  const headers = ['Timestamp', 'Email Address', 'Prompt title', 'AI model / tool', 'Category', 'Description / what this prompt creates', 'Prompt template', 'Google Drive links'];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([headers, ['2026-09-05', 'someone@example.com', valid.title, valid.model, valid.category, valid.description, valid.template, `${valid.media_urls[0]}, https://drive.google.com/file/d/abcdefghijk456/view`]]), 'Form Responses 1');
+  const file = bytes(workbook);
+  assert.equal(inspectPromptWorkbook(file)[0].name, 'Form Responses 1');
+  const result = readPromptWorkbook(file, { sheetName: 'Form Responses 1', columns: suggestPromptColumns(headers) });
+  assert.deepEqual(result.issues, []);
+  assert.equal(result.rows[0].title, valid.title);
+  assert.equal(result.rows[0].price, 0);
+  assert.equal(result.rows[0].media_urls.length, 2);
+  assert.equal(result.rows[0].email, undefined);
+});
+test('manual column mapping supports custom questions and rejects missing or reused required columns', () => {
+  const workbook = XLSX.utils.book_new();
+  const headers = ['نام', 'تفصیل', 'قسم', 'ماڈل', 'پرامپٹ', 'تصویر'];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([headers, [valid.title, valid.description, valid.category, valid.model, valid.template, valid.media_urls[0]]]), 'Responses');
+  const file = bytes(workbook);
+  const columns = [0, 1, 2, 3, 4, -1, -1, 5, -1, -1, -1, -1, -1];
+  assert.deepEqual(readPromptWorkbook(file, { sheetName: 'Responses', columns }).rows, [valid]);
+  assert.throws(() => readPromptWorkbook(file, { sheetName: 'Responses', columns: suggestPromptColumns(headers) }), /required columns/);
+  assert.throws(() => readPromptWorkbook(file, { sheetName: 'Responses', columns: [0, 0, ...columns.slice(2)] }), /different source column/);
+});
 
 test('Excel export/import round-trip preserves variables, Unicode, newlines, media and paid prices', () => {
   const paid = { ...valid, title: 'Premium prompt', price: 1250.5, purchase_url: 'https://example.com/buy', media_urls: [...valid.media_urls, 'https://drive.google.com/file/d/abcdefghijk456/view'] };

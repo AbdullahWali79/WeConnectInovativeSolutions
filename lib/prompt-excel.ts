@@ -4,6 +4,34 @@ import { MAX_PROMPT_IMPORT_BYTES, MAX_PROMPT_IMPORT_ROWS, validatePromptImport, 
 
 export const PROMPT_EXCEL_HEADERS = ["Title", "Description", "Category", "AI Model", "Prompt Template", "Price (PKR)", "Purchase URL", "Drive URL 1", "Drive URL 2", "Drive URL 3", "Drive URL 4", "Drive URL 5", "Drive URL 6"];
 export const MAX_PROMPT_EXCEL_FILE_BYTES = 2 * 1024 * 1024;
+export type PromptExcelSheet = { name: string; headers: string[] };
+export const PROMPT_REQUIRED_COLUMNS = [0, 1, 2, 3, 4, 7];
+
+export function suggestPromptColumns(headers: string[]) {
+  const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const aliases = [
+    ["Prompt title", "Prompt name"], ["Description / what this prompt creates", "Prompt description", "Description / what this prompt creates (required)"],
+    ["Prompt category"], ["AI model / tool", "Model", "AI Tool"], ["Prompt", "Prompt text", "Full prompt"],
+    ["Price", "Price (PKR) — 0 for free"], ["Purchase / contact HTTPS link (required for paid prompts)", "Purchase link", "Contact link"],
+    ["Output image / video Google Drive links — one per line (up to 6)", "Google Drive links", "Google Drive URL", "Output images", "Image URL", "Upload output images/videos"],
+  ];
+  return PROMPT_EXCEL_HEADERS.map((label, index) => {
+    const candidates = [label, ...(aliases[index] ?? [])].map(normalize);
+    return headers.findIndex((header) => candidates.includes(normalize(header)));
+  });
+}
+
+export function inspectPromptWorkbook(bytes: ArrayBuffer): PromptExcelSheet[] {
+  if (bytes.byteLength > MAX_PROMPT_EXCEL_FILE_BYTES) throw new Error("Excel file must be 2 MB or smaller.");
+  const workbook = XLSX.read(bytes, { type: "array", sheetRows: 1 });
+  return workbook.SheetNames.filter((name) => name !== "Instructions" && name !== "Example (do not import)").map((name) => {
+    const sheet = workbook.Sheets[name];
+    const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
+    if (range.e.c > 99) throw new Error("Use a sheet with at most 100 columns.");
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, defval: "", range: 0 });
+    return { name, headers: (rows[0] ?? []).map((value) => String(value).trim()) };
+  });
+}
 
 export function createPromptWorkbook(prompts: Pick<Prompt, "title" | "description" | "category" | "model" | "template" | "price" | "purchase_url" | "media_urls">[] = []) {
   const workbook = XLSX.utils.book_new();
@@ -28,6 +56,8 @@ export function createPromptWorkbook(prompts: Pick<Prompt, "title" | "descriptio
     ["Admin chooses publication status on the import screen. Excel cannot change contributor permissions or ownership."],
     ["All rows must be valid before anything is saved. Correct errors and choose the file again."],
     ["Use plain values, not Excel formulas. Example sheet is a guide only and is never imported."],
+    ["Google Form responses are also supported: download the response spreadsheet as .xlsx, select the response sheet and match your column headings on the import screen."],
+    ["Timestamp, email and unmapped columns are ignored. Multiple Drive links in one response can be separated with commas or new lines."],
   ]);
   instructions["!cols"] = [{ wch: 125 }];
   XLSX.utils.book_append_sheet(workbook, instructions, "Instructions");
@@ -37,28 +67,38 @@ export function createPromptWorkbook(prompts: Pick<Prompt, "title" | "descriptio
   return workbook;
 }
 
-export function readPromptWorkbook(bytes: ArrayBuffer) {
+export function readPromptWorkbook(bytes: ArrayBuffer, selection?: { sheetName: string; columns: number[] }) {
   if (bytes.byteLength > MAX_PROMPT_EXCEL_FILE_BYTES) throw new Error("Excel file must be 2 MB or smaller.");
   const workbook = XLSX.read(bytes, { type: "array", sheetRows: MAX_PROMPT_IMPORT_ROWS + 2, cellFormula: true });
-  const sheet = workbook.Sheets.Prompts;
-  if (!sheet) throw new Error('Missing "Prompts" sheet. Please use the downloadable template.');
+  const sheet = workbook.Sheets[selection?.sheetName ?? "Prompts"];
+  if (!sheet) throw new Error('Missing sheet. Select your response sheet or use the downloadable template.');
   const range = XLSX.utils.decode_range(sheet["!fullref"] ?? sheet["!ref"] ?? "A1");
   if (range.e.r > MAX_PROMPT_IMPORT_ROWS) throw new Error(`Use at most ${MAX_PROMPT_IMPORT_ROWS} prompt rows. Remove extra rows or split the file.`);
-  if (range.e.c >= PROMPT_EXCEL_HEADERS.length) throw new Error("Unexpected extra columns. Please use the template headings.");
+  if (range.e.c > 99) throw new Error("Use a sheet with at most 100 columns.");
+  if (!selection && range.e.c >= PROMPT_EXCEL_HEADERS.length) throw new Error("Unexpected extra columns. Please match your response columns on the import screen.");
+  const columns = selection?.columns ?? PROMPT_EXCEL_HEADERS.map((_, index) => index);
+  if (columns.length !== PROMPT_EXCEL_HEADERS.length || columns.some((index) => !Number.isInteger(index) || index < -1 || index > range.e.c)) throw new Error("Invalid column selection.");
+  const missing = PROMPT_REQUIRED_COLUMNS.filter((index) => columns[index] < 0);
+  if (missing.length) throw new Error(`Match the required columns: ${missing.map((index) => PROMPT_EXCEL_HEADERS[index]).join(", ")}.`);
+  const selected = columns.filter((index) => index >= 0);
+  if (new Set(selected).size !== selected.length) throw new Error("Choose a different source column for each prompt field.");
   for (const [address, cell] of Object.entries(sheet)) {
-    if (!address.startsWith("!") && (cell as XLSX.CellObject).f) throw new Error(`Cell ${address}: replace the Excel formula with a plain value.`);
+    if (!address.startsWith("!") && selected.includes(XLSX.utils.decode_cell(address).c) && (cell as XLSX.CellObject).f) throw new Error(`Cell ${address}: replace the Excel formula with a plain value.`);
   }
   const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, defval: "", blankrows: true, range: 0 });
   const headers = grid[0] ?? [];
-  if (PROMPT_EXCEL_HEADERS.some((header, index) => String(headers[index] ?? "").trim() !== header)) throw new Error("Column headings do not match. Download a fresh template and keep the headings unchanged.");
+  if (!selection && PROMPT_EXCEL_HEADERS.some((header, index) => String(headers[index] ?? "").trim() !== header)) throw new Error("Column headings do not match. Download a fresh template and keep the headings unchanged.");
   const data = grid.slice(1);
   while (data.length && data[data.length - 1].every((value) => value === "")) data.pop();
   // Preserve internal blank rows so Excel row numbers remain accurate in validation errors.
-  const result = validatePromptImport(data.map((row) => ({
-    title: row[0], description: row[1], category: row[2], model: row[3], template: row[4],
-    price: row[5] === "" ? undefined : row[5], purchase_url: row[6],
-    media_urls: row.slice(7, 13).map((value) => String(value).trim()).filter(Boolean),
-  })));
+  const result = validatePromptImport(data.map((row) => {
+    const value = (index: number) => columns[index] < 0 ? "" : row[columns[index]] ?? "";
+    return {
+      title: value(0), description: value(1), category: value(2), model: value(3), template: value(4),
+      price: columns[5] < 0 ? 0 : value(5) === "" ? undefined : value(5), purchase_url: value(6),
+      media_urls: columns.slice(7).flatMap((_, index) => String(value(index + 7)).split(/\r?\n|,\s*(?=https:\/\/)/)).map((url) => url.trim()).filter(Boolean),
+    };
+  }));
   if (new TextEncoder().encode(JSON.stringify(result.rows)).length > MAX_PROMPT_IMPORT_BYTES) throw new Error("Prompt text is too large for one import. Split the file into smaller batches.");
   return result;
 }
