@@ -229,3 +229,42 @@ test('paid Excel rows without a purchase URL pass preview and server import', as
   assert.equal(allowed.inserts[0][0].purchase_url, '');
   assert.equal(allowed.inserts[0][0].price, 1000);
 });
+
+test('save and publish overrides pending selection, updates existing prompt and refreshes the public page', async () => {
+  const saved = [];
+  const refreshed = [];
+  const mocks = actionMocks().mocks;
+  mocks['next/cache'] = { revalidatePath(path) { refreshed.push(path); } };
+  mocks['@/lib/prompts-server'].promptDb = () => ({ from() { return {
+    update(payload) { return { eq(field, id) { saved.push({ payload, id }); return { select() { return { async single() { return { error: null }; } }; } }; } }; }
+  }; } });
+  const form = new FormData();
+  for (const [key, value] of Object.entries(valid)) form.set(key, key === 'media_urls' ? value.join('\n') : String(value));
+  form.set('operation', 'save');
+  form.set('id', '123e4567-e89b-42d3-a456-426614174000');
+  form.set('status', 'pending');
+  form.set('publish_status', 'approved');
+  const result = await loadTs('app/admin/prompts/actions.ts', mocks).managePrompt(form);
+  assert.equal(result.ok, true);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].payload.status, 'approved');
+  assert.equal(saved[0].id, form.get('id'));
+  assert.ok(refreshed.includes('/prompts'));
+  assert.match(result.message, /published/);
+});
+
+test('bulk save publishes or holds for review and only refreshes after successful persistence', async () => {
+  for (const status of ['pending', 'approved']) {
+    const allowed = actionMocks();
+    const refreshed = [];
+    allowed.mocks['next/cache'] = { revalidatePath(path) { refreshed.push(path); } };
+    const result = await loadTs('app/admin/prompts/actions.ts', allowed.mocks).importAdminPrompts(JSON.stringify([valid]), status);
+    assert.equal(result.ok, true);
+    assert.equal(allowed.inserts[0][0].status, status);
+    assert.ok(refreshed.includes('/prompts'));
+  }
+  const failure = actionMocks({ dbError: { message: 'unavailable' } });
+  failure.mocks['next/cache'] = { revalidatePath() { assert.fail('Failed save must not claim publication'); } };
+  const result = await loadTs('app/admin/prompts/actions.ts', failure.mocks).importAdminPrompts(JSON.stringify([valid]), 'approved');
+  assert.equal(result.ok, false);
+});
