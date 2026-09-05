@@ -49,6 +49,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/software-houses", label: "Software Houses", icon: "add_business", adminOnly: true },
   ]},
   { id: "communication", label: "Communication", icon: "campaign", items: [
+    { href: "/admin/prompts", label: "Prompts", icon: "auto_awesome", adminOnly: true },
     { href: "/admin/ai-tools", label: "AI Tools", icon: "smart_toy", adminOnly: true },
     { href: "/admin/announcements", label: "Announcements", icon: "campaign", permission: "announcements.view" },
     { href: "/admin/feedback", label: "Feedback", icon: "reviews", adminOnly: true },

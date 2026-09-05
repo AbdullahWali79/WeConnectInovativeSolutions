@@ -66,6 +66,7 @@ const navCategories: NavCategory[] = [
     label: "Insights",
     items: [
       { href: "/ai-tools", path: "/ai-tools", label: "AI Tools" },
+      { href: "/prompts", path: "/prompts", label: "Prompts" },
       { href: "/blogs", path: "/blogs", label: "Blogs" },
       { href: "/news", path: "/news", label: "News" },
     ],
