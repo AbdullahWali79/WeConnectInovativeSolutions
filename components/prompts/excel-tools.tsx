@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PromptMedia } from "./library";
+import { SubmissionFormShare } from "./submission-form-share";
 import type { Prompt } from "@/lib/prompts";
 import type { PromptImportIssue, PromptImportRow } from "@/lib/prompt-import";
 import { validatePromptImport } from "@/lib/prompt-import";
@@ -100,6 +102,7 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
 
   return <section className="space-y-5 rounded-2xl border border-outline-variant bg-surface p-6">
     <div><h2 className="text-xl font-bold">Excel import & export</h2><p className="mt-2 text-sm text-on-surface-variant">Import your Google Form response spreadsheet or use our template. Download responses from Google Sheets as Excel (.xlsx), then upload here. Import up to 100 prompts at once.</p></div>
+    {admin && <details className="rounded-xl border border-outline-variant p-4"><summary className="cursor-pointer font-semibold">Share student submission form</summary><div className="mt-4"><SubmissionFormShare /></div></details>}
     <div className="flex flex-wrap gap-3">
       <button type="button" disabled={busy} onClick={() => download(false)} className={buttonClass}>Download Excel template</button>
       <button type="button" disabled={busy || !prompts.length} onClick={() => download(true)} className={buttonClass}>Export {admin ? "all" : "my"} prompts ({prompts.length})</button>
@@ -132,6 +135,11 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
           setDrafts((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: key === 'media_urls' ? value.split(/\r?\n/) : value } : row));
           setRows([]); setIssues([]); setResult(null);
         }} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 font-normal" /></label>)}</div>
+        <div className="mt-4 space-y-3">
+          <h4 className="text-sm font-semibold">Output image / video previews</h4>
+          <PromptMedia urls={draft.media_urls.map((url) => url.trim()).filter(Boolean).slice(0, 6)} title={draft.title || `Row ${index + 2}`} />
+          <p className="text-sm text-on-surface-variant">Previews update when you edit the Drive links. Set each file to Anyone with the link. If a preview cannot load, use Open preview in Google Drive.</p>
+        </div>
       </details>)}
       <button type="button" disabled={busy} className={buttonClass} onClick={() => {
         const checked = validatePromptImport(drafts.map((draft) => ({ ...draft, media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean), price: draft.price === '' ? undefined : draft.price })));
