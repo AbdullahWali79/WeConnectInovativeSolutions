@@ -28,9 +28,9 @@ test('Drive previews reject arbitrary hosts and unsafe protocols', () => {
   for (const url of ['javascript:alert(1)', 'https://drive.google.com.evil.test/file/d/abcdefghijk123/view', 'http://drive.google.com/file/d/abcdefghijk123/view', 'https://drive.google.com/drive/folders/abcdefghijk123']) assert.equal(drivePreview(url), null);
 });
 const valid = { title: 'Facebook campaign', description: 'Generate campaign copy for your business.', category: 'Marketing', model: 'ChatGPT', template: 'Write three ads for {{BusinessName}}.', media_urls: ['https://drive.google.com/file/d/abcdefghijk123/view'], price: 0, purchase_url: '' };
-test('paid prompts require a safe purchase link and nonnegative price', () => {
+test('paid prompts allow no purchase link but validate supplied links and price', () => {
   assert.equal(promptSchema.safeParse(valid).success, true);
-  assert.equal(promptSchema.safeParse({ ...valid, price: 500 }).success, false);
+  assert.equal(promptSchema.safeParse({ ...valid, price: 500 }).success, true);
   assert.equal(promptSchema.safeParse({ ...valid, price: 500, purchase_url: 'https://example.com/buy' }).success, true);
   assert.equal(promptSchema.safeParse({ ...valid, price: -1 }).success, false);
   assert.equal(promptSchema.safeParse({ ...valid, price: 500, purchase_url: 'javascript:alert(1)' }).success, false);
@@ -39,4 +39,11 @@ test('at least one and at most six Drive output previews are required', () => {
   assert.equal(promptSchema.safeParse({ ...valid, media_urls: [] }).success, false);
   assert.equal(promptSchema.safeParse({ ...valid, media_urls: Array(7).fill(valid.media_urls[0]) }).success, false);
   assert.equal(promptSchema.safeParse({ ...valid, media_urls: ['https://example.com/image.png'] }).success, false);
+});
+
+test('purchase URL may be omitted and prompt template requires at least 20 characters', () => {
+  const { purchase_url, ...withoutLink } = valid;
+  assert.equal(promptSchema.parse({ ...withoutLink, price: 500 }).purchase_url, '');
+  assert.equal(promptSchema.safeParse({ ...valid, template: 'A'.repeat(20) }).success, true);
+  assert.equal(promptSchema.safeParse({ ...valid, template: 'A'.repeat(19) }).success, false);
 });

@@ -12,7 +12,7 @@ export function suggestPromptColumns(headers: string[]) {
   const aliases = [
     ["Prompt title", "Prompt name"], ["Description / what this prompt creates", "Prompt description", "Description / what this prompt creates (required)"],
     ["Prompt category"], ["AI model / tool", "Model", "AI Tool"], ["Prompt", "Prompt text", "Full prompt"],
-    ["Price", "Price (PKR) — 0 for free"], ["Purchase / contact HTTPS link (required for paid prompts)", "Purchase link", "Contact link"],
+    ["Price", "Price (PKR) — 0 for free"], ["Purchase / contact HTTPS link (optional)", "Purchase / contact HTTPS link (required for paid prompts)", "Purchase link", "Contact link"],
     ["Output image / video Google Drive links — one per line (up to 6)", "Google Drive links", "Google Drive URL", "Output images", "Image URL", "Upload output images/videos"],
   ];
   return PROMPT_EXCEL_HEADERS.map((label, index) => {
@@ -51,7 +51,7 @@ export function createPromptWorkbook(prompts: Pick<Prompt, "title" | "descriptio
     ["Fill the Prompts sheet; one prompt per row. Keep the column headings unchanged."],
     [`Import up to ${MAX_PROMPT_IMPORT_ROWS} rows at once. Maximum file size: 2 MB; large prompt text may require smaller batches.`],
     ["Required: Title, Description, Category, AI Model, Prompt Template, Price (PKR), Drive URL 1."],
-    ["Use 0 for free prompts. Paid prompts require a positive PKR price and an HTTPS Purchase URL."],
+    ["Use 0 for free prompts. Paid prompts require a positive PKR price. Purchase URL is optional; if supplied, use HTTPS."],
     ["Use {{BusinessName}}, {{TargetAudience}}, etc. in Prompt Template to create fillable fields."],
     ["Upload output images/videos to Google Drive and set sharing to Anyone with the link."],
     ["Paste one Google Drive file link in each Drive URL column (up to 6). Folder links are not supported."],

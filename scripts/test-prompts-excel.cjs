@@ -71,7 +71,7 @@ test('empty template does not accidentally import the example sheet', () => {
   assert.match(result.issues[0].message, /between 1 and 100/);
 });
 test('validation preserves Excel row numbers and rejects the whole batch', () => {
-  const workbook = createPromptWorkbook([valid, { ...valid, title: 'Second prompt', price: 50 }]);
+  const workbook = createPromptWorkbook([valid, { ...valid, title: 'Second prompt', price: 50, purchase_url: 'http://example.com' }]);
   const result = readPromptWorkbook(bytes(workbook));
   assert.equal(result.rows.length, 0);
   assert.ok(result.issues.some((issue) => issue.row === 3 && /purchase/.test(issue.message)));
@@ -176,7 +176,7 @@ test('correction preview retains invalid and missing values without making them 
   assert.equal(parsed.drafts[0].title, invalid.title);
   assert.equal(parsed.drafts[0].category, '');
   assert.ok(parsed.issues.some(i => /description/.test(i.message)));
-  assert.ok(parsed.issues.some(i => /purchase_url/.test(i.message)));
+  assert.ok(!parsed.issues.some(i => /purchase_url/.test(i.message)));
   assert.throws(() => parsePromptImportPayload(JSON.stringify(parsed.drafts)), /Row 2/);
   assert.deepEqual(parsePromptImportPayload(JSON.stringify([valid])), [valid]);
 });
@@ -217,4 +217,15 @@ test('admin can edit an existing prompt while preserving its ownership', async (
   assert.equal(updates[0].payload.contributor_id, undefined);
   const denied = actionMocks({ isAdmin: false });
   assert.equal((await loadTs('app/admin/prompts/actions.ts', denied.mocks).managePrompt(form)).ok, false);
+});
+
+test('paid Excel rows without a purchase URL pass preview and server import', async () => {
+  const paid = { ...valid, price: 1000 };
+  const result = readPromptWorkbook(bytes(createPromptWorkbook([paid])));
+  assert.deepEqual(result.issues, []);
+  const allowed = actionMocks();
+  const response = await loadTs('app/admin/prompts/actions.ts', allowed.mocks).importAdminPrompts(JSON.stringify(result.rows), 'pending');
+  assert.equal(response.ok, true);
+  assert.equal(allowed.inserts[0][0].purchase_url, '');
+  assert.equal(allowed.inserts[0][0].price, 1000);
 });

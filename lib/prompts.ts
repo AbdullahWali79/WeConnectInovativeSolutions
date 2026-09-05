@@ -29,8 +29,8 @@ export const promptSchema = z.object({
   template: z.string().trim().min(20).max(30000),
   media_urls: z.array(z.string().max(500).refine((url) => Boolean(drivePreview(url)), "Use a Google Drive file sharing link.")).min(1).max(6),
   price: z.coerce.number().finite().min(0).max(1000000),
-  purchase_url: z.string().trim().max(1000).refine((value) => { if (!value) return true; try { return new URL(value).protocol === "https:"; } catch { return false; } }, "Use an HTTPS purchase or contact link."),
-}).refine((value) => value.price === 0 || Boolean(value.purchase_url), { message: "Paid prompts require a purchase/contact link.", path: ["purchase_url"] });
+  purchase_url: z.string().trim().max(1000).refine((value) => { if (!value) return true; try { return new URL(value).protocol === "https:"; } catch { return false; } }, "Use an HTTPS purchase or contact link.").default(""),
+});
 
 export function promptInput(form: FormData) {
   return promptSchema.parse({ ...Object.fromEntries(form), media_urls: String(form.get("media_urls") ?? "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean) });
