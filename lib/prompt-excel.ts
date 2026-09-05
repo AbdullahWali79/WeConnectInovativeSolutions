@@ -4,7 +4,7 @@ import { MAX_PROMPT_IMPORT_BYTES, MAX_PROMPT_IMPORT_ROWS, validatePromptImport, 
 
 export const PROMPT_EXCEL_HEADERS = ["Title", "Description", "Category", "AI Model", "Prompt Template", "Price (PKR)", "Purchase URL", "Drive URL 1", "Drive URL 2", "Drive URL 3", "Drive URL 4", "Drive URL 5", "Drive URL 6"];
 export const MAX_PROMPT_EXCEL_FILE_BYTES = 2 * 1024 * 1024;
-export type PromptExcelSheet = { name: string; headers: string[] };
+export type PromptExcelSheet = { name: string; headers: string[]; hasData: boolean };
 export const PROMPT_REQUIRED_COLUMNS = [0, 1, 2, 3, 4, 7];
 
 export function suggestPromptColumns(headers: string[]) {
@@ -17,19 +17,23 @@ export function suggestPromptColumns(headers: string[]) {
   ];
   return PROMPT_EXCEL_HEADERS.map((label, index) => {
     const candidates = [label, ...(aliases[index] ?? [])].map(normalize);
+    if (index >= 7) {
+      const number = index - 6;
+      candidates.push(...[`Output Image ${number}`, `Output Image 0${number}`, `Output Image ${number} Optional`, `Output Image 0${number} Optional`, ...(index === 7 ? ["Upload Output Images / Videos"] : [])].map(normalize));
+    }
     return headers.findIndex((header) => candidates.includes(normalize(header)));
   });
 }
 
 export function inspectPromptWorkbook(bytes: ArrayBuffer): PromptExcelSheet[] {
   if (bytes.byteLength > MAX_PROMPT_EXCEL_FILE_BYTES) throw new Error("Excel file must be 2 MB or smaller.");
-  const workbook = XLSX.read(bytes, { type: "array", sheetRows: 1 });
+  const workbook = XLSX.read(bytes, { type: "array", sheetRows: MAX_PROMPT_IMPORT_ROWS + 2 });
   return workbook.SheetNames.filter((name) => name !== "Instructions" && name !== "Example (do not import)").map((name) => {
     const sheet = workbook.Sheets[name];
     const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
     if (range.e.c > 99) throw new Error("Use a sheet with at most 100 columns.");
     const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, defval: "", range: 0 });
-    return { name, headers: (rows[0] ?? []).map((value) => String(value).trim()) };
+    return { name, headers: (rows[0] ?? []).map((value) => String(value).trim()), hasData: rows.slice(1).some((row) => row.some((value) => String(value).trim() !== "")) };
   });
 }
 
@@ -67,7 +71,7 @@ export function createPromptWorkbook(prompts: Pick<Prompt, "title" | "descriptio
   return workbook;
 }
 
-export function readPromptWorkbook(bytes: ArrayBuffer, selection?: { sheetName: string; columns: number[] }) {
+export function readPromptWorkbook(bytes: ArrayBuffer, selection?: { sheetName: string; columns: number[]; allowCorrections?: boolean }) {
   if (bytes.byteLength > MAX_PROMPT_EXCEL_FILE_BYTES) throw new Error("Excel file must be 2 MB or smaller.");
   const workbook = XLSX.read(bytes, { type: "array", sheetRows: MAX_PROMPT_IMPORT_ROWS + 2, cellFormula: true });
   const sheet = workbook.Sheets[selection?.sheetName ?? "Prompts"];
@@ -79,7 +83,7 @@ export function readPromptWorkbook(bytes: ArrayBuffer, selection?: { sheetName: 
   const columns = selection?.columns ?? PROMPT_EXCEL_HEADERS.map((_, index) => index);
   if (columns.length !== PROMPT_EXCEL_HEADERS.length || columns.some((index) => !Number.isInteger(index) || index < -1 || index > range.e.c)) throw new Error("Invalid column selection.");
   const missing = PROMPT_REQUIRED_COLUMNS.filter((index) => columns[index] < 0);
-  if (missing.length) throw new Error(`Match the required columns: ${missing.map((index) => PROMPT_EXCEL_HEADERS[index]).join(", ")}.`);
+  if (missing.length && !selection?.allowCorrections) throw new Error(`Match the required columns: ${missing.map((index) => PROMPT_EXCEL_HEADERS[index]).join(", ")}.`);
   const selected = columns.filter((index) => index >= 0);
   if (new Set(selected).size !== selected.length) throw new Error("Choose a different source column for each prompt field.");
   for (const [address, cell] of Object.entries(sheet)) {
@@ -91,17 +95,20 @@ export function readPromptWorkbook(bytes: ArrayBuffer, selection?: { sheetName: 
   const data = grid.slice(1);
   while (data.length && data[data.length - 1].every((value) => value === "")) data.pop();
   // Preserve internal blank rows so Excel row numbers remain accurate in validation errors.
-  const result = validatePromptImport(data.map((row) => {
+  const drafts = data.map((row) => {
     const value = (index: number) => columns[index] < 0 ? "" : row[columns[index]] ?? "";
     return {
-      title: value(0), description: value(1), category: value(2), model: value(3), template: value(4),
+      title: String(value(0)), description: String(value(1)), category: String(value(2)), model: String(value(3)), template: String(value(4)),
       price: columns[5] < 0 ? 0 : value(5) === "" ? undefined : value(5), purchase_url: value(6),
       media_urls: columns.slice(7).flatMap((_, index) => String(value(index + 7)).split(/\r?\n|,\s*(?=https:\/\/)/)).map((url) => url.trim()).filter(Boolean),
     };
-  }));
-  if (new TextEncoder().encode(JSON.stringify(result.rows)).length > MAX_PROMPT_IMPORT_BYTES) throw new Error("Prompt text is too large for one import. Split the file into smaller batches.");
-  return result;
+  });
+  const result = validatePromptImport(drafts);
+  if (new TextEncoder().encode(JSON.stringify(drafts)).length > MAX_PROMPT_IMPORT_BYTES) throw new Error("Prompt text is too large for one import. Split the file into smaller batches.");
+  return { ...result, drafts };
 }
+
+export type PromptImportDraft = ReturnType<typeof readPromptWorkbook>["drafts"][number];
 
 export function downloadPromptWorkbook(prompts?: Prompt[]) {
   XLSX.writeFile(createPromptWorkbook(prompts), prompts ? "weconnect-prompts-export.xlsx" : "weconnect-prompts-template.xlsx", { compression: true });

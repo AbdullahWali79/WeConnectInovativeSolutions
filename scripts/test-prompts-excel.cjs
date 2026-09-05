@@ -149,3 +149,72 @@ test('invalid rows do not reach the database and database failure is reported', 
   const result = await loadTs('app/admin/prompts/actions.ts', failure.mocks).importAdminPrompts(JSON.stringify([valid]), 'pending');
   assert.equal(result.ok, false); assert.match(result.message, /No prompts were saved/);
 });
+
+test('student response headings map both output images and identify the populated sheet', () => {
+  const workbook = createPromptWorkbook();
+  const headers = ['Timestamp', 'Title', 'Description', 'Category', 'AI Model', 'Prompt Template', 'Price (PKR)', 'Purchase URL', 'OutPut Image 01', 'OutPut Image 02 Optional', 'Import Status', 'Import Errors', 'Added to Prompts At'];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([headers, ['', valid.title, valid.description, 'Option 1', valid.model, valid.template, 0, '', valid.media_urls[0], valid.media_urls[0], 'Needs Fix', 'Old script error', '']]), 'Form Responses 1');
+  const file = bytes(workbook);
+  const sheets = inspectPromptWorkbook(file);
+  assert.equal(sheets.find(s => s.name === 'Prompts').hasData, false);
+  assert.equal(sheets.find(s => s.name === 'Form Responses 1').hasData, true);
+  const columns = suggestPromptColumns(headers);
+  assert.equal(columns[7], 8); assert.equal(columns[8], 9);
+  const parsed = readPromptWorkbook(file, { sheetName: 'Form Responses 1', columns });
+  assert.equal(parsed.rows.length, 1);
+  assert.equal(parsed.rows[0].media_urls.length, 2);
+  assert.equal(parsed.rows[0].status, undefined);
+});
+
+test('correction preview retains invalid and missing values without making them importable', () => {
+  const invalid = { ...valid, title: 'A'.repeat(435), description: 'Logo', price: 1000, media_urls: [] };
+  const file = bytes(createPromptWorkbook([invalid]));
+  const columns = Array.from({ length: 13 }, (_, i) => i);
+  columns[2] = -1;
+  const parsed = readPromptWorkbook(file, { sheetName: 'Prompts', columns, allowCorrections: true });
+  assert.equal(parsed.rows.length, 0);
+  assert.equal(parsed.drafts[0].title, invalid.title);
+  assert.equal(parsed.drafts[0].category, '');
+  assert.ok(parsed.issues.some(i => /description/.test(i.message)));
+  assert.ok(parsed.issues.some(i => /purchase_url/.test(i.message)));
+  assert.throws(() => parsePromptImportPayload(JSON.stringify(parsed.drafts)), /Row 2/);
+  assert.deepEqual(parsePromptImportPayload(JSON.stringify([valid])), [valid]);
+});
+
+if (process.env.PROMPT_TEST_WORKBOOK) test('provided student workbook retains all 13 submissions and maps image columns', () => {
+  const workbook = XLSX.readFile(process.env.PROMPT_TEST_WORKBOOK);
+  const file = bytes(workbook);
+  const selected = inspectPromptWorkbook(file).find(s => s.hasData);
+  assert.equal(selected.name, 'Form Responses 1');
+  const parsed = readPromptWorkbook(file, { sheetName: selected.name, columns: suggestPromptColumns(selected.headers), allowCorrections: true });
+  assert.equal(parsed.drafts.length, 13);
+  assert.ok(parsed.drafts.every(row => row.media_urls.length >= 1));
+  assert.equal(parsed.rows.length, 0);
+  assert.deepEqual([...new Set(parsed.issues.map(i => i.row))], [10, 11]);
+});
+
+test('admin can edit an existing prompt while preserving its ownership', async () => {
+  const updates = [];
+  const mocks = actionMocks().mocks;
+  mocks['@/lib/prompts-server'].promptDb = () => ({ from(table) {
+    assert.equal(table, 'prompt_library');
+    return { update(payload) { return { eq(field, id) {
+      updates.push({ payload, field, id });
+      return { select() { return { async single() { return { error: null }; } }; } };
+    } }; } };
+  } });
+  const form = new FormData();
+  for (const [key, value] of Object.entries(valid)) form.set(key, key === 'media_urls' ? value.join('\n') : String(value));
+  form.set('operation', 'save');
+  form.set('id', '123e4567-e89b-42d3-a456-426614174000');
+  form.set('status', 'pending');
+  form.set('admin_note', 'Corrected missing details');
+  const result = await loadTs('app/admin/prompts/actions.ts', mocks).managePrompt(form);
+  assert.equal(result.ok, true);
+  assert.equal(updates[0].id, form.get('id'));
+  assert.equal(updates[0].payload.title, valid.title);
+  assert.equal(updates[0].payload.status, 'pending');
+  assert.equal(updates[0].payload.contributor_id, undefined);
+  const denied = actionMocks({ isAdmin: false });
+  assert.equal((await loadTs('app/admin/prompts/actions.ts', denied.mocks).managePrompt(form)).ok, false);
+});

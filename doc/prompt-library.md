@@ -38,3 +38,5 @@ Verification after applying the migration:
 4. Enable direct publishing and verify the next submission is public; revoke and verify submission is denied.
 5. Publish a paid prompt with an external link; confirm its template is absent from public HTML/RSC responses and only the purchase link is exposed.
 6. Use a second contributor to confirm they cannot edit another contributor’s prompt. Confirm non-admin sessions cannot invoke admin actions and browser database clients cannot read the module tables.
+
+Excel student submissions: the importer selects a populated sheet when Prompts is empty, and maps OutPut Image 01 / OutPut Image 02 Optional to Drive URLs. Timestamp and old import-status/error columns are ignored. Admins can correct every row in the preview, including unmapped or missing fields, and validate edited submissions before importing. Invalid rows remain visible with their original Excel row numbers and block the batch. Preview edits are temporary until import; remapping or selecting another file resets them. Saved prompts remain editable under Prompts > Edit prompt. Contributor and server validation remain strict.
