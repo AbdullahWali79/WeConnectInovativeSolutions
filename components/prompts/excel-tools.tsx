@@ -25,7 +25,8 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
   const [result, setResult] = useState<PromptActionResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [filename, setFilename] = useState("");
-  const [status, setStatus] = useState("pending");
+  const [published, setPublished] = useState(false);
+  const saving = useRef(false);
 
   async function download(exportExisting: boolean) {
     setBusy(true); setResult(null);
@@ -37,7 +38,7 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
   }
 
   async function chooseFile(file?: File) {
-    setDrafts([]); setRows([]); setIssues([]); setResult(null); setSheets([]); fileBytes.current = null; setFilename(file?.name ?? "");
+    setDrafts([]); setRows([]); setIssues([]); setResult(null); setSheets([]); fileBytes.current = null; setFilename(file?.name ?? ""); setPublished(false);
     if (!file) return;
     setBusy(true);
     try {
@@ -81,15 +82,20 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
     finally { setBusy(false); }
   }
 
-  async function importRows() {
-    if (!rows.length || busy) return;
-    setBusy(true); setResult(null);
+  async function importRows(status: "pending" | "approved" = "pending") {
+    if (busy || saving.current) return;
+    setResult(null); setPublished(false);
+    const checked = validatePromptImport(admin ? drafts.map((draft) => ({ ...draft, media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean), price: draft.price === "" ? undefined : draft.price })) : rows);
+    setRows(checked.rows); setIssues(checked.issues);
+    if (checked.issues.length) return;
+    saving.current = true;
+    setBusy(true);
     try {
-      const response = admin ? await importAdminPrompts(JSON.stringify(rows), status) : await importContributorPrompts(JSON.stringify(rows));
+      const response = admin ? await importAdminPrompts(JSON.stringify(checked.rows), status) : await importContributorPrompts(JSON.stringify(checked.rows));
       setResult(response);
-      if (response.ok) { setDrafts([]); setRows([]); setFilename(""); setSheets([]); fileBytes.current = null; if (input.current) input.current.value = ""; router.refresh(); }
+      if (response.ok) { setPublished(admin && status === "approved"); setDrafts([]); setRows([]); setFilename(""); setSheets([]); fileBytes.current = null; if (input.current) input.current.value = ""; router.refresh(); }
     } catch { setResult({ ok: false, message: "The import response could not be received. Check your prompt list before retrying to avoid creating copies." }); }
-    finally { setBusy(false); }
+    finally { saving.current = false; setBusy(false); }
   }
 
   return <section className="space-y-5 rounded-2xl border border-outline-variant bg-surface p-6">
@@ -99,6 +105,15 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
       <button type="button" disabled={busy || !prompts.length} onClick={() => download(true)} className={buttonClass}>Export {admin ? "all" : "my"} prompts ({prompts.length})</button>
     </div>
     <label className="block text-sm font-semibold">Choose completed Excel file (.xlsx, max 2 MB)<input ref={input} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => void chooseFile(event.target.files?.[0])} className="mt-2 block w-full rounded-xl border border-outline-variant p-3 font-normal" /></label>
+    {admin && <div className="sticky top-2 z-10 space-y-2 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+      <div className="flex flex-wrap gap-3">
+        <button type="button" disabled={busy || !drafts.length} onClick={() => void importRows("pending")} className={buttonClass}>Save for review{drafts.length ? ` (${drafts.length})` : ""}</button>
+        <button type="button" disabled={busy || !drafts.length} onClick={() => void importRows("approved")} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Save &amp; Publish{drafts.length ? ` (${drafts.length})` : ""}</button>
+        <a href="/prompts" target="_blank" rel="noopener noreferrer" className={buttonClass}>View public prompt library</a>
+      </div>
+      <p className="text-sm text-on-surface-variant">{drafts.length ? "Save & Publish validates your latest edits, saves all submissions and makes them live on the public prompt library. Save for review keeps them hidden until published." : "Choose an Excel file to enable saving and publishing. Match columns and preview rows if needed."}</p>
+      {published && <p role="status" className="font-semibold text-primary">Prompts are now live. <a href="/prompts" target="_blank" rel="noopener noreferrer" className="underline">View published prompts</a></p>}
+    </div>}
     {sheets.length > 0 && <div className="space-y-4 rounded-xl border border-outline-variant p-4">
       <label className="block text-sm font-semibold">Response sheet<select disabled={busy} value={sheetName} onChange={(event) => void chooseSheet(event.target.value)} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3">{sheets.map((sheet) => <option key={sheet.name}>{sheet.name}</option>)}</select></label>
       <div><h3 className="font-semibold">Match your form columns</h3><p className="mt-1 text-sm text-on-surface-variant">Headings must be in the first row. Match each field to your form question. Timestamp, email and other unmapped columns are ignored. Drive URL 1 can contain multiple links separated by commas or new lines. An unmapped price defaults to free (PKR 0).</p></div>
@@ -124,8 +139,7 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
       }}>Validate edited submissions</button>
     </div>}
     {rows.length > 0 && <div className="space-y-4"><p className="font-semibold">Ready to import {rows.length} prompts from {filename}</p><div className="max-h-80 overflow-auto rounded-xl border border-outline-variant"><table className="w-full text-left text-sm"><thead className="bg-background"><tr><th className="p-3">Excel row</th><th className="p-3">Title</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Previews</th></tr></thead><tbody>{rows.map((row, index) => <tr key={index} className="border-t border-outline-variant"><td className="p-3">{index + 2}</td><td className="p-3">{row.title}</td><td className="p-3">{row.category}</td><td className="whitespace-nowrap p-3">{row.price ? `PKR ${row.price}` : "Free"}</td><td className="p-3">{row.media_urls.length}</td></tr>)}</tbody></table></div>
-      {admin && <label className="block max-w-sm text-sm font-semibold">Import status<select value={status} disabled={busy} onChange={(event) => setStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3"><option value="pending">Pending review</option><option value="approved">Publish immediately</option></select></label>}
-      <button type="button" disabled={busy} onClick={importRows} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Import {rows.length} new prompts</button>
+      {!admin && <button type="button" disabled={busy} onClick={() => void importRows()} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Import {rows.length} new prompts</button>}
     </div>}
     {busy && <p role="status" className="text-sm">Processing…</p>}
     {result && <p role={result.ok ? "status" : "alert"} className={`whitespace-pre-wrap rounded-xl border p-4 text-sm ${result.ok ? "border-primary text-primary" : "border-red-400 text-red-600"}`}>{result.message}</p>}

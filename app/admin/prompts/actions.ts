@@ -39,13 +39,13 @@ export async function managePrompt(form: FormData): Promise<PromptActionResult> 
       if (error) throw new Error("Could not review prompt.");
     } else if (operation === "save") {
       const input = promptInput(form);
-      const status = z.enum(["pending", "approved", "rejected"]).parse(form.get("status") ?? "approved");
+      const status = z.enum(["pending", "approved", "rejected"]).parse(form.get("publish_status") ?? form.get("status") ?? "approved");
       const payload = { ...input, status, admin_note: note };
       const query = id ? db.from("prompt_library").update(payload).eq("id", id) : db.from("prompt_library").insert(payload);
       const { error } = await query.select("id").single();
       if (error) throw new Error("Could not save prompt.");
     } else { throw new Error("Unknown action."); }
     revalidatePath("/prompts"); revalidatePath("/prompts/contribute"); revalidatePath("/admin/prompts");
-    return { ok: true, message: "Changes saved." };
+    return { ok: true, message: operation === "save" && (form.get("publish_status") ?? form.get("status") ?? "approved") === "approved" ? "Prompt saved and published. It is now live on /prompts." : "Changes saved." };
   } catch (error) { return { ok: false, message: error instanceof z.ZodError ? error.issues.map((i) => `${i.path.join(" ")}: ${i.message}`).join("; ") : error instanceof Error ? error.message : "Could not save changes." }; }
 }
