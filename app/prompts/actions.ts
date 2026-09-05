@@ -3,9 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { promptInput } from "@/lib/prompts";
+import { parsePromptImportPayload } from "@/lib/prompt-import";
 import { currentContributor, endPromptSession, limitPromptAction, passwordHash, passwordMatches, promptDb, startPromptSession } from "@/lib/prompts-server";
 
 export type PromptActionResult = { ok: boolean; message: string };
+export async function importContributorPrompts(payload: string): Promise<PromptActionResult> {
+  try {
+    const contributor = await currentContributor();
+    if (!contributor || contributor.status !== "approved") throw new Error("Admin approval is required before importing prompts.");
+    await limitPromptAction("bulk-submit", contributor.id, 5);
+    const rows = parsePromptImportPayload(payload);
+    // Ownership and publishing rights are derived from the session, never the spreadsheet.
+    const status = contributor.auto_publish ? "approved" : "pending";
+    const { error } = await promptDb().from("prompt_library").insert(rows.map((row) => ({ ...row, contributor_id: contributor.id, status, admin_note: "" })));
+    if (error) throw new Error("Import failed. No prompts were saved. Please retry.");
+    revalidatePath("/prompts"); revalidatePath("/prompts/contribute"); revalidatePath("/admin/prompts");
+    return { ok: true, message: `${rows.length} prompts ${contributor.auto_publish ? "published" : "sent to admin for review"}.` };
+  } catch (error) { return failure(error); }
+}
 function failure(error: unknown): PromptActionResult {
   return { ok: false, message: error instanceof z.ZodError ? error.issues.map((issue) => `${issue.path.join(" ")}: ${issue.message}`).join("; ") : error instanceof Error ? error.message : "Something went wrong. Please retry." };
 }

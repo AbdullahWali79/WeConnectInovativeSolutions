@@ -5,6 +5,20 @@ import { requireAdminOnly } from "@/lib/admin-access";
 import { promptDb } from "@/lib/prompts-server";
 import { promptInput } from "@/lib/prompts";
 import type { PromptActionResult } from "@/app/prompts/actions";
+import { parsePromptImportPayload } from "@/lib/prompt-import";
+
+export async function importAdminPrompts(payload: string, publicationStatus: string): Promise<PromptActionResult> {
+  try {
+    await requireAdminOnly();
+    const status = z.enum(["pending", "approved"]).parse(publicationStatus);
+    const rows = parsePromptImportPayload(payload);
+    // One INSERT is atomic: no rows are saved if any row fails.
+    const { error } = await promptDb().from("prompt_library").insert(rows.map((row) => ({ ...row, contributor_id: null, status, admin_note: "" })));
+    if (error) throw new Error("Import failed. No prompts were saved. Please retry.");
+    revalidatePath("/prompts"); revalidatePath("/admin/prompts");
+    return { ok: true, message: `${rows.length} prompts imported${status === "approved" ? " and published" : " as pending review"}.` };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "Could not import prompts." }; }
+}
 
 export async function managePrompt(form: FormData): Promise<PromptActionResult> {
   try {

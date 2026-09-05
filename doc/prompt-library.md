@@ -1,5 +1,17 @@
 # Prompt library
 
+## Excel bulk import and export
+
+Admin can add individual prompts with **Add prompt**, or use **Excel import & export** on `/admin/prompts`. Approved contributors have the same template/import controls on `/prompts/contribute` and can export only their own prompts. Admin export includes all prompts, including unpublished and paid template text; share the empty template when collecting submissions.
+
+Download the `.xlsx` template and fill the **Prompts** sheet (one prompt per row). The **Instructions** and **Example (do not import)** sheets explain the format and are ignored on import. Keep the headings unchanged. There are separate columns for six Google Drive preview URLs. Use `0` for free prompts; paid prompts require a price and HTTPS purchase link.
+
+Select the completed workbook to validate and preview up to 100 rows (2 MB maximum file size). All rows must be valid before importing; errors show Excel row numbers. Formula cells and duplicate title/template pairs within a file are rejected. Very large prompt text requires smaller batches. Exports use the same columns and can be imported again, but importing creates **new prompts**, not updates; reimporting a workbook creates copies. Split exports containing more than 100 prompts before importing.
+
+Admin chooses pending review or immediate publication. Contributor imports derive ownership and status from their verified session, applying the existing direct-publishing permission. Every batch is validated again on the server and saved in one atomic insert. No database migration is needed for Excel support.
+
+Tests: `node --test scripts/test-prompts.cjs scripts/test-prompts-excel.cjs` covers workbook round trips, invalid rows, safe text cells, limits, and server-action approval/ownership behavior with mocked database access.
+
 Apply `supabase/migrations/20260905000000_prompt_library.sql` to the same Supabase project before deploying. The existing Supabase URL and service role environment variables are used only on the server. No changes to course accounts, enrollments, auth triggers or existing tables are required.
 
 - `/prompts`: public search, category and pricing filters, newest/title sorting, Drive previews, variable generation and copying.
