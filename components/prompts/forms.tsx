@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { contributorAuth, contributorLogout, saveContributorPrompt, type PromptActionResult } from "@/app/prompts/actions";
 import { managePrompt } from "@/app/admin/prompts/actions";
 import { type Contributor, type Prompt } from "@/lib/prompts";
-import { PromptMedia } from "./library";
+import { PromptMedia, PromptLibrary } from "./library";
 import { PromptExcelTools } from "./excel-tools";
 
 const fieldClass = "mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 text-on-background";
@@ -30,6 +30,20 @@ export function PromptAdmin({ contributors, prompts }: { contributors: Contribut
   {tab === "excel" && <PromptExcelTools prompts={prompts} admin />}
   {tab === "create" && <section className="rounded-2xl border border-outline-variant bg-surface p-6"><PromptEditor admin /></section>}
   {tab === "requests" && <>{!contributors.filter((c) => filter === "all" || c.status === filter).length && <p>No contributors with this status.</p>}{contributors.filter((c) => filter === "all" || c.status === filter).map((c) => <section key={c.id} className="rounded-2xl border border-outline-variant bg-surface p-6"><h2 className="text-xl font-bold">{c.name} · {c.status}</h2><p className="my-2 text-sm text-on-surface-variant">{c.email}</p><p className="mb-5 whitespace-pre-wrap">{c.request_note}</p><ActionForm action={managePrompt}><input type="hidden" name="operation" value="contributor" /><input type="hidden" name="id" value={c.id} /><label className="block">Access<select name="status" defaultValue={c.status} className={fieldClass}><option value="pending">Pending</option><option value="approved">Allow submissions</option><option value="rejected">Reject / revoke access</option></select></label><label className="flex items-center gap-3"><input type="checkbox" name="auto_publish" defaultChecked={c.auto_publish} />Allow direct publishing without per-prompt approval</label><p className="text-sm text-on-surface-variant">Revoking access stops future submissions. Review already published prompts separately to hide them.</p><Field label="Admin note to contributor" name="admin_note" value={c.admin_note} multiline required={false} /><button className={buttonClass}>Save contributor access</button></ActionForm></section>)}</>}
-  {tab === "prompts" && <>{!prompts.filter((p) => filter === "all" || p.status === filter).length && <p>No prompts with this status.</p>}{prompts.filter((p) => filter === "all" || p.status === filter).map((p) => <details key={p.id} className="rounded-2xl border border-outline-variant bg-surface p-6"><summary className="cursor-pointer text-lg font-bold">Edit prompt: {p.title} · {p.status} · {Number(p.price) ? `PKR ${p.price}` : "Free"}</summary><p className="my-4 text-sm text-on-surface-variant">Contributor: {contributors.find((c) => c.id === p.contributor_id)?.email ?? "Admin"}</p><PromptMedia urls={p.media_urls} title={p.title} /><div className="mt-6"><PromptEditor admin prompt={p} /></div></details>)}</>}
+  {tab === "prompts" && <div className="-mx-4 md:mx-0"><PromptLibrary prompts={prompts.filter((p) => filter === "all" || p.status === filter)} renderAdminControls={(p) => (
+    <div className="mt-6 border-t border-outline-variant pt-6">
+      <h3 className="mb-4 text-lg font-bold">Admin actions</h3>
+      <p className="mb-4 text-sm text-on-surface-variant">Contributor: {contributors.find((c) => c.id === p.contributor_id)?.email ?? "Admin"} · Status: {p.status}</p>
+      <details className="rounded-xl border border-outline-variant bg-background p-4">
+        <summary className="cursor-pointer font-bold">Edit & Publish options</summary>
+        <div className="mt-4"><PromptEditor admin prompt={p} /></div>
+      </details>
+      <ActionForm action={managePrompt} className="mt-4">
+        <input type="hidden" name="operation" value="delete" />
+        <input type="hidden" name="id" value={p.id} />
+        <button className="text-red-600 font-bold hover:underline" onClick={(e) => { if (!window.confirm("Are you sure you want to delete this prompt?")) e.preventDefault(); }}>Delete prompt</button>
+      </ActionForm>
+    </div>
+  )} /></div>}
   </div>;
 }

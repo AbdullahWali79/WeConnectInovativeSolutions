@@ -44,6 +44,10 @@ export async function managePrompt(form: FormData): Promise<PromptActionResult> 
       const query = id ? db.from("prompt_library").update(payload).eq("id", id) : db.from("prompt_library").insert(payload);
       const { error } = await query.select("id").single();
       if (error) throw new Error("Could not save prompt.");
+    } else if (operation === "delete") {
+      if (!id) throw new Error("Missing prompt.");
+      const { error } = await db.from("prompt_library").delete().eq("id", id);
+      if (error) throw new Error("Could not delete prompt.");
     } else { throw new Error("Unknown action."); }
     revalidatePath("/prompts"); revalidatePath("/prompts/contribute"); revalidatePath("/admin/prompts");
     return { ok: true, message: operation === "save" && (form.get("publish_status") ?? form.get("status") ?? "approved") === "approved" ? "Prompt saved and published. It is now live on /prompts." : "Changes saved." };
