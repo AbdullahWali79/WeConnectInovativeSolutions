@@ -96,7 +96,7 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
       template: (draft.template || "Pending template...").trim().padEnd(20, ".").slice(0, 30000),
       media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean),
       price: draft.price === "" || isNaN(Number(draft.price)) ? undefined : draft.price,
-      purchase_url: draft.purchase_url?.startsWith("https://") ? draft.purchase_url.slice(0, 1000) : undefined
+      purchase_url: typeof draft.purchase_url === "string" && draft.purchase_url.startsWith("https://") ? draft.purchase_url.slice(0, 1000) : undefined
     })) : rows;
     
     const checked = validatePromptImport(payloadToValidate, admin);
@@ -169,7 +169,7 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
           template: (draft.template || "Pending template...").trim().padEnd(20, ".").slice(0, 30000),
           media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean),
           price: draft.price === '' || isNaN(Number(draft.price)) ? undefined : draft.price,
-          purchase_url: draft.purchase_url?.startsWith("https://") ? draft.purchase_url.slice(0, 1000) : undefined
+          purchase_url: typeof draft.purchase_url === "string" && draft.purchase_url.startsWith("https://") ? draft.purchase_url.slice(0, 1000) : undefined
         }));
         const checked = validatePromptImport(payloadToValidate, true);
         setRows(checked.rows); setIssues(checked.issues); setResult(null);
