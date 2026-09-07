@@ -5,3 +5,5 @@ export default async function AdminBlogsPage() {
   await requireAdminPage("/admin/blogs");
   return <BlogsManager />;
 }
+
+// Vercel rebuild trigger
