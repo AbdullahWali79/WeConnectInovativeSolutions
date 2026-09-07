@@ -1,243 +1,88 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createBlog, deleteBlog, getBlogs, updateBlog } from "@/app/admin/blogs/actions";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
-import { normalizeBlogTags, slugifyBlogTitle, type BlogInput } from "@/lib/blogs";
-import { normalizeImageUrl } from "@/lib/image-url";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Blog } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
-const defaultForm = {
-  title: "",
-  slug: "",
-  target_keyword: "",
-  excerpt: "",
-  content: "",
-  cover_image_url: "",
-  cover_image_github_path: "",
-  cover_image_github_url: "",
-  cover_image_cdn_url: "",
-  tags: "",
-  seo_title: "",
-  seo_description: "",
-  display_order: "1",
-  published_at: "",
-  published: false,
-  featured: false,
-};
 
 export function BlogsManager() {
+  const supabase = createSupabaseBrowserClient();
   const [rows, setRows] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(defaultForm);
-  const [slugEdited, setSlugEdited] = useState(false);
+  const [toast, setToast] = useState<ToastState>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [toast, setToast] = useState<ToastState>(null);
-  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
-  const coverPreviewUrl = useMemo(() => normalizeImageUrl(form.cover_image_url), [form.cover_image_url]);
 
-  const clearToast = useCallback(() => setToast(null), []);
-
-  const loadRows = useCallback(async () => {
-    setLoading(true);
-    try {
-      setRows(await getBlogs());
-    } catch (error) {
-      setToast({ type: "error", message: error instanceof Error ? error.message : "Blogs could not be loaded." });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.from("blogs").select("*").order("created_at", { ascending: false });
+    if (error) setToast({ type: "error", message: error.message });
+    else setRows(data ?? []);
+    setLoading(false);
+  }, [supabase]);
 
   useEffect(() => {
-    void loadRows();
-  }, [loadRows]);
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return rows.filter((row) => {
-      const matchesQuery = !term || `${row.title} ${row.slug} ${row.target_keyword ?? ""} ${(row.tags ?? []).join(" ")}`.toLowerCase().includes(term);
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "published" && row.published) ||
-        (statusFilter === "unpublished" && !row.published) ||
-        (statusFilter === "featured" && row.featured);
-      return matchesQuery && matchesStatus;
-    });
-  }, [rows, query, statusFilter]);
-
-  function resetForm() {
-    setEditingId(null);
-    setSlugEdited(false);
-    setForm(defaultForm);
-    setPreviewStatus("idle");
-  }
-
-  function startEdit(row: Blog) {
-    setEditingId(row.id);
-    setSlugEdited(true);
-    setPreviewStatus(row.cover_image_url ? "loading" : "idle");
-    setForm({
-      title: row.title,
-      slug: row.slug,
-      target_keyword: row.target_keyword ?? "",
-      excerpt: row.excerpt ?? "",
-      content: row.content,
-      cover_image_url: row.cover_image_url ?? "",
-      cover_image_github_path: row.cover_image_github_path ?? "",
-      cover_image_github_url: row.cover_image_github_url ?? "",
-      cover_image_cdn_url: row.cover_image_cdn_url ?? "",
-      tags: (row.tags ?? []).join(", "),
-      seo_title: row.seo_title ?? "",
-      seo_description: row.seo_description ?? "",
-      display_order: String(row.display_order ?? 1),
-      published_at: row.published_at ? row.published_at.slice(0, 16) : "",
-      published: row.published,
-      featured: row.featured,
-    });
-  }
-
-  function updateTitle(value: string) {
-    setForm((current) => ({
-      ...current,
-      title: value,
-      slug: slugEdited ? current.slug : slugifyBlogTitle(value),
-    }));
-  }
-
-  function updateSlug(value: string) {
-    setSlugEdited(true);
-    setForm((current) => ({ ...current, slug: slugifyBlogTitle(value) }));
-  }
-
-  function buildPayload(): BlogInput {
-    return {
-      title: form.title,
-      slug: form.slug,
-      target_keyword: form.target_keyword,
-      excerpt: form.excerpt,
-      content: form.content,
-      cover_image_url: form.cover_image_url,
-      cover_image_github_path: form.cover_image_github_path,
-      cover_image_github_url: form.cover_image_github_url,
-      cover_image_cdn_url: form.cover_image_cdn_url,
-      tags: normalizeBlogTags(form.tags),
-      seo_title: form.seo_title,
-      seo_description: form.seo_description,
-      display_order: Number(form.display_order),
-      published_at: form.published_at ? new Date(form.published_at).toISOString() : null,
-      published: form.published,
-      featured: form.featured,
-    };
-  }
-
-  async function saveRow(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    const result = editingId ? await updateBlog(editingId, buildPayload()) : await createBlog(buildPayload());
-    setSaving(false);
-
-    if (!result.ok) {
-      setToast({ type: "error", message: result.error ?? "Blog could not be saved." });
-      return;
-    }
-
-    setToast({ type: "success", message: editingId ? "Blog updated." : "Blog created." });
-    resetForm();
-    await loadRows();
-  }
-
-  async function toggleFlag(row: Blog, key: "published" | "featured") {
-    const result = await updateBlog(row.id, {
-      ...row,
-      [key]: !row[key],
-      published_at: key === "published" && !row.published && !row.published_at ? new Date().toISOString() : row.published_at,
-    });
-
-    if (!result.ok) {
-      setToast({ type: "error", message: result.error ?? "Blog could not be updated." });
-      return;
-    }
-
-    await loadRows();
-  }
+    return rows
+      .filter((row) => {
+        if (statusFilter === "published") return row.published;
+        if (statusFilter === "unpublished") return !row.published;
+        if (statusFilter === "featured") return row.featured;
+        return true;
+      })
+      .filter((row) => {
+        const q = query.trim().toLowerCase();
+        if (!q) return true;
+        return (
+          row.title.toLowerCase().includes(q) ||
+          row.slug.toLowerCase().includes(q) ||
+          (row.target_keyword ?? "").toLowerCase().includes(q) ||
+          (row.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+        );
+      });
+  }, [rows, statusFilter, query]);
 
   async function removeRow(id: string) {
-    if (!window.confirm("Delete this blog?")) return;
-    const result = await deleteBlog(id);
-    if (!result.ok) {
-      setToast({ type: "error", message: result.error ?? "Blog could not be deleted." });
-      return;
+    if (!confirm("Are you sure you want to delete this blog post? This action cannot be undone.")) return;
+    const { error } = await supabase.from("blogs").delete().eq("id", id);
+    if (error) setToast({ type: "error", message: error.message });
+    else {
+      setToast({ type: "success", message: "Blog deleted successfully." });
+      setRows((current) => current.filter((r) => r.id !== id));
     }
-    setToast({ type: "success", message: "Blog deleted." });
-    await loadRows();
+  }
+
+  async function toggleFlag(row: Blog, field: "published" | "featured") {
+    const next = !row[field];
+    setRows((current) => current.map((r) => (r.id === row.id ? { ...r, [field]: next } : r)));
+    const { error } = await supabase.from("blogs").update({ [field]: next }).eq("id", row.id);
+    if (error) {
+      setRows((current) => current.map((r) => (r.id === row.id ? { ...r, [field]: !next } : r)));
+      setToast({ type: "error", message: error.message });
+    }
   }
 
   if (loading) return <LoadingState label="Loading blogs..." />;
 
   return (
     <>
-      <Toast toast={toast} onClear={clearToast} />
+      <Toast toast={toast} onClear={() => setToast(null)} />
       <PageHeader
         eyebrow="Blogs"
         title="Manage blogs"
-        description="Create Markdown articles, control publishing, and curate featured content for the public blog."
-        action={<Link href="/blogs" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Blogs</Link>}
+        description="Create rich articles, control publishing, and curate featured content for the public blog."
+        action={<Link href="/admin/blogs/editor" className="wc-primary-btn text-sm"><Icon name="add" /> Add New Blog</Link>}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[460px_1fr]">
-        <form onSubmit={saveRow} className="wc-card space-y-4 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-bold text-on-surface">{editingId ? "Edit Blog" : "Add Blog"}</h2>
-            {editingId ? <button type="button" onClick={resetForm} className="wc-secondary-btn px-3 py-2 text-xs">Cancel</button> : null}
-          </div>
-
-          <div className="grid gap-3">
-            <input className="wc-input" placeholder="Title" value={form.title} onChange={(event) => updateTitle(event.target.value)} required />
-            <input className="wc-input" placeholder="Slug" value={form.slug} onChange={(event) => updateSlug(event.target.value)} required />
-            <input className="wc-input" placeholder="Target keyword" value={form.target_keyword} onChange={(event) => setForm((current) => ({ ...current, target_keyword: event.target.value }))} />
-            <textarea className="wc-input min-h-20" placeholder="Excerpt" value={form.excerpt} onChange={(event) => setForm((current) => ({ ...current, excerpt: event.target.value }))} />
-            <textarea className="wc-input min-h-64 font-mono text-sm" placeholder="# Markdown content" value={form.content} onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))} required />
-            <input className="wc-input" placeholder="Public image URL or Google Drive share link" value={form.cover_image_url} onChange={(event) => { setPreviewStatus(event.target.value.trim() ? "loading" : "idle"); setForm((current) => ({ ...current, cover_image_url: event.target.value, cover_image_github_path: "", cover_image_github_url: "", cover_image_cdn_url: "" })); }} />
-            <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low">
-              {coverPreviewUrl && previewStatus !== "error" ? <>
-                <div className="aspect-[16/9] bg-white">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={coverPreviewUrl} alt="Blog cover preview" className="h-full w-full object-cover" onLoad={() => setPreviewStatus("loaded")} onError={() => setPreviewStatus("error")} />
-                </div>
-                <p className={`flex items-center gap-2 border-t border-outline-variant px-3 py-2 text-xs font-bold ${previewStatus === "loaded" ? "text-emerald-700" : "text-on-surface-variant"}`}><Icon name={previewStatus === "loaded" ? "check_circle" : "progress_activity"} /> {previewStatus === "loaded" ? "Image preview loaded successfully" : "Loading image preview..."}</p>
-              </> : <div className="flex min-h-36 flex-col items-center justify-center gap-2 p-4 text-center text-on-surface-variant"><Icon name={previewStatus === "error" ? "broken_image" : "image"} className="text-3xl" /><p className="text-sm font-bold">{previewStatus === "error" ? "Image could not be previewed" : "Image preview will appear here"}</p><p className="text-xs">Google Drive access must be Anyone with the link - Viewer.</p></div>}
-            </div>
-            <input className="wc-input" placeholder="Tags (comma separated)" value={form.tags} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))} />
-            <input className="wc-input" placeholder="SEO title" value={form.seo_title} onChange={(event) => setForm((current) => ({ ...current, seo_title: event.target.value }))} />
-            <textarea className="wc-input min-h-20" maxLength={160} placeholder="SEO description (max 160 characters)" value={form.seo_description} onChange={(event) => setForm((current) => ({ ...current, seo_description: event.target.value }))} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input className="wc-input" type="number" placeholder="Display order" value={form.display_order} onChange={(event) => setForm((current) => ({ ...current, display_order: event.target.value }))} />
-              <input className="wc-input" type="datetime-local" value={form.published_at} onChange={(event) => setForm((current) => ({ ...current, published_at: event.target.value }))} />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-center gap-3 rounded-lg border border-outline-variant/60 bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface">
-                <input type="checkbox" checked={form.published} onChange={(event) => setForm((current) => ({ ...current, published: event.target.checked }))} />
-                Published
-              </label>
-              <label className="flex items-center gap-3 rounded-lg border border-outline-variant/60 bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface">
-                <input type="checkbox" checked={form.featured} onChange={(event) => setForm((current) => ({ ...current, featured: event.target.checked }))} />
-                Featured
-              </label>
-            </div>
-          </div>
-
-          <button disabled={saving} className="wc-primary-btn w-full">{saving ? "Saving..." : editingId ? "Update Blog" : "Create Blog"}</button>
-        </form>
-
+      <div className="mt-6">
         <section className="wc-card overflow-hidden">
           <div className="grid gap-3 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-[1fr_220px]">
             <input className="wc-input" placeholder="Search title, slug, keyword, or tag" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -285,7 +130,7 @@ export function BlogsManager() {
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           <Link href={`/blogs/${row.slug}`} className="rounded-lg bg-surface-container p-2 text-primary" title="View"><Icon name="visibility" /></Link>
-                          <button className="rounded-lg bg-surface-container p-2 text-primary" onClick={() => startEdit(row)} title="Edit"><Icon name="edit" /></button>
+                          <Link href={`/admin/blogs/editor?id=${row.id}`} className="rounded-lg bg-surface-container p-2 text-primary" title="Edit"><Icon name="edit" /></Link>
                           <button className="rounded-lg bg-error-container p-2 text-error" onClick={() => removeRow(row.id)} title="Delete"><Icon name="delete" /></button>
                         </div>
                       </td>
@@ -300,6 +145,3 @@ export function BlogsManager() {
     </>
   );
 }
-
-
-

@@ -41,6 +41,12 @@ function renderInline(value: string) {
 }
 
 export function renderMarkdownToHtml(markdown: string) {
+  const trimmed = markdown.trim();
+  // If the content comes from a WYSIWYG editor and starts with common HTML block tags, return it unmodified.
+  if (/^<p>|^<h[1-6]>|^<ul>|^<ol>|^<blockquote>|^<div/.test(trimmed)) {
+    return trimmed;
+  }
+
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const html: string[] = [];
   let paragraph: string[] = [];
