@@ -87,9 +87,27 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
   async function importRows(status: "pending" | "approved" = "pending") {
     if (busy || saving.current) return;
     setResult(null); setPublished(false);
-    const checked = validatePromptImport(admin ? drafts.map((draft) => ({ ...draft, media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean), price: draft.price === "" ? undefined : draft.price })) : rows);
+    const payloadToValidate = admin ? drafts.map((draft) => ({
+      ...draft,
+      title: (draft.title || "Untitled Prompt").trim().padEnd(3, ".").slice(0, 140),
+      description: (draft.description || "Pending description...").trim().padEnd(10, ".").slice(0, 2000),
+      category: (draft.category || "Uncategorized").trim().padEnd(2, ".").slice(0, 60),
+      model: (draft.model || "Unknown model").trim().padEnd(2, ".").slice(0, 80),
+      template: (draft.template || "Pending template...").trim().padEnd(20, ".").slice(0, 30000),
+      media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean),
+      price: draft.price === "" || isNaN(Number(draft.price)) ? undefined : draft.price,
+      purchase_url: draft.purchase_url?.startsWith("https://") ? draft.purchase_url.slice(0, 1000) : undefined
+    })) : rows;
+    
+    const checked = validatePromptImport(payloadToValidate, admin);
     setRows(checked.rows); setIssues(checked.issues);
-    if (checked.issues.length) return;
+    
+    if (checked.issues.length > 0 && !admin) return;
+    if (checked.rows.length === 0) {
+      setResult({ ok: false, message: "No valid prompts to import. Check the issues above." });
+      return;
+    }
+    
     saving.current = true;
     setBusy(true);
     try {
@@ -142,7 +160,18 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
         </div>
       </details>)}
       <button type="button" disabled={busy} className={buttonClass} onClick={() => {
-        const checked = validatePromptImport(drafts.map((draft) => ({ ...draft, media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean), price: draft.price === '' ? undefined : draft.price })));
+        const payloadToValidate = drafts.map((draft) => ({
+          ...draft,
+          title: (draft.title || "Untitled Prompt").trim().padEnd(3, ".").slice(0, 140),
+          description: (draft.description || "Pending description...").trim().padEnd(10, ".").slice(0, 2000),
+          category: (draft.category || "Uncategorized").trim().padEnd(2, ".").slice(0, 60),
+          model: (draft.model || "Unknown model").trim().padEnd(2, ".").slice(0, 80),
+          template: (draft.template || "Pending template...").trim().padEnd(20, ".").slice(0, 30000),
+          media_urls: draft.media_urls.map((url) => url.trim()).filter(Boolean),
+          price: draft.price === '' || isNaN(Number(draft.price)) ? undefined : draft.price,
+          purchase_url: draft.purchase_url?.startsWith("https://") ? draft.purchase_url.slice(0, 1000) : undefined
+        }));
+        const checked = validatePromptImport(payloadToValidate, true);
         setRows(checked.rows); setIssues(checked.issues); setResult(null);
       }}>Validate edited submissions</button>
     </div>}

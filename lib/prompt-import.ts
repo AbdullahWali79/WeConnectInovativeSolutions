@@ -7,7 +7,7 @@ export const MAX_PROMPT_IMPORT_BYTES = 400_000;
 export type PromptImportRow = z.infer<typeof promptSchema>;
 export type PromptImportIssue = { row: number; message: string };
 
-export function validatePromptImport(input: unknown): { rows: PromptImportRow[]; issues: PromptImportIssue[] } {
+export function validatePromptImport(input: unknown, skipInvalid: boolean = false): { rows: PromptImportRow[]; issues: PromptImportIssue[] } {
   if (!Array.isArray(input) || input.length < 1 || input.length > MAX_PROMPT_IMPORT_ROWS) {
     return { rows: [], issues: [{ row: 0, message: `Import between 1 and ${MAX_PROMPT_IMPORT_ROWS} prompts at a time.` }] };
   }
@@ -21,11 +21,14 @@ export function validatePromptImport(input: unknown): { rows: PromptImportRow[];
       return;
     }
     const signature = JSON.stringify([result.data.title.toLowerCase(), result.data.template]);
-    if (seen.has(signature)) issues.push({ row: index + 2, message: "Duplicate title and template in this file. Remove the duplicate row." });
+    if (seen.has(signature)) {
+      issues.push({ row: index + 2, message: "Duplicate title and template in this file. Remove the duplicate row." });
+      return;
+    }
     seen.add(signature);
     rows.push(result.data);
   });
-  return { rows: issues.length ? [] : rows, issues };
+  return { rows: (issues.length > 0 && !skipInvalid) ? [] : rows, issues };
 }
 
 export function parsePromptImportPayload(payload: string) {
