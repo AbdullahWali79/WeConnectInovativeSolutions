@@ -3,13 +3,23 @@ import { z } from "zod";
 export type Contributor = { id: string; name: string; email: string; request_note: string; status: "pending" | "approved" | "rejected"; auto_publish: boolean; admin_note: string; created_at: string };
 export type Prompt = { id: string; contributor_id: string | null; title: string; description: string; category: string; model: string; template: string; media_urls: string[]; price: number; purchase_url: string; status: "pending" | "approved" | "rejected"; admin_note: string; created_at: string };
 
-export function drivePreview(url: string) {
+export function driveId(url: string) {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" || parsed.hostname !== "drive.google.com") return null;
     const id = parsed.pathname.match(/^\/file\/d\/([\w-]+)/)?.[1] ?? parsed.searchParams.get("id");
-    return id && /^[\w-]{10,150}$/.test(id) ? `https://drive.google.com/file/d/${id}/preview` : null;
+    return id && /^[\w-]{10,150}$/.test(id) ? id : null;
   } catch { return null; }
+}
+
+export function drivePreview(url: string) {
+  const id = driveId(url);
+  return id ? `https://drive.google.com/file/d/${id}/preview` : null;
+}
+
+export function driveThumbnail(url: string) {
+  const id = driveId(url);
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w800` : null;
 }
 
 export function promptVariables(template: string) {
