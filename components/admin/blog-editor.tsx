@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
 import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
 import { Toast, type ToastState } from "@/components/toast";
@@ -13,7 +13,7 @@ import type { Database } from "@/lib/supabase/types";
 type BlogInput = Database["public"]["Tables"]["blogs"]["Insert"];
 
 // Dynamic import for React Quill to avoid SSR issues
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false, loading: () => <div className="min-h-[500px] w-full animate-pulse rounded-xl bg-surface-container-low" /> });
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false, loading: () => <div className="min-h-[500px] w-full animate-pulse rounded-xl bg-surface-container-low" /> });
 
 const QUILL_MODULES = {
   toolbar: [

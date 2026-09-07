@@ -25,6 +25,7 @@ tsconfig.tsbuildinfo
 # Misc
 .DS_Store
 next-env.d.ts.zip
+*.zip
 build-output.log
 build.log
 stderr.log
