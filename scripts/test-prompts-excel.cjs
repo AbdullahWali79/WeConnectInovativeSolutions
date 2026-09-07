@@ -17,6 +17,7 @@ function loadTs(relative, mocks = {}, cache = new Map()) {
   const originalRequire = loaded.require.bind(loaded);
   loaded.require = (name) => {
     if (Object.hasOwn(mocks, name)) return mocks[name];
+    if (name === './prompts-server' && mocks['@/lib/prompts-server']) return mocks['@/lib/prompts-server'];
     if (name.startsWith('.') || name.startsWith('@/')) {
       const local = name.startsWith('@/') ? path.resolve(__dirname, '..', name.slice(2)) : path.resolve(path.dirname(filename), name);
       if (fs.existsSync(`${local}.ts`)) return loadTs(`${local}.ts`, mocks, cache);
@@ -57,7 +58,7 @@ test('manual column mapping supports custom questions and rejects missing or reu
 });
 
 test('Excel export/import round-trip preserves variables, Unicode, newlines, media and paid prices', () => {
-  const paid = { ...valid, title: 'Premium prompt', price: 1250.5, purchase_url: 'https://example.com/buy', media_urls: [...valid.media_urls, 'https://drive.google.com/file/d/abcdefghijk456/view'] };
+  const paid = { ...valid, title: 'Premium prompt', template: 'Different complete text for {{BusinessName}} and {{Offer}}.', price: 1250.5, purchase_url: 'https://example.com/buy', media_urls: ['https://drive.google.com/file/d/abcdefghijk456/view'] };
   const result = readPromptWorkbook(bytes(createPromptWorkbook([valid, paid])));
   assert.deepEqual(result.issues, []);
   assert.deepEqual(result.rows, [valid, paid]);
@@ -101,14 +102,14 @@ test('server validation rejects invalid data and strips spreadsheet permission/o
   assert.deepEqual(parsePromptImportPayload(JSON.stringify([{ ...valid, status: 'approved', contributor_id: 'someone-else', admin_note: 'override' }])), [valid]);
 });
 
-function actionMocks({ contributor = null, isAdmin = true, dbError = null } = {}) {
+function actionMocks({ contributor = null, isAdmin = true, dbError = null, existing = [], readError = null } = {}) {
   const inserts = [];
   const mocks = {
     'next/cache': { revalidatePath() {} },
     '@/lib/admin-access': { async requireAdminOnly() { if (!isAdmin) throw new Error('Unauthorized'); } },
     '@/lib/prompts-server': {
       async currentContributor() { return contributor; }, async limitPromptAction() {},
-      promptDb() { return { from() { return { async insert(rows) { inserts.push(rows); return { error: dbError }; } }; } }; },
+      promptDb() { return { from() { return { select() { return { order() { return { async range(start, end) { return { data: existing.slice(start, end + 1), error: readError }; } }; } }; }, async insert(rows) { inserts.push(rows); return { error: dbError }; } }; } }; },
     },
   };
   return { mocks, inserts };
@@ -120,7 +121,7 @@ test('admin import checks authorization before writing and inserts valid rows in
   assert.equal(denied.inserts.length, 0);
   const allowed = actionMocks();
   const actions = loadTs('app/admin/prompts/actions.ts', allowed.mocks);
-  assert.equal((await actions.importAdminPrompts(JSON.stringify([valid, { ...valid, title: 'Second prompt' }]), 'approved')).ok, true);
+  assert.equal((await actions.importAdminPrompts(JSON.stringify([valid, { ...valid, title: 'Second prompt', template: 'Another full prompt for {{BusinessName}}.', media_urls: ['https://drive.google.com/file/d/abcdefghijk789/view'] }]), 'approved')).ok, true);
   assert.equal(allowed.inserts.length, 1);
   assert.equal(allowed.inserts[0].length, 2);
   assert.equal(allowed.inserts[0][0].contributor_id, null);
@@ -277,4 +278,52 @@ test('prompt submission embeds the supplied responder form and rejects arbitrary
   for (const url of ['https://evil.test/forms/d/e/abc/viewform', 'https://docs.google.com.evil.test/forms/d/e/abc/viewform', 'http://docs.google.com/forms/d/e/abc/viewform', 'https://docs.google.com/forms/d/e/abc/edit', 'javascript:alert(1)']) {
     assert.throws(() => promptSubmissionEmbedUrl(url));
   }
+});
+
+
+test('duplicate rules match title case, Drive identity, and full text but not shared variables', () => {
+  const { createPromptDuplicateIndex } = loadTs('lib/prompt-import.ts');
+  const index = createPromptDuplicateIndex([valid]);
+  const fresh = { ...valid, title: 'Another title', template: 'A different task using {{BusinessName}} and {{Offer}}.', media_urls: [] };
+  assert.equal(index.reason(fresh), null);
+  assert.match(index.reason({ ...fresh, title: '  CAMPAIGN PROMPT  ' }), /title/);
+  assert.match(index.reason({ ...fresh, media_urls: ['https://drive.google.com/open?id=abcdefghijk123'] }), /Drive/);
+  assert.match(index.reason({ ...fresh, template: valid.template.replace(/\n/g, '\r\n') }), /variables/);
+  assert.equal(index.reason({ ...fresh, template: valid.template.replace('BusinessName', 'CustomerName') }), null);
+  const { validatePromptImport } = loadTs('lib/prompt-import.ts');
+  for (const row of [ { ...fresh, title: valid.title.toUpperCase() }, { ...fresh, media_urls: valid.media_urls }, { ...fresh, template: valid.template } ]) {
+    const result = validatePromptImport([valid, row], true);
+    assert.equal(result.rows.length, 1);
+    assert.equal(result.issues[0].row, 3);
+    assert.match(result.issues[0].message, /Duplicate/);
+  }
+});
+
+test('imports skip saved matches across pages and allow different prompts with shared variables', async () => {
+  const existing = Array.from({ length: 500 }, (_, i) => ({ ...valid, title: `Old ${i}`, template: `Old text ${i}`, media_urls: [] }));
+  existing.push(valid);
+  const unique = { ...valid, title: 'Unique title', template: 'A different task using {{BusinessName}} and {{Offer}}.', media_urls: [] };
+  const duplicate = { ...valid, title: valid.title.toUpperCase(), template: 'Changed text but still a duplicate title.', media_urls: [] };
+  const allowed = actionMocks({ existing });
+  const actions = loadTs('app/admin/prompts/actions.ts', allowed.mocks);
+  const result = await actions.importAdminPrompts(JSON.stringify([duplicate, unique]), 'approved');
+  assert.equal(result.ok, true);
+  assert.match(result.message, /1 prompts imported.*1 duplicates skipped/);
+  assert.deepEqual(allowed.inserts[0].map(row => row.title), ['Unique title']);
+});
+
+test('repeat upload skips all saved rows without writing; failed lookup prevents import', async () => {
+  for (const admin of [true, false]) {
+    const allowed = actionMocks({ existing: [valid], contributor: { id: 'owner', status: 'approved', auto_publish: true } });
+    const actions = loadTs(admin ? 'app/admin/prompts/actions.ts' : 'app/prompts/actions.ts', allowed.mocks);
+    const result = admin ? await actions.importAdminPrompts(JSON.stringify([valid]), 'approved') : await actions.importContributorPrompts(JSON.stringify([valid]));
+    assert.equal(result.ok, true);
+    assert.match(result.message, /0 prompts imported. 1 duplicates skipped/);
+    assert.equal(allowed.inserts.length, 0);
+  }
+  const failed = actionMocks({ readError: { message: 'unavailable' } });
+  const result = await loadTs('app/admin/prompts/actions.ts', failed.mocks).importAdminPrompts(JSON.stringify([valid]), 'approved');
+  assert.equal(result.ok, false);
+  assert.match(result.message, /Could not check existing prompts/);
+  assert.equal(failed.inserts.length, 0);
 });

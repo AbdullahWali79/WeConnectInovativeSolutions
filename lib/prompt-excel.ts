@@ -55,7 +55,7 @@ export function createPromptWorkbook(prompts: Pick<Prompt, "title" | "descriptio
     ["Use {{BusinessName}}, {{TargetAudience}}, etc. in Prompt Template to create fillable fields."],
     ["Upload output images/videos to Google Drive and set sharing to Anyone with the link."],
     ["Paste one Google Drive file link in each Drive URL column (up to 6). Folder links are not supported."],
-    ["Import creates NEW prompts. It does not update existing prompts. Reimporting a file creates copies."],
+    ["Import creates NEW prompts and skips existing matches: title (case-insensitive), image / Drive file, or complete prompt text including variables. Shared variable names alone are not duplicates."],
     ["Contributors need approved access. Their prompts follow the admin review/direct-publishing setting."],
     ["Admin chooses publication status on the import screen. Excel cannot change contributor permissions or ownership."],
     ["All rows must be valid before anything is saved. Correct errors and choose the file again."],

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { promptInput } from "@/lib/prompts";
 import { parsePromptImportPayload } from "@/lib/prompt-import";
+import { filterExistingPromptImports } from "@/lib/prompt-import-server";
 import { currentContributor, endPromptSession, limitPromptAction, passwordHash, passwordMatches, promptDb, startPromptSession } from "@/lib/prompts-server";
 
 export type PromptActionResult = { ok: boolean; message: string };
@@ -12,13 +13,15 @@ export async function importContributorPrompts(payload: string): Promise<PromptA
     const contributor = await currentContributor();
     if (!contributor || contributor.status !== "approved") throw new Error("Admin approval is required before importing prompts.");
     await limitPromptAction("bulk-submit", contributor.id, 5);
-    const rows = parsePromptImportPayload(payload);
+    const checked = await filterExistingPromptImports(parsePromptImportPayload(payload));
+    const { rows, skipped } = checked;
+    if (!rows.length) return { ok: true, message: `0 prompts imported. ${skipped} duplicates skipped.` };
     // Ownership and publishing rights are derived from the session, never the spreadsheet.
     const status = contributor.auto_publish ? "approved" : "pending";
     const { error } = await promptDb().from("prompt_library").insert(rows.map((row) => ({ ...row, contributor_id: contributor.id, status, admin_note: "" })));
     if (error) throw new Error("Import failed. No prompts were saved. Please retry.");
     revalidatePath("/prompts"); revalidatePath("/prompts/contribute"); revalidatePath("/admin/prompts");
-    return { ok: true, message: `${rows.length} prompts ${contributor.auto_publish ? "published" : "sent to admin for review"}.` };
+    return { ok: true, message: `${rows.length} prompts ${contributor.auto_publish ? "published" : "sent to admin for review"}. ${skipped} duplicates skipped.` };
   } catch (error) { return failure(error); }
 }
 function failure(error: unknown): PromptActionResult {

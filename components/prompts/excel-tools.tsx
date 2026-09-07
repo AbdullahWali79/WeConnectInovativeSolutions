@@ -112,8 +112,9 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false, 
     setBusy(true);
     try {
       const response = admin ? await importAdminPrompts(JSON.stringify(checked.rows), status) : await importContributorPrompts(JSON.stringify(checked.rows));
-      setResult(response);
-      if (response.ok) { setPublished(admin && status === "approved"); setDrafts([]); setRows([]); setFilename(""); setSheets([]); fileBytes.current = null; if (input.current) input.current.value = ""; router.refresh(); }
+      const fileDuplicates = checked.issues.filter((issue) => issue.message.startsWith("Duplicate ")).length;
+      setResult(fileDuplicates ? { ...response, message: `${response.message} ${fileDuplicates} duplicate rows skipped within this file.` } : response);
+      if (response.ok) { setPublished(admin && status === "approved" && !response.message.startsWith("0 prompts imported")); setDrafts([]); setRows([]); setFilename(""); setSheets([]); fileBytes.current = null; if (input.current) input.current.value = ""; router.refresh(); }
     } catch { setResult({ ok: false, message: "The import response could not be received. Check your prompt list before retrying to avoid creating copies." }); }
     finally { saving.current = false; setBusy(false); }
   }
@@ -133,7 +134,7 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false, 
         <a href="/prompts" target="_blank" rel="noopener noreferrer" className={buttonClass}>View public prompt library</a>
         {admin && onManagePrompts && <button type="button" onClick={onManagePrompts} className="rounded-full border border-outline-variant px-5 py-3 font-semibold hover:bg-surface-variant">Manage all prompts →</button>}
       </div>
-      <p className="text-sm text-on-surface-variant">{drafts.length ? "Save & Publish validates your latest edits, saves all submissions and makes them live on the public prompt library. Save for review keeps them hidden until published." : "Choose an Excel file to enable saving and publishing. Match columns and preview rows if needed."}</p>
+      <p className="text-sm text-on-surface-variant">{drafts.length ? "Save & Publish validates your latest edits, saves valid new submissions and makes them live on the public prompt library. Save for review keeps them hidden until published." : "Choose an Excel file to enable saving and publishing. Match columns and preview rows if needed."}</p>
       {published && <p role="status" className="font-semibold text-primary">Prompts are now live. <a href="/prompts" target="_blank" rel="noopener noreferrer" className="underline">View published prompts</a></p>}
     </div>}
     {sheets.length > 0 && <div className="space-y-4 rounded-xl border border-outline-variant p-4">
@@ -142,7 +143,7 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false, 
       <div className="grid gap-3 md:grid-cols-2">{fields.map((field, index) => <label key={field.label} className="block text-sm font-semibold">{field.label}{field.required ? " *" : ""}<select disabled={busy} value={columns[index] ?? -1} onChange={(event) => { const next = [...columns]; next[index] = Number(event.target.value); setColumns(next); setDrafts([]); setRows([]); setIssues([]); setResult(null); }} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 font-normal"><option value={-1}>{field.required ? "Choose a column" : index === 5 ? "Not provided — free (0)" : "Not provided"}</option>{(sheets.find((sheet) => sheet.name === sheetName)?.headers ?? []).map((header, sourceIndex) => <option key={sourceIndex} value={sourceIndex}>{sourceIndex + 1}. {header || "(blank heading)"}</option>)}</select></label>)}</div>
       <button type="button" disabled={busy} onClick={validateColumns} className={buttonClass}>Validate & preview rows</button>
     </div>}
-    <p className="text-sm text-on-surface-variant">Imports create new prompts. They do not update existing prompts; importing the same file again creates copies. {admin ? "Choose whether to publish or send the imported prompts to review." : autoPublish ? "Your approved direct-publishing permission also applies to Excel imports." : "Imported prompts will be sent to admin for approval."}</p>
+    <p className="text-sm text-on-surface-variant">Imports create new prompts and skip matches already in the library. A matching title (ignoring capital/small letters), image / Drive file, or complete prompt text including variables counts as a duplicate. Shared variable names alone do not count. Duplicates within this file are flagged below. {admin ? "Choose whether to publish or send the imported prompts to review." : autoPublish ? "Your approved direct-publishing permission also applies to Excel imports." : "Imported prompts will be sent to admin for approval."}</p>
     {issues.length > 0 && <div role="alert" className="rounded-xl border border-red-400 p-4"><p className="font-semibold">{admin ? "Nothing imported yet. Fix these errors in the row editors below, then validate again:" : "Nothing imported. Fix these errors in Excel and select the file again:"}</p><ul className="mt-3 max-h-64 list-disc space-y-1 overflow-auto pl-5 text-sm">{issues.map((issue, index) => <li key={index}>{issue.row ? `Row ${issue.row}: ` : ""}{issue.message}</li>)}</ul></div>}
     {admin && drafts.length > 0 && <div className="space-y-3">
       <h3 className="font-semibold">Review & edit submissions ({drafts.length})</h3>
