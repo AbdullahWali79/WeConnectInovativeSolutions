@@ -76,7 +76,6 @@ const navGroups: NavGroup[] = [
     { href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
     { href: "/admin/settings/signature", label: "Signature & Stamp", icon: "draw", adminOnly: true },
     { href: "/admin/settings/branding", label: "Branding", icon: "palette", adminOnly: true },
-    { href: "/admin/settings/google-drive", label: "Google Drive", icon: "add_to_drive", adminOnly: true },
     { href: "/admin/settings/ai-assistant", label: "AI Assistant", icon: "smart_toy", adminOnly: true },
     { href: "/admin/settings/deepseek", label: "DeepSeek Fallback", icon: "backup", adminOnly: true },
     { href: "/admin/settings/mistral", label: "Mistral Fallback", icon: "psychology", adminOnly: true },
