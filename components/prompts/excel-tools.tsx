@@ -13,7 +13,7 @@ import { importContributorPrompts, type PromptActionResult } from "@/app/prompts
 
 const buttonClass = "rounded-full border border-outline-variant px-5 py-3 text-sm font-semibold disabled:opacity-50";
 
-export function PromptExcelTools({ prompts, admin = false, autoPublish = false }: { prompts: Prompt[]; admin?: boolean; autoPublish?: boolean }) {
+export function PromptExcelTools({ prompts, admin = false, autoPublish = false, onManagePrompts }: { prompts: Prompt[]; admin?: boolean; autoPublish?: boolean; onManagePrompts?: () => void }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const fileBytes = useRef<ArrayBuffer | null>(null);
@@ -127,10 +127,11 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false }
     </div>
     <label className="block text-sm font-semibold">Choose completed Excel file (.xlsx, max 2 MB)<input ref={input} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => void chooseFile(event.target.files?.[0])} className="mt-2 block w-full rounded-xl border border-outline-variant p-3 font-normal" /></label>
     {admin && <div className="sticky top-2 z-10 space-y-2 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <button type="button" disabled={busy || !drafts.length} onClick={() => void importRows("pending")} className={buttonClass}>Save for review{drafts.length ? ` (${drafts.length})` : ""}</button>
         <button type="button" disabled={busy || !drafts.length} onClick={() => void importRows("approved")} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Save &amp; Publish{drafts.length ? ` (${drafts.length})` : ""}</button>
         <a href="/prompts" target="_blank" rel="noopener noreferrer" className={buttonClass}>View public prompt library</a>
+        {admin && onManagePrompts && <button type="button" onClick={onManagePrompts} className="rounded-full border border-outline-variant px-5 py-3 font-semibold hover:bg-surface-variant">Manage all prompts →</button>}
       </div>
       <p className="text-sm text-on-surface-variant">{drafts.length ? "Save & Publish validates your latest edits, saves all submissions and makes them live on the public prompt library. Save for review keeps them hidden until published." : "Choose an Excel file to enable saving and publishing. Match columns and preview rows if needed."}</p>
       {published && <p role="status" className="font-semibold text-primary">Prompts are now live. <a href="/prompts" target="_blank" rel="noopener noreferrer" className="underline">View published prompts</a></p>}
