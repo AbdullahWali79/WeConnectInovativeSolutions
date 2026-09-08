@@ -17,9 +17,9 @@ export function drivePreview(url: string) {
   return id ? `https://drive.google.com/file/d/${id}/preview` : null;
 }
 
-export function driveThumbnail(url: string) {
+export function driveThumbnail(url: string, size = 800) {
   const id = driveId(url);
-  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w800` : null;
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : null;
 }
 
 export function promptVariables(template: string) {

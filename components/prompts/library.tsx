@@ -1,47 +1,123 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { drivePreview, driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
 
-function PromptThumbnail({ url, title }: { url: string; title: string }) {
-  const thumbnail = driveThumbnail(url);
-  const preview = drivePreview(url);
-  const [failed, setFailed] = useState(false);
+function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; initialIndex: number; onClose: () => void; title: string }) {
+  const [index, setIndex] = useState(initialIndex);
+  const [scale, setScale] = useState(1);
 
-  if (!thumbnail || !preview) return null;
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") { setIndex((prev) => (prev + 1) % urls.length); setScale(1); }
+      if (e.key === "ArrowLeft") { setIndex((prev) => (prev - 1 + urls.length) % urls.length); setScale(1); }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "auto";
+    };
+  }, [urls.length, onClose]);
+
+  const currentUrl = urls[index];
+  const src = driveThumbnail(currentUrl, 2000);
+
+  if (!src) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm" onClick={onClose}>
+      <div className="absolute top-4 right-4 flex gap-4 z-50 text-white">
+        <button className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors" onClick={(e) => { e.stopPropagation(); setScale(s => s === 1 ? 2 : 1); }}>
+          {scale === 1 ? "Zoom In" : "Zoom Out"}
+        </button>
+        <button className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors" onClick={onClose}>
+          Close
+        </button>
+      </div>
+
+      {urls.length > 1 && (
+        <button className="absolute left-4 z-50 p-4 text-4xl text-white/70 hover:text-white transition-colors" onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + urls.length) % urls.length); setScale(1); }}>
+          ‹
+        </button>
+      )}
+
+      <div className="relative flex h-full w-full items-center justify-center overflow-auto p-4 md:p-12" onClick={(e) => e.stopPropagation()}>
+        <img
+          src={src}
+          alt={`${title} - view ${index + 1}`}
+          className="max-h-full max-w-full object-contain transition-transform duration-300"
+          style={{ transform: `scale(${scale})`, cursor: scale > 1 ? "zoom-out" : "zoom-in" }}
+          onClick={() => setScale(s => s === 1 ? 2 : 1)}
+          loading="lazy"
+        />
+      </div>
+
+      {urls.length > 1 && (
+        <button className="absolute right-4 z-50 p-4 text-4xl text-white/70 hover:text-white transition-colors" onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % urls.length); setScale(1); }}>
+          ›
+        </button>
+      )}
+
+      <div className="absolute bottom-4 left-0 right-0 text-center text-sm text-white/50">
+        {index + 1} / {urls.length}
+      </div>
+    </div>
+  );
+}
+
+function PromptThumbnail({ url, title }: { url: string; title: string }) {
+  const thumbnail = driveThumbnail(url, 800);
+  if (!thumbnail) return null;
 
   return (
     <div className="overflow-hidden bg-surface-container-low">
-      {failed ? (
-        <>
-          <iframe
-            src={preview}
-            title={`${title} - output preview`}
-            loading="lazy"
-            allow="fullscreen"
-            allowFullScreen
-            referrerPolicy="no-referrer"
-            className="aspect-video w-full border-0"
-          />
-          <a href={url} target="_blank" rel="noopener noreferrer" className="block px-4 py-3 text-sm font-semibold text-primary">
-            Open preview in Google Drive
-          </a>
-        </>
-      ) : (
-        <img
-          src={thumbnail}
-          alt={`${title} - output preview`}
-          className="aspect-video w-full object-contain"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
-        />
-      )}
+      <img
+        src={thumbnail}
+        alt={`${title} - output preview`}
+        className="aspect-video w-full object-cover"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+      />
     </div>
   );
 }
 
 export function PromptMedia({ urls, title }: { urls: string[]; title: string }) {
-  return <div className="grid gap-4 md:grid-cols-2">{urls.map((url, index) => { const preview = drivePreview(url); return preview ? <div key={`${url}-${index}`} className="overflow-hidden rounded-2xl border border-outline-variant bg-black"><iframe src={preview} title={`${title} — output preview ${index + 1}`} loading="lazy" allow="fullscreen" allowFullScreen referrerPolicy="no-referrer" className="aspect-video w-full border-0" /><a href={url} target="_blank" rel="noopener noreferrer" className="block bg-surface p-3 text-sm text-primary">Open preview in Google Drive ↗</a></div> : null; })}</div>;
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  return (
+    <>
+      <div className="grid gap-4 md:grid-cols-2">
+        {urls.map((url, index) => {
+          const thumbnail = driveThumbnail(url, 800);
+          return thumbnail ? (
+            <div
+              key={`${url}-${index}`}
+              className="group relative overflow-hidden rounded-2xl border border-outline-variant bg-black cursor-zoom-in"
+              onClick={() => setLightboxIndex(index)}
+            >
+              <img
+                src={thumbnail}
+                alt={`${title} — preview ${index + 1}`}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="aspect-video w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                <span className="rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100">
+                  Expand
+                </span>
+              </div>
+            </div>
+          ) : null;
+        })}
+      </div>
+      {lightboxIndex !== null && (
+        <Lightbox urls={urls} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} title={title} />
+      )}
+    </>
+  );
 }
 function PromptDetail({ prompt }: { prompt: Prompt }) {
   const variables = promptVariables(prompt.template);
