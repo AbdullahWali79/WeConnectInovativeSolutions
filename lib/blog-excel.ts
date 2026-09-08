@@ -96,7 +96,22 @@ function parseYesNo(val: string | undefined): boolean {
   return ["yes", "y", "true", "1"].includes(val.toString().trim().toLowerCase());
 }
 
-export function readBlogWorkbook(bytes: ArrayBuffer, sheetName: string): { rows: Record<string, unknown>[]; issues: string[] } {
+export type BlogImportRow = {
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string;
+  target_keyword: string;
+  tags: string[];
+  cover_image_url: string;
+  seo_title: string;
+  seo_description: string;
+  display_order: number;
+  published: boolean;
+  featured: boolean;
+};
+
+export function readBlogWorkbook(bytes: ArrayBuffer, sheetName: string): { rows: BlogImportRow[]; issues: string[] } {
   const wb = xlsx.read(bytes, { type: "array" });
   const ws = wb.Sheets[sheetName];
   if (!ws) throw new Error("Sheet not found");
@@ -106,7 +121,7 @@ export function readBlogWorkbook(bytes: ArrayBuffer, sheetName: string): { rows:
 
   // Assume first row is header
   const dataRows = rawRows.slice(1);
-  const parsedRows: Record<string, unknown>[] = [];
+  const parsedRows: BlogImportRow[] = [];
   const issues: string[] = [];
 
   for (let i = 0; i < dataRows.length; i++) {
