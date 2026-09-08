@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { BlogExcelSheet } from "@/lib/blog-excel";
+import type { BlogExcelSheet, BlogImportRow } from "@/lib/blog-excel";
 
 const buttonClass = "rounded-full border border-outline-variant px-5 py-3 text-sm font-semibold disabled:opacity-50";
 
@@ -15,7 +15,7 @@ export function BlogsExcelTools() {
   const fileBytes = useRef<ArrayBuffer | null>(null);
   const [sheets, setSheets] = useState<BlogExcelSheet[]>([]);
   const [sheetName, setSheetName] = useState("");
-  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+  const [rows, setRows] = useState<BlogImportRow[]>([]);
   const [issues, setIssues] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [filename, setFilename] = useState("");
