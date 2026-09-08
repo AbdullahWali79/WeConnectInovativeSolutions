@@ -11,6 +11,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Blog } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 
+import { BlogsExcelTools } from "./blogs-excel-tools";
+
 export function BlogsManager() {
   const supabase = createSupabaseBrowserClient();
   const [rows, setRows] = useState<Blog[]>([]);
@@ -82,7 +84,9 @@ export function BlogsManager() {
         action={<Link href="/admin/blogs/editor" className="wc-primary-btn text-sm"><Icon name="add" /> Add New Blog</Link>}
       />
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-6">
+        <BlogsExcelTools />
+
         <section className="wc-card overflow-hidden">
           <div className="grid gap-3 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-[1fr_220px]">
             <input className="wc-input" placeholder="Search title, slug, keyword, or tag" value={query} onChange={(event) => setQuery(event.target.value)} />
