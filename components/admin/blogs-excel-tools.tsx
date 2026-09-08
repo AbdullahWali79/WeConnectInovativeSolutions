@@ -77,12 +77,30 @@ export function BlogsExcelTools() {
     setBusy(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.from("blogs").insert(rows);
+      
+      // Check for duplicates by slug
+      const { data: existingBlogs, error: fetchError } = await supabase.from("blogs").select("slug");
+      if (fetchError) throw new Error("Could not verify duplicates from database");
+
+      const existingSlugs = new Set(existingBlogs?.map(b => b.slug) || []);
+      const newRows = rows.filter(r => !existingSlugs.has(r.slug));
+      const duplicateCount = rows.length - newRows.length;
+
+      if (newRows.length === 0) {
+        setToast({ type: "error", message: `All ${duplicateCount} blogs were skipped because their Slugs already exist in the database.` });
+        setBusy(false);
+        return;
+      }
+
+      const { error } = await supabase.from("blogs").insert(newRows);
       
       if (error) {
         setToast({ type: "error", message: error.message });
       } else {
-        setToast({ type: "success", message: `Successfully imported ${rows.length} blogs!` });
+        const msg = duplicateCount > 0 
+          ? `Successfully imported ${newRows.length} blogs! (${duplicateCount} duplicate slugs skipped)`
+          : `Successfully imported ${newRows.length} blogs!`;
+        setToast({ type: "success", message: msg });
         setRows([]);
         setIssues([]);
         setFilename("");
