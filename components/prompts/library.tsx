@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useEffect } from "react";
-import { drivePreview, driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
+import { driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
 
 function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; initialIndex: number; onClose: () => void; title: string }) {
   const [index, setIndex] = useState(initialIndex);
