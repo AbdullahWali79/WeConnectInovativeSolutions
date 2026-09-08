@@ -5,12 +5,17 @@ import { driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/
 function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; initialIndex: number; onClose: () => void; title: string }) {
   const [index, setIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [positionStart, setPositionStart] = useState({ x: 0, y: 0 });
+  const [hasDragged, setHasDragged] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight") { setIndex((prev) => (prev + 1) % urls.length); setScale(1); }
-      if (e.key === "ArrowLeft") { setIndex((prev) => (prev - 1 + urls.length) % urls.length); setScale(1); }
+      if (e.key === "ArrowRight") { setIndex((prev) => (prev + 1) % urls.length); setScale(1); setPosition({ x: 0, y: 0 }); }
+      if (e.key === "ArrowLeft") { setIndex((prev) => (prev - 1 + urls.length) % urls.length); setScale(1); setPosition({ x: 0, y: 0 }); }
     };
     document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
@@ -25,10 +30,53 @@ function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; init
 
   if (!src) return null;
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (scale > 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+      setPositionStart({ ...position });
+      setHasDragged(false);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (isDragging && scale > 1) {
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        setHasDragged(true);
+      }
+      setPosition({
+        x: positionStart.x + dx,
+        y: positionStart.y + dy
+      });
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDragging) {
+      setIsDragging(false);
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (scale === 1) {
+      setScale(2);
+    } else {
+      if (!hasDragged) {
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm" onClick={onClose}>
       <div className="absolute top-4 right-4 flex gap-4 z-50 text-white">
-        <button className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors" onClick={(e) => { e.stopPropagation(); setScale(s => s === 1 ? 2 : 1); }}>
+        <button className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors" onClick={(e) => { e.stopPropagation(); setScale(s => s === 1 ? 2 : 1); setPosition({ x: 0, y: 0 }); }}>
           {scale === 1 ? "Zoom In" : "Zoom Out"}
         </button>
         <button className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors" onClick={onClose}>
@@ -37,29 +85,39 @@ function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; init
       </div>
 
       {urls.length > 1 && (
-        <button className="absolute left-4 z-50 p-4 text-4xl text-white/70 hover:text-white transition-colors" onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + urls.length) % urls.length); setScale(1); }}>
+        <button className="absolute left-4 z-50 p-4 text-4xl text-white/70 hover:text-white transition-colors" onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + urls.length) % urls.length); setScale(1); setPosition({ x: 0, y: 0 }); }}>
           ‹
         </button>
       )}
 
-      <div className="relative flex h-full w-full items-center justify-center overflow-auto p-4 md:p-12" onClick={(e) => e.stopPropagation()}>
+      <div className="relative flex h-full w-full items-center justify-center overflow-hidden p-4 md:p-12" onClick={(e) => e.stopPropagation()}>
         <img
           src={src}
           alt={`${title} - view ${index + 1}`}
-          className="max-h-full max-w-full object-contain transition-transform duration-300"
-          style={{ transform: `scale(${scale})`, cursor: scale > 1 ? "zoom-out" : "zoom-in" }}
-          onClick={() => setScale(s => s === 1 ? 2 : 1)}
+          className="max-h-full max-w-full object-contain transition-transform"
+          style={{ 
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, 
+            cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
+            transitionDuration: isDragging ? "0ms" : "300ms",
+            touchAction: "none"
+          }}
+          onClick={handleClick}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          draggable={false}
           loading="lazy"
         />
       </div>
 
       {urls.length > 1 && (
-        <button className="absolute right-4 z-50 p-4 text-4xl text-white/70 hover:text-white transition-colors" onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % urls.length); setScale(1); }}>
+        <button className="absolute right-4 z-50 p-4 text-4xl text-white/70 hover:text-white transition-colors" onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % urls.length); setScale(1); setPosition({ x: 0, y: 0 }); }}>
           ›
         </button>
       )}
 
-      <div className="absolute bottom-4 left-0 right-0 text-center text-sm text-white/50">
+      <div className="absolute bottom-4 left-0 right-0 text-center text-sm text-white/50 pointer-events-none">
         {index + 1} / {urls.length}
       </div>
     </div>
