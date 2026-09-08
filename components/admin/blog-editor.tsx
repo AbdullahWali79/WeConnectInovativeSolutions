@@ -50,6 +50,7 @@ export function BlogEditor({ initialId }: { initialId?: string }) {
   const [loading, setLoading] = useState(Boolean(initialId));
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [viewMode, setViewMode] = useState<"visual" | "html">("visual");
 
   const [form, setForm] = useState({
     title: "",
@@ -180,14 +181,42 @@ export function BlogEditor({ initialId }: { initialId?: string }) {
           </div>
 
           <div className="wc-card overflow-hidden bg-white">
-            <ReactQuill 
-              theme="snow" 
-              value={form.content} 
-              onChange={(value) => setForm((current) => ({ ...current, content: value }))} 
-              modules={QUILL_MODULES} 
-              className="min-h-[500px]"
-              placeholder="Write your amazing post here..."
-            />
+            <div className="flex items-center gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2">
+              <button
+                type="button"
+                onClick={() => setViewMode("visual")}
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${viewMode === "visual" ? "bg-primary text-white" : "text-on-surface-variant hover:bg-surface-container-high"}`}
+              >
+                <Icon name="visibility" className="mr-2 inline-block align-bottom" />
+                Visual View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("html")}
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${viewMode === "html" ? "bg-primary text-white" : "text-on-surface-variant hover:bg-surface-container-high"}`}
+              >
+                <Icon name="code" className="mr-2 inline-block align-bottom" />
+                HTML View
+              </button>
+            </div>
+            
+            {viewMode === "visual" ? (
+              <ReactQuill 
+                theme="snow" 
+                value={form.content} 
+                onChange={(value) => setForm((current) => ({ ...current, content: value }))} 
+                modules={QUILL_MODULES} 
+                className="min-h-[500px]"
+                placeholder="Write your amazing post here..."
+              />
+            ) : (
+              <textarea
+                className="w-full min-h-[500px] resize-y p-5 font-mono text-sm text-on-surface focus:outline-none"
+                placeholder="<!-- Paste your raw HTML or Markdown code here -->"
+                value={form.content}
+                onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
+              />
+            )}
           </div>
           <style dangerouslySetInnerHTML={{ __html: `
             .ql-editor { min-height: 500px; font-size: 16px; font-family: inherit; line-height: 1.8; color: #1e293b; }
