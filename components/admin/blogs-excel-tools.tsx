@@ -15,7 +15,7 @@ export function BlogsExcelTools() {
   const fileBytes = useRef<ArrayBuffer | null>(null);
   const [sheets, setSheets] = useState<BlogExcelSheet[]>([]);
   const [sheetName, setSheetName] = useState("");
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [issues, setIssues] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [filename, setFilename] = useState("");
@@ -92,8 +92,8 @@ export function BlogsExcelTools() {
         // Refresh router so the BlogsManager table updates
         router.refresh();
       }
-    } catch (err: any) {
-      setToast({ type: "error", message: err.message || "Failed to import" });
+    } catch (err: unknown) {
+      setToast({ type: "error", message: err instanceof Error ? err.message : "Failed to import" });
     } finally {
       setBusy(false);
     }
