@@ -1,5 +1,5 @@
 import * as xlsx from "xlsx";
-import type { BlogInput } from "./supabase/types";
+
 
 export const BLOG_EXCEL_HEADERS = [
   "Title",
