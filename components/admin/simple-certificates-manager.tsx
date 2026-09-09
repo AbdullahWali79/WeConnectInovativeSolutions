@@ -46,6 +46,22 @@ export function SimpleCertificatesManager() {
   useEffect(() => { void load(); }, [load]);
   const filtered = rows.filter((r) => (!search || `${r.roll_number} ${r.student_name}`.toLowerCase().includes(search.toLowerCase())) && (!houseFilter || r.software_house_name === houseFilter));
   const matchingStudents = students.filter((student) => `${student.full_name ?? ""} ${student.email ?? ""} ${student.phone ?? ""}`.toLowerCase().includes(studentSearch.trim().toLowerCase())).slice(0, 8);
+  const getGeneratedRollNumber = (courseName: string, startDateStr: string) => {
+    if (!courseName || !startDateStr) return "";
+    const d = new Date(startDateStr);
+    const season = d.getMonth() < 4 ? "SP" : d.getMonth() < 8 ? "SU" : "FA";
+    const initials = courseName.replace(/[^a-zA-Z\s-]/g, '').split(/[\s-]+/).filter(Boolean).map(w => w[0].toUpperCase()).join("").slice(0, 3);
+    const prefix = `WC-${season}${d.getFullYear().toString().slice(-2)}-${initials}-`;
+    let max = 0;
+    for (const row of rows) {
+      if (row.roll_number?.startsWith(prefix)) {
+        const num = parseInt(row.roll_number.slice(prefix.length), 10);
+        if (!isNaN(num) && num > max) max = num;
+      }
+    }
+    return `${prefix}${(max + 1).toString().padStart(2, "0")}`;
+  };
+
   function chooseStudent(student: Profile) {
     const enrollment = enrollments.find((row) => row.student_id === student.id && row.status === "active") ?? enrollments.find((row) => row.student_id === student.id);
     const course = courses.find((row) => row.id === enrollment?.course_id);
@@ -66,7 +82,9 @@ export function SimpleCertificatesManager() {
     const startDate = enrollment?.created_at?.slice(0, 10) ?? today();
     const endDate = enrollment?.completed_at?.slice(0, 10) ?? today();
     const durationWeeks = Math.max(1, Math.round((new Date(`${endDate}T12:00:00`).getTime() - new Date(`${startDate}T12:00:00`).getTime()) / 604800000));
-    setForm((old) => ({ ...old, student_name: student.full_name ?? old.student_name, course_name: course?.title ?? old.course_name, start_date: startDate, end_date: endDate, duration_weeks: durationWeeks, punctuality_percentage: punctualityPercentage, task_completion_percentage: taskPercentage, project_involvement_percentage: projectPercentage }));
+    const courseName = course?.title ?? form.course_name;
+    const autoRoll = getGeneratedRollNumber(courseName, startDate) || form.roll_number;
+    setForm((old) => ({ ...old, roll_number: autoRoll, student_name: student.full_name ?? old.student_name, course_name: courseName, start_date: startDate, end_date: endDate, duration_weeks: durationWeeks, punctuality_percentage: punctualityPercentage, task_completion_percentage: taskPercentage, project_involvement_percentage: projectPercentage }));
     setStudentSearch(student.full_name ?? student.email ?? "Student");
     setStudentFacts({ punctuality: deadlineTasks.length ? `${onTimeTasks} of ${deadlineTasks.length} deadline submissions were on time` : "No submitted tasks with deadlines found", tasks: `${completedTasks} of ${scopedTasks.length} assigned tasks are reviewed`, projects: `${projectDone} of ${projectTotal} project records are completed/approved` });
     setStudentResultsOpen(false);
@@ -106,22 +124,11 @@ export function SimpleCertificatesManager() {
         </div>
         <Field label="Roll number *"><div className="flex gap-2"><input required className="wc-input flex-1" value={form.roll_number} onChange={(e) => update("roll_number", e.target.value)} placeholder="e.g. WC-SP26-PD-01" /><button type="button" onClick={() => {
           if (!form.course_name || !form.start_date) return setToast({ type: "error", message: "Please enter a course name and start date first." });
-          const d = new Date(form.start_date);
-          const season = d.getMonth() < 4 ? "SP" : d.getMonth() < 8 ? "SU" : "FA";
-          const initials = form.course_name.replace(/[^a-zA-Z\s-]/g, '').split(/[\s-]+/).filter(Boolean).map(w => w[0].toUpperCase()).join("").slice(0, 3);
-          const prefix = `WC-${season}${d.getFullYear().toString().slice(-2)}-${initials}-`;
-          let max = 0;
-          for (const row of rows) {
-            if (row.roll_number?.startsWith(prefix)) {
-              const num = parseInt(row.roll_number.slice(prefix.length), 10);
-              if (!isNaN(num) && num > max) max = num;
-            }
-          }
-          update("roll_number", `${prefix}${(max + 1).toString().padStart(2, "0")}`);
+          update("roll_number", getGeneratedRollNumber(form.course_name, form.start_date));
         }} className="wc-secondary-btn px-3 shrink-0" title="Auto-generate"><Icon name="auto_awesome" /></button></div></Field>
         <Field label="Student name *"><input required className="wc-input" value={form.student_name} onChange={(e) => update("student_name", e.target.value)} placeholder="Selected name can be edited" /></Field>
-        <Field label="Internship name *"><input required className="wc-input" value={form.course_name} onChange={(e) => update("course_name", e.target.value)} placeholder="Web Development" /></Field>
-        <div className="grid grid-cols-2 gap-3"><Field label="Duration (weeks)"><input min={1} type="number" className="wc-input" value={form.duration_weeks} onChange={(e) => { const weeks = Number(e.target.value); setForm((f) => ({ ...f, duration_weeks: weeks, end_date: plusWeeks(f.start_date, weeks) })); }} /></Field><Field label="Start date *"><input required type="date" className="wc-input" value={form.start_date} onChange={(e) => { const start = e.target.value; setForm((f) => ({ ...f, start_date: start, end_date: plusWeeks(start, f.duration_weeks) })); }} /></Field></div>
+        <Field label="Internship name *"><input required className="wc-input" value={form.course_name} onChange={(e) => update("course_name", e.target.value)} onBlur={(e) => { if (!form.roll_number && e.target.value) update("roll_number", getGeneratedRollNumber(e.target.value, form.start_date)); }} placeholder="Web Development" /></Field>
+        <div className="grid grid-cols-2 gap-3"><Field label="Duration (weeks)"><input min={1} type="number" className="wc-input" value={form.duration_weeks} onChange={(e) => { const weeks = Number(e.target.value); setForm((f) => ({ ...f, duration_weeks: weeks, end_date: plusWeeks(f.start_date, weeks) })); }} /></Field><Field label="Start date *"><input required type="date" className="wc-input" value={form.start_date} onChange={(e) => { const start = e.target.value; setForm((f) => ({ ...f, start_date: start, end_date: plusWeeks(start, f.duration_weeks) })); }} onBlur={(e) => { if (!form.roll_number && form.course_name) update("roll_number", getGeneratedRollNumber(form.course_name, e.target.value)); }} /></Field></div>
         <Field label="End date *"><input required type="date" className="wc-input" value={form.end_date} onChange={(e) => { const end = e.target.value; setForm((f) => { const startD = new Date(f.start_date); const endD = new Date(end); const weeks = Math.max(1, Math.round((endD.getTime() - startD.getTime()) / 604800000)); return { ...f, end_date: end, duration_weeks: weeks }; }); }} /></Field>
         <Field label="Software house"><select className="wc-input" value={form.software_house_id ?? ""} onChange={(e) => chooseHouse(e.target.value)}><option value="">Custom software house</option>{houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></Field>
         <Field label="Software house name *"><input required className="wc-input" value={form.software_house_name} onChange={(e) => update("software_house_name", e.target.value)} /></Field>
