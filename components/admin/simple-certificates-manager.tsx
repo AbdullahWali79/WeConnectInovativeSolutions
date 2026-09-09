@@ -118,7 +118,7 @@ export function SimpleCertificatesManager() {
             }
           }
           update("roll_number", `${prefix}${(max + 1).toString().padStart(2, "0")}`);
-        }} className="wc-secondary-btn px-3 shrink-0" title="Auto-generate"><Icon name="magic_button" /></button></div></Field>
+        }} className="wc-secondary-btn px-3 shrink-0" title="Auto-generate"><Icon name="auto_awesome" /></button></div></Field>
         <Field label="Student name *"><input required className="wc-input" value={form.student_name} onChange={(e) => update("student_name", e.target.value)} placeholder="Selected name can be edited" /></Field>
         <Field label="Internship name *"><input required className="wc-input" value={form.course_name} onChange={(e) => update("course_name", e.target.value)} placeholder="Web Development" /></Field>
         <div className="grid grid-cols-2 gap-3"><Field label="Duration (weeks)"><input min={1} type="number" className="wc-input" value={form.duration_weeks} onChange={(e) => { const weeks = Number(e.target.value); setForm((f) => ({ ...f, duration_weeks: weeks, end_date: plusWeeks(f.start_date, weeks) })); }} /></Field><Field label="Start date *"><input required type="date" className="wc-input" value={form.start_date} onChange={(e) => { const start = e.target.value; setForm((f) => ({ ...f, start_date: start, end_date: plusWeeks(start, f.duration_weeks) })); }} /></Field></div>
