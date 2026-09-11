@@ -240,7 +240,7 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
               <Icon name="manage_accounts" className="text-5xl" />
             </div>
             <h2 className="text-xl font-bold">Muhammad Abdullah</h2>
-            <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Manager</p>
+            <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Co-Founder &amp; Operational Manager</p>
             <p className="mt-4 flex-grow text-sm text-[var(--wc-on-surface-variant)]">
               Overseeing operations, product development, and ensuring client success.
             </p>
