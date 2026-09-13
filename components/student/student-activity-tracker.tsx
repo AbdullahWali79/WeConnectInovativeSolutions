@@ -12,6 +12,23 @@ export function StudentActivityTracker() {
   const supabase = useRef(createSupabaseBrowserClient()).current;
 
   useEffect(() => {
+    // Also remove an already-open session when the scheduled check or admin
+    // deactivates it. Inactive accounts retain read access to their own profile.
+    const checkAccess = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("status").eq("id", user.id).maybeSingle();
+      if (data && data.status !== "approved") {
+        await supabase.auth.signOut();
+        window.location.replace(`/login?message=${encodeURIComponent(data.status)}`);
+      }
+    };
+    const accessTimer = window.setInterval(() => { void checkAccess(); }, HEARTBEAT_MS);
+    void checkAccess();
+    return () => window.clearInterval(accessTimer);
+  }, [supabase]);
+
+  useEffect(() => {
     lastTick.current = Date.now();
     void supabase.rpc("record_student_activity", {
       p_event_type: "page_view",

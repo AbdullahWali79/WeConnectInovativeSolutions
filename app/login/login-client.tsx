@@ -28,7 +28,20 @@ export default function LoginPage() {
 
   async function routeAfterAuth(userId: string) {
     const { data } = await supabase.from("profiles").select("role,status").eq("id", userId).single();
-    const profile = data as Pick<Profile, "role" | "status"> | null;
+    let profile = data as Pick<Profile, "role" | "status"> | null;
+
+    if (profile?.role === "student" && profile.status === "approved") {
+      const { error } = await supabase.rpc("record_student_activity", {
+        p_event_type: "page_view", p_path: "/login", p_active_seconds: 0,
+      });
+      const { data: checkedProfile } = await supabase.from("profiles").select("role,status").eq("id", userId).single();
+      if (error || !checkedProfile) {
+        await supabase.auth.signOut();
+        setToast({ type: "error", message: "Unable to verify account access. Please try again." });
+        return;
+      }
+      profile = checkedProfile as Pick<Profile, "role" | "status">;
+    }
 
     if (!profile) {
       setToast({ type: "info", message: "Profile is being created. Try again after a moment." });
@@ -172,6 +185,6 @@ export default function LoginPage() {
 function statusMessage(status: string) {
   if (status === "session_expired") return "Your session expired. Sign in again to continue.";
   if (status === "pending" || status === "profile_pending") return "Your profile is pending admin approval.";
-  if (status === "rejected") return "Your application was rejected. Contact admin for clarification.";
+  if (status === "rejected") return "Your account is inactive or your application was rejected. Accounts become inactive after 7 days without portal activity. Contact admin to activate your account.";
   return "Continue after your account status is approved.";
 }

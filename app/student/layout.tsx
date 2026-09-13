@@ -18,7 +18,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   }
 
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  const profile = data as Profile | null;
+  let profile = data as Profile | null;
 
   if (!profile) {
     redirect("/login?message=profile_pending");
@@ -31,6 +31,16 @@ export default async function StudentLayout({ children }: { children: React.Reac
   if (profile.status !== "approved") {
     redirect(`/login?message=${profile.status}`);
   }
+
+  const { error: activityError } = await supabase.rpc("record_student_activity", {
+    p_event_type: "heartbeat", p_path: "/student", p_active_seconds: 0,
+  });
+  const { data: checkedProfile } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!checkedProfile || checkedProfile.status !== "approved") {
+    redirect(`/login?message=${checkedProfile?.status ?? "profile_pending"}`);
+  }
+  if (activityError) throw new Error("Unable to verify student account access.");
+  profile = checkedProfile as Profile;
 
   const branding = await loadBrandingSettingsMap().catch(() => getDefaultBrandingSettingsMap());
 
