@@ -1,5 +1,17 @@
 begin;
 
+-- Older production databases may not have the optional lifecycle migration.
+-- Account access still uses status; preserve any existing lifecycle values.
+alter table public.profiles
+  add column if not exists admin_status text default 'approved'
+  constraint profiles_admin_status_check
+  check (admin_status in ('approved', 'active', 'completed', 'inactive'));
+
+update public.profiles
+set admin_status = 'inactive'
+where role = 'student' and status = 'rejected'
+  and (admin_status is null or admin_status = 'approved');
+
 -- Run independently of website visits. Requires Supabase Cron.
 create extension if not exists pg_cron with schema pg_catalog;
 

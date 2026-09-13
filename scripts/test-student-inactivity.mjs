@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite');
+for (const legacySchema of [false, true]) {
 const db = new PGlite();
 try {
   await db.exec(`
@@ -33,6 +34,7 @@ try {
   }
   await db.query(`insert into student_activity_daily values
     ($1, current_date, now(), now(), 30, 1, 0)`, [id(3)]);
+  if (legacySchema) await db.exec('alter table profiles drop column admin_status');
   const migration = await readFile(new URL('../supabase/migrations/20260913000000_auto_deactivate_inactive_students.sql', import.meta.url), 'utf8');
   await db.exec(migration.replace('create extension if not exists pg_cron with schema pg_catalog;', ''));
   const status = async n => (await db.query('select status, admin_status from profiles where id=$1', [id(n)])).rows[0];
@@ -69,7 +71,8 @@ try {
   assert.equal((await db.query('select schedule from cron.jobs')).rows[0].schedule, '* * * * *');
   assert.equal((await db.query(`select has_function_privilege('authenticated', 'public.deactivate_inactive_students()', 'execute') as allowed`)).rows[0].allowed, false);
   assert.equal((await db.query(`select has_table_privilege('authenticated', 'public.student_inactivity_clock', 'update') as allowed`)).rows[0].allowed, false);
-  console.log('PASS: inactivity backfill, role exclusions, pending accounts, activation, expiry, activity renewal, retained history, schedule, and permissions.');
+  console.log(`PASS (${legacySchema ? 'legacy schema without admin_status' : 'current schema'}): inactivity backfill, role exclusions, pending accounts, activation, expiry, activity renewal, retained history, schedule, and permissions.`);
 } finally {
   await db.close();
+}
 }
