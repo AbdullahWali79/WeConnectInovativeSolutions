@@ -8,6 +8,24 @@ import type { TeamMember } from "@/lib/supabase/types";
 
 type TeamMemberWithLead = TeamMember & { lead_name?: string | null };
 
+function TeamMemberPhoto({ src, name }: { src?: string | null; name: string }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const photoSrc = src?.trim();
+  const showPhoto = Boolean(photoSrc && photoSrc !== failedSrc);
+
+  return (
+    <Image
+      src={showPhoto ? photoSrc! : "/logo.jpeg"}
+      alt={showPhoto ? name : "WeConnect logo"}
+      width={112}
+      height={112}
+      unoptimized
+      className={`h-full w-full rounded-full ${showPhoto ? "object-cover" : "bg-white object-contain p-2"}`}
+      onError={showPhoto ? () => setFailedSrc(photoSrc!) : undefined}
+    />
+  );
+}
+
 function normalizeExternalUrl(url: string) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
@@ -218,7 +236,7 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
         <div className="mx-auto mb-20 grid max-w-4xl gap-8 sm:grid-cols-2">
           <div className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
             <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
-              <Icon name="person" className="text-5xl" />
+              <TeamMemberPhoto name="Dr. Hammad Habib Qazi" />
             </div>
             <h2 className="text-xl font-bold">Dr. Hammad Habib Qazi</h2>
             <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Founder &amp; CEO</p>
@@ -238,7 +256,7 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
 
           <div className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
             <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
-              <Icon name="manage_accounts" className="text-5xl" />
+              <TeamMemberPhoto name="Muhammad Abdullah" />
             </div>
             <h2 className="text-xl font-bold">Muhammad Abdullah</h2>
             <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Co-Founder &amp; Operational Manager</p>
@@ -364,11 +382,7 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
                         <div className="flex flex-col items-center mt-6">
                           <div className={`mx-auto flex h-28 w-28 items-center justify-center rounded-full p-[3px] transition-all duration-500 ${isActive ? 'bg-gradient-to-br from-[var(--wc-secondary)] to-[var(--wc-primary)] shadow-glow-lg' : 'bg-[var(--wc-surface-low)]'}`}>
                             <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--wc-bg)] overflow-hidden">
-                              {(member.image_cdn_url ?? member.image_url) ? (
-                                <Image src={member.image_cdn_url ?? member.image_url ?? ""} alt={member.name} width={112} height={112} unoptimized className="h-full w-full object-cover" />
-                              ) : (
-                                <span className="text-4xl font-black text-on-surface">{member.name.charAt(0)}</span>
-                              )}
+                              <TeamMemberPhoto src={member.image_cdn_url?.trim() || member.image_url} name={member.name} />
                             </div>
                           </div>
                           <div className="mt-8 text-center">
