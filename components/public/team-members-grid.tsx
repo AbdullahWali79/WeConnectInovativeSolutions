@@ -226,11 +226,12 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
               Leading the vision and strategy for digital excellence and innovation.
             </p>
             <div className="mt-6 flex w-full flex-col gap-3">
+              <h3 className="text-sm font-bold text-[var(--wc-on-surface)]">Contact Information</h3>
               <a href="tel:+447454498664" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
                 <Icon name="call" className="text-[18px]" /> +44 7454 498664
               </a>
               <a href="https://www.linkedin.com/in/hummad-h-qazi-01bb8662/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
-                <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> Connect on LinkedIn
+                <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> LinkedIn
               </a>
             </div>
           </div>
@@ -245,11 +246,12 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
               Overseeing operations, product development, and ensuring client success.
             </p>
             <div className="mt-6 flex w-full flex-col gap-3">
+              <h3 className="text-sm font-bold text-[var(--wc-on-surface)]">Contact Information</h3>
               <a href="tel:03046983794" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
                 <Icon name="call" className="text-[18px]" /> 0304 698 3794
               </a>
               <a href="https://www.linkedin.com/in/abdullahwale/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
-                <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> Connect on LinkedIn
+                <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> LinkedIn
               </a>
             </div>
           </div>
