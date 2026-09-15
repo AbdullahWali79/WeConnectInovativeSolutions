@@ -89,7 +89,7 @@ export function Chatbot() {
   }
 
   // Keep floating panels and actions from covering enrollment fields on phones.
-  if (pathname === "/apply") return null;
+  if (pathname === "/apply" || pathname.startsWith("/verify-certificate/") || pathname.startsWith("/certificate/")) return null;
 
   return <>
     <AnimatePresence>{!isAdminRoute && !isOpen && !faqOpen ? <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} onMouseEnter={() => setToolsOpen(true)} onMouseLeave={() => setToolsOpen(false)} className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-2 pb-1">
