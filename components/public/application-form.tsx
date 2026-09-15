@@ -38,6 +38,11 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
     event.preventDefault();
     if (submittingRef.current) return;
     const formElement = event.currentTarget;
+    // Read what the browser actually displays, including mobile autofill values.
+    const data = new FormData(formElement);
+    const values = Object.fromEntries(
+      Object.keys(initialForm).map((name) => [name, String(data.get(name) ?? "")]),
+    ) as typeof initialForm;
     setResultMessage(null);
 
     const showResult = (result: NonNullable<ToastState>, field?: string) => {
@@ -47,6 +52,8 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
         const input = formElement.elements.namedItem(field);
         if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
           input.setCustomValidity(result.message);
+          input.focus({ preventScroll: true });
+          input.scrollIntoView({ block: "center", behavior: "auto" });
           input.reportValidity();
         }
       } else {
@@ -57,23 +64,23 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
       }
     };
 
-    const missingField = (["course_id", "full_name", "email", "phone"] as const).find((name) => !form[name].trim());
+    const missingField = (["full_name", "email", "phone", "course_id"] as const).find((name) => !values[name].trim());
     if (missingField) {
       showResult({ type: "error", message: "Full name, email, phone, and course are required." }, missingField);
       return;
     }
 
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+    if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) {
       showResult({ type: "error", message: "Enter a valid email address." }, "email");
       return;
     }
 
-    if (form.password.length < 6) {
+    if (values.password.length < 6) {
       showResult({ type: "error", message: "Password must be at least 6 characters long." }, "password");
       return;
     }
 
-    if (form.password !== form.confirm_password) {
+    if (values.password !== values.confirm_password) {
       showResult({ type: "error", message: "Passwords do not match." }, "confirm_password");
       return;
     }
@@ -82,12 +89,12 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
     setLoading(true);
     try {
       const result = await submitStudentApplication({
-        full_name: form.full_name.trim(),
-        email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
-        password: form.password,
-        course_id: form.course_id,
-        message: form.message.trim() || null,
+        full_name: values.full_name.trim(),
+        email: values.email.trim().toLowerCase(),
+        phone: values.phone.trim(),
+        password: values.password,
+        course_id: values.course_id,
+        message: values.message.trim() || null,
       });
 
       if (!result.success) {

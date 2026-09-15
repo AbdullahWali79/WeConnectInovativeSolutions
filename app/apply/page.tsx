@@ -22,7 +22,7 @@ export default async function ApplyPage({
   const selectedCourseId = (await searchParams)?.course;
 
   return (
-    <main className="min-h-screen bg-[var(--wc-bg)] text-on-surface">
+    <main className="min-h-screen bg-[var(--wc-bg)] pt-20 text-on-surface md:pt-24">
       <PublicHeader />
 
       <section className="relative overflow-hidden bg-[var(--wc-bg)] py-8 sm:py-12 md:py-24">
@@ -37,16 +37,16 @@ export default async function ApplyPage({
               Choose a course, fill out your details, and set a password. Our team will review your application. Need help? Email{" "}
               <a href={CONTACT_EMAIL_HREF} className="break-words [overflow-wrap:anywhere] text-on-surface underline underline-offset-4">{CONTACT_EMAIL}</a>.
             </p>
-            <a href="/student-app" className="mt-4 inline-flex max-w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-emerald-500">
-              <Icon name="download" className="text-xl" /> Download Student App
+            <a href="#application-form" className="mt-4 inline-flex max-w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-emerald-500">
+              <Icon name="edit_note" className="text-xl" /> Fill Application Form
             </a>
           </div>
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-[var(--wc-bg)] pb-32 md:pb-24">
+      <section id="application-form" className="relative scroll-mt-24 bg-[var(--wc-bg)] pb-12 md:pb-24">
         <div className="mx-auto max-w-3xl px-3 sm:px-5 md:px-margin-page">
-          <div className="rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-4 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-xl md:p-10">
+          <div className="rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-4 sm:rounded-3xl sm:p-6 sm:shadow-lg md:p-10">
             {activeCourses.length === 0 ? (
               <div className="rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-6 text-sm text-[var(--wc-on-surface-variant)]">
                 No active courses are available right now. Please contact the team before applying.

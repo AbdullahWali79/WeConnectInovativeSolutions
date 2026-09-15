@@ -306,7 +306,7 @@ export function PublicHeader() {
         </div>
       </div>
 
-      <nav
+      {currentPath !== "/apply" && <nav
         className={`public-bottom-nav ${scrolled ? "is-visible" : ""}`}
         aria-label="Quick mobile navigation"
       >
@@ -343,7 +343,7 @@ export function PublicHeader() {
             <span>Menu</span>
           </button>
         </div>
-      </nav>
+      </nav>}
     </header>
   );
 }
