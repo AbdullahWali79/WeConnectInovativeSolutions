@@ -813,52 +813,6 @@ export function TasksManager({
               </div>
             </div>
 
-            {canCreate ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-                  <label className="flex items-center gap-3 text-sm font-bold text-on-surface xl:min-w-48">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSubmittedSelected}
-                      disabled={bulkReviewableTasks.length === 0 || bulkReviewing}
-                      onChange={toggleAllVisibleSubmitted}
-                      className="h-5 w-5 rounded border-outline-variant text-emerald-600"
-                    />
-                    Select all submitted ({bulkReviewableTasks.length})
-                  </label>
-                  <label className="block xl:w-36">
-                    <span className="wc-label">Default marks</span>
-                    <input
-                      className="wc-input mt-2 bg-white"
-                      type="number"
-                      min="0"
-                      value={bulkReviewScore}
-                      onChange={(event) => setBulkReviewScore(event.target.value)}
-                    />
-                  </label>
-                  <label className="block min-w-0 flex-1">
-                    <span className="wc-label">Default feedback</span>
-                    <input
-                      className="wc-input mt-2 bg-white"
-                      value={bulkReviewFeedback}
-                      onChange={(event) => setBulkReviewFeedback(event.target.value)}
-                      placeholder="Very Good Work"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    disabled={selectedBulkReviewTaskIds.length === 0 || bulkReviewing}
-                    onClick={() => void acceptSelectedSubmissions()}
-                    className="wc-primary-btn whitespace-nowrap bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Icon name={bulkReviewing ? "hourglass_empty" : "done_all"} />
-                    {bulkReviewing ? "Accepting..." : `Accept Selected (${selectedBulkReviewTaskIds.length})`}
-                  </button>
-                </div>
-                <p className="mt-3 text-xs text-emerald-800">Only currently submitted tasks can be selected. The marks and feedback above will be applied to every selected submission.</p>
-              </div>
-            ) : null}
-
             <div className="border-b border-outline-variant/70 bg-surface-container-low p-3">
               <div className="grid gap-3 md:grid-cols-12">
                 <input className="wc-input md:col-span-4" placeholder="Search task title" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -994,6 +948,55 @@ export function TasksManager({
                 </div>
               </div>
             </div>
+            {canCreate && activeView === "reviews" ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+                  <label className="flex items-center gap-3 text-sm font-bold text-on-surface xl:min-w-48">
+                    <input
+                      type="checkbox"
+                      ref={(input) => {
+                        if (input) input.indeterminate = selectedBulkReviewTaskIds.length > 0 && !allVisibleSubmittedSelected;
+                      }}
+                      checked={allVisibleSubmittedSelected}
+                      disabled={bulkReviewableTasks.length === 0 || bulkReviewing}
+                      onChange={toggleAllVisibleSubmitted}
+                      className="h-5 w-5 rounded border-outline-variant text-emerald-600"
+                    />
+                    Select all submitted tasks ({bulkReviewableTasks.length})
+                  </label>
+                  <label className="block xl:w-36">
+                    <span className="wc-label">Default marks</span>
+                    <input
+                      className="wc-input mt-2 bg-white"
+                      type="number"
+                      min="0"
+                      value={bulkReviewScore}
+                      onChange={(event) => setBulkReviewScore(event.target.value)}
+                    />
+                  </label>
+                  <label className="block min-w-0 flex-1">
+                    <span className="wc-label">Default feedback</span>
+                    <input
+                      className="wc-input mt-2 bg-white"
+                      value={bulkReviewFeedback}
+                      onChange={(event) => setBulkReviewFeedback(event.target.value)}
+                      placeholder="Very Good Work"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={selectedBulkReviewTaskIds.length === 0 || bulkReviewing}
+                    onClick={() => void acceptSelectedSubmissions()}
+                    className="wc-primary-btn whitespace-nowrap bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icon name={bulkReviewing ? "hourglass_empty" : "done_all"} />
+                    {bulkReviewing ? "Accepting..." : `Accept Selected (${selectedBulkReviewTaskIds.length})`}
+                  </button>
+                </div>
+                <p className="mt-3 text-xs text-emerald-800">Select all includes every submitted task matching the current filters. The marks and feedback above will be applied to every selected submission.</p>
+              </div>
+            ) : null}
+
             {reviewVisibleTasks.length === 0 ? <div className="p-4"><EmptyState title={activeView === "zero-marks" ? "No accepted submissions with zero marks" : "No tasks matched"} description={activeView === "zero-marks" ? "All accepted submissions currently have marks greater than zero." : "Adjust filters or create a task."} icon={activeView === "zero-marks" ? "verified" : "assignment"} /></div> : (
               <div className="divide-y divide-outline-variant/70">
                 {reviewVisibleTasks.map((task) => {
