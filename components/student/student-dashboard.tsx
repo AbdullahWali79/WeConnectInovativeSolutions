@@ -99,6 +99,29 @@ export function StudentDashboard() {
     setLoading(false);
   }, [supabase]);
 
+  async function refreshTaskData(taskId: string) {
+    // After saving, fetch only the changed task and progress data. Keep the
+    // dashboard visible and avoid repeating enrollment repair and profile loads.
+    const [taskResult, submissionResult, enrollmentResult, reportResult] = await Promise.all([
+      supabase.from("tasks").select("*").eq("id", taskId).single(),
+      supabase.from("submissions").select("*").eq("task_id", taskId).maybeSingle(),
+      supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
+      supabase.from("progress_reports").select("*").order("updated_at", { ascending: false }),
+    ]);
+    const error = taskResult.error ?? submissionResult.error ?? enrollmentResult.error ?? reportResult.error;
+    if (taskResult.data) {
+      const updatedTask = taskResult.data;
+      setTasks((current) => [updatedTask, ...current.filter((task) => task.id !== taskId)]);
+    }
+    if (submissionResult.data) {
+      const updatedSubmission = submissionResult.data;
+      setSubmissions((current) => [updatedSubmission, ...current.filter((submission) => submission.task_id !== taskId)]);
+    }
+    if (enrollmentResult.data) setEnrollments(enrollmentResult.data);
+    if (reportResult.data) setReports(reportResult.data);
+    if (error) setToast({ type: "error", message: `Task saved, but the dashboard could not fully refresh: ${error.message}` });
+  }
+
   useEffect(() => {
     void loadData();
   }, [loadData]);
@@ -162,8 +185,10 @@ export function StudentDashboard() {
     }
 
     setToast({ type: "success", message: "Task updated successfully." });
+    setTasks((current) => current.map((task) => task.id === editingTask.id
+      ? { ...task, title: editTitle.trim(), description: editDescription.trim() }
+      : task));
     setEditingTask(null);
-    await loadData();
   }
 
   const courseById = useMemo(() => new Map(courses.map((course) => [course.id, course])), [courses]);
@@ -416,7 +441,7 @@ export function StudentDashboard() {
       setToast({ type: "success", message: "Daily task submitted for review." });
       resetTaskForm();
       setAddTaskOpen(false);
-      await loadData();
+      await refreshTaskData(createdTaskId);
     } catch (err: unknown) {
       const errMsg = err instanceof Error
         ? err.message
@@ -868,7 +893,7 @@ export function StudentDashboard() {
           onSaved={async (message) => {
             closeSubmissionForm();
             setToast({ type: "success", message });
-            await loadData();
+            await refreshTaskData(submissionTask.id);
           }}
         />
       ) : null}

@@ -171,7 +171,7 @@ export function SubmissionsReview({
     const score = status === "reviewed" ? toNumber(form.score, 0) : 0;
 
     setBusyId(submission.id);
-    const { error } = await supabase
+    const { data: updatedSubmission, error } = await supabase
       .from("submissions")
       .update({
         status,
@@ -179,7 +179,9 @@ export function SubmissionsReview({
         feedback: form.feedback.trim() || null,
         reviewed_at: new Date().toISOString(),
       })
-      .eq("id", submission.id);
+      .eq("id", submission.id)
+      .select("*")
+      .single();
     setBusyId(null);
 
     if (error) {
@@ -187,15 +189,14 @@ export function SubmissionsReview({
       return;
     }
 
-    const task = taskById.get(submission.task_id);
-    if (task) {
-      const taskStatus = status === "reviewed" ? "reviewed" : status === "rejected" ? "rejected" : "revision_required";
-      await supabase.from("tasks").update({ status: taskStatus }).eq("id", submission.task_id);
-      await supabase.rpc("refresh_student_progress", {
-        target_student_id: submission.student_id,
-        target_course_id: task.course_id,
-      });
-    }
+    // Database triggers update task status and progress in the same transaction.
+    setSubmissions((current) => current.map((row) => row.id === submission.id ? updatedSubmission : row));
+    setTasks((current) => current.map((task) => task.id === submission.task_id ? { ...task, status: updatedSubmission.status } : task));
+    setForms((current) => ({ ...current, [submission.id]: {
+      status: updatedSubmission.status,
+      score: String(updatedSubmission.score ?? 0),
+      feedback: updatedSubmission.feedback ?? "",
+    } }));
 
     setToast({
       type: "success",
@@ -206,7 +207,6 @@ export function SubmissionsReview({
             ? "Submission rejected."
             : "Revision requested.",
     });
-    await loadData();
   }
 
   if (loading) return <LoadingState label="Loading submissions..." />;

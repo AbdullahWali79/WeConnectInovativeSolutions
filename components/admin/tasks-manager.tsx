@@ -345,6 +345,26 @@ export function TasksManager({
     });
   }
 
+  // The submission trigger synchronizes task status and course progress.
+  // Apply confirmed rows without reloading every list or clearing other drafts.
+  function applyReviewedSubmissions(updated: Submission[]) {
+    const byId = new Map(updated.map((submission) => [submission.id, submission]));
+    const byTaskId = new Map(updated.map((submission) => [submission.task_id, submission]));
+    setSubmissions((current) => current.map((submission) => byId.get(submission.id) ?? submission));
+    setTasks((current) => current.map((task) => {
+      const submission = byTaskId.get(task.id);
+      return submission ? { ...task, status: submission.status } : task;
+    }));
+    setSubmissionForms((current) => ({
+      ...current,
+      ...Object.fromEntries(updated.map((submission) => [submission.id, {
+        status: submission.status,
+        score: String(submission.score ?? 0),
+        feedback: submission.feedback ?? "",
+      }])),
+    }));
+  }
+
   async function acceptSelectedSubmissions() {
     if (!canCreate) {
       setToast({ type: "error", message: "You do not have permission to review submissions." });
@@ -380,7 +400,7 @@ export function TasksManager({
     const reviewedAt = new Date().toISOString();
 
     setBulkReviewing(true);
-    const { error: submissionError } = await supabase
+    const { data: updatedSubmissions, error: submissionError } = await supabase
       .from("submissions")
       .update({
         status: "reviewed",
@@ -388,7 +408,9 @@ export function TasksManager({
         feedback: bulkReviewFeedback.trim(),
         reviewed_at: reviewedAt,
       })
-      .in("id", selectedSubmissions.map((submission) => submission.id));
+      .in("id", selectedSubmissions.map((submission) => submission.id))
+      .eq("status", "submitted")
+      .select("*");
 
     if (submissionError) {
       setBulkReviewing(false);
@@ -396,29 +418,11 @@ export function TasksManager({
       return;
     }
 
-    const { error: taskError } = await supabase
-      .from("tasks")
-      .update({ status: "reviewed" })
-      .in("id", selectedTasks.map((task) => task.id));
-
-    if (taskError) {
-      setBulkReviewing(false);
-      setToast({ type: "error", message: taskError.message });
-      return;
-    }
-
-    const progressTargets = Array.from(new Map(
-      selectedTasks.map((task) => [`${task.student_id}:${task.course_id}`, { studentId: task.student_id, courseId: task.course_id }]),
-    ).values());
-    await Promise.all(progressTargets.map((target) => supabase.rpc("refresh_student_progress", {
-      target_student_id: target.studentId,
-      target_course_id: target.courseId,
-    })));
+    applyReviewedSubmissions(updatedSubmissions ?? []);
 
     setBulkReviewing(false);
     setBulkReviewSelection([]);
-    setToast({ type: "success", message: `${selectedSubmissions.length} submissions accepted with ${score} marks.` });
-    await loadData();
+    setToast({ type: "success", message: `${updatedSubmissions?.length ?? 0} submissions accepted with ${score} marks.` });
   }
 
   async function saveSubmissionReview(submission: Submission, forcedStatus?: SubmissionStatus) {
@@ -438,7 +442,7 @@ export function TasksManager({
     const score = status === "reviewed" ? toNumber(form.score, 0) : 0;
 
     setSubmissionBusyId(submission.id);
-    const { error } = await supabase
+    const { data: updatedSubmission, error } = await supabase
       .from("submissions")
       .update({
         status,
@@ -446,19 +450,9 @@ export function TasksManager({
         feedback: form.feedback.trim() || null,
         reviewed_at: new Date().toISOString(),
       })
-      .eq("id", submission.id);
-
-    if (!error) {
-      const taskStatus = status === "reviewed" ? "reviewed" : status === "rejected" ? "rejected" : "revision_required";
-      await supabase.from("tasks").update({ status: taskStatus }).eq("id", submission.task_id);
-      const task = tasks.find((item) => item.id === submission.task_id);
-      if (task) {
-        await supabase.rpc("refresh_student_progress", {
-          target_student_id: submission.student_id,
-          target_course_id: task.course_id,
-        });
-      }
-    }
+      .eq("id", submission.id)
+      .select("*")
+      .single();
 
     setSubmissionBusyId(null);
 
@@ -479,7 +473,7 @@ export function TasksManager({
     setExpandedTaskId((currentTaskId) =>
       currentTaskId === submission.task_id ? null : currentTaskId,
     );
-    await loadData();
+    applyReviewedSubmissions([updatedSubmission]);
   }
 
   async function assignTask(event: React.FormEvent<HTMLFormElement>) {
