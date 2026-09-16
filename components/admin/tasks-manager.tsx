@@ -444,7 +444,12 @@ export function TasksManager({
       setToast({ type: "error", message: "Admin feedback is required before saving a review." });
       return;
     }
-    const score = status === "reviewed" ? toNumber(form.score, 0) : 0;
+    const score = status === "reviewed" ? Number(form.score) : 0;
+    const maxScore = tasks.find((task) => task.id === submission.task_id)?.max_score ?? 100;
+    if (status === "reviewed" && (!form.score.trim() || !Number.isFinite(score) || score < 0 || score > maxScore)) {
+      setToast({ type: "error", message: `Enter marks between 0 and ${maxScore}.` });
+      return;
+    }
 
     setSubmissionBusyId(submission.id);
     const { data: updatedSubmission, error } = await supabase
@@ -799,17 +804,17 @@ export function TasksManager({
             </div>
 
             <div className="rounded-xl border border-outline-variant/60 bg-surface-container-low p-2.5">
-              <div className="grid gap-2 md:grid-cols-12">
-                <input aria-label="Search tasks" className="wc-input md:col-span-4" placeholder="Search task title..." value={query} onChange={(event) => setQuery(event.target.value)} />
-                <select aria-label="Filter by trainee" className="wc-input md:col-span-2" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(180px,2fr)_repeat(3,minmax(120px,1fr))_150px_minmax(120px,1fr)]">
+                <input aria-label="Search tasks" className="wc-input" placeholder="Search task title..." value={query} onChange={(event) => setQuery(event.target.value)} />
+                <select aria-label="Filter by trainee" className="wc-input" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
                   <option value="all">All Trainees</option>
                   {assignedTaskStudents.map((student) => <option key={student.id} value={student.id}>{student.full_name ?? student.email}</option>)}
                 </select>
-                <select aria-label="Filter by course" className="wc-input md:col-span-2" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
+                <select aria-label="Filter by course" className="wc-input" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
                   <option value="all">All Courses</option>
                   {coursesWithEnrollments.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
                 </select>
-                <select aria-label="Filter by task status" className="wc-input md:col-span-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <select aria-label="Filter by task status" className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="all">All Task Status</option>
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
@@ -818,14 +823,12 @@ export function TasksManager({
                   <option value="revision_required">Revision Required</option>
                   <option value="rejected">Rejected</option>
                 </select>
-                <div className="grid grid-cols-2 gap-2 md:col-span-2">
                   <input aria-label="Filter by deadline" className="wc-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
                   <select aria-label="Filter by review status" className="wc-input" value={reviewedFilter} onChange={(event) => setReviewedFilter(event.target.value)}>
                     <option value="all">All Review</option>
                     <option value="reviewed">Reviewed</option>
                     <option value="unreviewed">Unreviewed</option>
                   </select>
-                </div>
               </div>
             </div>
             <div className="space-y-3">
@@ -893,28 +896,21 @@ export function TasksManager({
                     : "Open submitted tasks, score them, and give feedback."}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 text-xs font-bold">
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">Total {taskStats.total}</span>
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">Pending {taskStats.pending}</span>
-                <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Submitted {taskStats.submitted}</span>
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Reviewed {taskStats.reviewed}</span>
-                <span className="rounded-full bg-rose-100 px-3 py-1 text-rose-700">Zero marks {allZeroMarksTasks.length}</span>
-                <span className="rounded-full bg-rose-100 px-3 py-1 text-rose-700">Rejected {taskStats.rejected}</span>
-              </div>
+              <span className="rounded-full bg-surface-container px-2.5 py-1 text-xs font-medium text-on-surface-variant">{reviewVisibleTasks.length} matching tasks</span>
             </div>
 
             <div className="rounded-xl border border-outline-variant/60 bg-surface-container-low p-2.5">
-              <div className="grid gap-2 md:grid-cols-12">
-                <input aria-label="Search tasks" className="wc-input md:col-span-4" placeholder="Search task title..." value={query} onChange={(event) => setQuery(event.target.value)} />
-                <select aria-label="Filter by trainee" className="wc-input md:col-span-2" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(180px,2fr)_repeat(3,minmax(120px,1fr))_150px_minmax(120px,1fr)]">
+                <input aria-label="Search tasks" className="wc-input" placeholder="Search task title..." value={query} onChange={(event) => setQuery(event.target.value)} />
+                <select aria-label="Filter by trainee" className="wc-input" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
                   <option value="all">All Trainees</option>
                   {assignedTaskStudents.map((student) => <option key={student.id} value={student.id}>{student.full_name ?? student.email}</option>)}
                 </select>
-                <select aria-label="Filter by course" className="wc-input md:col-span-2" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
+                <select aria-label="Filter by course" className="wc-input" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
                   <option value="all">All Courses</option>
                   {coursesWithEnrollments.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
                 </select>
-                <select aria-label="Filter by task status" className="wc-input md:col-span-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <select aria-label="Filter by task status" className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="all">All Task Status</option>
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
@@ -923,19 +919,17 @@ export function TasksManager({
                   <option value="revision_required">Revision Required</option>
                   <option value="rejected">Rejected</option>
                 </select>
-                <div className="grid grid-cols-2 gap-2 md:col-span-2">
                   <input aria-label="Filter by deadline" className="wc-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
                   <select aria-label="Filter by review status" className="wc-input" value={reviewedFilter} onChange={(event) => setReviewedFilter(event.target.value)}>
                     <option value="all">All Review</option>
                     <option value="reviewed">Reviewed</option>
                     <option value="unreviewed">Unreviewed</option>
                   </select>
-                </div>
               </div>
             </div>
             {canCreate && activeView === "reviews" ? (
               <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-3">
-                <div className="grid gap-3 sm:grid-cols-[1fr_100px] xl:grid-cols-[auto_90px_minmax(160px,1fr)_auto] xl:items-end">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[auto_90px_minmax(160px,1fr)_auto] xl:items-end">
                   <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-on-surface">
                     <input
                       type="checkbox"
@@ -1000,7 +994,7 @@ export function TasksManager({
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <h3 className="min-w-0 break-words text-sm font-semibold text-on-surface">{task.title}</h3>
-                              <StatusPill value={submission?.status ?? task.status} />
+                              <StatusPill value={submission?.status ?? task.status} className="!px-2 !py-0.5 !text-[10px]" />
                             </div>
                             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-on-surface-variant">
                               <span className="font-medium text-on-surface">{studentById.get(task.student_id)?.full_name ?? "Unknown student"}</span>
