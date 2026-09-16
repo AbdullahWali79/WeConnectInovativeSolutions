@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Document, Image, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 import { EmptyState } from "@/components/empty-state";
@@ -571,6 +572,7 @@ export function StudentProgress({ targetStudentId, adminMode = false }: { target
                           <p className="text-body-sm text-on-surface-variant">{formatDateTime(submission?.submitted_at ?? task.created_at)}</p>
                           <p className="text-body-sm text-on-surface-variant">Score {submission?.score ?? 0}/{task.max_score ?? 100}</p>
                           <TaskFeedback feedback={submission?.feedback} />
+                          {!adminMode && submission?.status === "revision_required" ? <TaskRevisionLink taskId={task.id} /> : null}
                         </div>
                       );
                     })
@@ -621,6 +623,7 @@ export function StudentProgress({ targetStudentId, adminMode = false }: { target
                     <p className="text-body-sm text-on-surface-variant">{formatDateTime(submission.submitted_at)}</p>
                     <p className="text-body-sm text-on-surface-variant">Score {submission.score ?? 0}/{task?.max_score ?? 100}</p>
                     <TaskFeedback feedback={submission.feedback} />
+                    {!adminMode && submission.status === "revision_required" ? <TaskRevisionLink taskId={submission.task_id} /> : null}
                   </div>
                 ))
               )}
@@ -629,6 +632,17 @@ export function StudentProgress({ targetStudentId, adminMode = false }: { target
         </div>
       )}
     </>
+  );
+}
+
+function TaskRevisionLink({ taskId }: { taskId: string }) {
+  return (
+    <div className="flex flex-col gap-3 md:col-span-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-on-surface-variant">Update your work using the admin feedback, then resubmit it for review.</p>
+      <Link href={`/student/tasks/${encodeURIComponent(taskId)}/submit`} className="wc-primary-btn shrink-0 justify-center">
+        Revise &amp; Resubmit
+      </Link>
+    </div>
   );
 }
 

@@ -73,7 +73,7 @@ export function SyllabusTaskSubmissionModal({ task, course, submission, onClose,
         <div className="flex items-start justify-between gap-4 border-b border-outline-variant/60 px-5 py-4 sm:px-6">
           <div>
             <p className="text-label-sm uppercase tracking-widest text-primary">{task.workflow_type === "daily" ? "Daily Task" : "Syllabus Task"}</p>
-            <h2 id="syllabus-task-title" className="mt-1 text-title-lg text-on-surface">Submit task</h2>
+            <h2 id="syllabus-task-title" className="mt-1 text-title-lg text-on-surface">{submission?.status === "revision_required" ? "Revise & Resubmit Task" : "Submit task"}</h2>
             <p className="mt-1 text-sm text-on-surface-variant">Submit the task explanation, proof link, and optional image URL for review.</p>
           </div>
           <button type="button" onClick={onClose} disabled={saving} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50" aria-label="Close task form">
@@ -82,6 +82,12 @@ export function SyllabusTaskSubmissionModal({ task, course, submission, onClose,
         </div>
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={submit}>
           <div className="grid flex-1 gap-4 overflow-y-auto px-5 py-5 sm:grid-cols-2 sm:px-6">
+            {submission?.status === "revision_required" ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:col-span-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-900">Admin feedback</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-amber-900">{submission.feedback?.trim() || "Please improve your work and resubmit it for review."}</p>
+              </div>
+            ) : null}
             <label className="block">
               <span className="wc-label">Course</span>
               <input className="wc-input mt-2 bg-surface-container-low" value={course?.title ?? "Unknown course"} readOnly />
