@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
-import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { GoogleDriveImagePreviews } from "@/components/admin/google-drive-image-previews";
@@ -69,6 +68,7 @@ export function TasksManager({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [submittedProjectCount, setSubmittedProjectCount] = useState(0);
   const [query, setQuery] = useState("");
+  const [pagination, setPagination] = useState({ key: "", page: 1 });
   const [studentFilter, setStudentFilter] = useState("all");
   const [courseFilter, setCourseFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -298,10 +298,15 @@ export function TasksManager({
   );
   const allVisibleSubmittedSelected = bulkReviewableTasks.length > 0 && selectedBulkReviewTaskIds.length === bulkReviewableTasks.length;
   const assignedOnlyTasks = useMemo(() => {
-    return tasks
+    return visibleTasks
       .filter((task) => task.workflow_type !== "daily")
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [tasks]);
+  }, [visibleTasks]);
+  const paginationKey = JSON.stringify([activeView, query, studentFilter, courseFilter, statusFilter, dueDate, reviewedFilter]);
+  const listedTasks = activeView === "assigned" ? assignedOnlyTasks : reviewVisibleTasks;
+  const pageCount = Math.max(1, Math.ceil(listedTasks.length / 25));
+  const currentPage = Math.min(pagination.key === paginationKey ? pagination.page : 1, pageCount);
+  const pageTasks = listedTasks.slice((currentPage - 1) * 25, currentPage * 25);
   const taskStats = useMemo(() => {
     const reviewed = tasks.filter((task) => task.status === "reviewed").length;
     const submitted = tasks.filter((task) => task.status === "submitted").length;
@@ -722,41 +727,27 @@ export function TasksManager({
   return (
     <>
       <Toast toast={toast} onClear={clearToast} />
-      <PageHeader
-        eyebrow="Task Assignment"
-        title="Assign tasks with resources"
-        description="Create a task for an enrolled student and attach video, Google Docs, Sheets, images, GitHub, or custom resource links."
-        action={
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowBulkTaskModal(true)}
-              className="wc-secondary-btn shadow-sm"
-            >
-              <Icon name="group_add" /> Bulk Assign
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowTaskModal(true)}
-              className="wc-primary-btn shadow-sm"
-            >
-              <Icon name="add" /> New Task
-            </button>
-          </div>
-        }
-      />
-
-      <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Total Tasks" value={taskStats.total} icon="assignment" tone="dark" />
-        <MetricCard label="Pending / Active" value={taskStats.pending} icon="pending_actions" />
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-on-surface">Tasks</h1>
+          <p className="mt-1 text-xs text-on-surface-variant">Assign work, review submissions, and track results.</p>
+        </div>
+        {canCreate ? <div className="flex gap-2">
+          <button type="button" onClick={() => setShowBulkTaskModal(true)} className="wc-secondary-btn !px-3 !py-2 !text-xs"><Icon name="group_add" /> Bulk assign</button>
+          <button type="button" onClick={() => setShowTaskModal(true)} className="wc-primary-btn !px-3 !py-2 !text-xs"><Icon name="add" /> New task</button>
+        </div> : null}
+      </header>
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+        <MetricCard label="Total tasks" value={taskStats.total} icon="assignment" tone="dark" />
+        <MetricCard label="Pending" value={taskStats.pending} icon="pending_actions" />
         <MetricCard label="Submitted" value={taskStats.submitted} icon="upload_file" />
-        <MetricCard label="Reviewed" value={taskStats.reviewed} icon="rate_review" />
-        <MetricCard label="Needs Revision" value={taskStats.revisions} icon="restart_alt" />
+        <MetricCard label="Accepted" value={taskStats.reviewed} icon="task_alt" />
+        <MetricCard label="Needs revision" value={taskStats.revisions} icon="restart_alt" />
         <MetricCard label="Rejected" value={taskStats.rejected} icon="block" />
       </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <section className="wc-card overflow-hidden">
+        <section className="wc-card overflow-hidden [&_.wc-input]:min-w-0 [&_.wc-input]:px-3 [&_.wc-input]:py-2 [&_.wc-input]:text-sm [&_.wc-input]:shadow-none [&_.wc-label]:text-[10px] [&_.wc-secondary-btn]:px-3 [&_.wc-secondary-btn]:py-2 [&_.wc-secondary-btn]:text-xs">
             <div className="border-b border-outline-variant/70 bg-surface-container-low px-4 pt-4">
               <div className="flex flex-wrap gap-2">
                 <button
@@ -796,29 +787,29 @@ export function TasksManager({
             </div>
 
           {activeView === "assigned" ? (
-            <div className="space-y-4 p-4">
-            <div className="flex flex-col gap-4 border-b border-outline-variant/70 p-4 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3 p-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-1">
               <div>
                 <h2 className="text-base font-black text-on-surface">Assigned tasks</h2>
-                <p className="mt-1 text-sm text-on-surface-variant">View all assigned tasks separately from submission reviews.</p>
+                <p className="mt-1 text-xs text-on-surface-variant">View all assigned tasks separately from submission reviews.</p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs font-bold">
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">Total {taskStats.total}</span>
               </div>
             </div>
 
-            <div className="border-b border-outline-variant/70 bg-surface-container-low p-3">
-              <div className="grid gap-3 md:grid-cols-12">
-                <input className="wc-input md:col-span-4" placeholder="Search task title" value={query} onChange={(event) => setQuery(event.target.value)} />
-                <select className="wc-input md:col-span-2" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
+            <div className="rounded-xl border border-outline-variant/60 bg-surface-container-low p-2.5">
+              <div className="grid gap-2 md:grid-cols-12">
+                <input aria-label="Search tasks" className="wc-input md:col-span-4" placeholder="Search task title..." value={query} onChange={(event) => setQuery(event.target.value)} />
+                <select aria-label="Filter by trainee" className="wc-input md:col-span-2" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
                   <option value="all">All Trainees</option>
                   {assignedTaskStudents.map((student) => <option key={student.id} value={student.id}>{student.full_name ?? student.email}</option>)}
                 </select>
-                <select className="wc-input md:col-span-2" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
+                <select aria-label="Filter by course" className="wc-input md:col-span-2" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
                   <option value="all">All Courses</option>
                   {coursesWithEnrollments.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
                 </select>
-                <select className="wc-input md:col-span-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <select aria-label="Filter by task status" className="wc-input md:col-span-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="all">All Task Status</option>
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
@@ -827,9 +818,9 @@ export function TasksManager({
                   <option value="revision_required">Revision Required</option>
                   <option value="rejected">Rejected</option>
                 </select>
-                <div className="grid grid-cols-2 gap-3 md:col-span-2">
-                  <input className="wc-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
-                  <select className="wc-input" value={reviewedFilter} onChange={(event) => setReviewedFilter(event.target.value)}>
+                <div className="grid grid-cols-2 gap-2 md:col-span-2">
+                  <input aria-label="Filter by deadline" className="wc-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+                  <select aria-label="Filter by review status" className="wc-input" value={reviewedFilter} onChange={(event) => setReviewedFilter(event.target.value)}>
                     <option value="all">All Review</option>
                     <option value="reviewed">Reviewed</option>
                     <option value="unreviewed">Unreviewed</option>
@@ -840,7 +831,7 @@ export function TasksManager({
             <div className="space-y-3">
               {assignedOnlyTasks.length === 0 ? <div className="p-4"><EmptyState title="No assigned tasks" description="Create a new task to see it here." icon="assignment" /></div> : (
                 <div className="divide-y divide-outline-variant/70">
-                  {assignedOnlyTasks.map((task) => {
+                  {pageTasks.map((task) => {
                     const taskResources = resources.filter((resource) => resource.task_id === task.id);
                     return (
                       <article key={task.id} className="p-4">
@@ -852,7 +843,7 @@ export function TasksManager({
                             </div>
                             <p className="truncate text-sm text-on-surface-variant">{task.description ?? "No description"}</p>
                             <p className="mt-2 text-xs text-on-surface-variant">
-                              {studentById.get(task.student_id)?.full_name ?? "Unknown student"} Ãƒâ€šÃ‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ãƒâ€šÃ‚Â· Deadline {formatDateTime(task.deadline)}
+                              {studentById.get(task.student_id)?.full_name ?? "Unknown student"} / {courseById.get(task.course_id)?.title ?? "Unknown course"} / Deadline {formatDateTime(task.deadline)}
                             </p>
                             {taskResources.length > 0 ? (
                               <div className="mt-4 flex flex-wrap gap-2">
@@ -892,11 +883,11 @@ export function TasksManager({
             </div>
           </div>
           ) : (
-            <div className="space-y-4 p-4">
-            <div className="flex flex-col gap-4 border-b border-outline-variant/70 p-4 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3 p-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-1">
               <div>
                 <h2 className="text-base font-black text-on-surface">{activeView === "zero-marks" ? "Accepted submissions with zero marks" : "Submission review"}</h2>
-                <p className="mt-1 text-sm text-on-surface-variant">
+                <p className="mt-1 text-xs text-on-surface-variant">
                   {activeView === "zero-marks"
                     ? "These submissions were accepted but currently have 0 marks. Open one to correct its score."
                     : "Open submitted tasks, score them, and give feedback."}
@@ -912,18 +903,18 @@ export function TasksManager({
               </div>
             </div>
 
-            <div className="border-b border-outline-variant/70 bg-surface-container-low p-3">
-              <div className="grid gap-3 md:grid-cols-12">
-                <input className="wc-input md:col-span-4" placeholder="Search task title" value={query} onChange={(event) => setQuery(event.target.value)} />
-                <select className="wc-input md:col-span-2" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
+            <div className="rounded-xl border border-outline-variant/60 bg-surface-container-low p-2.5">
+              <div className="grid gap-2 md:grid-cols-12">
+                <input aria-label="Search tasks" className="wc-input md:col-span-4" placeholder="Search task title..." value={query} onChange={(event) => setQuery(event.target.value)} />
+                <select aria-label="Filter by trainee" className="wc-input md:col-span-2" value={studentFilter} onChange={(event) => setStudentFilter(event.target.value)}>
                   <option value="all">All Trainees</option>
                   {assignedTaskStudents.map((student) => <option key={student.id} value={student.id}>{student.full_name ?? student.email}</option>)}
                 </select>
-                <select className="wc-input md:col-span-2" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
+                <select aria-label="Filter by course" className="wc-input md:col-span-2" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
                   <option value="all">All Courses</option>
                   {coursesWithEnrollments.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
                 </select>
-                <select className="wc-input md:col-span-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <select aria-label="Filter by task status" className="wc-input md:col-span-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="all">All Task Status</option>
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
@@ -932,9 +923,9 @@ export function TasksManager({
                   <option value="revision_required">Revision Required</option>
                   <option value="rejected">Rejected</option>
                 </select>
-                <div className="grid grid-cols-2 gap-3 md:col-span-2">
-                  <input className="wc-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
-                  <select className="wc-input" value={reviewedFilter} onChange={(event) => setReviewedFilter(event.target.value)}>
+                <div className="grid grid-cols-2 gap-2 md:col-span-2">
+                  <input aria-label="Filter by deadline" className="wc-input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+                  <select aria-label="Filter by review status" className="wc-input" value={reviewedFilter} onChange={(event) => setReviewedFilter(event.target.value)}>
                     <option value="all">All Review</option>
                     <option value="reviewed">Reviewed</option>
                     <option value="unreviewed">Unreviewed</option>
@@ -943,9 +934,9 @@ export function TasksManager({
               </div>
             </div>
             {canCreate && activeView === "reviews" ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-                  <label className="flex items-center gap-3 text-sm font-bold text-on-surface xl:min-w-48">
+              <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-3">
+                <div className="grid gap-3 sm:grid-cols-[1fr_100px] xl:grid-cols-[auto_90px_minmax(160px,1fr)_auto] xl:items-end">
+                  <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-on-surface">
                     <input
                       type="checkbox"
                       ref={(input) => {
@@ -956,12 +947,12 @@ export function TasksManager({
                       onChange={toggleAllVisibleSubmitted}
                       className="h-5 w-5 rounded border-outline-variant text-emerald-600"
                     />
-                    Select all submitted tasks ({bulkReviewableTasks.length})
+                    Select all ({bulkReviewableTasks.length})
                   </label>
-                  <label className="block xl:w-36">
-                    <span className="wc-label">Default marks</span>
+                  <label className="block">
+                    <span className="wc-label">Marks</span>
                     <input
-                      className="wc-input mt-2 bg-white"
+                      className="wc-input mt-1 bg-white"
                       type="number"
                       min="0"
                       value={bulkReviewScore}
@@ -969,9 +960,9 @@ export function TasksManager({
                     />
                   </label>
                   <label className="block min-w-0 flex-1">
-                    <span className="wc-label">Default feedback</span>
+                    <span className="wc-label">Feedback</span>
                     <input
-                      className="wc-input mt-2 bg-white"
+                      className="wc-input mt-1 bg-white"
                       value={bulkReviewFeedback}
                       onChange={(event) => setBulkReviewFeedback(event.target.value)}
                       placeholder="Very Good Work"
@@ -981,313 +972,116 @@ export function TasksManager({
                     type="button"
                     disabled={selectedBulkReviewTaskIds.length === 0 || bulkReviewing}
                     onClick={() => void acceptSelectedSubmissions()}
-                    className="wc-primary-btn whitespace-nowrap bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="wc-primary-btn !px-3 !py-2 !text-xs whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Icon name={bulkReviewing ? "hourglass_empty" : "done_all"} />
                     {bulkReviewing ? "Accepting..." : `Accept Selected (${selectedBulkReviewTaskIds.length})`}
                   </button>
                 </div>
-                <p className="mt-3 text-xs text-emerald-800">Select all includes every submitted task matching the current filters. The marks and feedback above will be applied to every selected submission.</p>
+                <p className="mt-2 text-[11px] text-on-surface-variant">Select all includes submitted tasks across all filtered pages. Marks and feedback apply to the selection.</p>
               </div>
             ) : null}
 
             {reviewVisibleTasks.length === 0 ? <div className="p-4"><EmptyState title={activeView === "zero-marks" ? "No accepted submissions with zero marks" : "No tasks matched"} description={activeView === "zero-marks" ? "All accepted submissions currently have marks greater than zero." : "Adjust filters or create a task."} icon={activeView === "zero-marks" ? "verified" : "assignment"} /></div> : (
               <div className="divide-y divide-outline-variant/70">
-                {reviewVisibleTasks.map((task) => {
-                  const taskResources = resources.filter((resource) => resource.task_id === task.id);
+                {pageTasks.map((task) => {
+                  const submission = submissionByTaskId.get(task.id);
+                  const review = submission ? submissionForms[submission.id] : null;
                   const isExpanded = expandedTaskId === task.id;
-                  const taskSubmission = submissionByTaskId.get(task.id) ?? null;
-                  const imageProofLinks = Array.isArray(taskSubmission?.proof_links)
-                    ? taskSubmission.proof_links.filter((link): link is string => typeof link === "string" && link.trim().length > 0)
-                    : [];
-                  const taskSubmissionForm = taskSubmission ? submissionForms[taskSubmission.id] ?? {
-                    status: taskSubmission.status,
-                    score: String(taskSubmission.score ?? 0),
-                    feedback: taskSubmission.feedback ?? "",
-                  } : null;
-                  const canBulkReview = taskSubmission?.status === "submitted";
-                  const isBulkSelected = canBulkReview && selectedBulkReviewTaskIds.includes(task.id);
+                  const selected = selectedBulkReviewTaskIds.includes(task.id);
+                  const busy = bulkReviewing || submissionBusyId === submission?.id;
                   return (
-                    <article key={task.id} className="p-4">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        {canCreate && canBulkReview ? (
-                          <label className="flex shrink-0 items-center gap-2 rounded-xl border border-outline-variant/70 bg-surface-container-low px-3 py-2 text-xs font-bold text-on-surface">
-                            <input
-                              type="checkbox"
-                              checked={isBulkSelected}
-                              disabled={bulkReviewing}
-                              onChange={() => toggleBulkReviewTask(task.id)}
-                              className="h-5 w-5 rounded border-outline-variant text-emerald-600"
-                            />
-                            Select
-                          </label>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
-                          className="flex min-w-0 flex-1 items-start gap-3 text-left"
-                        >
-                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-container text-sm font-black text-primary transition hover:bg-surface-container-high">
-                            {isExpanded ? "ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢" : "+"}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="mb-2 flex flex-wrap items-center gap-3">
-                              <h3 className="truncate text-base font-bold text-on-surface">{task.title}</h3>
-                              <StatusPill value={task.status} />
+                    <article key={task.id} className={selected ? "bg-primary/[0.03]" : "bg-white"}>
+                      <div className="flex items-center gap-3 px-2 py-3 sm:px-3">
+                        {canCreate && submission?.status === "submitted" ? (
+                          <input type="checkbox" aria-label={`Select ${task.title}`} checked={selected} disabled={bulkReviewing} onChange={() => toggleBulkReviewTask(task.id)} className="h-4 w-4 shrink-0 rounded border-outline-variant text-primary" />
+                        ) : <span className="w-4 shrink-0" />}
+                        <button type="button" aria-expanded={isExpanded} aria-controls={`task-details-${task.id}`} onClick={() => setExpandedTaskId(isExpanded ? null : task.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-primary">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="min-w-0 break-words text-sm font-semibold text-on-surface">{task.title}</h3>
+                              <StatusPill value={submission?.status ?? task.status} />
                             </div>
-                            <p className="truncate text-sm text-on-surface-variant">{task.description ?? "No description"}</p>
-                            <p className="mt-2 text-xs text-on-surface-variant">
-                              <span className="font-black text-slate-950">
-                                {studentById.get(task.student_id)?.full_name ?? "Unknown student"}
-                              </span>{" "}
-                              Ãƒâ€šÃ‚Â· {courseById.get(task.course_id)?.title ?? "Unknown course"} Ãƒâ€šÃ‚Â· Deadline {formatDateTime(task.deadline)}
-                            </p>
-                            <p className="mt-2 text-xs font-semibold text-on-surface-variant">
-                              Submission:{" "}
-                              {taskSubmission ? (
-                                <span className="text-emerald-700">{taskSubmission.status.replaceAll("_", " ")}</span>
-                              ) : (
-                                <span className="text-amber-700">Waiting for student submission</span>
-                              )}
-                            </p>
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-on-surface-variant">
+                              <span className="font-medium text-on-surface">{studentById.get(task.student_id)?.full_name ?? "Unknown student"}</span>
+                              <span>{courseById.get(task.course_id)?.title ?? "Unknown course"}</span>
+                              {submission ? <span>{formatDateTime(submission.submitted_at)}</span> : <span>Awaiting submission</span>}
+                            </div>
                           </div>
+                          {submission?.status === "reviewed" ? <span className="shrink-0 text-xs font-semibold tabular-nums text-primary">{submission.score}/{task.max_score}</span> : null}
+                          <Icon name={isExpanded ? "expand_less" : "expand_more"} className="shrink-0 text-xl text-on-surface-variant" />
                         </button>
-                        <div className="flex shrink-0 gap-2">
-                          {canCreate ? (
-                            <button type="button" onClick={() => setExpandedTaskId(isExpanded ? null : task.id)} className="flex h-8 items-center justify-center rounded-lg bg-surface-container px-3 text-xs font-bold text-primary">
-                              {isExpanded ? "Collapse" : "Details"}
-                            </button>
-                          ) : null}
-                        </div>
                       </div>
-
-                      <AnimatePresence initial={false}>
-                        {isExpanded ? (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.22 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="mt-4 space-y-4 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4">
-                              <div className="grid gap-2 rounded-xl bg-surface p-3 text-sm">
-                                <div className="flex items-center justify-between gap-3">
-                                  <span className="text-on-surface-variant">Student</span>
-                                  <span className="font-bold text-on-surface">{studentById.get(task.student_id)?.full_name ?? "Unknown student"}</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                  <span className="text-on-surface-variant">Course</span>
-                                  <span className="font-bold text-on-surface">{courseById.get(task.course_id)?.title ?? "Unknown course"}</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                  <span className="text-on-surface-variant">Deadline</span>
-                                  <span className="font-bold text-on-surface">{formatDateTime(task.deadline)}</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                  <span className="text-on-surface-variant">Max score</span>
-                                  <span className="font-bold text-on-surface">{task.max_score}</span>
-                                </div>
+                      {isExpanded ? (
+                        <div id={`task-details-${task.id}`} className="border-t border-outline-variant/50 bg-surface-container-low p-3 sm:p-4">
+                          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+                            <div className="min-w-0 space-y-4">
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant">
+                                <span>Deadline: <strong className="font-medium text-on-surface">{formatDateTime(task.deadline)}</strong></span>
+                                <span>Max score: <strong className="font-medium text-on-surface">{task.max_score}</strong></span>
+                                {submission?.reviewed_at ? <span>Reviewed: {formatDateTime(submission.reviewed_at)}</span> : null}
                               </div>
-
-                              <div className="rounded-3xl border border-outline-variant/60 bg-white p-6 shadow-md space-y-6">
-                                <div className="flex items-start justify-between gap-4 pb-4 border-b border-outline-variant/50">
-                                  <div>
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-primary">Submission Review</p>
-                                    <h4 className="mt-1 text-base font-bold text-on-surface">
-                                      {taskSubmission ? "Latest submission" : "No submission yet"}
-                                    </h4>
-                                  </div>
-                                  {taskSubmission ? <StatusPill value={taskSubmission.status} /> : null}
-                                </div>
-
-                                <div className="space-y-3 rounded-2xl bg-surface-container-low p-4">
-                                  <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Description</p>
-                                  <p className="mt-1 text-sm text-on-surface">{task.description ?? "No description"}</p>
-                                </div>
-
-                                {taskSubmission && taskSubmissionForm ? (
-                                  <div className="space-y-5">
-                                    <div className="grid gap-3 grid-cols-2 rounded-2xl bg-surface-container-low p-4 text-xs text-on-surface-variant">
-                                      <div className="flex flex-col gap-1">
-                                        <span className="text-[10px] uppercase font-bold text-on-surface-variant/70">Submitted</span>
-                                        <span className="font-bold text-on-surface">{formatDateTime(taskSubmission.submitted_at)}</span>
-                                      </div>
-                                      <div className="flex flex-col gap-1">
-                                        <span className="text-[10px] uppercase font-bold text-on-surface-variant/70">Reviewed</span>
-                                        <span className="font-bold text-on-surface">
-                                          {taskSubmission.reviewed_at ? formatDateTime(taskSubmission.reviewed_at) : "Not reviewed"}
-                                        </span>
-                                      </div>
-                                      <div className="flex flex-col gap-1 col-span-2 border-t border-outline-variant/30 pt-2 mt-1">
-                                        <span className="text-[10px] uppercase font-bold text-on-surface-variant/70">Current Score</span>
-                                        <span className="font-bold text-sm text-primary">
-                                          {taskSubmission.score ?? 0} / {task.max_score}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Verification Links</p>
-                                      <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-low p-3 space-y-2">
-                                        {taskSubmission.github_url ? (
-                                          <a
-                                            href={normalizeAnyUrl(taskSubmission.github_url)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center justify-between rounded-xl bg-primary text-white px-4 py-2.5 text-xs font-bold transition hover:bg-primary/90"
-                                          >
-                                            <span>Open Github Repository</span>
-                                            <Icon name="open_in_new" className="text-sm" />
-                                          </a>
-                                        ) : (
-                                          <div className="rounded-xl border border-outline-variant/40 bg-surface-container p-3 text-xs font-medium text-on-surface-variant">
-                                            No GitHub repository link provided.
-                                          </div>
-                                        )}
-                                        <div className="grid gap-2 grid-cols-2">
-                                          {taskSubmission.google_doc_url && <SubmissionLink label="Google Doc" url={taskSubmission.google_doc_url} />}
-                                          {taskSubmission.google_sheet_url && <SubmissionLink label="Google Sheet" url={taskSubmission.google_sheet_url} />}
-                                          {taskSubmission.image_url && <SubmissionLink label="Image" url={taskSubmission.image_url} />}
-                                          {taskSubmission.youtube_url && <SubmissionLink label="YouTube" url={taskSubmission.youtube_url} />}
-                                          {taskSubmission.proof_url && <SubmissionLink label="Proof Link" url={taskSubmission.proof_url} />}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <GoogleDriveImagePreviews links={imageProofLinks} />
-
-                                    {screenshots.some((screen) => screen.task_submission_id === taskSubmission.id) ? (
-                                    <div className="space-y-2">
-                                      <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Submitted Screenshots</p>
-                                      {(() => {
-                                        const subScreenshots = screenshots.filter((s) => s.task_submission_id === taskSubmission.id);
-                                        if (subScreenshots.length === 0) {
-                                          return (
-                                            <p className="text-xs text-on-surface-variant/80 italic p-3 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low">
-                                              No screenshots submitted.
-                                            </p>
-                                          );
-                                        }
-                                        return (
-                                          <div className="grid gap-3 grid-cols-3 p-3 rounded-2xl bg-surface-container-low">
-                                            {subScreenshots.map((screen) => (
-                                              <div
-                                                key={screen.id}
-                                                className="group relative cursor-pointer overflow-hidden rounded-xl border border-outline-variant/50 hover:border-primary transition aspect-video bg-white"
-                                                onClick={() => setLightboxUrl(screen.cdn_url)}
-                                              >
-                                                <img
-                                                  src={screen.cdn_url}
-                                                  alt={screen.original_filename}
-                                                  className="w-full h-full object-cover transition group-hover:scale-105"
-                                                />
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition">
-                                                  <Icon name="zoom_in" className="text-white text-xs" />
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-                                    ) : null}
-
-                                    <div className="space-y-4 pt-3 border-t border-outline-variant/50">
-                                      <div className="grid gap-4 grid-cols-2">
-                                        <label className="block space-y-1.5">
-                                          <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Review Status</span>
-                                          <select
-                                            className="wc-input bg-surface-container-low"
-                                            value={taskSubmissionForm.status}
-                                            onChange={(event) => updateSubmissionForm(taskSubmission.id, { status: event.target.value as SubmissionStatus })}
-                                          >
-                                            <option value="submitted">Submitted</option>
-                                            <option value="reviewed">Accept</option>
-                                            <option value="rejected">Reject</option>
-                                            <option value="revision_required">Revise</option>
-                                          </select>
-                                        </label>
-                                        <label className="block space-y-1.5">
-                                          <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Score</span>
-                                          <input
-                                            className="wc-input bg-surface-container-low"
-                                            type="number"
-                                            min="0"
-                                            max={task.max_score}
-                                            value={taskSubmissionForm.score}
-                                            onChange={(event) => updateSubmissionForm(taskSubmission.id, { score: event.target.value })}
-                                          />
-                                        </label>
-                                      </div>
-                                      <label className="block space-y-1.5">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Feedback</span>
-                                        <textarea
-                                          className="wc-input bg-surface-container-low min-h-24"
-                                          value={taskSubmissionForm.feedback}
-                                          onChange={(event) => updateSubmissionForm(taskSubmission.id, { feedback: event.target.value })}
-                                          placeholder="Write feedback for the student..."
-                                        />
-                                      </label>
-                                    </div>
-
-                                    <div className="flex gap-3 pt-2">
-                                      <button
-                                        type="button"
-                                        disabled={submissionBusyId === taskSubmission.id}
-                                        onClick={() => void saveSubmissionReview(taskSubmission, "reviewed")}
-                                        className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-bold shadow-md hover:shadow-lg transition flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm"
-                                      >
-                                        <Icon name="check" className="text-base" /> Accept
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={submissionBusyId === taskSubmission.id}
-                                        onClick={() => void saveSubmissionReview(taskSubmission, "rejected")}
-                                        className="flex-1 py-3 border border-rose-500 text-rose-600 hover:bg-rose-50 rounded-2xl font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm"
-                                      >
-                                        <Icon name="block" className="text-base" /> Reject
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={submissionBusyId === taskSubmission.id}
-                                        onClick={() => void saveSubmissionReview(taskSubmission, "revision_required")}
-                                        className="flex-1 py-3 border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-2xl font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm"
-                                      >
-                                        <Icon name="sync" className="text-base" /> Revise
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-center py-8 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low">
-                                    <Icon name="schedule" className="text-3xl text-on-surface-variant/30 mb-2" />
-                                    <p className="text-sm text-on-surface-variant">Once the student submits this task, you can review it directly from here.</p>
-                                  </div>
-                                )}
+                              <div>
+                                <h4 className="mb-1.5 text-xs font-semibold text-on-surface">{submission ? "Student explanation" : "Task brief"}</h4>
+                                <p className="max-h-60 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-6 text-on-surface-variant">{submission?.explanation || task.description || "No description provided."}</p>
                               </div>
-
-                              <div className="flex flex-wrap gap-2">
-                                {canCreate ? (
-                                  <button type="button" title="Load template" onClick={() => loadTaskTemplate(task)} className="wc-secondary-btn whitespace-nowrap">
-                                    <Icon name="content_copy" />
-                                    Template
-                                  </button>
-                                ) : null}
-                                {canCreate ? (
-                                  <button type="button" title="Duplicate task" disabled={saving} onClick={() => void duplicateTask(task)} className="wc-secondary-btn whitespace-nowrap disabled:opacity-50">
-                                    <Icon name="post_add" />
-                                    Duplicate
-                                  </button>
-                                ) : null}
-                                {canDelete ? (
-                                  <button type="button" disabled={saving} onClick={() => deleteTask(task.id)} className="rounded-xl bg-error-container px-4 py-2 text-sm font-bold text-error">
-                                    Delete
-                                  </button>
-                                ) : null}
+                              {submission?.explanation && task.description && submission.explanation.trim() !== task.description.trim() ? (
+                                <details className="text-xs text-on-surface-variant"><summary className="cursor-pointer font-semibold">Original task brief</summary><p className="mt-2 whitespace-pre-wrap break-words leading-5">{task.description}</p></details>
+                              ) : null}
+                              {submission ? <div>
+                                <h4 className="mb-2 text-xs font-semibold text-on-surface">Proof &amp; attachments</h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {submission.proof_url ? <SubmissionLink label="Proof link" url={submission.proof_url} /> : null}
+                                  {submission.github_url ? <SubmissionLink label="GitHub" url={submission.github_url} /> : null}
+                                  {submission.google_doc_url ? <SubmissionLink label="Google Doc" url={submission.google_doc_url} /> : null}
+                                  {submission.google_sheet_url ? <SubmissionLink label="Google Sheet" url={submission.google_sheet_url} /> : null}
+                                  {submission.image_url ? <SubmissionLink label="Image" url={submission.image_url} /> : null}
+                                  {submission.youtube_url ? <SubmissionLink label="YouTube" url={submission.youtube_url} /> : null}
+                                </div>
+                                <GoogleDriveImagePreviews links={Array.isArray(submission.proof_links) ? submission.proof_links.filter((link): link is string => typeof link === "string" && Boolean(link.trim())) : []} />
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {screenshots.filter((screen) => screen.task_submission_id === submission.id).map((screen) => (
+                                    <button key={screen.id} type="button" onClick={() => setLightboxUrl(screen.cdn_url)} className="h-20 w-28 overflow-hidden rounded-lg border border-outline-variant/50" aria-label={`View ${screen.original_filename}`}>
+                                      <img src={screen.cdn_url} alt={screen.original_filename} loading="lazy" className="h-full w-full object-cover" />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div> : null}
+                              {resources.some((resource) => resource.task_id === task.id) ? <div className="flex flex-wrap gap-2">
+                                {resources.filter((resource) => resource.task_id === task.id).map((resource) => <SubmissionLink key={resource.id} label={resource.title || "Task resource"} url={resource.url} />)}
+                              </div> : null}
+                              <div className="flex flex-wrap gap-2 border-t border-outline-variant/50 pt-3">
+                                {canCreate ? <>
+                                  <button type="button" onClick={() => { loadTaskTemplate(task); setShowTaskModal(true); }} className="wc-secondary-btn"><Icon name="content_copy" className="text-sm" /> Use template</button>
+                                  <button type="button" disabled={saving} onClick={() => void duplicateTask(task)} className="wc-secondary-btn"><Icon name="post_add" className="text-sm" /> Duplicate</button>
+                                </> : null}
+                                {canDelete ? <button type="button" disabled={saving} onClick={() => deleteTask(task.id)} className="rounded-lg px-3 py-2 text-xs font-semibold text-error hover:bg-error-container">Delete</button> : null}
                               </div>
                             </div>
-                          </motion.div>
-                        ) : null}
-                      </AnimatePresence>
+                            {submission && review ? (
+                              <fieldset disabled={!canCreate || busy} className="min-w-0 space-y-3 rounded-xl border border-outline-variant/60 bg-white p-3 disabled:opacity-70">
+                                <div className="flex items-center justify-between border-b border-outline-variant/50 pb-2">
+                                  <h4 className="text-sm font-semibold text-on-surface">Review submission</h4>
+                                  <span className="text-xs tabular-nums text-on-surface-variant">{submission.score ?? 0} / {task.max_score}</span>
+                                </div>
+                                <div className="grid grid-cols-[1fr_100px] gap-2">
+                                  <label className="block"><span className="wc-label">Status</span><select className="wc-input mt-1" value={review.status} onChange={(event) => updateSubmissionForm(submission.id, { status: event.target.value as SubmissionStatus })}>
+                                    <option value="submitted">Submitted</option><option value="reviewed">Accept</option><option value="revision_required">Revise</option><option value="rejected">Reject</option>
+                                  </select></label>
+                                  <label className="block"><span className="wc-label">Marks / {task.max_score}</span><input type="number" min="0" max={task.max_score} className="wc-input mt-1" value={review.score} onChange={(event) => updateSubmissionForm(submission.id, { score: event.target.value })} /></label>
+                                </div>
+                                <label className="block"><span className="wc-label">Feedback *</span><textarea rows={3} className="wc-input mt-1 resize-y" value={review.feedback} onChange={(event) => updateSubmissionForm(submission.id, { feedback: event.target.value })} placeholder="Add clear feedback for the student..." /></label>
+                                <button type="button" onClick={() => void saveSubmissionReview(submission)} className="wc-primary-btn w-full !py-2 !text-xs">{busy ? "Saving..." : "Save review"}</button>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <button type="button" onClick={() => void saveSubmissionReview(submission, "reviewed")} className="rounded-lg bg-emerald-50 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100">Accept</button>
+                                  <button type="button" onClick={() => void saveSubmissionReview(submission, "revision_required")} className="rounded-lg bg-amber-50 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100">Revise</button>
+                                  <button type="button" onClick={() => void saveSubmissionReview(submission, "rejected")} className="rounded-lg bg-rose-50 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-100">Reject</button>
+                                </div>
+                              </fieldset>
+                            ) : <p className="rounded-xl border border-dashed border-outline-variant p-4 text-sm text-on-surface-variant">Waiting for the student to submit their work.</p>}
+                          </div>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}
@@ -1295,6 +1089,14 @@ export function TasksManager({
             )}
           </div>
           )}
+            <nav aria-label="Task pagination" className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant/60 px-4 py-3 text-xs text-on-surface-variant">
+              <span>{listedTasks.length ? `${(currentPage - 1) * 25 + 1}-${Math.min(currentPage * 25, listedTasks.length)} of ${listedTasks.length} tasks` : "0 tasks"}</span>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={currentPage === 1} onClick={() => { setPagination({ key: paginationKey, page: currentPage - 1 }); setExpandedTaskId(null); }} className="rounded-lg border border-outline-variant px-3 py-1.5 font-semibold disabled:opacity-40">Previous</button>
+                <span>Page {currentPage} of {pageCount}</span>
+                <button type="button" disabled={currentPage === pageCount} onClick={() => { setPagination({ key: paginationKey, page: currentPage + 1 }); setExpandedTaskId(null); }} className="rounded-lg border border-outline-variant px-3 py-1.5 font-semibold disabled:opacity-40">Next</button>
+              </div>
+            </nav>
           </section>
       </motion.div>
 
@@ -1881,7 +1683,7 @@ function SubmissionButton({ label, url, primary = false }: { label: string; url:
       rel="noreferrer"
       className={primary
         ? "flex items-center justify-between rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary/90"
-        : "flex items-center justify-between rounded-lg bg-white px-3 py-2 text-primary transition hover:bg-primary/5"}
+        : "inline-flex items-center gap-2 rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-xs font-medium text-primary transition hover:bg-primary/5"}
     >
       <span>{label}</span>
       <Icon name="open_in_new" className="text-base" />
@@ -1896,12 +1698,9 @@ function SubmissionLink({ label, url }: { label: string; url: string | null }) {
 function MetricCard({ label, value, icon, tone = "light" }: { label: string; value: string | number; icon: string; tone?: "light" | "dark" }) {
   const dark = tone === "dark";
   return (
-    <div className={dark ? "rounded-2xl bg-primary p-4 text-white shadow-card" : "rounded-2xl border border-outline-variant bg-white p-4 shadow-sm"}>
-      <div className={dark ? "mb-3 inline-flex rounded-xl bg-white/15 p-2" : "mb-3 inline-flex rounded-xl bg-surface-container p-2 text-primary"}>
-        <Icon name={icon} className="text-lg" />
-      </div>
-      <p className={dark ? "text-xs font-bold text-blue-100" : "text-xs font-bold text-on-surface-variant"}>{label}</p>
-      <p className={dark ? "text-2xl font-black text-white" : "text-2xl font-black text-primary"}>{value}</p>
+    <div className={`flex items-center gap-3 rounded-xl border px-3 py-3 ${dark ? "border-primary bg-primary text-white" : "border-outline-variant/60 bg-white text-on-surface"}`}>
+      <Icon name={icon} className={`text-xl ${dark ? "text-white/80" : "text-primary/70"}`} />
+      <div><p className={`text-[11px] font-medium ${dark ? "text-white/80" : "text-on-surface-variant"}`}>{label}</p><p className="text-xl font-bold leading-6 tabular-nums">{value}</p></div>
     </div>
   );
 }
