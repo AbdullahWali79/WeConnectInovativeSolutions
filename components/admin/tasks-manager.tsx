@@ -29,6 +29,8 @@ type SubmissionScreenshot = {
   created_at: string;
 };
 
+const taskCheckboxClass = "h-5 w-5 shrink-0 cursor-pointer rounded border-2 border-blue-700 bg-blue-50 text-blue-700 accent-blue-700 checked:border-blue-700 checked:bg-blue-700 indeterminate:border-blue-700 indeterminate:bg-blue-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
 const taskInitial = { student_id: "", course_id: "", title: "", description: "", deadline: "", max_score: "100" };
 const bulkTaskInitial = { course_id: "", title: "", description: "", deadline: "", max_score: "100" };
 type ResourceForm = { resource_type: ResourceType; title: string; url: string };
@@ -939,7 +941,7 @@ export function TasksManager({
                       checked={allVisibleSubmittedSelected}
                       disabled={bulkReviewableTasks.length === 0 || bulkReviewing}
                       onChange={toggleAllVisibleSubmitted}
-                      className="h-5 w-5 rounded border-outline-variant text-emerald-600"
+                      className={taskCheckboxClass}
                     />
                     Select all ({bulkReviewableTasks.length})
                   </label>
@@ -988,8 +990,8 @@ export function TasksManager({
                     <article key={task.id} className={selected ? "bg-primary/[0.03]" : "bg-white"}>
                       <div className="flex items-center gap-3 px-2 py-3 sm:px-3">
                         {canCreate && submission?.status === "submitted" ? (
-                          <input type="checkbox" aria-label={`Select ${task.title}`} checked={selected} disabled={bulkReviewing} onChange={() => toggleBulkReviewTask(task.id)} className="h-4 w-4 shrink-0 rounded border-outline-variant text-primary" />
-                        ) : <span className="w-4 shrink-0" />}
+                          <input type="checkbox" aria-label={`Select ${task.title}`} checked={selected} disabled={bulkReviewing} onChange={() => toggleBulkReviewTask(task.id)} className={taskCheckboxClass} />
+                        ) : <span className="w-5 shrink-0" />}
                         <button type="button" aria-expanded={isExpanded} aria-controls={`task-details-${task.id}`} onClick={() => setExpandedTaskId(isExpanded ? null : task.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-primary">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
@@ -1366,7 +1368,7 @@ export function TasksManager({
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => toggleBulkStudent(student.id)}
-                                className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary"
+                                className={taskCheckboxClass}
                               />
                               <div className="min-w-0">
                                 <p className="truncate font-bold text-on-surface">{student.full_name ?? student.email}</p>
@@ -1562,7 +1564,7 @@ export function TasksManager({
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => toggleBulkStudent(student.id)}
-                                className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary"
+                                className={taskCheckboxClass}
                               />
                               <div className="min-w-0">
                                 <p className="truncate font-bold text-on-surface">{student.full_name ?? student.email}</p>
