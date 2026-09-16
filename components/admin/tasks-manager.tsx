@@ -79,7 +79,7 @@ export function TasksManager({
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showBulkTaskModal, setShowBulkTaskModal] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"assigned" | "reviews" | "zero-marks">("assigned");
+  const [activeView, setActiveView] = useState<"assigned" | "reviews" | "zero-marks" | "revise">("assigned");
   const [bulkForm, setBulkForm] = useState(bulkTaskInitial);
   const [selectedTopicId, setSelectedTopicId] = useState("");
   const [bulkSelectedTopicId, setBulkSelectedTopicId] = useState("");
@@ -288,7 +288,8 @@ export function TasksManager({
   );
   const zeroMarksTaskIds = useMemo(() => new Set(allZeroMarksTasks.map((task) => task.id)), [allZeroMarksTasks]);
   const zeroMarksTasks = useMemo(() => visibleTasks.filter((task) => zeroMarksTaskIds.has(task.id)), [visibleTasks, zeroMarksTaskIds]);
-  const reviewVisibleTasks = activeView === "zero-marks" ? zeroMarksTasks : visibleTasks;
+  const reviseTasks = useMemo(() => visibleTasks.filter((task) => { const submission = submissionByTaskId.get(task.id); return (submission?.status ?? task.status) === "revision_required"; }), [visibleTasks, submissionByTaskId]);
+  const reviewVisibleTasks = activeView === "zero-marks" ? zeroMarksTasks : activeView === "revise" ? reviseTasks : visibleTasks;
   const bulkReviewableTasks = useMemo(
     () => visibleTasks.filter((task) => submissionByTaskId.get(task.id)?.status === "submitted"),
     [submissionByTaskId, visibleTasks],
@@ -783,6 +784,18 @@ export function TasksManager({
                   Accepted with 0 Marks
                   <span className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700">{allZeroMarksTasks.length}</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView("revise");
+                    setStatusFilter("all");
+                    setReviewedFilter("all");
+                  }}
+                  className={activeView === "revise" ? "rounded-t-xl bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm" : "rounded-t-xl px-4 py-2 text-sm font-bold text-on-surface-variant"}
+                >
+                  Revise
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700">{taskStats.revisions}</span>
+                </button>
                 <Link
                   href="/admin/projects"
                   className="rounded-t-xl px-4 py-2 text-sm font-bold text-on-surface-variant transition hover:bg-white hover:text-primary"
@@ -891,10 +904,12 @@ export function TasksManager({
             <div className="space-y-3 p-3 sm:p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-1">
               <div>
-                <h2 className="text-base font-black text-on-surface">{activeView === "zero-marks" ? "Accepted submissions with zero marks" : "Submission review"}</h2>
+                <h2 className="text-base font-black text-on-surface">{activeView === "zero-marks" ? "Accepted submissions with zero marks" : activeView === "revise" ? "Revision required" : "Submission review"}</h2>
                 <p className="mt-1 text-xs text-on-surface-variant">
                   {activeView === "zero-marks"
                     ? "These submissions were accepted but currently have 0 marks. Open one to correct its score."
+                    : activeView === "revise"
+                    ? "These tasks have been sent back to students for revision."
                     : "Open submitted tasks, score them, and give feedback."}
                 </p>
               </div>
