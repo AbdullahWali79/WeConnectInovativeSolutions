@@ -11,6 +11,7 @@ import { DEFAULT_TARGET_TASKS, deriveStudentProgressStatus, getCourseSignals, ge
 const statusTone: Record<string, string> = {
   active: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30",
   completed: "bg-green-600 text-white border border-green-700 shadow-sm shadow-green-600/30",
+  certified: "bg-purple-600 text-white border border-purple-700 shadow-sm shadow-purple-600/30",
   pending: "bg-[var(--wc-secondary)]/20 text-[var(--wc-secondary-dark)] dark:text-[var(--wc-secondary)] border border-[var(--wc-secondary)]/30",
   dropped: "bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30",
 };
@@ -27,10 +28,10 @@ type TraineeView = {
   completed_projects: number;
   pending_tasks: number;
   progress_percentage: number;
-  status: "active" | "completed" | "pending" | "dropped";
+  status: string;
   created_at: string;
   updated_at: string;
-  displayStatus: "active" | "completed" | "pending" | "dropped";
+  displayStatus: string;
 };
 
 type TraineesBoardProps = {
@@ -44,6 +45,7 @@ type TraineesBoardProps = {
   initialManualEnrollments: ManualEnrollment[];
   initialProjects: StudentProject[];
   initialReports: ProgressReport[];
+  initialCertificates?: { student_name: string; course_name: string }[];
 };
 
 function compareMonthKeysDesc(a: string, b: string) {
@@ -61,6 +63,7 @@ export function TraineesBoard({
   initialManualEnrollments,
   initialProjects,
   initialReports,
+  initialCertificates = [],
 }: TraineesBoardProps) {
   const [trainees] = useState<Trainee[]>(initialTrainees);
   const [courses] = useState<Course[]>(initialCourses);
@@ -112,6 +115,8 @@ export function TraineesBoard({
   }, [projects]);
 
   const traineesWithStatus = useMemo<TraineeView[]>(() => {
+    const certifiedNames = new Set(initialCertificates.map(c => c.student_name.trim().toLowerCase()));
+    
     const feeRecordsByStudentId = feeRecords.reduce((map, fee) => {
       const current = map.get(fee.student_id) ?? [];
       current.push(fee);
@@ -208,7 +213,7 @@ export function TraineesBoard({
           status: derivedStatus,
           created_at: trainee?.created_at ?? student.created_at,
           updated_at: trainee?.updated_at ?? student.created_at,
-          displayStatus: derivedStatus,
+          displayStatus: certifiedNames.has((student.full_name ?? trainee?.name ?? "").trim().toLowerCase()) ? "certified" : derivedStatus,
         };
       });
 
@@ -289,12 +294,12 @@ export function TraineesBoard({
           status: derivedStatus,
           created_at: trainee.created_at,
           updated_at: trainee.updated_at,
-          displayStatus: derivedStatus,
+          displayStatus: certifiedNames.has((trainee.name ?? "").trim().toLowerCase()) ? "certified" : derivedStatus,
         };
       });
 
     return [...profileRows, ...extraRows];
-  }, [feeRecords, studentByEmail, students, tasks, submissionByTaskId, traineeByEmail, trainees, enrollmentByStudentId, courseById, manualEnrollmentByKey, approvedProjectsByStudentAndCourse]);
+  }, [feeRecords, studentByEmail, students, tasks, submissionByTaskId, traineeByEmail, trainees, enrollmentByStudentId, courseById, manualEnrollmentByKey, approvedProjectsByStudentAndCourse, initialCertificates]);
 
   const filtered = useMemo(() => traineesWithStatus.filter((trainee) => {
     const text = `${trainee.name} ${trainee.email}`.toLowerCase();

@@ -22,9 +22,10 @@ export default async function TraineesPage() {
     supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
   ]);
 
-  const [enrollmentResult, reportResult] = await Promise.all([
+  const [enrollmentResult, reportResult, certificateResult] = await Promise.all([
     supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
     supabase.from("progress_reports").select("*"),
+    supabase.from("simple_certificates").select("student_name, course_name"),
   ]);
 
   const trainees = (traineeResult.data ?? []) as Trainee[];
@@ -37,6 +38,7 @@ export default async function TraineesPage() {
   const projects = (projectResult.data ?? []) as StudentProject[];
   const enrollments = (enrollmentResult.data ?? []) as Enrollment[];
   const reports = (reportResult.data ?? []) as ProgressReport[];
+  const certificates = (certificateResult.data ?? []) as { student_name: string; course_name: string }[];
 
   return (
     <main className="min-h-screen bg-[var(--wc-bg)] text-on-surface">
@@ -52,6 +54,7 @@ export default async function TraineesPage() {
         initialManualEnrollments={manualEnrollments}
         initialProjects={projects}
         initialReports={reports}
+        initialCertificates={certificates}
       />
     </main>
   );
