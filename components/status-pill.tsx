@@ -6,7 +6,7 @@ const toneClasses: Record<string, string> = {
   rejected: "bg-error-container text-on-error-container",
   active: "bg-primary-fixed text-on-primary-fixed",
   inactive: "bg-slate-100 text-slate-600",
-  completed: "bg-green-100 text-green-700",
+  completed: "bg-green-600 text-white shadow-sm ring-1 ring-green-700",
   paid: "bg-green-100 text-green-700",
   partial: "bg-blue-100 text-blue-700",
   pending_fee: "bg-amber-100 text-amber-700",

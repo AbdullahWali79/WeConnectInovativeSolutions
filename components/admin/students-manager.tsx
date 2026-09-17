@@ -26,6 +26,8 @@ type StudentViewRow = StudentRow & {
   feeSummaryLabel: string;
   latestFeeMonth: string | null;
   hasSecondMonthFeePending: boolean;
+  isCertified: boolean;
+  certificateId: string | null;
 };
 
 function compareMonthKeysDesc(a: string, b: string) {
@@ -90,6 +92,7 @@ export function StudentsManager({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [projects, setProjects] = useState<StudentProject[]>([]);
+  const [certifiedStudentIds, setCertifiedStudentIds] = useState<Map<string, string>>(new Map());
   const [courseScope, setCourseScope] = useState<CourseScope>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -117,7 +120,7 @@ export function StudentsManager({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [studentListTab, setStudentListTab] = useState<"total" | "active" | "near_completion" | "completed" | "inactive" | "second_month_pending">("total");
+  const [studentListTab, setStudentListTab] = useState<"total" | "active" | "near_completion" | "completed" | "certified" | "inactive" | "second_month_pending">("total");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -129,7 +132,7 @@ export function StudentsManager({
       setToast({ type: "error", message: error instanceof Error ? error.message : "Failed to load course scope." });
       scope = [];
     }
-    const [profileResult, enrollmentResult, courseResult, progressResult, completionResult, applicationResult, taskResult, submissionResult, projectResult, feeResult] = await Promise.all([
+    const [profileResult, enrollmentResult, courseResult, progressResult, completionResult, applicationResult, taskResult, submissionResult, projectResult, feeResult, manualEnrollmentResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "student").order("created_at", { ascending: false }),
       supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
       supabase.from("courses").select("*").order("title"),
@@ -140,6 +143,7 @@ export function StudentsManager({
       supabase.from("submissions").select("*").order("submitted_at", { ascending: false }),
       supabase.from("student_projects").select("*").eq("status", "approved").order("reviewed_at", { ascending: false }),
       supabase.from("student_fee_records").select("*").order("month_key", { ascending: false }),
+        supabase.from("manual_enrollments").select("id, student_id, certificate_issued").eq("certificate_issued", true),
     ]);
     const error = profileResult.error ?? enrollmentResult.error ?? courseResult.error ?? progressResult.error ?? completionResult.error ?? applicationResult.error ?? taskResult.error ?? submissionResult.error ?? projectResult.error ?? feeResult.error;
     if (error) setToast({ type: "error", message: error.message });
@@ -158,6 +162,7 @@ export function StudentsManager({
       const task = (taskResult.data ?? []).find((item) => item.id === submission.task_id);
       return task ? courseInScope(task.course_id, scope) : false;
     }));
+    setCertifiedStudentIds(new Map((manualEnrollmentResult.data ?? []).map((row) => [row.student_id, row.id])));
     setLoading(false);
   }, [currentRole, supabase]);
 
@@ -217,9 +222,11 @@ export function StudentsManager({
         feeSummaryLabel: latestFee ? getFeeSummaryLabel(latestFee.status) : "Pending Fee",
         latestFeeMonth: latestFee?.month_key ?? null,
         hasSecondMonthFeePending,
+        isCertified: certifiedStudentIds.has(student.id),
+        certificateId: certifiedStudentIds.get(student.id) ?? null,
       };
     });
-  }, [completionRecords, feeRecords, students]);
+  }, [completionRecords, feeRecords, students, certifiedStudentIds]);
 
   const approvedApplications: ApprovedApplicationRow[] = useMemo(
     () => applications
@@ -271,6 +278,7 @@ export function StudentsManager({
     () => filteredStudents.filter((student) => student.displayStatus === "completed"),
     [filteredStudents],
   );
+  const certifiedStudents = useMemo(() => filteredStudents.filter((student) => student.isCertified), [filteredStudents]);
   const nearCompletionStudents = useMemo(
     () => filteredStudents.filter((student) => student.displayStatus !== "completed" && student.displayStatus !== "inactive" && student.progress.some((report) => {
       const target = Number(report.target_tasks ?? 100);
@@ -683,6 +691,20 @@ export function StudentsManager({
               </button>
               <button
                 type="button"
+                onClick={() => setStudentListTab("certified")}
+                className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                  studentListTab === "certified"
+                    ? "bg-green-600 text-white shadow-sm"
+                    : "bg-transparent text-green-700 hover:bg-green-50"
+                }`}
+              >
+                Certified
+                <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] ${studentListTab === "certified" ? "bg-white/20" : "bg-green-100 text-green-800"}`}>
+                  {certifiedStudents.length}
+                </span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setStudentListTab("inactive")}
                 className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
                   studentListTab === "inactive"
@@ -757,7 +779,7 @@ export function StudentsManager({
                   />
                 ) : visibleStudents.length > 0 ? (
                   <StudentTable
-                    title={studentListTab === "active" ? "Active Students" : studentListTab === "near_completion" ? "Near to Complete Students" : studentListTab === "completed" ? "Completed Students" : studentListTab === "second_month_pending" ? "2nd Month Fee Pending Students" : "Inactive Students"}
+                    title={studentListTab === "active" ? "Active Students" : studentListTab === "near_completion" ? "Near to Complete Students" : studentListTab === "completed" ? "Completed Students" : studentListTab === "certified" ? "Certified Students" : studentListTab === "second_month_pending" ? "2nd Month Fee Pending Students" : "Inactive Students"}
                     students={visibleStudents}
                     projects={projects}
                     getStudentProgress={getStudentProgress}
@@ -1143,6 +1165,13 @@ function StudentTable({
                             Added link
                           </a>
                         ) : (
+                        {student.certificateId && (
+                          <a href={`/certificate/${student.certificateId}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 underline decoration-green-600/30 underline-offset-4 hover:decoration-green-600" title="View Certificate">
+                            <Icon name="workspace_premium" className="text-[14px]" />
+                            Certificate
+                          </a>
+                        )}
+
                           <p className="text-xs text-on-surface-variant">Not added yet</p>
                         )}
                         {canEditStudents ? (
