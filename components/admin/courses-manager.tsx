@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
@@ -34,6 +34,8 @@ export function CoursesManager({
   const [courseForm, setCourseForm] = useState(courseInitial);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showCourseModal, setShowCourseModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
@@ -87,6 +89,7 @@ export function CoursesManager({
     setToast({ type: "success", message: editingCategoryId ? "Category updated." : "Category created." });
     setCategoryForm(categoryInitial);
     setEditingCategoryId(null);
+    setShowCategoryModal(false);
     await loadData();
   }
 
@@ -118,6 +121,7 @@ export function CoursesManager({
     setToast({ type: "success", message: editingCourseId ? "Course updated." : "Course created." });
     setCourseForm(courseInitial);
     setEditingCourseId(null);
+    setShowCourseModal(false);
     await loadData();
   }
 
@@ -164,6 +168,7 @@ export function CoursesManager({
   function editCategory(category: CourseCategory) {
     setEditingCategoryId(category.id);
     setCategoryForm({ name: category.name, description: category.description ?? "" });
+    setShowCategoryModal(true);
   }
 
   function editCourse(course: Course) {
@@ -176,6 +181,7 @@ export function CoursesManager({
       category_id: course.category_id ?? "",
       status: course.status,
     });
+    setShowCourseModal(true);
   }
 
   function loadCourseTemplate(course: Course) {
@@ -193,6 +199,7 @@ export function CoursesManager({
       category_id: course.category_id ?? "",
       status: "inactive",
     });
+    setShowCourseModal(true);
     setToast({ type: "success", message: "Course template loaded in the create form." });
   }
 
@@ -201,74 +208,98 @@ export function CoursesManager({
   return (
     <>
       <Toast toast={toast} onClear={clearToast} />
-      <PageHeader eyebrow="Catalog" title="Courses and categories" description="Create, edit, deactivate, and delete course categories and courses shown on the public landing page." />
+      <PageHeader 
+        eyebrow="Catalog" 
+        title="Courses and categories" 
+        description="Create, edit, deactivate, and delete course categories and courses shown on the public landing page." 
+        action={canCreate ? (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => { setEditingCategoryId(null); setCategoryForm(categoryInitial); setShowCategoryModal(true); }} className="wc-secondary-btn shrink-0 whitespace-nowrap px-3 py-2 text-sm">
+              <Icon name="add" className="mr-1 text-sm" /> New Category
+            </button>
+            <button type="button" onClick={() => { setEditingCourseId(null); setCourseForm(courseInitial); setShowCourseModal(true); }} className="wc-primary-btn shrink-0 whitespace-nowrap px-3 py-2 text-sm">
+              <Icon name="add" className="mr-1 text-sm" /> New Course
+            </button>
+          </div>
+        ) : null}
+      />
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <div className="grid gap-4 xl:grid-cols-[320px_1fr] [&_.wc-input]:min-w-0 [&_.wc-input]:px-3 [&_.wc-input]:py-1.5 [&_.wc-input]:text-sm [&_.wc-label]:text-[10px] [&_.wc-label]:font-bold [&_.wc-label]:uppercase [&_.wc-label]:tracking-wider [&_.wc-secondary-btn]:px-3 [&_.wc-secondary-btn]:py-1.5 [&_.wc-secondary-btn]:text-xs [&_.wc-primary-btn]:px-3 [&_.wc-primary-btn]:py-1.5 [&_.wc-primary-btn]:text-xs">
-          {(canCreate || canEdit) ? (
-          <section className="space-y-4">
-            {(canCreate || editingCategoryId) ? <form onSubmit={saveCategory} className="wc-card space-y-2 p-3">
-              <h2 className="text-[13px] font-bold text-on-surface uppercase tracking-wider">{editingCategoryId ? "Edit category" : "Create category"}</h2>
+      <AnimatePresence>
+        {showCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <motion.form initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onSubmit={saveCategory} className="wc-card relative w-full max-w-sm space-y-4 p-5 [&_.wc-input]:px-3 [&_.wc-input]:py-2 [&_.wc-input]:text-sm [&_.wc-label]:text-xs [&_.wc-label]:font-bold [&_.wc-label]:uppercase [&_.wc-label]:tracking-wider">
+              <button type="button" className="absolute right-4 top-4 rounded-full p-2 hover:bg-surface-container" onClick={() => { setShowCategoryModal(false); setEditingCategoryId(null); setCategoryForm(categoryInitial); }}><Icon name="close" /></button>
+              <h2 className="text-lg font-bold text-on-surface">{editingCategoryId ? "Edit category" : "Create category"}</h2>
               <label className="block">
                 <span className="wc-label">Name</span>
-                <input className="wc-input mt-1" value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} required />
+                <input className="wc-input mt-1.5" value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} required />
               </label>
               <label className="block">
                 <span className="wc-label">Description</span>
-                <textarea className="wc-input mt-1 min-h-[60px]" value={categoryForm.description} onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))} />
+                <textarea className="wc-input mt-1.5 min-h-[80px]" value={categoryForm.description} onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))} />
               </label>
-              <div className="flex gap-2 pt-1">
-                <button disabled={saving} className="wc-primary-btn flex-1">{editingCategoryId ? "Update" : "Create"}</button>
-                {editingCategoryId ? <button type="button" onClick={() => { setEditingCategoryId(null); setCategoryForm(categoryInitial); }} className="wc-secondary-btn">Cancel</button> : null}
+              <div className="pt-2">
+                <button disabled={saving} className="wc-primary-btn w-full !py-2.5">{editingCategoryId ? "Update category" : "Create category"}</button>
               </div>
-            </form> : null}
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
 
-            {(canCreate || editingCourseId) ? <form onSubmit={saveCourse} className="wc-card space-y-2 p-3">
-              <h2 className="text-[13px] font-bold text-on-surface uppercase tracking-wider">{editingCourseId ? "Edit course" : "Create course"}</h2>
+      <AnimatePresence>
+        {showCourseModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <motion.form initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onSubmit={saveCourse} className="wc-card relative w-full max-w-lg space-y-4 p-5 [&_.wc-input]:px-3 [&_.wc-input]:py-2 [&_.wc-input]:text-sm [&_.wc-label]:text-xs [&_.wc-label]:font-bold [&_.wc-label]:uppercase [&_.wc-label]:tracking-wider">
+              <button type="button" className="absolute right-4 top-4 rounded-full p-2 hover:bg-surface-container" onClick={() => { setShowCourseModal(false); setEditingCourseId(null); setCourseForm(courseInitial); }}><Icon name="close" /></button>
+              <h2 className="text-lg font-bold text-on-surface">{editingCourseId ? "Edit course" : "Create course"}</h2>
               <label className="block">
                 <span className="wc-label">Title</span>
-                <input className="wc-input mt-1" value={courseForm.title} onChange={(event) => setCourseForm((current) => ({ ...current, title: event.target.value }))} required />
+                <input className="wc-input mt-1.5" value={courseForm.title} onChange={(event) => setCourseForm((current) => ({ ...current, title: event.target.value }))} required />
               </label>
               <label className="block">
                 <span className="wc-label">Category</span>
-                <select className="wc-input mt-1" value={courseForm.category_id} onChange={(event) => setCourseForm((current) => ({ ...current, category_id: event.target.value }))}>
+                <select className="wc-input mt-1.5" value={courseForm.category_id} onChange={(event) => setCourseForm((current) => ({ ...current, category_id: event.target.value }))}>
                   <option value="">No category</option>
                   {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                 </select>
               </label>
-              <div className="grid gap-2 grid-cols-2">
+              <div className="grid gap-4 grid-cols-2">
                 <label className="block">
                   <span className="wc-label">Duration</span>
-                  <input className="wc-input mt-1" value={courseForm.duration} onChange={(event) => setCourseForm((current) => ({ ...current, duration: event.target.value }))} />
+                  <input className="wc-input mt-1.5" value={courseForm.duration} onChange={(event) => setCourseForm((current) => ({ ...current, duration: event.target.value }))} />
                 </label>
                 <label className="block">
                   <span className="wc-label">Level</span>
-                  <input className="wc-input mt-1" value={courseForm.level} onChange={(event) => setCourseForm((current) => ({ ...current, level: event.target.value }))} />
+                  <input className="wc-input mt-1.5" value={courseForm.level} onChange={(event) => setCourseForm((current) => ({ ...current, level: event.target.value }))} />
                 </label>
               </div>
               <label className="block">
                 <span className="wc-label">Status</span>
-                <select className="wc-input mt-1" value={courseForm.status} onChange={(event) => setCourseForm((current) => ({ ...current, status: event.target.value as CourseStatus }))}>
+                <select className="wc-input mt-1.5" value={courseForm.status} onChange={(event) => setCourseForm((current) => ({ ...current, status: event.target.value as CourseStatus }))}>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </label>
               <label className="block">
                 <span className="wc-label">Description</span>
-                <textarea className="wc-input mt-1 min-h-[60px]" value={courseForm.description} onChange={(event) => setCourseForm((current) => ({ ...current, description: event.target.value }))} />
+                <textarea className="wc-input mt-1.5 min-h-[100px]" value={courseForm.description} onChange={(event) => setCourseForm((current) => ({ ...current, description: event.target.value }))} />
               </label>
-              <div className="flex gap-2 pt-1">
-                <button disabled={saving} className="wc-primary-btn flex-1">{editingCourseId ? "Update" : "Create"}</button>
-                {editingCourseId ? <button type="button" onClick={() => { setEditingCourseId(null); setCourseForm(courseInitial); }} className="wc-secondary-btn">Cancel</button> : null}
+              <div className="pt-2">
+                <button disabled={saving} className="wc-primary-btn w-full !py-2.5">{editingCourseId ? "Update course" : "Create course"}</button>
               </div>
-            </form> : null}
-          </section>
-          ) : (
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <div className="space-y-6">
+          {!(canCreate || canEdit) ? (
             <section className="wc-card p-4">
               <h2 className="text-base font-bold text-on-surface">Read-only course access</h2>
               <p className="mt-2 text-sm leading-6 text-on-surface-variant">You can view the course catalog, but create, edit, and delete actions are not enabled for this account.</p>
             </section>
-          )}
+          ) : null}
 
           <section className="space-y-6">
             <div className="wc-card overflow-hidden">
