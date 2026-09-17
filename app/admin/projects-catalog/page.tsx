@@ -12,7 +12,7 @@ export default async function AdminProjectsPage() {
   }
 
   const supabase = createSupabaseServiceClient();
-  const { data: projectsData } = await supabase.from("course_projects").select("*").order("created_at");
+  const { data: projectsData } = await supabase.from("course_projects").select("*").order("created_at").limit(10000);
   const projects = (projectsData ?? []) as CourseProject[];
   
   const [coursesResult, activeCoursesResult] = await Promise.all([

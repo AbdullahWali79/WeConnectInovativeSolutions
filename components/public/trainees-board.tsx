@@ -9,10 +9,10 @@ import { FadeIn, StaggerContainer, StaggerItem } from "@/components/public/anima
 import { DEFAULT_TARGET_TASKS, deriveStudentProgressStatus, getCourseSignals, getProgressPercentage, isReviewedStatus, isRevisionRequiredStatus, isStartedStatus } from "@/lib/student-progress-status";
 
 const statusTone: Record<string, string> = {
-  active: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
-  completed: "bg-green-500/20 text-green-300 border border-green-500/30",
-  pending: "bg-[var(--wc-secondary)]/20 text-[var(--wc-secondary)] border border-[var(--wc-secondary)]/30",
-  dropped: "bg-red-500/20 text-red-300 border border-red-500/30",
+  active: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30",
+  completed: "bg-green-600 text-white border border-green-700 shadow-sm shadow-green-600/30",
+  pending: "bg-[var(--wc-secondary)]/20 text-[var(--wc-secondary-dark)] dark:text-[var(--wc-secondary)] border border-[var(--wc-secondary)]/30",
+  dropped: "bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30",
 };
 
 type TraineeView = {
