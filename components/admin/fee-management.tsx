@@ -703,7 +703,7 @@ export function FeeManagement() {
         eyebrow="Fee Management"
         title="Monthly student fee status"
         description="Track monthly payments for active enrollments. Current date paid students are counted, and overdue records are excluded from paid status."
-        actions={
+        action={
           <button type="button" onClick={() => { setQuickFeeRecordId(null); setIsQuickFeesOpen(true); }} className="wc-primary-btn text-sm whitespace-nowrap shadow-sm">
             <Icon name="add_card" className="text-[18px]" />
             Quick Fees Entry
