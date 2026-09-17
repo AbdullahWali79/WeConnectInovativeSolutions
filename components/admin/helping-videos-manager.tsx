@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AnimatePresence, motion } from "framer-motion";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
@@ -32,7 +31,6 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [query, setQuery] = useState("");
@@ -87,7 +85,6 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
   function resetForm() {
     setEditingId(null);
     setForm(defaultForm);
-    setShowModal(false);
     setShowModal(false);
   }
 
