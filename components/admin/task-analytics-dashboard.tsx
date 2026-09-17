@@ -2344,15 +2344,15 @@ export function TaskAnalyticsDashboard({
         ))}
       </div>
 
-      <section className="mt-6 wc-card overflow-hidden task-analytics-print-hidden">
-        <div className="border-b border-outline-variant/50 bg-surface-container-low px-5 py-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Active Overview</p>
-          <h2 className="mt-1 text-xl font-black text-on-surface">Active students, paid students, and completed tasks</h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
+      <section className="mt-8 task-analytics-print-hidden">
+        <div className="mb-4 px-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Active Overview</p>
+          <h2 className="mt-1 text-base font-extrabold sm:text-lg">Active students, paid students, and completed tasks</h2>
+          <p className="mt-0.5 text-xs text-on-surface-variant sm:text-sm">
             These cards follow the same active-student counting rule used in the fee and analytics reports.
           </p>
         </div>
-        <div className="grid gap-3 p-5 md:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-3">
           <SummaryMetricCard
             label="Active Students"
             value={data.totalActiveStudents}
@@ -2377,15 +2377,15 @@ export function TaskAnalyticsDashboard({
         </div>
       </section>
 
-      <section className="mt-6 wc-card overflow-hidden task-analytics-print-hidden">
-        <div className="border-b border-outline-variant/50 bg-primary px-5 py-5 text-on-primary">
-          <p className="text-xs font-bold uppercase tracking-wider text-blue-100">Student-wise Report</p>
-          <h2 className="mt-1 text-xl font-black text-white">Per-student active progress</h2>
-          <p className="mt-1 text-sm text-blue-100">
+      <section className="mt-8 overflow-hidden task-analytics-print-hidden">
+        <div className="mb-4 px-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Student-wise Report</p>
+          <h2 className="mt-1 text-base font-extrabold sm:text-lg">Per-student active progress</h2>
+          <p className="mt-0.5 text-xs text-on-surface-variant sm:text-sm">
             Each active student shows fee counts, completed tasks, and approved client hunts in one row.
           </p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-outline-variant bg-surface shadow-sm">
           <table className="min-w-full border-separate border-spacing-0">
             <thead>
               <tr className="bg-surface-container-low text-left text-[11px] font-black uppercase tracking-wider text-primary">
@@ -3142,16 +3142,16 @@ function SummaryMetricCard({
         : { card: "border-blue-200 bg-blue-50", icon: "bg-blue-100 text-blue-700", value: "text-blue-950", label: "text-blue-900", description: "text-blue-800/80" };
 
   return (
-    <div className={`rounded-2xl border p-5 shadow-sm ${toneClasses.card}`}>
+    <div className={`rounded-xl border p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5 ${toneClasses.card}`}>
       <div className="flex items-start justify-between gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${toneClasses.icon}`}>
-          <Icon name={icon} className="text-[24px]" />
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg sm:h-11 sm:w-11 ${toneClasses.icon}`}>
+          <Icon name={icon} className="text-[20px] sm:text-[24px]" />
         </div>
-        <span className="rounded-full bg-white/75 px-2.5 py-1 text-[11px] font-bold text-slate-600">Live</span>
+        <span className="rounded-md bg-white/75 px-2 py-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-600 sm:px-2.5">Live</span>
       </div>
-      <p className={`mt-4 text-4xl font-black leading-none ${toneClasses.value}`}>{value}</p>
-      <h3 className={`mt-2 text-sm font-black ${toneClasses.label}`}>{label}</h3>
-      <p className={`mt-1 text-xs leading-relaxed ${toneClasses.description}`}>{description}</p>
+      <p className={`mt-3 text-3xl font-black leading-none sm:mt-4 sm:text-4xl ${toneClasses.value}`}>{value}</p>
+      <h3 className={`mt-1.5 text-sm font-extrabold sm:mt-2 ${toneClasses.label}`}>{label}</h3>
+      <p className={`mt-1 text-xs font-medium leading-relaxed opacity-90 ${toneClasses.description}`}>{description}</p>
     </div>
   );
 }
