@@ -1558,6 +1558,7 @@ export function TaskAnalyticsDashboard({
   const [selectedFeeStudentId, setSelectedFeeStudentId] = useState("");
   const [selectedFeeCourseId, setSelectedFeeCourseId] = useState("");
   const [feeStudentOptions, setFeeStudentOptions] = useState<FeeStudentOption[]>([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
 
   const dailyReportRows = useMemo(() => buildDailyReportRows(data.activeStudents, data.allTaskDetails, reportDate), [data.activeStudents, data.allTaskDetails, reportDate]);
   const dailyCompactRows = useMemo(() => buildDailyCompactRows(data.activeStudents, data.allTaskDetails, reportDate), [data.activeStudents, data.allTaskDetails, reportDate]);
@@ -1898,6 +1899,15 @@ export function TaskAnalyticsDashboard({
     }),
     [data.studentWorkSummaries],
   );
+
+  const filteredStudentWorkSummaryRows = useMemo(() => {
+    const lowerQuery = studentSearchQuery.toLowerCase();
+    return studentWorkSummaryRows.filter((row) => 
+      row.studentName.toLowerCase().includes(lowerQuery) || 
+      row.email?.toLowerCase().includes(lowerQuery)
+    );
+  }, [studentWorkSummaryRows, studentSearchQuery]);
+
   const reportCardRows = useMemo(
     () => [...data.studentWorkSummaries].sort((first, second) => first.studentName.localeCompare(second.studentName)),
     [data.studentWorkSummaries],
@@ -2378,32 +2388,44 @@ export function TaskAnalyticsDashboard({
       </section>
 
       <section className="mt-8 overflow-hidden task-analytics-print-hidden">
-        <div className="mb-4 px-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Student-wise Report</p>
-          <h2 className="mt-1 text-base font-extrabold sm:text-lg">Per-student active progress</h2>
-          <p className="mt-0.5 text-xs text-on-surface-variant sm:text-sm">
-            Each active student shows fee counts, completed tasks, and approved client hunts in one row.
-          </p>
+        <div className="mb-4 flex flex-col gap-3 px-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Student-wise Report</p>
+            <h2 className="mt-1 text-base font-extrabold sm:text-lg">Per-student active progress</h2>
+            <p className="mt-0.5 text-xs text-on-surface-variant sm:text-sm">
+              Each active student shows fee counts, completed tasks, and approved client hunts in one row.
+            </p>
+          </div>
+          <div className="relative w-full max-w-sm shrink-0">
+            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+            <input
+              type="search"
+              placeholder="Search students..."
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-outline-variant bg-surface py-2 pl-9 pr-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
         </div>
         <div className="overflow-x-auto rounded-xl border border-outline-variant bg-surface shadow-sm">
           <table className="min-w-full border-separate border-spacing-0">
             <thead>
               <tr className="bg-surface-container-low text-left text-[11px] font-black uppercase tracking-wider text-primary">
-                <th className="px-5 py-3">Student</th>
-                <th className="px-5 py-3">Fees Paid</th>
-                <th className="px-5 py-3">Tasks Completed</th>
-                <th className="px-5 py-3">Client Hunts Done</th>
+                <th className="px-5 py-3 border-b border-outline-variant/50">Student</th>
+                <th className="px-5 py-3 border-b border-outline-variant/50">Fees Paid</th>
+                <th className="px-5 py-3 border-b border-outline-variant/50">Tasks Completed</th>
+                <th className="px-5 py-3 border-b border-outline-variant/50">Client Hunts Done</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/50">
-              {studentWorkSummaryRows.length === 0 ? (
+              {filteredStudentWorkSummaryRows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-5 py-6 text-sm text-on-surface-variant">
-                    No active student records found.
+                    No matching student records found.
                   </td>
                 </tr>
               ) : (
-                studentWorkSummaryRows.map((row) => (
+                filteredStudentWorkSummaryRows.map((row) => (
                   <tr key={row.studentId} className="hover:bg-surface-container/40">
                     <td className="px-5 py-4">
                       <div className="font-bold text-on-surface">{row.studentName}</div>
