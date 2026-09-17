@@ -342,6 +342,7 @@ function SidebarLink({ item, active, collapsed, nested = false, onNavigate }: { 
   return (
     <Link
       href={item.href}
+      prefetch={true}
       onClick={onNavigate}
       className={cn(
         "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200",

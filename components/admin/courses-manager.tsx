@@ -19,50 +19,31 @@ const courseInitial = { title: "", description: "", duration: "", level: "", cat
 export function CoursesManager({
   currentRole = "admin",
   permissions = [],
+  initialCategories = [],
+  initialCourses = [],
 }: {
   currentRole?: Profile["role"];
   permissions?: PermissionKey[];
+  initialCategories?: CourseCategory[];
+  initialCourses?: Course[];
 }) {
   const supabase = createSupabaseBrowserClient();
   const canUse = useCallback((permission: PermissionKey) => currentRole === "admin" || permissions.includes(permission), [currentRole, permissions]);
   const canCreate = canUse("courses.create");
   const canEdit = canUse("courses.edit");
   const canDelete = canUse("courses.delete");
-  const [categories, setCategories] = useState<CourseCategory[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [categories, setCategories] = useState<CourseCategory[]>(initialCategories);
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [categoryForm, setCategoryForm] = useState(categoryInitial);
   const [courseForm, setCourseForm] = useState(courseInitial);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCourseModal, setShowCourseModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const clearToast = useCallback(() => setToast(null), []);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    let scope: CourseScope = null;
-    try {
-      scope = await loadTeacherCourseScope(supabase as never, currentRole);
-    } catch (error) {
-      setToast({ type: "error", message: error instanceof Error ? error.message : "Failed to load course scope." });
-      scope = [];
-    }
-    const [categoryResult, courseResult] = await Promise.all([
-      supabase.from("course_categories").select("*").order("created_at", { ascending: true }),
-      supabase.from("courses").select("*").order("created_at", { ascending: false }),
-    ]);
-    if (categoryResult.error ?? courseResult.error) setToast({ type: "error", message: (categoryResult.error ?? courseResult.error)?.message ?? "Failed to load catalog." });
-    setCategories(categoryResult.data ?? []);
-    setCourses(filterCoursesByScope(courseResult.data ?? [], scope));
-    setLoading(false);
-  }, [currentRole, supabase]);
-
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
 
   const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
 
