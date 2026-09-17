@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -703,19 +703,15 @@ export function FeeManagement() {
         eyebrow="Fee Management"
         title="Monthly student fee status"
         description="Track monthly payments for active enrollments. Current date paid students are counted, and overdue records are excluded from paid status."
-      />
-
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
-        <div className="wc-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-primary">Fee management</p>
-            <p className="mt-1 text-sm text-on-surface-variant">Add a payment without scrolling through the records.</p>
-          </div>
-          <button type="button" onClick={() => { setQuickFeeRecordId(null); setIsQuickFeesOpen(true); }} className="wc-primary-btn whitespace-nowrap">
-            <Icon name="add_card" className="text-lg" />
+        actions={
+          <button type="button" onClick={() => { setQuickFeeRecordId(null); setIsQuickFeesOpen(true); }} className="wc-primary-btn text-sm whitespace-nowrap shadow-sm">
+            <Icon name="add_card" className="text-[18px]" />
             Quick Fees Entry
           </button>
-        </div>
+        }
+      />
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <FeeStat icon="receipt_long" label="Month records" value={stats.total} />
@@ -745,7 +741,7 @@ export function FeeManagement() {
                     key={value}
                     type="button"
                     onClick={() => setReminderTab(value)}
-                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                    className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                       reminderTab === value
                         ? "bg-primary text-on-primary shadow-sm"
                         : "bg-surface text-on-surface-variant ring-1 ring-outline-variant hover:text-primary"
@@ -768,7 +764,7 @@ export function FeeManagement() {
           </div>
 
           {remindersExpanded ? filteredReminders.length === 0 ? (
-            <div className="px-5 py-6">
+            <div className="px-4 py-3">
               <EmptyState title="No fee reminders in this tab" description="No paid or amount-paid partial records reach their next monthly date within the 7-day reminder window." icon="event_available" />
             </div>
           ) : (
@@ -790,7 +786,7 @@ export function FeeManagement() {
                     const whatsappUrl = feeReminderWhatsappUrl(reminder);
                     return (
                     <tr key={`${reminder.enrollment.id}:${reminder.monthNumber}`} className="border-t border-outline-variant/60 hover:bg-surface-container/40">
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3">
                         <p className="font-bold text-on-surface">{reminder.student.full_name ?? "Unnamed student"}</p>
                         {whatsappUrl ? (
                           <a
@@ -807,18 +803,18 @@ export function FeeManagement() {
                           <p className="mt-1 text-xs text-on-surface-variant">{reminder.student.phone ?? reminder.student.email ?? "No contact details"}</p>
                         )}
                       </td>
-                      <td className="px-4 py-4 font-semibold text-primary">{reminder.course.title}</td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3 font-semibold text-primary">{reminder.course.title}</td>
+                      <td className="px-4 py-3">
                         <p className="text-sm text-on-surface-variant">{formatReminderDate(reminder.lastFeeDate)}</p>
                         <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-primary">{reminder.lastFeeStatus}</p>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3">
                         <span className="inline-flex rounded-full bg-primary-container px-3 py-1 text-xs font-black text-on-primary-container">
                           Month {reminder.monthNumber}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm font-semibold text-on-surface">{formatReminderDate(reminder.dueDate)}</td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3 text-sm font-semibold text-on-surface">{formatReminderDate(reminder.dueDate)}</td>
+                      <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
                           reminder.daysUntilDue < 0
                             ? "bg-error-container text-error"
@@ -829,7 +825,7 @@ export function FeeManagement() {
                           {reminderTimingLabel(reminder.daysUntilDue)}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <button type="button" onClick={() => openReminderFeeEntry(reminder)} className="wc-primary-btn whitespace-nowrap px-4 py-2 text-sm">
                           <Icon name="add_card" className="text-base" />
                           {reminder.nextFee ? "Update fee" : "Add fee"}
@@ -1072,7 +1068,7 @@ export function FeeManagement() {
                             ? "border-red-200 bg-red-50/80 hover:bg-red-100/80"
                             : "border-outline-variant/60 hover:bg-surface-container/40"
                         }`}>
-                        <td className="px-4 py-4 align-middle">
+                        <td className="px-4 py-3 align-middle">
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <button
@@ -1111,29 +1107,29 @@ export function FeeManagement() {
                           </div>
                         </td>
 
-                        <td className="px-4 py-4 align-middle">
+                        <td className="px-4 py-3 align-middle">
                           <div className="truncate font-semibold text-primary">{course?.title ?? 'Unknown course'}</div>
                           <div className="truncate text-xs text-on-surface-variant">
                             Enrollment {fee.enrollment_id ? enrollmentById.get(fee.enrollment_id)?.status ?? 'not linked' : 'not linked'}
                           </div>
                         </td>
 
-                        <td className="px-4 py-4 align-middle text-sm whitespace-nowrap text-on-surface-variant">{fee.month_key}</td>
+                        <td className="px-4 py-3 align-middle text-sm whitespace-nowrap text-on-surface-variant">{fee.month_key}</td>
 
-                        <td className="px-4 py-4 align-middle">
+                        <td className="px-4 py-3 align-middle">
                           <div className="space-y-1">
                             <div className="text-sm font-semibold text-on-surface">Due {fee.amount_due ?? 0}</div>
                             <div className="text-xs text-on-surface-variant">Paid {fee.amount_paid ?? 0}</div>
                           </div>
                         </td>
 
-                        <td className="px-4 py-4 align-middle">
+                        <td className="px-4 py-3 align-middle">
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wider ring-1 ${getFeeStatusTone(statusTone)}`}>
                             {blocked ? "Blocked" : getFeeStatusLabel(fee.status)}
                           </span>
                         </td>
 
-                        <td className="px-4 py-4 align-middle">
+                        <td className="px-4 py-3 align-middle">
                           <button
                             type="button"
                             onClick={() => setExpandedFeeId(isExpanded ? null : fee.id)}
@@ -1207,10 +1203,10 @@ export function FeeManagement() {
                                     <Icon name="add_card" className="text-base" />
                                     Add next month fee
                                   </button>
-                                  <button type="button" disabled={busyId === ('block-' + fee.id)} onClick={() => setBlocked(fee, !blocked)} className={blocked ? "wc-secondary-btn whitespace-nowrap px-4 py-2 text-sm" : "rounded-xl bg-error-container px-4 py-2 text-sm font-bold text-error"}>
+                                  <button type="button" disabled={busyId === ('block-' + fee.id)} onClick={() => setBlocked(fee, !blocked)} className={blocked ? "wc-secondary-btn whitespace-nowrap px-4 py-2 text-sm" : "rounded-xl bg-error-container px-3 py-1.5 text-xs font-bold text-error"}>
                                     {blocked ? "Unblock" : "Block"}
                                   </button>
-                                  <button type="button" disabled={busyId === ('delete-' + fee.id)} onClick={() => removeFee(fee)} className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                                  <button type="button" disabled={busyId === ('delete-' + fee.id)} onClick={() => removeFee(fee)} className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200">
                                     {busyId === ('delete-' + fee.id) ? "Deleting..." : "Delete"}
                                   </button>
                                 </div>
@@ -1228,6 +1224,7 @@ export function FeeManagement() {
           </> : null}
         </section>
 
+
       </motion.div>
     </>
   );
@@ -1235,24 +1232,20 @@ export function FeeManagement() {
 
 function FeeStat({ icon, label, value, tone }: { icon: string; label: string; value: number; tone?: "success" | "gold" | "error" }) {
   const toneClass =
-    tone === "success" ? "bg-green-50 text-green-700" :
-    tone === "gold" ? "bg-secondary-container text-on-secondary-fixed" :
-    tone === "error" ? "bg-error-container text-error" :
-    "bg-surface-container text-primary";
+    tone === "success" ? "bg-green-500/10 text-green-600 border-green-500/20 shadow-green-500/5" :
+    tone === "gold" ? "bg-amber-500/10 text-amber-600 border-amber-500/20 shadow-amber-500/5" :
+    tone === "error" ? "bg-rose-500/10 text-rose-600 border-rose-500/20 shadow-rose-500/5" :
+    "bg-primary/10 text-primary border-primary/20 shadow-primary/5";
 
   return (
-    <div className="wc-card p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{label}</p>
-          <p className="mt-2 text-2xl font-black text-primary">{value}</p>
-        </div>
-        <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${toneClass}`}>
-          <Icon name={icon} className="text-2xl" />
-        </span>
+    <div className="wc-card flex items-center justify-between gap-4 p-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant">{label}</p>
+        <p className="mt-1 text-2xl font-black text-on-surface">{value}</p>
+      </div>
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${toneClass}`}>
+        <Icon name={icon} className="text-xl" />
       </div>
     </div>
   );
 }
-
-
