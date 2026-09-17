@@ -1165,14 +1165,14 @@ function StudentTable({
                             Added link
                           </a>
                         ) : (
+                          <p className="text-xs text-on-surface-variant">Not added yet</p>
+                        )}
                         {student.certificateId && (
                           <a href={`/certificate/${student.certificateId}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 underline decoration-green-600/30 underline-offset-4 hover:decoration-green-600" title="View Certificate">
                             <Icon name="workspace_premium" className="text-[14px]" />
                             Certificate
                           </a>
                         )}
-
-                          <p className="text-xs text-on-surface-variant">Not added yet</p>
                         )}
                         {canEditStudents ? (
                           <button type="button" onClick={() => openGithubEditor(student)} className="inline-flex items-center gap-1 text-xs font-bold text-primary" title={student.github_url ? "Edit GitHub link" : "Add GitHub link"}>
