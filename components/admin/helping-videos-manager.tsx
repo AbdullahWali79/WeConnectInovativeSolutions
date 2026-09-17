@@ -1,7 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";\nimport { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LoadingState } from "@/components/loading-state";
@@ -30,6 +32,7 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [query, setQuery] = useState("");
@@ -84,6 +87,7 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
   function resetForm() {
     setEditingId(null);
     setForm(defaultForm);
+    setShowModal(false);
     setShowModal(false);
   }
 
@@ -189,7 +193,7 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
         title="Helping Videos"
         description="Add useful YouTube tutorials and walkthroughs for every student inside the portal."
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Link href="/student/helping-videos" className="wc-secondary-btn text-sm">
               <Icon name="visibility" /> View Student Page
             </Link>
@@ -248,10 +252,10 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
                   <div className="rounded-xl border border-outline-variant/60 bg-surface-container-low p-4">
                     <p className="text-xs font-bold uppercase tracking-wider text-primary">Who should see this video?</p>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => setForm((current) => ({ ...current, audience: "must_watch" }))} className={ounded-lg border px-3 py-2 text-sm font-bold transition }>
-                        Must Watch � Everyone
+                      <button type="button" onClick={() => setForm((current) => ({ ...current, audience: "must_watch" }))} className={`rounded-lg border px-3 py-2 text-sm font-bold transition ${form.audience === "must_watch" ? "border-primary bg-primary text-on-primary shadow-sm" : "border-outline-variant/60 bg-surface text-on-surface hover:border-primary/50"}`}>
+                        Must Watch — Everyone
                       </button>
-                      <button type="button" onClick={() => setForm((current) => ({ ...current, audience: "course" }))} className={ounded-lg border px-3 py-2 text-sm font-bold transition }>
+                      <button type="button" onClick={() => setForm((current) => ({ ...current, audience: "course" }))} className={`rounded-lg border px-3 py-2 text-sm font-bold transition ${form.audience === "course" ? "border-primary bg-primary text-on-primary shadow-sm" : "border-outline-variant/60 bg-surface text-on-surface hover:border-primary/50"}`}>
                         Course Specific
                       </button>
                     </div>
@@ -267,7 +271,7 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-2 text-xs text-on-surface-variant">This video will appear in every student's Must Watch tab.</p>
+                      <p className="mt-2 text-xs text-on-surface-variant">This video will appear in every student&apos;s Must Watch tab.</p>
                     )}
                   </div>
 
@@ -327,7 +331,7 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
         )}
       </AnimatePresence>
 
-      <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm task-analytics-print-hidden">
+      <section className="mt-8 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm task-analytics-print-hidden">
         <div className="flex flex-col gap-3 border-b border-outline-variant/50 bg-surface-container-low p-4 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
@@ -378,7 +382,7 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
                       </a>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider }>{row.status}</span>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${row.status === "active" ? "bg-green-100 text-green-800" : "bg-surface-variant text-on-surface-variant"}`}>{row.status}</span>
                     </td>
                     <td className="px-5 py-4 text-xs font-semibold text-on-surface-variant">
                       {row.is_must_watch ? (
@@ -407,6 +411,5 @@ export function HelpingVideosManager({ courses = [] }: { courses?: Course[] }) {
         )}
       </section>
     </>
-);
+  );
 }
-
