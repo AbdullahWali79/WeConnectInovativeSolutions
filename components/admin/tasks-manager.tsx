@@ -79,7 +79,7 @@ export function TasksManager({
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showBulkTaskModal, setShowBulkTaskModal] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"assigned" | "reviews" | "zero-marks" | "revise">("assigned");
+  const [activeView, setActiveView] = useState<"assigned" | "reviews" | "zero-marks" | "revise">("reviews");
   const [bulkForm, setBulkForm] = useState(bulkTaskInitial);
   const [selectedTopicId, setSelectedTopicId] = useState("");
   const [bulkSelectedTopicId, setBulkSelectedTopicId] = useState("");
