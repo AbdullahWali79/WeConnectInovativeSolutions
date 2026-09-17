@@ -34,7 +34,7 @@ type StudentFeeSummary = {
 };
 
 type StudentFeeView = StudentFeeSummary & {
-  displayStatus: "active" | "pending_fee" | "blocked";
+  displayStatus: "active" | "pending_fee" | "blocked" | "completed";
   displayStatusLabel: string;
   latestFeeLabel: string;
 };
@@ -469,20 +469,25 @@ export function FeeManagement() {
         .filter((fee) => fee.student_id === summary.student.id)
         .sort((a, b) => b.month_key.localeCompare(a.month_key))[0] ?? null;
 
+      const studentEnrollments = enrollments.filter(e => e.student_id === summary.student.id);
+      const isCompleted = studentEnrollments.length > 0 && studentEnrollments.every(e => e.status === "completed" || e.status === "dropped");
+
       const displayStatus: StudentFeeView["displayStatus"] = summary.blocked
         ? "blocked"
-        : latestFee?.status === "paid" || latestFee?.status === "waived"
-          ? "active"
-          : "pending_fee";
+        : isCompleted
+          ? "completed"
+          : latestFee?.status === "paid" || latestFee?.status === "waived"
+            ? "active"
+            : "pending_fee";
 
       return {
         ...summary,
         displayStatus,
-        displayStatusLabel: displayStatus === "active" ? "Active" : displayStatus === "blocked" ? "Blocked" : "Pending Fee",
+        displayStatusLabel: displayStatus === "completed" ? "Completed" : displayStatus === "active" ? "Active" : displayStatus === "blocked" ? "Blocked" : "Pending Fee",
         latestFeeLabel: latestFee ? getFeeStatusLabel(latestFee.status) : "Pending Fee",
       };
     });
-  }, [fees, studentFeeSummaries]);
+  }, [fees, studentFeeSummaries, enrollments]);
 
   const selectedStudentCourseOptions = useMemo(() => {
     const options = selectedStudentEnrollments
