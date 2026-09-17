@@ -17,7 +17,7 @@ export default async function CoursesPage() {
   let scope = null;
   try {
     scope = await loadTeacherCourseScope(supabase as never, access.profile.role);
-  } catch (error) {
+  } catch {
     scope = [];
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
@@ -9,7 +10,6 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { filterCoursesByScope, loadTeacherCourseScope, type CourseScope } from "@/lib/admin-course-scope";
 import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Course, CourseCategory, CourseStatus, Profile } from "@/lib/supabase/types";
 
@@ -27,6 +27,7 @@ export function CoursesManager({
   initialCategories?: CourseCategory[];
   initialCourses?: Course[];
 }) {
+  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const canUse = useCallback((permission: PermissionKey) => currentRole === "admin" || permissions.includes(permission), [currentRole, permissions]);
   const canCreate = canUse("courses.create");
@@ -71,7 +72,7 @@ export function CoursesManager({
     setCategoryForm(categoryInitial);
     setEditingCategoryId(null);
     setShowCategoryModal(false);
-    await loadData();
+    router.refresh();
   }
 
   async function saveCourse(event: React.FormEvent<HTMLFormElement>) {
@@ -103,7 +104,7 @@ export function CoursesManager({
     setCourseForm(courseInitial);
     setEditingCourseId(null);
     setShowCourseModal(false);
-    await loadData();
+    router.refresh();
   }
 
   async function deleteRow(table: "course_categories" | "courses", id: string) {
@@ -119,7 +120,7 @@ export function CoursesManager({
       return;
     }
     setToast({ type: "success", message: "Record deleted." });
-    await loadData();
+    router.refresh();
   }
 
   async function duplicateCourse(course: Course) {
@@ -143,7 +144,7 @@ export function CoursesManager({
     }
 
     setToast({ type: "success", message: "Course duplicated as inactive draft." });
-    await loadData();
+    router.refresh();
   }
 
   function editCategory(category: CourseCategory) {
