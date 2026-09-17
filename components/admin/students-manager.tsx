@@ -1173,7 +1173,6 @@ function StudentTable({
                             Certificate
                           </a>
                         )}
-                        )}
                         {canEditStudents ? (
                           <button type="button" onClick={() => openGithubEditor(student)} className="inline-flex items-center gap-1 text-xs font-bold text-primary" title={student.github_url ? "Edit GitHub link" : "Add GitHub link"}>
                             <Icon name="edit" className="text-sm" />
