@@ -343,11 +343,11 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
     </div>
 
     {visible.length > 0 && (
-      <div className="flex items-center gap-3 px-2 py-1 text-sm font-medium text-on-surface-variant">
-        <label className="flex items-center gap-2 cursor-pointer">
+      <div className="flex items-center gap-3 px-3 py-2 text-sm font-bold text-on-surface-variant bg-surface-container-low/50 rounded-lg border border-outline-variant/50">
+        <label className="flex items-center gap-3 cursor-pointer">
           <input 
             type="checkbox" 
-            className="h-5 w-5 rounded border-outline-variant text-primary accent-primary" 
+            className="h-5 w-5 cursor-pointer rounded border-2 border-primary/50 text-primary accent-primary hover:border-primary transition-colors" 
             checked={selectedIds.length === visible.length && visible.length > 0}
             onChange={() => toggleSelectAll(visible.map(r => r.id))}
           />
@@ -362,13 +362,14 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
         const expanded = expandedIds.includes(row.id);
         const draft = drafts[row.id] ?? draftFrom(row, row.promoted_product_id ? productById.get(row.promoted_product_id) : undefined);
         const previewLinks = urlLines(draft.imageLinksText);
-        return <article key={row.id} className="wc-card overflow-hidden">
-          <div className="flex w-full items-center gap-3 p-3 sm:p-4 hover:bg-surface-container-low transition-colors">
-            <label className="flex shrink-0 cursor-pointer p-1">
+        const isSelected = selectedIds.includes(row.id);
+        return <article key={row.id} className={`wc-card overflow-hidden transition-colors ${isSelected ? "border-primary/40 bg-primary/5" : ""}`}>
+          <div className={`flex w-full items-center gap-3 p-3 sm:p-4 hover:bg-surface-container-low/50 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
+            <label className="flex shrink-0 cursor-pointer p-2 rounded-full hover:bg-primary/10 transition-colors">
               <input 
                 type="checkbox" 
-                className="h-5 w-5 rounded border-outline-variant text-primary accent-primary" 
-                checked={selectedIds.includes(row.id)}
+                className="h-5 w-5 cursor-pointer rounded border-2 border-primary/50 text-primary accent-primary hover:border-primary transition-colors shadow-sm" 
+                checked={isSelected}
                 onChange={() => toggleSelection(row.id)}
               />
             </label>
