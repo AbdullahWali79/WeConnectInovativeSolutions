@@ -44,6 +44,7 @@ export type Profile = {
   role: Role;
   status: ProfileStatus;
   admin_status: "approved" | "active" | "completed" | "inactive" | null;
+  daily_task_limit: number | null;
   is_fee_blocked?: boolean;
   fee_block_reason?: string | null;
   fee_blocked_at?: string | null;

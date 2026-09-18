@@ -12,7 +12,7 @@ import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { filterCoursesByScope, filterEnrollmentsByScope, loadTeacherCourseScope, courseInScope, type CourseScope } from "@/lib/admin-course-scope";
-import { deleteStudentAccount, renewStudentInternship, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary } from "@/app/admin/actions";
+import { deleteStudentAccount, renewStudentInternship, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary, updateStudentDailyTaskLimit } from "@/app/admin/actions";
 import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Application, CompletedStudent, Course, Enrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task } from "@/lib/supabase/types";
 import { normalizeProfileLinkUrl } from "@/lib/profile-links";
@@ -115,6 +115,9 @@ export function StudentsManager({
   const [editingProgressStudentId, setEditingProgressStudentId] = useState<string | null>(null);
   const [progressDraft, setProgressDraft] = useState({ completedTasks: 0, targetTasks: 100, averageScore: 0 });
   const [savingProgressStudentId, setSavingProgressStudentId] = useState<string | null>(null);
+  const [editingLimitStudentId, setEditingLimitStudentId] = useState<string | null>(null);
+  const [limitDraft, setLimitDraft] = useState<string>("");
+  const [savingLimitStudentId, setSavingLimitStudentId] = useState<string | null>(null);
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState("");
@@ -457,6 +460,34 @@ export function StudentsManager({
     await loadData();
   }
 
+  function openLimitEditor(student: StudentRow) {
+    setEditingLimitStudentId(student.id);
+    setLimitDraft(student.daily_task_limit !== null ? String(student.daily_task_limit) : "5");
+  }
+
+  function cancelLimitEditor() {
+    setEditingLimitStudentId(null);
+    setLimitDraft("");
+  }
+
+  async function saveDailyLimit(student: StudentRow) {
+    const limit = parseInt(limitDraft, 10);
+    if (isNaN(limit) || limit < 0) {
+      setToast({ type: "error", message: "Please enter a valid positive number." });
+      return;
+    }
+    setSavingLimitStudentId(student.id);
+    const result = await updateStudentDailyTaskLimit(student.id, limit);
+    setSavingLimitStudentId(null);
+    if (!result.success) {
+      setToast({ type: "error", message: result.error ?? "Failed to update daily limit." });
+      return;
+    }
+    setToast({ type: "success", message: "Daily limit updated." });
+    cancelLimitEditor();
+    await loadData();
+  }
+
   async function setLifecycleStatus(student: StudentRow, nextStatus: "approved" | "active" | "completed" | "inactive") {
     if (!canEditStudents) {
       setToast({ type: "error", message: "You do not have permission to update student status." });
@@ -771,6 +802,13 @@ export function StudentsManager({
                     setProgressDraft={setProgressDraft}
                     cancelProgressEditor={cancelProgressEditor}
                     saveStudentProgress={saveStudentProgress}
+                    editingLimitStudentId={editingLimitStudentId}
+                    savingLimitStudentId={savingLimitStudentId}
+                    limitDraft={limitDraft}
+                    setLimitDraft={setLimitDraft}
+                    openLimitEditor={openLimitEditor}
+                    cancelLimitEditor={cancelLimitEditor}
+                    saveDailyLimit={saveDailyLimit}
                     toggleCompletion={toggleCompletion}
                     renewInternship={renewInternship}
                     deleteStudent={deleteStudent}
@@ -807,6 +845,13 @@ export function StudentsManager({
                     setProgressDraft={setProgressDraft}
                     cancelProgressEditor={cancelProgressEditor}
                     saveStudentProgress={saveStudentProgress}
+                    editingLimitStudentId={editingLimitStudentId}
+                    savingLimitStudentId={savingLimitStudentId}
+                    limitDraft={limitDraft}
+                    setLimitDraft={setLimitDraft}
+                    openLimitEditor={openLimitEditor}
+                    cancelLimitEditor={cancelLimitEditor}
+                    saveDailyLimit={saveDailyLimit}
                     toggleCompletion={toggleCompletion}
                     renewInternship={renewInternship}
                     deleteStudent={deleteStudent}
@@ -1043,6 +1088,13 @@ function StudentTable({
   setProgressDraft,
   cancelProgressEditor,
   saveStudentProgress,
+  editingLimitStudentId,
+  savingLimitStudentId,
+  limitDraft,
+  setLimitDraft,
+  openLimitEditor,
+  cancelLimitEditor,
+  saveDailyLimit,
   toggleCompletion,
   renewInternship,
   deleteStudent,
@@ -1077,6 +1129,13 @@ function StudentTable({
   setProgressDraft: React.Dispatch<React.SetStateAction<{ completedTasks: number; targetTasks: number; averageScore: number }>>;
   cancelProgressEditor: () => void;
   saveStudentProgress: (student: StudentRow) => Promise<void>;
+  editingLimitStudentId: string | null;
+  savingLimitStudentId: string | null;
+  limitDraft: string;
+  setLimitDraft: (value: string) => void;
+  openLimitEditor: (student: StudentRow) => void;
+  cancelLimitEditor: () => void;
+  saveDailyLimit: (student: StudentRow) => Promise<void>;
   toggleCompletion: (student: StudentRow, completed: boolean, courseId?: string | null) => Promise<void>;
   renewInternship: (student: StudentRow, courseId: string, currentTarget: number, completedTasks: number) => Promise<void>;
   deleteStudent: (student: StudentRow) => Promise<void>;
@@ -1315,7 +1374,7 @@ function StudentTable({
                 {isExpanded ? (
                   <tr key={`${student.id}-expanded`} className="bg-surface-container-low/30">
                     <td colSpan={7} className="px-4 py-4">
-                      <div className="grid gap-3 lg:grid-cols-2">
+                      <div className="grid gap-3 lg:grid-cols-3">
                         <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
                           <p className="text-xs font-bold uppercase tracking-wider text-primary">Quick Actions</p>
                           <div className="mt-3 flex flex-wrap gap-2">
@@ -1376,6 +1435,23 @@ function StudentTable({
                             <p>Tasks: {completedTasks}/{targetTasks}</p>
                             <p>Projects: {completedProjects}</p>
                           </div>
+                        </div>
+                        <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
+                          <p className="text-xs font-bold uppercase tracking-wider text-primary">Daily Task Limit</p>
+                          {editingLimitStudentId === student.id ? (
+                            <div className="mt-2 flex items-center gap-2">
+                              <input type="number" min="0" value={limitDraft} onChange={(e) => setLimitDraft(e.target.value)} className="wc-input h-8 w-20 text-xs px-2 py-1" />
+                              <button type="button" disabled={savingLimitStudentId === student.id} onClick={() => void saveDailyLimit(student)} className="wc-primary-btn h-8 px-3 py-1 text-xs">Save</button>
+                              <button type="button" onClick={cancelLimitEditor} className="wc-secondary-btn h-8 px-3 py-1 text-xs">Cancel</button>
+                            </div>
+                          ) : (
+                            <div className="mt-2 flex items-center gap-2 text-xs text-on-surface-variant">
+                              <p className="font-semibold text-on-surface">{student.daily_task_limit ?? 5} submissions / day</p>
+                              {canEditStudents ? (
+                                <button type="button" onClick={() => openLimitEditor(student)} className="text-primary hover:underline">Edit</button>
+                              ) : null}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>

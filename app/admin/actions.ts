@@ -1298,6 +1298,26 @@ export async function updateStudentNotes(input: {
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Failed to update student notes." };
   }
+
+export async function updateStudentDailyTaskLimit(studentId: string, dailyLimit: number | null) {
+  try {
+    await requirePermission("students.edit");
+    const supabase = createSupabaseServiceClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ daily_task_limit: dailyLimit })
+      .eq("id", studentId)
+      .eq("role", "student");
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/students");
+    return { success: true, error: null };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to update daily task limit." };
+  }
 }
 
 export async function updateStudentStatus(studentId: string, status: Extract<ProfileStatus, "approved" | "rejected">) {
