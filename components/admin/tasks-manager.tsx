@@ -230,12 +230,40 @@ export function TasksManager({
       description: topicDescription(topic),
     }));
   }
+  const baseTasksForView = useMemo(() => {
+    let base = tasks;
+    if (activeView === "assigned") {
+      base = tasks.filter((task) => task.workflow_type !== "daily");
+    } else if (activeView === "zero-marks") {
+      base = tasks.filter((task) => {
+        const submission = submissionByTaskId.get(task.id);
+        return submission?.status === "reviewed" && Number(submission.score ?? 0) === 0;
+      });
+    } else if (activeView === "revise") {
+      base = tasks.filter((task) => {
+        const submission = submissionByTaskId.get(task.id);
+        return (submission?.status ?? task.status) === "revision_required";
+      });
+    }
+
+    return base.filter((task) => {
+      const queryMatch = task.title.toLowerCase().includes(query.trim().toLowerCase());
+      const courseMatch = courseFilter === "all" || task.course_id === courseFilter;
+      const statusMatch = statusFilter === "all" || task.status === statusFilter;
+      const dueMatch = !dueDate || (task.deadline ? task.deadline.slice(0, 10) === dueDate : false);
+      const reviewedMatch = reviewedFilter === "all"
+        || (reviewedFilter === "reviewed" && task.status === "reviewed")
+        || (reviewedFilter === "unreviewed" && task.status !== "reviewed" && task.status !== "rejected");
+      return queryMatch && courseMatch && statusMatch && dueMatch && reviewedMatch;
+    });
+  }, [tasks, activeView, submissionByTaskId, query, courseFilter, statusFilter, dueDate, reviewedFilter]);
+
   const assignedTaskStudents = useMemo(() => {
-    const studentIds = new Set(tasks.map((task) => task.student_id));
+    const studentIds = new Set(baseTasksForView.map((task) => task.student_id));
     return students
       .filter((student) => studentIds.has(student.id))
       .sort((a, b) => (a.full_name ?? a.email).localeCompare(b.full_name ?? b.email));
-  }, [students, tasks]);
+  }, [students, baseTasksForView]);
   const coursesWithEnrollments = useMemo(() => {
     const activeEnrollmentCounts = enrollmentOptions.reduce((map, enrollment) => {
       map.set(enrollment.course_id, (map.get(enrollment.course_id) ?? 0) + 1);
