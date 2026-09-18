@@ -391,58 +391,74 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
           </div>
 
           {expanded ? <div className="border-t border-outline-variant p-4 sm:p-5">
-            <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4">
-              <p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">Original student submission - admin only</p>
-              <p className="mt-2 text-sm leading-6">{row.full_description || row.short_description}</p>
+            <div className="rounded-lg border border-outline-variant bg-surface-container-low/30 p-3 sm:p-4 text-sm">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Original student submission</p>
+              <p className="leading-relaxed text-on-surface/80">{row.full_description || row.short_description}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {row.github_url ? <a className="wc-secondary-btn" href={row.github_url} target="_blank" rel="noreferrer"><Icon name="code" /> Student GitHub</a> : null}
-                {row.live_url ? <a className="wc-secondary-btn" href={row.live_url} target="_blank" rel="noreferrer"><Icon name="open_in_new" /> {/(youtube\.com|youtu\.be)/i.test(row.live_url) ? "Student YouTube" : "Student Live Demo"}</a> : null}
+                {row.github_url ? <a className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1 text-xs font-semibold border border-outline-variant hover:bg-surface-container-low transition-colors" href={row.github_url} target="_blank" rel="noreferrer"><Icon name="code" className="text-[16px]" /> GitHub</a> : null}
+                {row.live_url ? <a className="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1 text-xs font-semibold border border-outline-variant hover:bg-surface-container-low transition-colors" href={row.live_url} target="_blank" rel="noreferrer"><Icon name="open_in_new" className="text-[16px]" /> {/(youtube\.com|youtu\.be)/i.test(row.live_url) ? "YouTube" : "Live Demo"}</a> : null}
               </div>
-              {row.live_url ? <div className="mt-4 max-w-3xl overflow-hidden rounded-lg border border-outline-variant">
+              {row.live_url ? <div className="mt-3 max-w-2xl overflow-hidden rounded-lg border border-outline-variant/50">
                 <ProductVideoPreview url={row.live_url} title={`${row.title} submitted video`} />
               </div> : null}
             </div>
 
-            {row.status === "approved" ? <div className="mt-5 rounded-xl border border-primary/30 p-4">
+            {row.status === "approved" ? <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-black">{row.promoted_product_id ? "Edit Published Product" : "Customize Before Publishing"}</h3>
-                  <p className="text-sm text-on-surface-variant">Only these details and the visitor link will appear on the public Products page.</p>
+                  <h3 className="text-base font-black text-primary">{row.promoted_product_id ? "Edit Published Product" : "Customize Before Publishing"}</h3>
+                  <p className="text-xs text-on-surface-variant">Only these details and the visitor link will appear on the public Products page.</p>
                 </div>
-                {row.promoted_product_id ? <a className="wc-secondary-btn" href="/products" target="_blank" rel="noreferrer"><Icon name="inventory_2" /> View Product</a> : null}
+                {row.promoted_product_id ? <a className="wc-secondary-btn text-sm py-1.5 min-h-0" href="/products" target="_blank" rel="noreferrer"><Icon name="inventory_2" className="text-[18px]" /> View Product</a> : null}
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="space-y-1"><span className="text-xs font-bold uppercase">Product title</span><input className="wc-input" value={draft.name} onChange={(event) => updateDraft(row.id, "name", event.target.value)} /></label>
-                <label className="space-y-1"><span className="text-xs font-bold uppercase">Category</span><input className="wc-input" value={draft.category} onChange={(event) => updateDraft(row.id, "category", event.target.value)} /></label>
-                <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Short description</span><textarea className="wc-input min-h-20" value={draft.shortDescription} onChange={(event) => updateDraft(row.id, "shortDescription", event.target.value)} /></label>
-                <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Full description</span><textarea className="wc-input min-h-36" value={draft.fullDescription} onChange={(event) => updateDraft(row.id, "fullDescription", event.target.value)} /></label>
-                <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Visitor button link</span><input className="wc-input" placeholder="https://wa.me/923001234567 or any public URL" value={draft.visitorLink} onChange={(event) => updateDraft(row.id, "visitorLink", event.target.value)} /><span className="block text-xs text-on-surface-variant">Student GitHub is not published. Visitors open only this admin-selected link.</span></label>
-                <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Public product video</span><input className="wc-input" type="url" placeholder="YouTube, public Google Drive video, or direct MP4/WebM URL" value={draft.videoUrl} onChange={(event) => updateDraft(row.id, "videoUrl", event.target.value)} /><span className="block text-xs text-on-surface-variant">You can keep, replace, or remove the student&apos;s submitted video before publishing.</span></label>
-                <label className="flex items-center gap-3 rounded-lg border border-outline-variant p-4 md:col-span-2">
-                  <input type="checkbox" className="h-5 w-5 accent-primary" checked={draft.showInBranding} onChange={(event) => updateDraft(row.id, "showInBranding", event.target.checked)} />
-                  <span><strong>Also show in Branding</strong><span className="block text-xs text-on-surface-variant">The product remains in {draft.category || "its original category"} and also appears under Branding.</span></span>
-                </label>
-                <label className="space-y-1"><span className="text-xs font-bold uppercase">Access type</span><input className="wc-input" value={draft.accessType} onChange={(event) => updateDraft(row.id, "accessType", event.target.value)} /></label>
-                <label className="space-y-1"><span className="text-xs font-bold uppercase">Badge</span><select className="wc-input" value={draft.badge} onChange={(event) => updateDraft(row.id, "badge", event.target.value as ProductBadge)}><option value="new">New</option><option value="premium">Premium</option><option value="hot">Hot</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
-                <label className="space-y-1"><span className="text-xs font-bold uppercase">Public status</span><select className="wc-input" value={draft.status} onChange={(event) => updateDraft(row.id, "status", event.target.value as Product["status"])}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
-                <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Features / technologies - one per line</span><textarea className="wc-input min-h-28" value={draft.featuresText} onChange={(event) => updateDraft(row.id, "featuresText", event.target.value)} /></label>
-                <label className="space-y-1 md:col-span-2"><span className="text-xs font-bold uppercase">Product image links - one per line</span><textarea className="wc-input min-h-32" placeholder="Google Drive or direct image URL, one per line" value={draft.imageLinksText} onChange={(event) => updateDraft(row.id, "imageLinksText", event.target.value)} /><span className="block text-xs text-on-surface-variant">Add, remove, replace, or reorder links. The first image becomes the product cover.</span></label>
+              <div className="rounded-lg bg-surface p-4 border border-outline-variant/50 shadow-sm">
+                <div className="grid gap-x-4 gap-y-3 md:grid-cols-3">
+                  <label className="space-y-1 md:col-span-2"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Product title</span><input className="wc-input text-sm py-1.5 px-3 h-9" value={draft.name} onChange={(event) => updateDraft(row.id, "name", event.target.value)} /></label>
+                  <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Category</span><input className="wc-input text-sm py-1.5 px-3 h-9" value={draft.category} onChange={(event) => updateDraft(row.id, "category", event.target.value)} /></label>
+                  
+                  <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Access type</span><input className="wc-input text-sm py-1.5 px-3 h-9" value={draft.accessType} onChange={(event) => updateDraft(row.id, "accessType", event.target.value)} /></label>
+                  <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Badge</span><select className="wc-input text-sm py-1.5 px-3 h-9" value={draft.badge} onChange={(event) => updateDraft(row.id, "badge", event.target.value as ProductBadge)}><option value="new">New</option><option value="premium">Premium</option><option value="hot">Hot</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
+                  <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Public status</span><select className="wc-input text-sm py-1.5 px-3 h-9" value={draft.status} onChange={(event) => updateDraft(row.id, "status", event.target.value as Product["status"])}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+
+                  <div className="col-span-full border-t border-outline-variant/30 my-1"></div>
+
+                  <label className="space-y-1 md:col-span-3"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Short description</span><textarea className="wc-input text-sm py-2 px-3 min-h-[60px]" value={draft.shortDescription} onChange={(event) => updateDraft(row.id, "shortDescription", event.target.value)} /></label>
+                  <label className="space-y-1 md:col-span-3"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Full description</span><textarea className="wc-input text-sm py-2 px-3 min-h-[100px]" value={draft.fullDescription} onChange={(event) => updateDraft(row.id, "fullDescription", event.target.value)} /></label>
+                  <label className="space-y-1 md:col-span-3"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Features / technologies - one per line</span><textarea className="wc-input text-sm py-2 px-3 min-h-[80px]" value={draft.featuresText} onChange={(event) => updateDraft(row.id, "featuresText", event.target.value)} /></label>
+
+                  <div className="col-span-full border-t border-outline-variant/30 my-1"></div>
+
+                  <label className="space-y-1 md:col-span-3"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Visitor button link</span><input className="wc-input text-sm py-1.5 px-3 h-9" placeholder="https://wa.me/923001234567 or any public URL" value={draft.visitorLink} onChange={(event) => updateDraft(row.id, "visitorLink", event.target.value)} /><span className="block text-[10px] text-on-surface-variant">Student GitHub is not published. Visitors open only this admin-selected link.</span></label>
+                  <label className="space-y-1 md:col-span-3"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Public product video</span><input className="wc-input text-sm py-1.5 px-3 h-9" type="url" placeholder="YouTube, public Google Drive video, or direct MP4/WebM URL" value={draft.videoUrl} onChange={(event) => updateDraft(row.id, "videoUrl", event.target.value)} /><span className="block text-[10px] text-on-surface-variant">You can keep, replace, or remove the student&apos;s submitted video before publishing.</span></label>
+                  <label className="space-y-1 md:col-span-3"><span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Product image links - one per line</span><textarea className="wc-input text-sm py-2 px-3 min-h-[80px]" placeholder="Google Drive or direct image URL, one per line" value={draft.imageLinksText} onChange={(event) => updateDraft(row.id, "imageLinksText", event.target.value)} /><span className="block text-[10px] text-on-surface-variant">Add, remove, replace, or reorder links. The first image becomes the product cover.</span></label>
+                  
+                  <label className="flex items-center gap-3 rounded-lg border border-outline-variant/50 p-3 md:col-span-3 hover:bg-surface-container-low transition-colors cursor-pointer">
+                    <input type="checkbox" className="h-4 w-4 rounded border-2 border-primary/50 text-primary accent-primary" checked={draft.showInBranding} onChange={(event) => updateDraft(row.id, "showInBranding", event.target.checked)} />
+                    <span className="text-sm"><strong>Also show in Branding</strong> &middot; <span className="text-on-surface-variant">The product remains in {draft.category || "its original category"} and also appears under Branding.</span></span>
+                  </label>
+                </div>
               </div>
 
               {draft.videoUrl ? <div className="mt-4 max-w-3xl overflow-hidden rounded-lg border border-outline-variant"><ProductVideoPreview url={draft.videoUrl} title={`${draft.name} public video preview`} /></div> : null}
               <GoogleDriveImagePreviews links={previewLinks} />
-              <button disabled={busy === row.id} onClick={() => void saveProduct(row)} className="wc-primary-btn mt-4"><Icon name="save" /> {row.promoted_product_id ? "Save Product Changes" : "Publish Customized Product"}</button>
+              <button disabled={busy === row.id} onClick={() => void saveProduct(row)} className="wc-primary-btn mt-4 text-sm py-2 min-h-0"><Icon name="save" className="text-[18px]" /> {row.promoted_product_id ? "Save Product Changes" : "Publish Customized Product"}</button>
             </div> : null}
 
-            <textarea className="wc-input mt-4 min-h-20" placeholder="Admin feedback" value={feedback[row.id] ?? row.admin_feedback ?? ""} onChange={(event) => setFeedback({ ...feedback, [row.id]: event.target.value })} />
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 rounded-lg bg-surface-container-low/30 border border-outline-variant/50 p-3">
+              <label className="block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1 block">Admin Feedback</span>
+                <textarea className="wc-input text-sm py-2 px-3 min-h-[60px]" placeholder="Write feedback here before returning for improvement..." value={feedback[row.id] ?? row.admin_feedback ?? ""} onChange={(event) => setFeedback({ ...feedback, [row.id]: event.target.value })} />
+              </label>
+            </div>
+            
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               {row.status === "submitted" ? <>
-                <button disabled={busy === row.id} onClick={() => void review(row, "approved")} className="wc-primary-btn"><Icon name="check" /> Approve</button>
-                <button disabled={busy === row.id} onClick={() => void review(row, "revision_required")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-amber-100 px-5 py-3 font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" /> Need Improvement</button>
-                <button disabled={busy === row.id} onClick={() => void review(row, "rejected")} className="wc-secondary-btn"><Icon name="close" /> Reject</button>
+                <button disabled={busy === row.id} onClick={() => void review(row, "approved")} className="wc-primary-btn text-sm py-2 min-h-0"><Icon name="check" className="text-[18px]" /> Approve</button>
+                <button disabled={busy === row.id} onClick={() => void review(row, "revision_required")} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-100 px-4 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" className="text-[18px]" /> Need Improvement</button>
+                <button disabled={busy === row.id} onClick={() => void review(row, "rejected")} className="wc-secondary-btn text-sm py-2 min-h-0"><Icon name="close" className="text-[18px]" /> Reject</button>
               </> : null}
-              {row.status === "approved" && !row.promoted_product_id ? <button disabled={busy === row.id} onClick={() => void review(row, "revision_required")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-amber-100 px-5 py-3 font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" /> Need Improvement</button> : null}
+              {row.status === "approved" && !row.promoted_product_id ? <button disabled={busy === row.id} onClick={() => void review(row, "revision_required")} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-100 px-4 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" className="text-[18px]" /> Need Improvement</button> : null}
             </div>
           </div> : null}
         </article>;
