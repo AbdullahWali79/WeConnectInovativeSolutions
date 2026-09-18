@@ -1298,6 +1298,7 @@ export async function updateStudentNotes(input: {
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Failed to update student notes." };
   }
+}
 
 export async function updateStudentDailyTaskLimit(studentId: string, dailyLimit: number | null) {
   try {

@@ -74,6 +74,7 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [toast, setToast] = useState<ToastState>(null);
 
   const load = useCallback(async () => {
@@ -138,6 +139,58 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
         : "Project " + status + ".",
     });
     await load();
+  }
+
+  async function bulkReview(status: "approved" | "rejected" | "revision_required") {
+    if (!selectedIds.length) return;
+    if (status === "revision_required") {
+      const missingFeedback = selectedIds.some((id) => {
+        const row = rows.find(r => r.id === id);
+        const reviewFeedback = feedback[id]?.trim() || row?.admin_feedback?.trim() || "";
+        return !reviewFeedback;
+      });
+      if (missingFeedback) {
+        return setToast({ type: "error", message: "Write improvement comments for all selected projects before sending them back." });
+      }
+    }
+
+    setBusy("bulk");
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const updates = selectedIds.map(async (id) => {
+      const row = rows.find(r => r.id === id);
+      const reviewFeedback = feedback[id]?.trim() || row?.admin_feedback?.trim() || "";
+      return supabase.from("student_projects").update({
+        status,
+        admin_feedback: reviewFeedback || null,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id,
+        updated_at: new Date().toISOString(),
+      }).eq("id", id);
+    });
+
+    await Promise.all(updates);
+    
+    setBusy(null);
+    setSelectedIds([]);
+    setExpandedIds((current) => current.filter((id) => !selectedIds.includes(id)));
+    setToast({
+      type: "success",
+      message: `${selectedIds.length} projects ${status === "revision_required" ? "returned for improvement" : status}.`,
+    });
+    await load();
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
+  function toggleSelectAll(visibleIds: string[]) {
+    if (selectedIds.length === visibleIds.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(visibleIds);
+    }
   }
 
   async function saveProduct(row: StudentProject) {
@@ -264,42 +317,79 @@ export function StudentProjectsManager({ initialStudentId }: { initialStudentId?
       </button>)}
     </div>
 
-    <label className="relative block max-w-xl">
-      <span className="sr-only">Search projects in the selected tab</span>
-      <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-      <input
-        type="search"
-        className="wc-input pl-12"
-        placeholder="Search by project, student, email, or category..."
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-      />
-    </label>
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <label className="relative block w-full max-w-xl">
+        <span className="sr-only">Search projects in the selected tab</span>
+        <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+        <input
+          type="search"
+          className="wc-input pl-12"
+          placeholder="Search by project, student, email, or category..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </label>
 
-    <div className="grid gap-4">
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-2 px-4 shadow-sm">
+          <span className="text-sm font-bold text-primary">{selectedIds.length} selected</span>
+          <div className="flex gap-2">
+            <button disabled={busy === "bulk"} onClick={() => void bulkReview("approved")} className="wc-primary-btn text-sm py-1 min-h-0"><Icon name="check" className="text-[18px]" /> Approve</button>
+            <button disabled={busy === "bulk"} onClick={() => void bulkReview("revision_required")} className="inline-flex items-center justify-center gap-1 rounded-lg bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50"><Icon name="rate_review" className="text-[18px]" /> Need Improvement</button>
+            <button disabled={busy === "bulk"} onClick={() => void bulkReview("rejected")} className="wc-secondary-btn text-sm py-1 min-h-0"><Icon name="close" className="text-[18px]" /> Reject</button>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {visible.length > 0 && (
+      <div className="flex items-center gap-3 px-2 py-1 text-sm font-medium text-on-surface-variant">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input 
+            type="checkbox" 
+            className="h-5 w-5 rounded border-outline-variant text-primary accent-primary" 
+            checked={selectedIds.length === visible.length && visible.length > 0}
+            onChange={() => toggleSelectAll(visible.map(r => r.id))}
+          />
+          Select All
+        </label>
+      </div>
+    )}
+
+    <div className="grid gap-3">
       {visible.length ? visible.map((row) => {
         const student = names.get(row.student_id);
         const expanded = expandedIds.includes(row.id);
         const draft = drafts[row.id] ?? draftFrom(row, row.promoted_product_id ? productById.get(row.promoted_product_id) : undefined);
         const previewLinks = urlLines(draft.imageLinksText);
         return <article key={row.id} className="wc-card overflow-hidden">
-          <button type="button" onClick={() => toggleExpanded(row)} className="flex w-full items-center justify-between gap-4 p-5 text-left hover:bg-surface-container-low">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-lg font-black">{row.title}</h2>
-                <StatusPill value={row.status} />
-                {row.status === "submitted" && row.admin_feedback && !row.reviewed_at ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">Resubmitted after improvements</span> : null}
-                {row.promoted_product_id ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Published as product</span> : null}
+          <div className="flex w-full items-center gap-3 p-3 sm:p-4 hover:bg-surface-container-low transition-colors">
+            <label className="flex shrink-0 cursor-pointer p-1">
+              <input 
+                type="checkbox" 
+                className="h-5 w-5 rounded border-outline-variant text-primary accent-primary" 
+                checked={selectedIds.includes(row.id)}
+                onChange={() => toggleSelection(row.id)}
+              />
+            </label>
+            <button type="button" onClick={() => toggleExpanded(row)} className="flex min-w-0 flex-1 items-center justify-between gap-4 text-left">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="truncate text-base font-black">{row.title}</h2>
+                  <StatusPill value={row.status} />
+                  {row.status === "submitted" && row.admin_feedback && !row.reviewed_at ? <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700">Resubmitted</span> : null}
+                  {row.promoted_product_id ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Published</span> : null}
+                </div>
+                <p className="mt-0.5 truncate text-xs sm:text-sm text-on-surface-variant">{student?.full_name ?? "Student"} &middot; {student?.email} &middot; {row.category}</p>
+                {row.status === "submitted" && row.admin_feedback && !row.reviewed_at ? <p className="mt-0.5 text-[10px] font-semibold text-sky-700">Updated {new Date(row.updated_at).toLocaleString()}</p> : null}
               </div>
-              <p className="mt-1 truncate text-sm text-on-surface-variant">{student?.full_name ?? "Student"} &middot; {student?.email} &middot; {row.category}</p>
-              {row.status === "submitted" && row.admin_feedback && !row.reviewed_at ? <p className="mt-1 text-xs font-semibold text-sky-700">Updated {new Date(row.updated_at).toLocaleString()}</p> : null}
-            </div>
-            <span className="flex shrink-0 items-center gap-2 text-sm font-bold text-primary">
-              {expanded ? "Collapse" : "Expand"}<Icon name={expanded ? "expand_less" : "expand_more"} />
-            </span>
-          </button>
+              <span className="flex shrink-0 items-center gap-1 text-sm font-bold text-primary">
+                {expanded ? "Collapse" : "Expand"}<Icon name={expanded ? "expand_less" : "expand_more"} />
+              </span>
+            </button>
+          </div>
 
-          {expanded ? <div className="border-t border-outline-variant p-5">
+          {expanded ? <div className="border-t border-outline-variant p-4 sm:p-5">
             <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4">
               <p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">Original student submission - admin only</p>
               <p className="mt-2 text-sm leading-6">{row.full_description || row.short_description}</p>
