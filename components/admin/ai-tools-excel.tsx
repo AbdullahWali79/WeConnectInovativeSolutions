@@ -65,11 +65,11 @@ export function AIToolsExcelManager({ existingTools }: { existingTools: AITool[]
       if (!sheetName) throw new Error("Excel file is empty.");
 
       const sheet = wb.Sheets[sheetName];
-      const data = xlsx.utils.sheet_to_json<Record<string, unknown>>(sheet, { header: 1 });
+      const data = xlsx.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
       if (data.length < 2) throw new Error("No rows found in the Excel file.");
 
-      const headers = (data[0] as string[]).map(h => String(h || "").trim());
+      const headers = (data[0] as unknown[]).map(h => String(h || "").trim());
       
       const colName = headers.indexOf(TEMPLATE_HEADERS[0]);
       const colCategory = headers.indexOf(TEMPLATE_HEADERS[1]);
