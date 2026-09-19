@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function importProjects(courseId: string, projects: { title: string; description: string }[]) {
+export async function importProjects(courseId: string, projects: { title: string; description: string; level: string }[]) {
   const supabase = await createSupabaseServerClient();
   
   const payloads = projects.map(p => ({
     course_id: courseId,
     title: p.title,
-    description: p.description
+    description: p.description,
+    level: p.level || "Beginner"
   }));
 
   const { error } = await supabase.from("course_projects").insert(payloads);
@@ -35,10 +36,10 @@ export async function deleteProject(projectId: string) {
   return { success: true };
 }
 
-export async function updateProject(projectId: string, title: string, description: string) {
+export async function updateProject(projectId: string, title: string, description: string, level: string) {
   const supabase = await createSupabaseServerClient();
   
-  const { error } = await supabase.from("course_projects").update({ title, description }).eq("id", projectId);
+  const { error } = await supabase.from("course_projects").update({ title, description, level }).eq("id", projectId);
   
   if (error) {
     return { success: false, error: error.message };

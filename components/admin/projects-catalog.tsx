@@ -121,6 +121,7 @@ function ProjectManager({
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newLevel, setNewLevel] = useState("Beginner");
   const [isAdding, setIsAdding] = useState(false);
 
   const selectedProjects = projects.filter((p) => selectedProjectIds.includes(p.id));
@@ -151,7 +152,7 @@ function ProjectManager({
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet);
 
-        const newProjects: { title: string; description: string }[] = [];
+        const newProjects: { title: string; description: string; level: string }[] = [];
         
         for (const row of rows) {
           const normalizedRow: Record<string, string> = {};
@@ -161,9 +162,10 @@ function ProjectManager({
 
           const title = normalizedRow["project name"] || normalizedRow["title"];
           const desc = normalizedRow["description in detail"] || normalizedRow["description"];
+          const level = normalizedRow["level"] || normalizedRow["difficulty"] || "Beginner";
           
           if (title && desc) {
-            newProjects.push({ title: title.trim(), description: desc.trim() });
+            newProjects.push({ title: title.trim(), description: desc.trim(), level: level.trim() });
           }
         }
 
@@ -192,17 +194,17 @@ function ProjectManager({
 
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newDescription.trim()) {
-      onToast({ type: "error", message: "Title and description are required." });
+    if (!newTitle.trim() || !newDescription.trim() || !newLevel.trim()) {
+      onToast({ type: "error", message: "Title, description, and level are required." });
       return;
     }
     
     setIsAdding(true);
     let result;
     if (editingProjectId) {
-      result = await updateProject(editingProjectId, newTitle.trim(), newDescription.trim());
+      result = await updateProject(editingProjectId, newTitle.trim(), newDescription.trim(), newLevel.trim());
     } else {
-      result = await importProjects(course.id, [{ title: newTitle.trim(), description: newDescription.trim() }]);
+      result = await importProjects(course.id, [{ title: newTitle.trim(), description: newDescription.trim(), level: newLevel.trim() }]);
     }
     setIsAdding(false);
     
@@ -212,6 +214,7 @@ function ProjectManager({
       setEditingProjectId(null);
       setNewTitle("");
       setNewDescription("");
+      setNewLevel("Beginner");
     } else {
       onToast({ type: "error", message: result.error || "Failed to save project." });
     }
@@ -228,7 +231,7 @@ function ProjectManager({
   };
 
   const downloadTemplate = () => {
-    const ws = XLSX.utils.json_to_sheet([{ "Project Name": "Sample Project Title", "Description in detail": "Sample detailed requirements and instructions for this project." }]);
+    const ws = XLSX.utils.json_to_sheet([{ "Project Name": "Sample Project Title", "Level": "Beginner", "Description in detail": "Sample detailed requirements and instructions for this project." }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Projects");
     XLSX.writeFile(wb, "Projects_Template.xlsx");
@@ -370,7 +373,12 @@ function ProjectManager({
                       onChange={() => toggleValue(project.id, selectedProjectIds, setSelectedProjectIds)}
                     />
                     <div className="min-w-0 flex-1 overflow-hidden">
-                      <p className="break-words text-sm font-bold leading-tight sm:text-base">{project.title}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="shrink-0 rounded-full bg-secondary-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-on-secondary-container">
+                          {project.level || "Beginner"}
+                        </span>
+                        <p className="break-words text-sm font-bold leading-tight sm:text-base">{project.title}</p>
+                      </div>
                       <p className="mt-1 line-clamp-2 text-xs opacity-80">{project.description}</p>
                     </div>
                   </label>
@@ -383,6 +391,7 @@ function ProjectManager({
                           setEditingProjectId(project.id);
                           setNewTitle(project.title);
                           setNewDescription(project.description);
+                          setNewLevel(project.level || "Beginner");
                           setIsAddModalOpen(true);
                         }}
                         className="flex flex-1 items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors"
@@ -497,6 +506,19 @@ function ProjectManager({
                   className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
                   placeholder="Enter detailed requirements"
                 />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium">Difficulty Level</span>
+                <select
+                  required
+                  value={newLevel}
+                  onChange={(e) => setNewLevel(e.target.value)}
+                  className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advance">Advance</option>
+                </select>
               </label>
               <div className="grid grid-cols-2 gap-2 pt-2 sm:flex sm:justify-end sm:gap-3">
                 <button

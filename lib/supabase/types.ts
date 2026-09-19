@@ -208,6 +208,7 @@ export type CourseProject = {
   course_id: string;
   title: string;
   description: string;
+  level: string;
   created_at: string;
 };
 
@@ -943,7 +944,7 @@ export type Database = {
       };
       course_projects: {
         Row: CourseProject;
-        Insert: Partial<CourseProject> & { course_id: string; title: string; description: string };
+        Insert: Partial<CourseProject> & { course_id: string; title: string; description: string; level?: string };
         Update: Partial<CourseProject>;
         Relationships: [];
       };
