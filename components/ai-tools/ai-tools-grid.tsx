@@ -9,7 +9,7 @@ import { normalizeImageUrl } from "@/lib/image-url";
 type TutorialFilter = "all" | "with-video" | "without-video";
 type SortOption = "newest" | "oldest" | "name";
 
-export function AIToolsGrid({ tools, showStatus = false, renderActions }: { tools: AITool[]; showStatus?: boolean; renderActions?: (tool: AITool) => ReactNode }) {
+export function AIToolsGrid({ tools, showStatus = false, renderActions }: { tools: AITool[]; showStatus?: boolean; renderActions?: (tool: AITool, closeModal: () => void) => ReactNode }) {
   const [query, setQuery] = useState("");
   const [tutorialFilter, setTutorialFilter] = useState<TutorialFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -64,7 +64,7 @@ export function AIToolsGrid({ tools, showStatus = false, renderActions }: { tool
     <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-on-surface-variant">Showing {filteredTools.length} of {tools.length} tools</p>{(query || tutorialFilter !== "all" || categoryFilter !== "all" || sort !== "newest") && <button type="button" className="text-sm font-black text-secondary" onClick={() => { setQuery(""); setTutorialFilter("all"); setCategoryFilter("all"); setSort("newest"); }}>Clear filters</button>}</div>
 
     {filteredTools.length ? <div className="grid items-start gap-6 sm:grid-cols-2 xl:grid-cols-3">{filteredTools.map((tool) => <ToolCard key={tool.id} tool={tool} showStatus={showStatus} onSelect={() => setSelected(tool)} />)}</div> : <EmptyState hasTools={tools.length > 0} />}
-    {selected && <ToolDetailsModal tool={selected} showStatus={showStatus} actions={renderActions?.(selected)} onClose={() => setSelected(null)} />}
+    {selected && <ToolDetailsModal tool={selected} showStatus={showStatus} actions={renderActions?.(selected, () => setSelected(null))} onClose={() => setSelected(null)} />}
   </div>;
 }
 
