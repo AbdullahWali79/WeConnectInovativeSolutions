@@ -12,7 +12,7 @@ export async function getMyAITools() {
   return data ?? [];
 }
 
-export async function submitAITool(input: { name: string; url: string; benefits: string; image_url: string; youtube_url?: string }) {
+export async function submitAITool(input: { name: string; url: string; category: string; benefits: string; image_url: string; youtube_url?: string }) {
   const profile = await getCurrentUserProfile();
   if (profile.role !== "student" || profile.status !== "approved") return { ok: false, error: "Only approved students can submit AI tools." };
   const validation = validateAITool(input);
