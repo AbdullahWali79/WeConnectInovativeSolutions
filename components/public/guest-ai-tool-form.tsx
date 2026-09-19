@@ -11,11 +11,11 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
     toolName: "", 
     toolUrl: "", 
     benefits: "", 
-    imageUrl: "", 
     youtubeUrl: "",
     categoryId: categories[0]?.id ?? "",
     categorySnapshot: categories[0]?.category ?? ""
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [state, setState] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; target: number; remaining: number } | null>(null);
@@ -40,8 +40,36 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
       return;
     }
     
+    if (!imageFile) {
+      setState({ type: "error", message: "Please select an image file to upload." });
+      return;
+    }
+    
     setBusy(true);
     setState(null);
+    
+    let uploadedImageUrl = "";
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", imageFile);
+      
+      const res = await fetch("/api/uploads/guest-ai-tool", {
+        method: "POST",
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Image upload failed.");
+      }
+      
+      uploadedImageUrl = data.url;
+    } catch (err: any) {
+      setState({ type: "error", message: err.message || "Failed to upload image." });
+      setBusy(false);
+      return;
+    }
     
     // Find category snapshot
     const category = categories.find(c => c.id === fields.categoryId);
@@ -49,6 +77,7 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
     
     const result = await submitPublicAITool(form.id, {
       ...fields,
+      imageUrl: uploadedImageUrl,
       categorySnapshot: snap
     });
     
@@ -67,7 +96,10 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
     const remaining = Math.max(0, target - completed);
     
     setProgress({ completed, target, remaining });
-    setFields((current) => ({ ...current, toolName: "", toolUrl: "", benefits: "", imageUrl: "", youtubeUrl: "" }));
+    setFields((current) => ({ ...current, toolName: "", toolUrl: "", benefits: "", youtubeUrl: "" }));
+    setImageFile(null);
+    const fileInput = document.getElementById("tool-image") as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
     setState({ type: "success", message: "AI Tool submitted successfully. Thank you!" });
   }
 
@@ -104,7 +136,12 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
         
         <label className="sm:col-span-2"><span className="wc-label">Benefits for students *</span><textarea className="wc-input mt-2 min-h-24" value={fields.benefits} onChange={(e) => update("benefits", e.target.value)} required placeholder="How this tool helps in study or work..." /></label>
         
-        <label className="sm:col-span-2"><span className="wc-label">Public image or Google Drive URL *</span><input className="wc-input mt-2" type="url" value={fields.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="https://..." required /></label>
+        <div className="sm:col-span-2">
+          <label htmlFor="tool-image" className="wc-label">Upload public image *</label>
+          <input id="tool-image" className="wc-input mt-2 bg-white" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setImageFile(e.target.files?.[0] || null)} required />
+          <p className="mt-1 text-xs text-on-surface-variant">Image will be publicly visible immediately. Max 5MB.</p>
+        </div>
+        
         <label className="sm:col-span-2"><span className="wc-label">YouTube learning video URL (optional)</span><input className="wc-input mt-2" type="url" value={fields.youtubeUrl} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://youtube.com/..." /></label>
       </div>
 
