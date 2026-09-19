@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createAdminAITool, deleteAITool, getAllAITools, reviewAITool, updateAIToolVideo, updateAdminAITool } from "@/app/admin/ai-tools/actions";
+import { createAdminAITool, deleteAITool, getAllAITools, reviewAITool, updateAIToolVideo, updateAdminAITool, fetchAIToolMetadata } from "@/app/admin/ai-tools/actions";
 import { PageHeader } from "@/components/page-header";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
@@ -107,7 +107,26 @@ export function AIToolsManager() {
         <option value="" disabled>Select category</option>
         {STANDARD_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
       </select>
-      <input required type="url" className="wc-input md:col-span-2" placeholder="Official URL" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+      <input 
+        required 
+        type="url" 
+        className="wc-input md:col-span-2" 
+        placeholder="Official URL" 
+        value={form.url} 
+        onChange={(e) => setForm({ ...form, url: e.target.value })} 
+        onBlur={async () => {
+          if (form.url && !form.image_url) {
+            setToast({ type: "success", message: "Fetching tool image..." });
+            const res = await fetchAIToolMetadata(form.url);
+            if (res.ok && res.imageUrl) {
+              setForm(prev => ({ ...prev, image_url: res.imageUrl! }));
+              setToast({ type: "success", message: "Image auto-filled." });
+            } else {
+              setToast({ type: "error", message: "Could not fetch image. Please add manually." });
+            }
+          }
+        }}
+      />
       <textarea required minLength={10} className="wc-input min-h-24 md:col-span-2" placeholder="Benefits for students" value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} />
       <input required type="url" className="wc-input md:col-span-2" placeholder="Public image or Google Drive URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
       <input type="url" className="wc-input md:col-span-2" placeholder="YouTube learning video URL (optional)" value={form.youtube_url} onChange={(e) => setForm({ ...form, youtube_url: e.target.value })} />

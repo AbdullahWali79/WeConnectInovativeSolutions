@@ -50,3 +50,39 @@ export async function updateAIToolVideo(id: string, youtubeUrl: string) { await 
 export async function reviewAITool(id: string, status: "approved" | "rejected", admin_note: string) { const admin = await requireAdminOnly(); const now = new Date().toISOString(); const { error } = await createSupabaseServiceClient().from("ai_tools").update({ status, admin_note: admin_note.trim() || null, reviewed_by: admin.id, reviewed_at: now, published_at: status === "approved" ? now : null, updated_at: now }).eq("id", id); if (error) return { ok: false, error: error.message }; refresh(); return { ok: true }; }
 export async function deleteAITool(id: string) { await requireAdminOnly(); const { error } = await createSupabaseServiceClient().from("ai_tools").delete().eq("id", id); if (error) return { ok: false, error: error.message }; refresh(); return { ok: true }; }
 function refresh() { revalidatePath("/ai-tools"); revalidatePath("/student/ai-tools"); revalidatePath("/admin/ai-tools"); }
+
+export async function fetchAIToolMetadata(urlStr: string) {
+  try {
+    let target = urlStr.trim();
+    if (!target.startsWith("http")) target = "https://" + target;
+    const url = new URL(target);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return { ok: false, error: "Failed to fetch URL" };
+    
+    const html = await res.text();
+    
+    const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i) || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["'][^>]*>/i);
+    const twImageMatch = html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["'][^>]*>/i) || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']twitter:image["'][^>]*>/i);
+    
+    let imageUrl = ogImageMatch?.[1] || twImageMatch?.[1] || "";
+    
+    if (imageUrl) {
+      if (imageUrl.startsWith("/")) {
+        imageUrl = url.origin + imageUrl;
+      }
+      return { ok: true, imageUrl };
+    }
+    
+    return { ok: false, error: "No image found" };
+  } catch (error) {
+    return { ok: false, error: "Invalid URL or network error" };
+  }
+}

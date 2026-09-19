@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { getMyAITools, submitAITool } from "@/app/student/ai-tools/actions";
+import { fetchAIToolMetadata } from "@/app/admin/ai-tools/actions";
 import { PageHeader } from "@/components/page-header";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
@@ -26,7 +27,29 @@ export function AIToolsBoard() {
           {STANDARD_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </label>
-      <label className="space-y-1 md:col-span-2"><span className="wc-label">Official tool URL *</span><input required type="url" className="wc-input" value={form.url} onChange={e => setForm({...form,url:e.target.value})} placeholder="https://..." /></label>
+      <label className="space-y-1 md:col-span-2">
+        <span className="wc-label">Official tool URL *</span>
+        <input 
+          required 
+          type="url" 
+          className="wc-input" 
+          value={form.url} 
+          onChange={e => setForm({...form,url:e.target.value})} 
+          onBlur={async () => {
+            if (form.url && !form.image_url) {
+              setToast({ type: "success", message: "Fetching tool image..." });
+              const res = await fetchAIToolMetadata(form.url);
+              if (res.ok && res.imageUrl) {
+                setForm(prev => ({ ...prev, image_url: res.imageUrl! }));
+                setToast({ type: "success", message: "Image auto-filled." });
+              } else {
+                setToast({ type: "error", message: "Could not fetch image. Please add manually." });
+              }
+            }
+          }}
+          placeholder="https://..." 
+        />
+      </label>
     <label className="space-y-1 md:col-span-2"><span className="wc-label">Benefits *</span><textarea required minLength={10} maxLength={2000} className="wc-input min-h-28" value={form.benefits} onChange={e => setForm({...form,benefits:e.target.value})} placeholder="Explain what this tool does and how students can benefit from it." /></label>
     <label className="space-y-1 md:col-span-2"><span className="wc-label">Public Google Drive image URL *</span><input required type="url" className="wc-input" value={form.image_url} onChange={e => setForm({...form,image_url:e.target.value})} placeholder="https://drive.google.com/file/d/.../view" /><span className="block text-xs text-on-surface-variant">Set Drive access to Anyone with the link — Viewer.</span></label>
     <label className="space-y-1 md:col-span-2"><span className="wc-label">YouTube learning video</span><input type="url" className="wc-input" value={form.youtube_url} onChange={e => setForm({...form,youtube_url:e.target.value})} placeholder="https://www.youtube.com/watch?v=..." /><span className="block text-xs text-on-surface-variant">Optional tutorial. It will only appear publicly after admin approval.</span></label>
