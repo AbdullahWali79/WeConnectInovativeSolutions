@@ -107,6 +107,7 @@ export function TraineesManager({
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(defaultForm);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -305,7 +306,14 @@ export function TraineesManager({
         eyebrow="Trainees"
         title="Manage trainees"
         description="Track trainee progress, update status, and monitor task completion at a glance."
-        action={<Link href="/trainees" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Trainees</Link>}
+        action={
+          <div className="flex gap-2">
+            <Link href="/trainees" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Trainees</Link>
+            {canCreate ? (
+              <button onClick={() => { resetForm(); setIsFormOpen(true); }} className="wc-primary-btn text-sm"><Icon name="add" /> Add Trainee</button>
+            ) : null}
+          </div>
+        }
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -327,43 +335,7 @@ export function TraineesManager({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-        {(canCreate || editingId) ? <form onSubmit={saveRow} className="wc-card space-y-3 p-4">
-          <h2 className="text-base font-bold text-on-surface">{editingId ? "Edit Trainee" : "Add Trainee"}</h2>
-          <input className="wc-input" placeholder="Trainee name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
-          <input className="wc-input" placeholder="Email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required />
-          <select className="wc-input" value={form.course_id} onChange={(event) => setForm((current) => ({ ...current, course_id: event.target.value }))}>
-            <option value="">Course</option>
-            {courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
-          </select>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <input className="wc-input" type="number" min="0" placeholder="Assigned" value={form.assigned_tasks} onChange={(event) => setForm((current) => ({ ...current, assigned_tasks: event.target.value }))} />
-            <input className="wc-input" type="number" min="0" placeholder="Completed" value={form.completed_tasks} onChange={(event) => setForm((current) => ({ ...current, completed_tasks: event.target.value }))} />
-            <input className="wc-input" type="number" min="0" placeholder="Pending" value={form.pending_tasks} onChange={(event) => setForm((current) => ({ ...current, pending_tasks: event.target.value }))} />
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input className="wc-input" type="number" min="0" max="100" placeholder="Progress %" value={form.progress_percentage} onChange={(event) => setForm((current) => ({ ...current, progress_percentage: event.target.value }))} />
-            <select className="wc-input" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="dropped">Dropped</option>
-            </select>
-          </div>
-
-          <div className="flex gap-2">
-            <button disabled={saving} className="wc-primary-btn flex-1">{saving ? "Saving..." : editingId ? "Update" : "Create"}</button>
-            {editingId ? <button type="button" onClick={resetForm} className="wc-secondary-btn">Cancel</button> : null}
-          </div>
-        </form> : (
-          <section className="wc-card p-4">
-            <h2 className="text-base font-bold text-on-surface">{canEdit || canDelete ? "Trainee actions" : "Read-only trainee access"}</h2>
-            <p className="mt-2 text-sm leading-6 text-on-surface-variant">{traineeAccessMessage}</p>
-          </section>
-        )}
-
+      <div className="mt-6">
         <section className="wc-card overflow-hidden">
           <div className="grid gap-2 border-b border-outline-variant/50 bg-surface-container-low p-3 md:grid-cols-6">
             <input className="wc-input md:col-span-2" placeholder="Search name/email" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -437,6 +409,55 @@ export function TraineesManager({
           )}
         </section>
       </div>
+
+      {(isFormOpen || editingId) && (canCreate || canEdit) ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setIsFormOpen(false);
+            resetForm();
+          }
+        }}>
+          <div className="wc-card w-full max-w-lg p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-xl font-black text-on-surface">{editingId ? "Edit Trainee" : "Add Trainee"}</h2>
+              <button type="button" onClick={() => { setIsFormOpen(false); resetForm(); }} className="text-on-surface-variant hover:text-on-surface">
+                <Icon name="close" className="text-xl" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => { await saveRow(e); setIsFormOpen(false); }} className="space-y-4">
+              <input className="wc-input" placeholder="Trainee name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+              <input className="wc-input" placeholder="Email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required />
+              <select className="wc-input" value={form.course_id} onChange={(event) => setForm((current) => ({ ...current, course_id: event.target.value }))}>
+                <option value="">Course</option>
+                {courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
+              </select>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="block"><span className="wc-label text-xs">Assigned</span><input className="wc-input mt-1" type="number" min="0" placeholder="0" value={form.assigned_tasks} onChange={(event) => setForm((current) => ({ ...current, assigned_tasks: event.target.value }))} /></label>
+                <label className="block"><span className="wc-label text-xs">Completed</span><input className="wc-input mt-1" type="number" min="0" placeholder="0" value={form.completed_tasks} onChange={(event) => setForm((current) => ({ ...current, completed_tasks: event.target.value }))} /></label>
+                <label className="block"><span className="wc-label text-xs">Pending</span><input className="wc-input mt-1" type="number" min="0" placeholder="0" value={form.pending_tasks} onChange={(event) => setForm((current) => ({ ...current, pending_tasks: event.target.value }))} /></label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block"><span className="wc-label text-xs">Progress %</span><input className="wc-input mt-1" type="number" min="0" max="100" placeholder="0" value={form.progress_percentage} onChange={(event) => setForm((current) => ({ ...current, progress_percentage: event.target.value }))} /></label>
+                <label className="block"><span className="wc-label text-xs">Status</span>
+                  <select className="wc-input mt-1" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                    <option value="dropped">Dropped</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => { setIsFormOpen(false); resetForm(); }} className="wc-secondary-btn">Cancel</button>
+                <button disabled={saving} className="wc-primary-btn">{saving ? "Saving..." : editingId ? "Update" : "Create"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
