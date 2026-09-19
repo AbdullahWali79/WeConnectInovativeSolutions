@@ -120,7 +120,7 @@ export function PublicAIToolFormsManager({ forms, categories, submissions }: { f
           <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={formDraft.is_active} onChange={(e) => setFormDraft((v) => ({ ...v, is_active: e.target.checked }))} /> Accept submissions</label>
           <div className="flex justify-end gap-2">
             <button className="wc-secondary-btn" onClick={() => setModal(null)}>Cancel</button>
-            <button disabled={pending} className="wc-primary-btn" onClick={() => run(() => editingId ? updateAIToolForm(editingId, formDraft) : createAIToolForm(formDraft.title).then((r: any) => r.ok ? updateAIToolForm(r.data.id, formDraft) : r), editingId ? "Form updated." : "Form created.", () => setModal(null))}>Save Form</button>
+            <button disabled={pending} className="wc-primary-btn" onClick={() => run(() => editingId ? updateAIToolForm(editingId, formDraft) : createAIToolForm(formDraft.title).then(r => { if (!r.ok) return r; return updateAIToolForm(r.data.id, formDraft); }), editingId ? "Form updated." : "Form created.", () => setModal(null))}>Save Form</button>
           </div>
         </div> : <div className="mt-5 space-y-3">
           {forms.map((form) => <div key={form.id} className={`rounded-2xl border p-4 ${currentFormId === form.id ? "border-primary bg-primary/5" : "border-outline-variant"}`}>
