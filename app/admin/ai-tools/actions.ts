@@ -7,6 +7,15 @@ import { validateAITool } from "@/lib/ai-tools";
 type ToolInput = { name: string; url: string; category: string; benefits: string; image_url: string; youtube_url?: string };
 export async function getAllAITools() { await requireAdminOnly(); const supabase = createSupabaseServiceClient(); const [{ data, error }, { data: admins, error: adminError }] = await Promise.all([supabase.from("ai_tools").select("*").order("created_at", { ascending: false }), supabase.from("profiles").select("id").eq("role", "admin")]); if (error) throw new Error(error.message); if (adminError) throw new Error(adminError.message); const adminIds = new Set((admins ?? []).map((row) => row.id)); return (data ?? []).map((row) => ({ ...row, submitter_role: row.submitted_by && adminIds.has(row.submitted_by) ? "admin" as const : "student" as const })); }
 export async function createAdminAITool(input: ToolInput) { const admin = await requireAdminOnly(); const validation = validateAITool(input); if (!validation.ok) return validation; const now = new Date().toISOString(); const { error } = await createSupabaseServiceClient().from("ai_tools").insert({ ...validation.data, submitted_by: admin.id, submitter_email: admin.email ?? null, status: "approved", reviewed_by: admin.id, reviewed_at: now, published_at: now }); if (error) return { ok: false, error: error.code === "23505" ? "This AI tool URL already exists." : error.message }; refresh(); return { ok: true }; }
+export async function updateAdminAITool(id: string, input: ToolInput) {
+  await requireAdminOnly();
+  const validation = validateAITool(input);
+  if (!validation.ok) return validation;
+  const { error } = await createSupabaseServiceClient().from("ai_tools").update({ ...validation.data, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return { ok: false, error: error.code === "23505" ? "This AI tool URL already exists." : error.message };
+  refresh();
+  return { ok: true };
+}
 export async function importAdminAIToolsBulk(tools: ToolInput[]) {
   const admin = await requireAdminOnly();
   const supabase = createSupabaseServiceClient();
@@ -25,10 +34,10 @@ export async function importAdminAIToolsBulk(tools: ToolInput[]) {
       ...validation.data,
       submitted_by: admin.id,
       submitter_email: admin.email ?? null,
-      status: "approved",
-      reviewed_by: admin.id,
-      reviewed_at: now,
-      published_at: now
+      status: "pending",
+      reviewed_by: null,
+      reviewed_at: null,
+      published_at: null
     });
     
     if (!error) imported++;
