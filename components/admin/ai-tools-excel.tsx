@@ -100,8 +100,6 @@ export function AIToolsExcelManager({ existingTools }: { existingTools: AITool[]
       if (result.ok) {
         setStatus({ type: "success", message: result.message || "Import completed." });
         if (fileInputRef.current) fileInputRef.current.value = "";
-      } else {
-        throw new Error(result.error);
       }
     } catch (error: unknown) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to process Excel file." });
