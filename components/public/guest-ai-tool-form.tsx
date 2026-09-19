@@ -65,8 +65,8 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
       }
       
       uploadedImageUrl = data.url;
-    } catch (err: any) {
-      setState({ type: "error", message: err.message || "Failed to upload image." });
+    } catch (err: unknown) {
+      setState({ type: "error", message: err instanceof Error ? err.message : "Failed to upload image." });
       setBusy(false);
       return;
     }
