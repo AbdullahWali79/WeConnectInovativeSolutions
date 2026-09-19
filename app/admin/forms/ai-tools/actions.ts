@@ -135,7 +135,6 @@ export async function reviewAIToolSubmission(id: string, action: "publish" | "re
         status: "approved",
         submitted_by: submission.submitter_name,
         submitter_email: submission.submitter_phone,
-        submitter_role: "student",
         published_at: new Date().toISOString(),
       }).select().single();
       
