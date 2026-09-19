@@ -22,7 +22,7 @@ export function SyllabusTaskSubmissionModal({ task, course, submission, onClose,
   const [imageUrl, setImageUrl] = useState(submission?.image_url ?? "");
   const [saving, setSaving] = useState(false);
 
-  const isCustomTask = task.workflow_type === "daily";
+
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
 
@@ -41,8 +41,8 @@ export function SyllabusTaskSubmissionModal({ task, course, submission, onClose,
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isCustomTask && !title.trim()) return onError("Task title is required.");
-    if (isCustomTask && !description.trim()) return onError("Task description is required.");
+    if (!title.trim()) return onError("Task title is required.");
+    if (!description.trim()) return onError("Task description is required.");
     if (!explanation.trim()) return onError("Explanation is required.");
     const proofError = getProofLinkError(proofUrl);
     if (proofError) return onError(proofError);
@@ -57,16 +57,14 @@ export function SyllabusTaskSubmissionModal({ task, course, submission, onClose,
 
     setSaving(true);
     
-    if (isCustomTask) {
-      const { error: editError } = await supabase.rpc("edit_student_task", {
-        target_task_id: task.id,
-        new_title: title.trim(),
-        new_description: description.trim(),
-      });
-      if (editError) {
-        setSaving(false);
-        return onError(editError.message);
-      }
+    const { error: editError } = await supabase.rpc("edit_student_task", {
+      target_task_id: task.id,
+      new_title: title.trim(),
+      new_description: description.trim(),
+    });
+    if (editError) {
+      setSaving(false);
+      return onError(editError.message);
     }
 
     const { error } = await supabase.rpc("submit_task", {
@@ -111,23 +109,14 @@ export function SyllabusTaskSubmissionModal({ task, course, submission, onClose,
               <span className="wc-label">Course</span>
               <input className="wc-input mt-2 bg-surface-container-low" value={course?.title ?? "Unknown course"} readOnly />
             </label>
-            {isCustomTask ? (
-              <label className="block">
-                <span className="wc-label">Task Title *</span>
-                <input className="wc-input mt-2" value={title} onChange={(event) => setTitle(event.target.value)} required />
-              </label>
-            ) : (
-              <label className="block">
-                <span className="wc-label">Task Title</span>
-                <input className="wc-input mt-2 bg-surface-container-low" value={task.title} readOnly />
-              </label>
-            )}
-            {isCustomTask ? (
-              <label className="block sm:col-span-2">
-                <span className="wc-label">Task Description *</span>
-                <textarea className="wc-input mt-2 min-h-24" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the task requirements or what you built..." required />
-              </label>
-            ) : null}
+            <label className="block sm:col-span-2">
+              <span className="wc-label">Task Title *</span>
+              <input className="wc-input mt-2" value={title} onChange={(event) => setTitle(event.target.value)} required />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="wc-label">Task Description *</span>
+              <textarea className="wc-input mt-2 min-h-24" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the task requirements or what you built..." required />
+            </label>
             <label className="block sm:col-span-2">
               <span className="wc-label">Explanation</span>
               <textarea className="wc-input mt-2 min-h-32" value={explanation} onChange={(event) => setExplanation(event.target.value)} placeholder="Explain your work, key implementation decisions, and how the admin should review it." required />
