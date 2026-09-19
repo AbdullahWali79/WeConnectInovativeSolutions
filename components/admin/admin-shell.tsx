@@ -60,6 +60,7 @@ const navGroups: NavGroup[] = [
   { id: "forms", label: "Forms", icon: "dynamic_form", items: [
     { href: "/admin/forms/prompts", label: "Prompt Submission Form", icon: "auto_awesome", adminOnly: true },
     { href: "/admin/forms/client-hunt", label: "Client Hunt Form", icon: "travel_explore", adminOnly: true },
+    { href: "/admin/forms/ai-tools", label: "AI Tools Form", icon: "smart_toy", adminOnly: true },
   ]},
   { id: "certificates", label: "Certificates & Letters", icon: "workspace_premium", items: [
     { href: "/admin/simple-certificates", label: "Simple Certificates", icon: "card_membership", adminOnly: true },
