@@ -129,6 +129,7 @@ export async function reviewAIToolSubmission(id: string, action: "publish" | "re
       const { data: aiTool, error: aiError } = await supabase.from("ai_tools").insert({
         name: submission.tool_name,
         url: submission.tool_url,
+        category: submission.category_snapshot,
         benefits: submission.benefits,
         image_url: submission.image_url,
         youtube_url: submission.youtube_url,

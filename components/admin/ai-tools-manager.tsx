@@ -8,7 +8,20 @@ import { Toast, type ToastState } from "@/components/toast";
 import type { AITool } from "@/lib/ai-tools";
 import { AIToolsGrid } from "@/components/ai-tools/ai-tools-grid";
 
-const empty = { name: "", url: "", benefits: "", image_url: "", youtube_url: "" };
+import { AIToolsExcelManager } from "@/components/admin/ai-tools-excel";
+
+const empty = { name: "", category: "Productivity", url: "", benefits: "", image_url: "", youtube_url: "" };
+
+const STANDARD_CATEGORIES = [
+  "Video Editing",
+  "Image Generation",
+  "Text & Writing",
+  "Coding",
+  "Productivity",
+  "Audio & Music",
+  "Design & UI",
+  "Other"
+];
 
 export function AIToolsManager() {
   const [rows, setRows] = useState<AITool[]>([]);
@@ -57,10 +70,16 @@ export function AIToolsManager() {
     <Toast toast={toast} onClear={() => setToast(null)} />
     <PageHeader eyebrow="Research directory" title="AI Tools" description="Publish admin research and review student suggestions in separate lists." />
 
+    <AIToolsExcelManager existingTools={adminTools} />
+
     <form onSubmit={add} className="wc-card grid gap-4 p-5 md:grid-cols-2">
       <h2 className="text-xl font-black md:col-span-2">Add and publish tool</h2>
       <input required className="wc-input" placeholder="Tool name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-      <input required type="url" className="wc-input" placeholder="Official URL" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+      <select required className="wc-input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+        <option value="" disabled>Select category</option>
+        {STANDARD_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+      </select>
+      <input required type="url" className="wc-input md:col-span-2" placeholder="Official URL" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
       <textarea required minLength={10} className="wc-input min-h-24 md:col-span-2" placeholder="Benefits for students" value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} />
       <input required type="url" className="wc-input md:col-span-2" placeholder="Public image or Google Drive URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
       <input type="url" className="wc-input md:col-span-2" placeholder="YouTube learning video URL (optional)" value={form.youtube_url} onChange={(e) => setForm({ ...form, youtube_url: e.target.value })} />

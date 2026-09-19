@@ -66,6 +66,7 @@ function ToolCard({ tool, showStatus, onSelect }: { tool: AITool; showStatus: bo
     </div>
     <div className="p-5">
       <div className="flex items-start justify-between gap-3"><h2 className="min-w-0 text-xl font-black leading-tight text-on-surface">{tool.name}</h2><StatusBadge status={showStatus ? tool.status : "approved"} /></div>
+      {tool.category && <p className="mt-1 text-xs font-black uppercase tracking-widest text-secondary">{tool.category}</p>}
       <button type="button" className="mt-5 flex w-full items-center justify-center gap-1 rounded-lg border border-outline-variant py-2.5 text-sm font-black transition hover:border-secondary hover:bg-secondary hover:text-on-primary">View Details <Icon name="arrow_forward" /></button>
     </div>
   </article>;
@@ -76,7 +77,7 @@ function ToolDetailsModal({ tool, showStatus, actions, onClose }: { tool: AITool
   return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="ai-tool-title">
     <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-outline-variant bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
       <div className="flex items-center justify-between border-b border-outline-variant bg-surface/95 p-5 backdrop-blur-xl sm:p-6">
-        <div className="min-w-0"><div className="mb-1 flex items-center gap-2"><p className="text-[10px] font-black uppercase tracking-widest text-secondary">AI Tool Details</p>{showStatus && <StatusBadge status={tool.status} />}</div><h2 id="ai-tool-title" className="truncate text-2xl font-black text-on-surface">{tool.name}</h2></div>
+        <div className="min-w-0"><div className="mb-1 flex items-center gap-2"><p className="text-[10px] font-black uppercase tracking-widest text-secondary">AI Tool Details {tool.category ? `• ${tool.category}` : ""}</p>{showStatus && <StatusBadge status={tool.status} />}</div><h2 id="ai-tool-title" className="truncate text-2xl font-black text-on-surface">{tool.name}</h2></div>
         <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container text-on-surface transition hover:scale-110 hover:bg-secondary hover:text-on-primary" aria-label="Close tool details"><Icon name="close" /></button>
       </div>
       <div className="flex-1 overflow-y-auto p-5 sm:p-8">

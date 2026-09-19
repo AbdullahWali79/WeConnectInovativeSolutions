@@ -872,6 +872,7 @@ export type AIToolRow = {
   benefits: string;
   image_url: string;
   youtube_url: string | null;
+  category: string;
   submitted_by: string | null;
   submitter_email: string | null;
   status: "pending" | "approved" | "rejected";
@@ -888,7 +889,7 @@ export type Database = {
     Tables: {
       ai_tools: {
         Row: AIToolRow;
-        Insert: Partial<AIToolRow> & { name: string; url: string; benefits: string; image_url: string };
+        Insert: Partial<AIToolRow> & { name: string; url: string; category: string; benefits: string; image_url: string };
         Update: Partial<AIToolRow>;
         Relationships: [];
       };
