@@ -12,6 +12,7 @@ type SortOption = "newest" | "oldest" | "name";
 export function AIToolsGrid({ tools, showStatus = false, renderActions }: { tools: AITool[]; showStatus?: boolean; renderActions?: (tool: AITool) => ReactNode }) {
   const [query, setQuery] = useState("");
   const [tutorialFilter, setTutorialFilter] = useState<TutorialFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [sort, setSort] = useState<SortOption>("newest");
   const [selected, setSelected] = useState<AITool | null>(null);
 
@@ -24,25 +25,35 @@ export function AIToolsGrid({ tools, showStatus = false, renderActions }: { tool
     return () => { document.body.style.overflow = previousOverflow; window.removeEventListener("keydown", closeOnEscape); };
   }, [selected]);
 
+  const categories = useMemo(() => {
+    const cats = new Set(tools.map((t) => t.category).filter(Boolean));
+    return Array.from(cats).sort();
+  }, [tools]);
+
   const filteredTools = useMemo(() => {
     const term = query.trim().toLowerCase();
     return tools
       .filter((tool) => !term || `${tool.name} ${tool.benefits}`.toLowerCase().includes(term))
       .filter((tool) => tutorialFilter === "all" || (tutorialFilter === "with-video" ? Boolean(tool.youtube_url) : !tool.youtube_url))
+      .filter((tool) => categoryFilter === "all" || tool.category === categoryFilter)
       .sort((a, b) => {
         if (sort === "name") return a.name.localeCompare(b.name);
         const difference = new Date(a.published_at ?? a.created_at).getTime() - new Date(b.published_at ?? b.created_at).getTime();
         return sort === "oldest" ? difference : -difference;
       });
-  }, [query, sort, tools, tutorialFilter]);
+  }, [query, sort, tools, tutorialFilter, categoryFilter]);
 
   return <div className="space-y-6">
-    <div className="wc-card sticky top-24 z-20 grid gap-3 p-4 shadow-lg backdrop-blur-xl md:grid-cols-[minmax(240px,1fr)_auto_auto]">
+    <div className="wc-card sticky top-24 z-20 grid gap-3 p-4 shadow-lg backdrop-blur-xl md:grid-cols-[minmax(240px,1fr)_auto_auto_auto]">
       <label className="relative block">
         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xl text-on-surface-variant" />
         <input className="wc-input w-full pl-11" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search AI tools or benefits..." aria-label="Search AI tools" />
       </label>
-      <select className="wc-input min-w-48" value={tutorialFilter} onChange={(event) => setTutorialFilter(event.target.value as TutorialFilter)} aria-label="Filter by tutorial availability">
+      <select className="wc-input min-w-40" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
+        <option value="all">All categories</option>
+        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+      <select className="wc-input min-w-40" value={tutorialFilter} onChange={(event) => setTutorialFilter(event.target.value as TutorialFilter)} aria-label="Filter by tutorial availability">
         <option value="all">All tools</option><option value="with-video">With YouTube tutorial</option><option value="without-video">Without tutorial</option>
       </select>
       <select className="wc-input min-w-40" value={sort} onChange={(event) => setSort(event.target.value as SortOption)} aria-label="Sort AI tools">
@@ -50,7 +61,7 @@ export function AIToolsGrid({ tools, showStatus = false, renderActions }: { tool
       </select>
     </div>
 
-    <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-on-surface-variant">Showing {filteredTools.length} of {tools.length} tools</p>{(query || tutorialFilter !== "all" || sort !== "newest") && <button type="button" className="text-sm font-black text-secondary" onClick={() => { setQuery(""); setTutorialFilter("all"); setSort("newest"); }}>Clear filters</button>}</div>
+    <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-on-surface-variant">Showing {filteredTools.length} of {tools.length} tools</p>{(query || tutorialFilter !== "all" || categoryFilter !== "all" || sort !== "newest") && <button type="button" className="text-sm font-black text-secondary" onClick={() => { setQuery(""); setTutorialFilter("all"); setCategoryFilter("all"); setSort("newest"); }}>Clear filters</button>}</div>
 
     {filteredTools.length ? <div className="grid items-start gap-6 sm:grid-cols-2 xl:grid-cols-3">{filteredTools.map((tool) => <ToolCard key={tool.id} tool={tool} showStatus={showStatus} onSelect={() => setSelected(tool)} />)}</div> : <EmptyState hasTools={tools.length > 0} />}
     {selected && <ToolDetailsModal tool={selected} showStatus={showStatus} actions={renderActions?.(selected)} onClose={() => setSelected(null)} />}
