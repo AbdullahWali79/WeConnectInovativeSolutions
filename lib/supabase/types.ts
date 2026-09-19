@@ -793,6 +793,44 @@ export type PublicClientHuntSubmission = {
   submitted_at: string;
 };
 
+export type PublicAIToolForm = {
+  id: string;
+  title: string;
+  slug: string;
+  short_code: string | null;
+  description: string | null;
+  is_active: boolean;
+  daily_target: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PublicAIToolCategory = {
+  id: string;
+  form_id: string;
+  category: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type PublicAIToolSubmission = {
+  id: string;
+  form_id: string;
+  category_id: string | null;
+  category_snapshot: string;
+  submitter_name: string;
+  submitter_phone: string;
+  tool_name: string;
+  tool_url: string;
+  benefits: string;
+  image_url: string;
+  youtube_url: string | null;
+  status: "pending" | "approved" | "rejected";
+  published_ai_tool_id: string | null;
+  submitted_at: string;
+};
+
 export type StudentVideo = {
   id: string;
   student_id: string;
@@ -1152,6 +1190,24 @@ export type Database = {
         Row: PublicClientHuntSubmission;
         Insert: Partial<PublicClientHuntSubmission> & { form_id: string; keyword_snapshot: string; submitter_name: string; submitter_phone: string; website_url: string; service_required: PublicClientHuntService };
         Update: Partial<PublicClientHuntSubmission>;
+        Relationships: [];
+      };
+      public_ai_tool_forms: {
+        Row: PublicAIToolForm;
+        Insert: Partial<PublicAIToolForm> & { title: string; slug: string };
+        Update: Partial<PublicAIToolForm>;
+        Relationships: [];
+      };
+      public_ai_tool_categories: {
+        Row: PublicAIToolCategory;
+        Insert: Partial<PublicAIToolCategory> & { form_id: string; category: string };
+        Update: Partial<PublicAIToolCategory>;
+        Relationships: [];
+      };
+      public_ai_tool_submissions: {
+        Row: PublicAIToolSubmission;
+        Insert: Partial<PublicAIToolSubmission> & { form_id: string; category_snapshot: string; submitter_name: string; submitter_phone: string; tool_name: string; tool_url: string; benefits: string; image_url: string };
+        Update: Partial<PublicAIToolSubmission>;
         Relationships: [];
       };
       student_videos: {
