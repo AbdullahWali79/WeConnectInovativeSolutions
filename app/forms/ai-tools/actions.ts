@@ -1,6 +1,37 @@
 "use server";
 
 import { createSupabasePublicClient } from "@/lib/supabase/public";
+import * as cheerio from "cheerio";
+
+async function fetchFeaturedImage(urlStr: string): Promise<string> {
+  try {
+    const res = await fetch(urlStr, { 
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' 
+      },
+      next: { revalidate: 3600 }
+    });
+    if (!res.ok) return "";
+    
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    
+    let imageUrl = $('meta[property="og:image"]').attr('content') 
+                || $('meta[name="twitter:image"]').attr('content');
+                
+    if (imageUrl) {
+      if (imageUrl.startsWith('http')) {
+        return imageUrl;
+      } else {
+        const baseUrl = new URL(urlStr);
+        return new URL(imageUrl, baseUrl.origin).toString();
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch featured image for:", urlStr, e);
+  }
+  return "";
+}
 
 function normalizeUrlForComparison(urlStr: string) {
   try {
@@ -8,14 +39,7 @@ function normalizeUrlForComparison(urlStr: string) {
     let host = url.hostname.toLowerCase();
     if (host.startsWith('www.')) host = host.substring(4);
     
-    // Removing trailing slashes and common indexing files from path
-    let path = url.pathname;
-    if (path.endsWith('/')) path = path.slice(0, -1);
-    if (path.endsWith('/index.html') || path.endsWith('/index.php')) {
-      path = path.substring(0, path.lastIndexOf('/'));
-    }
-    
-    return host + path;
+    return host;
   } catch {
     return urlStr.toLowerCase().trim();
   }
@@ -68,6 +92,11 @@ export async function submitPublicAITool(formId: string, payload: {
       }
     }
 
+    let finalImageUrl = payload.imageUrl?.trim() || "";
+    if (!finalImageUrl) {
+      finalImageUrl = await fetchFeaturedImage(toolUrlStr);
+    }
+
     // 3. Insert submission
     const { error: insertError } = await supabase.from("public_ai_tool_submissions").insert({
       form_id: formId,
@@ -78,7 +107,7 @@ export async function submitPublicAITool(formId: string, payload: {
       tool_name: payload.toolName.trim(),
       tool_url: toolUrlStr,
       benefits: payload.benefits.trim(),
-      image_url: payload.imageUrl.trim(),
+      image_url: finalImageUrl,
       youtube_url: payload.youtubeUrl?.trim() || null,
       status: "pending"
     });
