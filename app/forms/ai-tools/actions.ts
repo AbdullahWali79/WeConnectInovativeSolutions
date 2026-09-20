@@ -16,7 +16,7 @@ async function fetchFeaturedImage(urlStr: string): Promise<string> {
     const html = await res.text();
     const $ = cheerio.load(html);
     
-    let imageUrl = $('meta[property="og:image"]').attr('content') 
+    const imageUrl = $('meta[property="og:image"]').attr('content') 
                 || $('meta[name="twitter:image"]').attr('content');
                 
     if (imageUrl) {
