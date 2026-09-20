@@ -802,6 +802,15 @@ export type PublicAIToolForm = {
   description: string | null;
   is_active: boolean;
   daily_target: number;
+  fields_config?: {
+    showName?: boolean;
+    showPhone?: boolean;
+    showCategory?: boolean;
+    showToolName?: boolean;
+    showToolUrl?: boolean;
+    showBenefits?: boolean;
+    showYoutubeUrl?: boolean;
+  } | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

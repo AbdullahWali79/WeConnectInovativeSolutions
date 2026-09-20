@@ -31,10 +31,19 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
     setFields((current) => ({ ...current, submitterName: savedName, submitterPhone: savedPhone }));
   }, []);
 
+  const config = form.fields_config || {};
+  const showName = config.showName ?? true;
+  const showPhone = config.showPhone ?? true;
+  const showCategory = config.showCategory ?? true;
+  const showToolName = config.showToolName ?? true;
+  const showToolUrl = config.showToolUrl ?? true;
+  const showBenefits = config.showBenefits ?? true;
+  const showYoutubeUrl = config.showYoutubeUrl ?? true;
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     
-    if (fields.benefits.length < 10) {
+    if (showBenefits && fields.benefits.length < 10) {
       setState({ type: "error", message: "Benefits must be at least 10 characters long." });
       return;
     }
@@ -46,11 +55,18 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
     const category = categories.find(c => c.id === fields.categoryId);
     const snap = category?.category ?? fields.categorySnapshot;
     
-    const result = await submitPublicAITool(form.id, {
+    const payload = {
       ...fields,
+      submitterName: showName ? fields.submitterName : "Anonymous",
+      submitterPhone: showPhone ? fields.submitterPhone : "N/A",
+      toolName: showToolName ? fields.toolName : "Unknown Tool",
+      toolUrl: showToolUrl ? fields.toolUrl : "https://example.com",
+      benefits: showBenefits ? fields.benefits : "N/A",
       imageUrl: "", // Handled on the server
-      categorySnapshot: snap
-    });
+      categorySnapshot: showCategory ? snap : "Uncategorized"
+    };
+
+    const result = await submitPublicAITool(form.id, payload);
     
     setBusy(false);
     
@@ -84,10 +100,10 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <label><span className="wc-label">Your name *</span><input className="wc-input mt-2" value={fields.submitterName} onChange={(e) => update("submitterName", e.target.value)} required /></label>
-        <label><span className="wc-label">Phone number *</span><input className="wc-input mt-2" type="tel" value={fields.submitterPhone} onChange={(e) => update("submitterPhone", e.target.value)} placeholder="+92 300 0000000" required /></label>
+        {showName && <label><span className="wc-label">Your name *</span><input className="wc-input mt-2" value={fields.submitterName} onChange={(e) => update("submitterName", e.target.value)} required /></label>}
+        {showPhone && <label><span className="wc-label">Phone number *</span><input className="wc-input mt-2" type="tel" value={fields.submitterPhone} onChange={(e) => update("submitterPhone", e.target.value)} placeholder="+92 300 0000000" required /></label>}
         
-        {categories.length > 0 ? (
+        {showCategory && (categories.length > 0 ? (
           <label className="sm:col-span-2"><span className="wc-label">Category *</span>
             <select className="wc-input mt-2" value={fields.categoryId} onChange={(e) => update("categoryId", e.target.value)} required>
               {categories.map(c => <option key={c.id} value={c.id}>{c.category}</option>)}
@@ -97,14 +113,14 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
           <label className="sm:col-span-2"><span className="wc-label">Category *</span>
             <input className="wc-input mt-2" value={fields.categorySnapshot} onChange={(e) => update("categorySnapshot", e.target.value)} required placeholder="e.g. Video Editing" />
           </label>
-        )}
+        ))}
 
-        <label className="sm:col-span-2"><span className="wc-label">Tool name *</span><input className="wc-input mt-2" value={fields.toolName} onChange={(e) => update("toolName", e.target.value)} required /></label>
-        <label className="sm:col-span-2"><span className="wc-label">Tool URL *</span><input className="wc-input mt-2" type="url" value={fields.toolUrl} onChange={(e) => update("toolUrl", e.target.value)} placeholder="https://..." required /></label>
+        {showToolName && <label className="sm:col-span-2"><span className="wc-label">Tool name *</span><input className="wc-input mt-2" value={fields.toolName} onChange={(e) => update("toolName", e.target.value)} required /></label>}
+        {showToolUrl && <label className="sm:col-span-2"><span className="wc-label">Tool URL *</span><input className="wc-input mt-2" type="url" value={fields.toolUrl} onChange={(e) => update("toolUrl", e.target.value)} placeholder="https://..." required /></label>}
         
-        <label className="sm:col-span-2"><span className="wc-label">Benefits for students *</span><textarea className="wc-input mt-2 min-h-24" value={fields.benefits} onChange={(e) => update("benefits", e.target.value)} required placeholder="How this tool helps in study or work..." /></label>
+        {showBenefits && <label className="sm:col-span-2"><span className="wc-label">Benefits for students *</span><textarea className="wc-input mt-2 min-h-24" value={fields.benefits} onChange={(e) => update("benefits", e.target.value)} required placeholder="How this tool helps in study or work..." /></label>}
         
-        <label className="sm:col-span-2"><span className="wc-label">YouTube learning video URL (optional)</span><input className="wc-input mt-2" type="url" value={fields.youtubeUrl} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://youtube.com/..." /></label>
+        {showYoutubeUrl && <label className="sm:col-span-2"><span className="wc-label">YouTube learning video URL (optional)</span><input className="wc-input mt-2" type="url" value={fields.youtubeUrl} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://youtube.com/..." /></label>}
       </div>
 
       {progress ? (

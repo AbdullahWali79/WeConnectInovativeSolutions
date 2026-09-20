@@ -19,7 +19,16 @@ export function PublicAIToolFormsManager({ forms, categories, submissions }: { f
   const [modal, setModal] = useState<Modal>(null);
   const [selectedFormId, setSelectedFormId] = useState(forms[0]?.id ?? "");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formDraft, setFormDraft] = useState({ title: "AI Tools Submission Form", description: "", is_active: true, daily_target: 50 });
+  const defaultFieldsConfig = {
+    showName: true,
+    showPhone: true,
+    showCategory: true,
+    showToolName: true,
+    showToolUrl: true,
+    showBenefits: true,
+    showYoutubeUrl: true,
+  };
+  const [formDraft, setFormDraft] = useState<{ title: string; description: string; is_active: boolean; daily_target: number; fields_config?: Record<string, boolean> }>({ title: "AI Tools Submission Form", description: "", is_active: true, daily_target: 50, fields_config: defaultFieldsConfig });
   const [categoryDraft, setCategoryDraft] = useState("");
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
@@ -48,8 +57,8 @@ export function PublicAIToolFormsManager({ forms, categories, submissions }: { f
   const run = (action: () => Promise<{ ok: boolean; error?: string }>, successMessage: string, done?: () => void) => startTransition(async () => { const result = await action(); if (!result.ok) setToast({ type: "error", message: result.error || "Action failed." }); else { setToast({ type: "success", message: successMessage }); done?.(); router.refresh(); } });
   const shareUrl = (slug: string) => `${window.location.origin}/forms/ai-tools/${slug}`;
 
-  function createForm() { setEditingId(null); setFormDraft({ title: "AI Tools Submission Form", description: "", is_active: true, daily_target: 50 }); setModal("editor"); }
-  function edit(form: PublicAIToolForm) { setEditingId(form.id); setSelectedFormId(form.id); setFormDraft({ title: form.title, description: form.description ?? "", is_active: form.is_active, daily_target: form.daily_target || 50 }); setModal("editor"); }
+  function createForm() { setEditingId(null); setFormDraft({ title: "AI Tools Submission Form", description: "", is_active: true, daily_target: 50, fields_config: defaultFieldsConfig }); setModal("editor"); }
+  function edit(form: PublicAIToolForm) { setEditingId(form.id); setSelectedFormId(form.id); setFormDraft({ title: form.title, description: form.description ?? "", is_active: form.is_active, daily_target: form.daily_target || 50, fields_config: { ...defaultFieldsConfig, ...(form.fields_config as Record<string, boolean> || {}) } }); setModal("editor"); }
   function copyLink(form: PublicAIToolForm) { void navigator.clipboard.writeText(shareUrl(form.slug)).then(() => setToast({ type: "success", message: "Shareable link copied." })); }
 
   return <>
@@ -117,6 +126,20 @@ export function PublicAIToolFormsManager({ forms, categories, submissions }: { f
           <label className="block"><span className="wc-label">Title</span><input className="wc-input mt-2" value={formDraft.title} onChange={(e) => setFormDraft((v) => ({ ...v, title: e.target.value }))} /></label>
           <label className="block"><span className="wc-label">Student Target (Total)</span><input className="wc-input mt-2" type="number" min={1} max={1000} value={formDraft.daily_target} onChange={(e) => setFormDraft((v) => ({ ...v, daily_target: Number(e.target.value) }))} /></label>
           <label className="block"><span className="wc-label">Instructions</span><textarea className="wc-input mt-2 min-h-28" value={formDraft.description} onChange={(e) => setFormDraft((v) => ({ ...v, description: e.target.value }))} /></label>
+          
+          <div className="rounded-xl border border-outline-variant p-4">
+            <span className="wc-label block mb-3">Field Visibility Options</span>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formDraft.fields_config?.showName ?? true} onChange={(e) => setFormDraft((v) => ({ ...v, fields_config: { ...v.fields_config, showName: e.target.checked } }))} /> Show Your Name</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formDraft.fields_config?.showPhone ?? true} onChange={(e) => setFormDraft((v) => ({ ...v, fields_config: { ...v.fields_config, showPhone: e.target.checked } }))} /> Show Phone Number</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formDraft.fields_config?.showCategory ?? true} onChange={(e) => setFormDraft((v) => ({ ...v, fields_config: { ...v.fields_config, showCategory: e.target.checked } }))} /> Show Category</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formDraft.fields_config?.showToolName ?? true} onChange={(e) => setFormDraft((v) => ({ ...v, fields_config: { ...v.fields_config, showToolName: e.target.checked } }))} /> Show Tool Name</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formDraft.fields_config?.showToolUrl ?? true} onChange={(e) => setFormDraft((v) => ({ ...v, fields_config: { ...v.fields_config, showToolUrl: e.target.checked } }))} /> Show Tool URL</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formDraft.fields_config?.showBenefits ?? true} onChange={(e) => setFormDraft((v) => ({ ...v, fields_config: { ...v.fields_config, showBenefits: e.target.checked } }))} /> Show Benefits</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formDraft.fields_config?.showYoutubeUrl ?? true} onChange={(e) => setFormDraft((v) => ({ ...v, fields_config: { ...v.fields_config, showYoutubeUrl: e.target.checked } }))} /> Show YouTube URL</label>
+            </div>
+          </div>
+
           <label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" checked={formDraft.is_active} onChange={(e) => setFormDraft((v) => ({ ...v, is_active: e.target.checked }))} /> Accept submissions</label>
           <div className="flex justify-end gap-2">
             <button className="wc-secondary-btn" onClick={() => setModal(null)}>Cancel</button>
