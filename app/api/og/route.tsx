@@ -40,24 +40,17 @@ export async function GET(req: NextRequest) {
             }}
           >
             {/* Simple logo placeholder - you can replace with an actual img tag if you have a public logo URL */}
-            <div
+            <img
+              src={`${new URL(req.url).origin}/logo.jpeg`}
               style={{
-                background: primary,
-                color: "white",
                 width: "80px",
                 height: "80px",
                 borderRadius: "16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "40px",
-                fontWeight: "bold",
+                objectFit: "cover",
                 marginRight: "20px",
                 boxShadow: "0 10px 25px rgba(30, 64, 175, 0.3)",
               }}
-            >
-              W
-            </div>
+            />
             <div
               style={{
                 display: "flex",
