@@ -111,7 +111,10 @@ export function GuestAIToolForm({ form, categories }: { form: PublicAIToolForm; 
           </label>
         ) : (
           <label className="sm:col-span-2"><span className="wc-label">Category *</span>
-            <input className="wc-input mt-2" value={fields.categorySnapshot} onChange={(e) => update("categorySnapshot", e.target.value)} required placeholder="e.g. Video Editing" />
+            <select className="wc-input mt-2" value={fields.categorySnapshot} onChange={(e) => update("categorySnapshot", e.target.value)} required>
+              <option value="" disabled>Select a category</option>
+              {["Video Editing", "Image Generation", "Text & Writing", "Audio & Speech", "Coding Assistant", "Productivity", "SEO & Marketing", "Automation", "Other"].map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
           </label>
         ))}
 
