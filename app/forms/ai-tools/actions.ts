@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import * as cheerio from "cheerio";
 
 async function fetchFeaturedImage(urlStr: string): Promise<string> {
@@ -9,14 +9,14 @@ async function fetchFeaturedImage(urlStr: string): Promise<string> {
       headers: { 
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' 
       },
-      next: { revalidate: 3600 }
+      signal: AbortSignal.timeout(5000)
     });
     if (!res.ok) return "";
     
     const html = await res.text();
     const $ = cheerio.load(html);
     
-    const imageUrl = $('meta[property="og:image"]').attr('content') 
+    let imageUrl = $('meta[property="og:image"]').attr('content') 
                 || $('meta[name="twitter:image"]').attr('content');
                 
     if (imageUrl) {
@@ -57,7 +57,7 @@ export async function submitPublicAITool(formId: string, payload: {
   youtubeUrl?: string;
 }) {
   try {
-    const supabase = createSupabasePublicClient();
+    const supabase = createSupabaseServiceClient();
     
     // Validate inputs
     const toolUrlStr = payload.toolUrl.trim();
@@ -135,7 +135,7 @@ export async function submitPublicAITool(formId: string, payload: {
 
   } catch (error: any) {
     console.error("Submission error:", error);
-    const errorMessage = error?.message || error?.details || "Failed to submit tool.";
+    const errorMessage = error?.message || error?.details || (typeof error === 'object' ? JSON.stringify(error) : String(error)) || "Failed to submit tool.";
     return { ok: false as const, error: errorMessage };
   }
 }

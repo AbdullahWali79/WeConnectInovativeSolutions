@@ -19,6 +19,7 @@
     "@vercel/og": "^1.0.2",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
+    "dotenv": "^18.0.1",
     "framer-motion": "^12.38.0",
     "html-to-image": "^1.11.13",
     "next": "^15.3.1",
