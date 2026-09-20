@@ -96,6 +96,11 @@ export async function submitPublicAITool(formId: string, payload: {
     if (!finalImageUrl) {
       finalImageUrl = await fetchFeaturedImage(toolUrlStr);
     }
+    
+    // Fallback to dynamically generated image if no image found from URL
+    if (!finalImageUrl) {
+      finalImageUrl = `/api/og?title=${encodeURIComponent(payload.toolName.trim())}`;
+    }
 
     // 3. Insert submission
     const { error: insertError } = await supabase.from("public_ai_tool_submissions").insert({
