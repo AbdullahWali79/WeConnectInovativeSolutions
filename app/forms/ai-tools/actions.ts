@@ -105,7 +105,7 @@ export async function submitPublicAITool(formId: string, payload: {
     // 3. Insert submission
     const { error: insertError } = await supabase.from("public_ai_tool_submissions").insert({
       form_id: formId,
-      category_id: payload.categoryId,
+      category_id: payload.categoryId || null,
       category_snapshot: payload.categorySnapshot,
       submitter_name: payload.submitterName.trim(),
       submitter_phone: payload.submitterPhone.trim(),
@@ -117,7 +117,10 @@ export async function submitPublicAITool(formId: string, payload: {
       status: "pending"
     });
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error("Supabase insert error:", insertError);
+      throw insertError;
+    }
 
     // 4. Get count for this phone number
     const { count, error: countError } = await supabase
@@ -130,7 +133,9 @@ export async function submitPublicAITool(formId: string, payload: {
 
     return { ok: true as const, totalSubmitted: count || 1 };
 
-  } catch (error) {
-    return { ok: false as const, error: error instanceof Error ? error.message : "Failed to submit tool." };
+  } catch (error: any) {
+    console.error("Submission error:", error);
+    const errorMessage = error?.message || error?.details || "Failed to submit tool.";
+    return { ok: false as const, error: errorMessage };
   }
 }
