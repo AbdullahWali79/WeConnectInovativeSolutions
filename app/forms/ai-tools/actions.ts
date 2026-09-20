@@ -16,7 +16,7 @@ async function fetchFeaturedImage(urlStr: string): Promise<string> {
     const html = await res.text();
     const $ = cheerio.load(html);
     
-    let imageUrl = $('meta[property="og:image"]').attr('content') 
+    const imageUrl = $('meta[property="og:image"]').attr('content') 
                 || $('meta[name="twitter:image"]').attr('content');
                 
     if (imageUrl) {
@@ -133,9 +133,10 @@ export async function submitPublicAITool(formId: string, payload: {
 
     return { ok: true as const, totalSubmitted: count || 1 };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Submission error:", error);
-    const errorMessage = error?.message || error?.details || (typeof error === 'object' ? JSON.stringify(error) : String(error)) || "Failed to submit tool.";
-    return { ok: false as const, error: errorMessage };
+    const err = error as Record<string, unknown>;
+    const errorMessage = err?.message || err?.details || (typeof error === 'object' ? JSON.stringify(error) : String(error)) || "Failed to submit tool.";
+    return { ok: false as const, error: errorMessage as string };
   }
 }
