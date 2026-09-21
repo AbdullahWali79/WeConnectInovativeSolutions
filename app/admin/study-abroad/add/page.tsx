@@ -41,8 +41,9 @@ export default function AddOpportunityPage() {
       if (!data.title && !data.description && !data.image) {
         setError("Could not extract data from this link. You may need to fill it manually.");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred while fetching the link.");
+    } catch (err) {
+      const e = err as Error;
+      setError(e.message || "An error occurred while fetching the link.");
     } finally {
       setIsFetching(false);
     }
@@ -74,9 +75,10 @@ export default function AddOpportunityPage() {
 
       router.push("/admin/study-abroad/opportunities");
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to publish opportunity.");
+      const e = err as Error;
+      setError(e.message || "Failed to publish opportunity.");
     } finally {
       setIsPublishing(false);
     }

@@ -110,7 +110,7 @@ export default function OpportunitiesListPage() {
               ) : opportunities.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-gray-500">
-                    No opportunities found. Click "Add New" to create one.
+                    No opportunities found. Click &quot;Add New&quot; to create one.
                   </td>
                 </tr>
               ) : (
