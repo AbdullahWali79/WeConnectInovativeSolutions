@@ -19,7 +19,7 @@ export function HelpingVideosBoard() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"course" | "must_watch">("course");
+  const [activeTab, setActiveTab] = useState<"course" | "must_watch" | "mix">("course");
   const [courseIds, setCourseIds] = useState<string[]>([]);
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -65,7 +65,9 @@ export function HelpingVideosBoard() {
   const filteredRows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return rows.filter((video) => {
-      const belongsToTab = activeTab === "must_watch"
+      const belongsToTab = activeTab === "mix"
+        ? true
+        : activeTab === "must_watch"
         ? video.is_must_watch
         : !video.is_must_watch && video.course_ids.some((courseId) => courseIds.includes(courseId));
       if (!belongsToTab) return false;
@@ -77,6 +79,7 @@ export function HelpingVideosBoard() {
 
   const courseCount = rows.filter((video) => !video.is_must_watch && video.course_ids.some((courseId) => courseIds.includes(courseId))).length;
   const mustWatchCount = rows.filter((video) => video.is_must_watch).length;
+  const mixCount = rows.length;
 
   if (loading) return <LoadingState label="Loading helping videos..." />;
 
@@ -112,19 +115,22 @@ export function HelpingVideosBoard() {
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-outline-variant bg-surface p-2 sm:inline-grid sm:min-w-[480px]">
+      <div className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-outline-variant bg-surface p-2 sm:grid-cols-3 sm:inline-grid sm:min-w-[640px]">
         <button type="button" onClick={() => setActiveTab("course")} className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold transition ${activeTab === "course" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}>
           <Icon name="school" /> My Course Videos <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{courseCount}</span>
         </button>
         <button type="button" onClick={() => setActiveTab("must_watch")} className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold transition ${activeTab === "must_watch" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}>
           <Icon name="priority_high" /> Must Watch <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{mustWatchCount}</span>
         </button>
+        <button type="button" onClick={() => setActiveTab("mix")} className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold transition ${activeTab === "mix" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}>
+          <Icon name="video_library" /> Mix Videos <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{mixCount}</span>
+        </button>
       </div>
 
       {filteredRows.length === 0 ? (
         <EmptyState
-          title={query ? "No videos match your search" : activeTab === "course" ? "No videos for your course yet" : "No must-watch videos yet"}
-          description={query ? "Try a different keyword or clear the search." : activeTab === "course" ? "Only videos assigned to your active course appear here." : "Universal guidance videos will appear in this tab."}
+          title={query ? "No videos match your search" : activeTab === "course" ? "No videos for your course yet" : activeTab === "must_watch" ? "No must-watch videos yet" : "No videos available"}
+          description={query ? "Try a different keyword or clear the search." : activeTab === "course" ? "Only videos assigned to your active course appear here." : activeTab === "must_watch" ? "Universal guidance videos will appear in this tab." : "All uploaded videos will appear in this tab."}
           icon="smart_display"
         />
       ) : (
