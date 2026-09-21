@@ -72,6 +72,10 @@ const navGroups: NavGroup[] = [
     { href: "/admin/team-members", label: "Team Members", icon: "groups", permission: "team_members.view" },
     { href: "/admin/subadmins", label: "Teachers / Sub-Admins", icon: "manage_accounts", adminOnly: true },
   ]},
+  { id: "study_abroad", label: "Study Abroad", icon: "flight_takeoff", items: [
+    { href: "/admin/study-abroad/add", label: "Add Opportunity", icon: "add_circle", adminOnly: true },
+    { href: "/admin/study-abroad/opportunities", label: "Opportunities List", icon: "list_alt", adminOnly: true },
+  ]},
   { id: "settings", label: "Settings", icon: "settings", items: [
     { href: "/admin/notification-settings", label: "WhatsApp Alerts", icon: "chat", adminOnly: true },
     { href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
