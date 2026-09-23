@@ -99,7 +99,7 @@ export function PublicHeader() {
         if (success && data && data.length > 0) {
           const simulationNavItems: NavItem[] = data.map((cat: { slug: string; name: string }) => ({
             href: `/simulations#${cat.slug}`,
-            path: `/simulations`,
+            path: `/simulations#${cat.slug}`,
             label: cat.name
           }));
           
