@@ -3,8 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 
-export default async function EditSimulationPage({ params }: { params: { id: string } }) {
-  const { data: simulation } = await getSimulationById(params.id);
+export default async function EditSimulationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { data: simulation } = await getSimulationById(id);
   if (!simulation) {
     return notFound();
   }
@@ -13,7 +14,7 @@ export default async function EditSimulationPage({ params }: { params: { id: str
 
   async function handleSubmit(formData: FormData) {
     "use server";
-    await updateSimulation(params.id, formData);
+    await updateSimulation(id, formData);
     redirect("/admin/simulations");
   }
 

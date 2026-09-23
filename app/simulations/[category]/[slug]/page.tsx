@@ -6,9 +6,10 @@ import { PublicHeader } from "@/components/public/public-header";
 export default async function SimulationExecutionPage({ 
   params 
 }: { 
-  params: { category: string; slug: string } 
+  params: Promise<{ category: string; slug: string }> 
 }) {
-  const { data: simulation, success } = await getPublicSimulationBySlug(params.category, params.slug);
+  const { category, slug } = await params;
+  const { data: simulation, success } = await getPublicSimulationBySlug(category, slug);
 
   if (!success || !simulation) {
     return notFound();
