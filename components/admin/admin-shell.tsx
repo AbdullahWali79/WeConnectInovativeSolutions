@@ -30,6 +30,7 @@ const navGroups: NavGroup[] = [
     { href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
     { href: "/admin/videos", label: "Student Videos", icon: "videocam", adminOnly: true },
     { href: "/admin/helping-videos", label: "Helping Videos", icon: "smart_display", adminOnly: true },
+    { href: "/admin/simulations", label: "Simulations", icon: "science", adminOnly: true },
   ]},
   { id: "students", label: "Students", icon: "groups", items: [
     { href: "/admin/student-activity", label: "Activity Logs", icon: "manage_history", adminOnly: true },
