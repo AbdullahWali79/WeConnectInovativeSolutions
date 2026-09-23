@@ -21,7 +21,10 @@ export default async function SimulationsAdminPage() {
         {/* Categories Section */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold mb-4">Categories</h2>
-          <form action={createSimulationCategory} className="flex gap-2 mb-4">
+          <form action={async (formData) => {
+            "use server";
+            await createSimulationCategory(formData);
+          }} className="flex gap-2 mb-4">
             <input 
               type="text" 
               name="name" 
