@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type MouseEvent, useEffect, useState } from "react";
+import { getPublicSimulationCategories } from "@/app/simulations/actions";
 import { motion, useAnimationControls } from "framer-motion";
 import { Icon } from "@/components/icon";
 import { useBranding } from "@/components/branding-provider";
@@ -80,7 +81,7 @@ export const navCategories: NavCategory[] = [
   { label: "Contact", href: "/contact", path: "/contact" },
 ];
 
-export function PublicHeaderClient({ navItems = navCategories }: { navItems?: NavCategory[] }) {
+export function PublicHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const currentPath = pathname ?? "";
@@ -89,6 +90,48 @@ export function PublicHeaderClient({ navItems = navCategories }: { navItems?: Na
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const logoControls = useAnimationControls();
+  const [navItems, setNavItems] = useState<NavCategory[]>(navCategories);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const { data, success } = await getPublicSimulationCategories();
+        if (success && data && data.length > 0) {
+          const simulationNavItems: NavItem[] = data.map((cat: any) => ({
+            href: `/simulations#${cat.slug}`,
+            path: `/simulations`,
+            label: cat.name
+          }));
+          
+          simulationNavItems.unshift({
+            href: `/simulations`,
+            path: `/simulations`,
+            label: "All Simulations"
+          });
+
+          const simulationCategory: NavCategory = {
+            label: "Simulations",
+            items: simulationNavItems
+          };
+
+          setNavItems((prev) => {
+            if (prev.some((p) => p.label === "Simulations")) return prev;
+            const newItems = [...prev];
+            const insightsIndex = newItems.findIndex((c) => c.label === "Insights");
+            if (insightsIndex !== -1) {
+              newItems.splice(insightsIndex, 0, simulationCategory);
+            } else {
+              newItems.push(simulationCategory);
+            }
+            return newItems;
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load simulation categories", err);
+      }
+    }
+    loadCategories();
+  }, []);
 
   // Mobile sub-menu toggle state
   const [openMobileCategory, setOpenMobileCategory] = useState<string | null>(null);
