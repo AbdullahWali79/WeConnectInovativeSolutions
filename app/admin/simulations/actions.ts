@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireAdminOnly } from "@/lib/admin-access";
 
 export async function getSimulationCategories() {
   const supabase = await createSupabaseServerClient();
@@ -32,7 +34,8 @@ export async function getSimulations() {
 }
 
 export async function createSimulationCategory(formData: FormData) {
-  const supabase = await createSupabaseServerClient();
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
   const name = formData.get("name") as string;
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   
@@ -50,7 +53,8 @@ export async function createSimulationCategory(formData: FormData) {
 }
 
 export async function createSimulation(formData: FormData) {
-  const supabase = await createSupabaseServerClient();
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
   const title = formData.get("title") as string;
   const category_id = formData.get("category_id") as string;
   const html_script = formData.get("html_script") as string;
@@ -73,7 +77,8 @@ export async function createSimulation(formData: FormData) {
 }
 
 export async function updateSimulation(id: string, formData: FormData) {
-  const supabase = await createSupabaseServerClient();
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
   const title = formData.get("title") as string;
   const category_id = formData.get("category_id") as string;
   const html_script = formData.get("html_script") as string;
