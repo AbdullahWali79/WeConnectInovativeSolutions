@@ -39,8 +39,7 @@ export async function createSimulationCategory(formData: FormData) {
   const name = formData.get("name") as string;
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   
-  // @ts-expect-error database types not yet generated
-  const { error } = await supabase.from("simulation_categories").insert({
+  const { error } = await (supabase as any).from("simulation_categories").insert({
     name,
     slug,
   });
@@ -61,8 +60,7 @@ export async function createSimulation(formData: FormData) {
   const html_script = formData.get("html_script") as string;
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-  // @ts-expect-error database types not yet generated
-  const { error } = await supabase.from("simulations").insert({
+  const { error } = await (supabase as any).from("simulations").insert({
     title,
     slug,
     category_id,
@@ -85,8 +83,7 @@ export async function updateSimulation(id: string, formData: FormData) {
   const category_id = formData.get("category_id") as string;
   const html_script = formData.get("html_script") as string;
 
-  // @ts-expect-error database types not yet generated
-  const { error } = await supabase.from("simulations").update({
+  const { error } = await (supabase as any).from("simulations").update({
     title,
     category_id,
     html_script,
