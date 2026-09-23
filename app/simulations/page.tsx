@@ -32,7 +32,7 @@ export default async function SimulationsPage() {
 
         <div className="space-y-12">
           {categories?.map((cat: Category) => (
-            <div key={cat.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div key={cat.id} id={cat.slug} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-800">{cat.name}</h2>
                 {cat.description && <p className="text-gray-600 mt-1">{cat.description}</p>}

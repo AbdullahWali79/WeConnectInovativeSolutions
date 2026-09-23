@@ -8,13 +8,13 @@ import { motion, useAnimationControls } from "framer-motion";
 import { Icon } from "@/components/icon";
 import { useBranding } from "@/components/branding-provider";
 
-type NavItem = {
+export type NavItem = {
   href: string;
   path: string;
   label: string;
 };
 
-type NavCategory = {
+export type NavCategory = {
   label: string;
   href?: string;
   path?: string;
@@ -33,7 +33,7 @@ function HeaderChevron({ expanded = false, className = "" }: { expanded?: boolea
   );
 }
 
-const navCategories: NavCategory[] = [
+export const navCategories: NavCategory[] = [
   { label: "Services", href: "/services", path: "/services" },
   {
     label: "Study Abroad",
@@ -80,7 +80,7 @@ const navCategories: NavCategory[] = [
   { label: "Contact", href: "/contact", path: "/contact" },
 ];
 
-export function PublicHeader() {
+export function PublicHeaderClient({ navItems = navCategories }: { navItems?: NavCategory[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const currentPath = pathname ?? "";
@@ -171,7 +171,7 @@ export function PublicHeader() {
         </Link>
 
         <nav className="public-header-nav" aria-label="Primary navigation">
-          {navCategories.map((cat) => {
+          {navItems.map((cat) => {
             const isActiveCategory = cat.href 
               ? currentPath === cat.path 
               : cat.items?.some((item) => currentPath === item.path);
@@ -250,7 +250,7 @@ export function PublicHeader() {
       <div className={`public-mobile-backdrop ${menuOpen ? "is-open" : ""}`} onClick={() => setMenuOpen(false)} />
       <div id="public-mobile-menu" className={`public-mobile-menu ${menuOpen ? "is-open" : ""}`}>
         <nav className="public-mobile-nav" aria-label="Mobile navigation">
-          {navCategories.map((cat) => {
+          {navItems.map((cat) => {
             if (cat.href) {
               const active = currentPath === cat.path;
               return (
