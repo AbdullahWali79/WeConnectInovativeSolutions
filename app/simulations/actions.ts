@@ -15,7 +15,7 @@ export async function getPublicSimulationCategories() {
   // Filter out categories that have no published simulations
   const filteredData = data?.map(cat => ({
     ...cat,
-    simulations: cat.simulations.filter((s: any) => s.is_published)
+    simulations: cat.simulations.filter((s: { is_published: boolean }) => s.is_published)
   })).filter(cat => cat.simulations.length > 0);
 
   return { success: true, data: filteredData };

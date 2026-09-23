@@ -2,6 +2,20 @@ import { getPublicSimulationCategories } from "./actions";
 import Link from "next/link";
 import { PublicHeader } from "@/components/public/public-header";
 
+type Simulation = {
+  id: string;
+  title: string;
+  slug: string;
+};
+
+type Category = {
+  id: string;
+  name: string;
+  description: string | null;
+  slug: string;
+  simulations: Simulation[];
+};
+
 export default async function SimulationsPage() {
   const { data: categories } = await getPublicSimulationCategories();
 
@@ -17,7 +31,7 @@ export default async function SimulationsPage() {
         </div>
 
         <div className="space-y-12">
-          {categories?.map((cat: any) => (
+          {categories?.map((cat: Category) => (
             <div key={cat.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-800">{cat.name}</h2>
@@ -25,7 +39,7 @@ export default async function SimulationsPage() {
               </div>
               
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {cat.simulations.map((sim: any) => (
+                {cat.simulations.map((sim: Simulation) => (
                   <Link 
                     key={sim.id}
                     href={`/simulations/${cat.slug}/${sim.slug}`}
