@@ -155,7 +155,7 @@ export function PublicSimulationsClient({ categories }: { categories: Category[]
               </div>
             ) : (
               <form onSubmit={handleRequestSubmit} className="space-y-4">
-                <p className="text-gray-600 mb-6">Don't see the topic you want to practice? Let us know what you need!</p>
+                <p className="text-gray-600 mb-6">Don&apos;t see the topic you want to practice? Let us know what you need!</p>
                 
                 {reqError && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{reqError}</div>}
                 
