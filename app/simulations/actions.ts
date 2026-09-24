@@ -38,3 +38,18 @@ export async function getPublicSimulationBySlug(categorySlug: string, simulation
   }
   return { success: true, data };
 }
+
+export async function submitSimulationRequest(data: { userName: string; email: string; topic: string; description: string }) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("simulation_requests").insert({
+    user_name: data.userName,
+    email: data.email,
+    topic: data.topic,
+    description: data.description,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}

@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { getSimulationCategories, getSimulations } from "./actions";
 import { AdminSimulationsClient } from "./client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function SimulationsAdminPage() {
   const { data: simulations } = await getSimulations();
   const { data: categories } = await getSimulationCategories();
+  
+  const supabase = await createSupabaseServerClient();
+  const { data: requests } = await supabase
+    .from("simulation_requests")
+    .select("*")
+    .order("created_at", { ascending: false });
 
   return (
     <div className="p-6 h-[calc(100vh-64px)] flex flex-col bg-gray-50/50">
@@ -26,6 +33,7 @@ export default async function SimulationsAdminPage() {
         <AdminSimulationsClient 
           simulations={simulations || []} 
           categories={categories || []} 
+          requests={requests || []}
         />
       </div>
     </div>
