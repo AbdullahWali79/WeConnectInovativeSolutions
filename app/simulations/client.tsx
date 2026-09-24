@@ -83,9 +83,18 @@ export function PublicSimulationsClient({ categories }: { categories: Category[]
       <div className="space-y-16">
         {filteredCategories?.map((cat: Category) => (
           <div key={cat.id} id={cat.slug} className="scroll-mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="mb-8 border-b border-gray-100 pb-4">
-              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{cat.name}</h2>
-              {cat.description && <p className="text-gray-500 mt-2 text-lg">{cat.description}</p>}
+            <div className="mb-8 border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{cat.name}</h2>
+                {cat.description && <p className="text-gray-500 mt-2 text-lg">{cat.description}</p>}
+              </div>
+              <button
+                onClick={() => setIsRequestModalOpen(true)}
+                className="bg-[#0664B9] text-white px-6 py-2.5 rounded-full shadow-md hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 font-semibold whitespace-nowrap"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Request for Simulation
+              </button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -120,19 +129,17 @@ export function PublicSimulationsClient({ categories }: { categories: Category[]
           <div className="text-center text-gray-500 py-16 bg-gray-50 rounded-2xl border border-gray-100">
             <div className="text-4xl mb-4">🚀</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Simulations Coming Soon</h3>
-            <p>No simulations have been added yet for this topic. Check back later!</p>
+            <p className="mb-6">No simulations have been added yet for this topic. Check back later!</p>
+            <button
+              onClick={() => setIsRequestModalOpen(true)}
+              className="bg-[#0664B9] text-white px-6 py-2.5 rounded-full shadow-md hover:bg-blue-700 transition-all duration-300 inline-flex items-center gap-2 font-semibold"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              Request for Simulation
+            </button>
           </div>
         )}
       </div>
-
-      {/* Floating Request Button */}
-      <button
-        onClick={() => setIsRequestModalOpen(true)}
-        className="fixed bottom-8 right-8 bg-[#0664B9] text-white p-4 rounded-full shadow-2xl hover:scale-105 hover:bg-blue-700 transition-all duration-300 z-40 flex items-center gap-2 font-bold"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-        <span className="hidden sm:inline">Request Topic</span>
-      </button>
 
       {/* Request Modal */}
       {isRequestModalOpen && (
