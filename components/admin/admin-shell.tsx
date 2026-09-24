@@ -14,11 +14,11 @@ import { brandingToCssVars } from "@/lib/branding-settings";
 import type { BrandingSettingsSnapshot } from "@/lib/supabase/types";
 import { useBranding } from "@/components/branding-provider";
 
-type NavItem = { href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean };
-type NavGroup = { id: string; label: string; icon: string; items: NavItem[] };
+export type NavItem = { href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean };
+export type NavGroup = { id: string; label: string; icon: string; items: NavItem[] };
 
-const dashboardItem: NavItem = { href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" };
-const navGroups: NavGroup[] = [
+export const dashboardItem: NavItem = { href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" };
+export const navGroups: NavGroup[] = [
   { id: "academics", label: "Academics", icon: "school", items: [
     { href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
     { href: "/admin/syllabus", label: "Syllabus", icon: "menu_book", permission: "courses.view" },

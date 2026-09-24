@@ -13,6 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Application, CompletedStudent, Course, Enrollment, Profile, Task } from "@/lib/supabase/types";
 import { buildApprovedStudentWhatsappUrl, formatDate, type WhatsappMessageTemplate, whatsappMessageTemplateOptions } from "@/lib/utils";
+import { navGroups, dashboardItem } from "./admin-shell";
 
 type DashboardData = {
   courses: Course[];
@@ -23,42 +24,18 @@ type DashboardData = {
   completed: CompletedStudent[];
 };
 
-type QuickAccessItem = { id: string; href: string; label: string; icon: string; permission?: PermissionKey; adminOnly?: boolean };
-const defaultQuickAccessIds = ["fees", "tasks", "reports", "client-hunting", "seat-reservations"];
-const quickAccessCatalog: QuickAccessItem[] = [
-  { id: "dashboard", href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" },
-  { id: "courses", href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
-  { id: "tasks", href: "/admin/tasks", label: "Tasks", icon: "assignment_add", permission: "tasks.view" },
-  { id: "reviews", href: "/admin/submissions", label: "Reviews", icon: "rate_review", permission: "submissions.view" },
-  { id: "progress", href: "/admin/progress", label: "Progress", icon: "monitoring", permission: "progress.view" },
-  { id: "reports", href: "/admin/task-analytics", label: "Reports", icon: "summarize", permission: "dashboard.view" },
-  { id: "helping-videos", href: "/admin/helping-videos", label: "Helping Videos", icon: "smart_display", adminOnly: true },
-  { id: "applications", href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
-  { id: "students", href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
-  { id: "trainees", href: "/admin/trainees", label: "Trainees", icon: "school", permission: "trainees.view" },
-  { id: "seat-reservations", href: "/admin/seat-reservations", label: "Seat Reservations", icon: "event_seat", adminOnly: true },
-  { id: "manual-enrollments", href: "/admin/manual-enrollments", label: "Manual Enrollments", icon: "how_to_reg", adminOnly: true },
-  { id: "fees", href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
-  { id: "products", href: "/admin/products", label: "Products", icon: "inventory_2", permission: "products.view" },
-  { id: "client-hunting", href: "/admin/client-hunting", label: "Client Hunting", icon: "manage_search", adminOnly: true },
-  { id: "software-houses", href: "/admin/software-houses", label: "Software Houses", icon: "add_business", adminOnly: true },
-  { id: "announcements", href: "/admin/announcements", label: "Announcements", icon: "campaign", permission: "announcements.view" },
-  { id: "feedback", href: "/admin/feedback", label: "Feedback", icon: "reviews", adminOnly: true },
-  { id: "blogs", href: "/admin/blogs", label: "Blogs", icon: "article", adminOnly: true },
-  { id: "social-media", href: "/admin/social-media", label: "Social Media", icon: "share", adminOnly: true },
-  { id: "promotions", href: "/admin/promotional-popups", label: "Promotions", icon: "auto_awesome", permission: "promotional_popups.view" },
-  { id: "forms", href: "/admin/forms/client-hunt", label: "Forms", icon: "dynamic_form", adminOnly: true },
-  { id: "completion", href: "/admin/completions", label: "Completion", icon: "workspace_premium", adminOnly: true },
-  { id: "simple-certificates", href: "/admin/simple-certificates", label: "Simple Certificates", icon: "card_membership", adminOnly: true },
-  { id: "internship-letters", href: "/admin/internship-letters", label: "Internship Letters", icon: "description", adminOnly: true },
-  { id: "manual-completion", href: "/admin/manual-completions", label: "Manual Completion", icon: "workspace_premium", adminOnly: true },
-  { id: "team-members", href: "/admin/team-members", label: "Team Members", icon: "groups", permission: "team_members.view" },
-  { id: "subadmins", href: "/admin/subadmins", label: "Teachers / Sub-Admins", icon: "manage_accounts", adminOnly: true },
-  { id: "whatsapp-alerts", href: "/admin/notification-settings", label: "WhatsApp Alerts", icon: "chat", adminOnly: true },
-  { id: "email-notifications", href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
-  { id: "signature", href: "/admin/settings/signature", label: "Signature & Stamp", icon: "draw", adminOnly: true },
-  { id: "branding", href: "/admin/settings/branding", label: "Branding", icon: "palette", adminOnly: true },
-];
+const defaultQuickAccessIds = ["/admin/fees", "/admin/tasks", "/admin/task-analytics", "/admin/client-hunting", "/admin/seat-reservations"];
+const quickAccessCatalog = [
+  dashboardItem,
+  ...navGroups.flatMap(group => group.items)
+].map(item => ({
+  id: item.href,
+  href: item.href,
+  label: item.label,
+  icon: item.icon,
+  permission: item.permission,
+  adminOnly: item.adminOnly
+}));
 
 export function AdminDashboard({
   currentRole,
@@ -77,6 +54,7 @@ export function AdminDashboard({
   const [selectedWhatsappTemplate, setSelectedWhatsappTemplate] = useState<WhatsappMessageTemplate>("default");
   const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(false);
   const [isManagingQuickAccess, setIsManagingQuickAccess] = useState(false);
+  const [quickAccessSearch, setQuickAccessSearch] = useState("");
   const [quickAccessIds, setQuickAccessIds] = useState<string[]>(defaultQuickAccessIds);
   const [toast, setToast] = useState<ToastState>(null);
   const clearToast = useCallback(() => setToast(null), []);
@@ -117,10 +95,54 @@ export function AdminDashboard({
     try {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) {
-        const savedIds = parsed.filter((id): id is string => typeof id === "string");
-        const nextIds = savedIds.includes("seat-reservations") ? savedIds : [...savedIds, "seat-reservations"];
-        setQuickAccessIds(nextIds);
-        localStorage.setItem("admin-dashboard-quick-access", JSON.stringify(nextIds));
+        let savedIds = parsed.filter((id): id is string => typeof id === "string");
+        
+        // MIGRATION: Convert old string IDs to new href IDs
+        savedIds = savedIds.map(id => {
+           if (!id.startsWith('/')) {
+              const oldMap: Record<string, string> = {
+                  "dashboard": "/admin",
+                  "fees": "/admin/fees",
+                  "tasks": "/admin/tasks",
+                  "reports": "/admin/task-analytics",
+                  "client-hunting": "/admin/client-hunting",
+                  "seat-reservations": "/admin/seat-reservations",
+                  "reviews": "/admin/submissions",
+                  "progress": "/admin/progress",
+                  "helping-videos": "/admin/helping-videos",
+                  "applications": "/admin/applications",
+                  "students": "/admin/students",
+                  "trainees": "/admin/trainees",
+                  "manual-enrollments": "/admin/manual-enrollments",
+                  "products": "/admin/products",
+                  "software-houses": "/admin/software-houses",
+                  "announcements": "/admin/announcements",
+                  "feedback": "/admin/feedback",
+                  "blogs": "/admin/blogs",
+                  "social-media": "/admin/social-media",
+                  "promotions": "/admin/promotional-popups",
+                  "forms": "/admin/forms/client-hunt",
+                  "completion": "/admin/completions",
+                  "simple-certificates": "/admin/simple-certificates",
+                  "internship-letters": "/admin/internship-letters",
+                  "manual-completion": "/admin/manual-completions",
+                  "team-members": "/admin/team-members",
+                  "subadmins": "/admin/subadmins",
+                  "whatsapp-alerts": "/admin/notification-settings",
+                  "email-notifications": "/admin/settings/notifications",
+                  "signature": "/admin/settings/signature",
+                  "branding": "/admin/settings/branding",
+              };
+              return oldMap[id] || `/admin/${id}`;
+           }
+           return id;
+        });
+
+        const nextIds = savedIds.includes("/admin/seat-reservations") ? savedIds : [...savedIds, "/admin/seat-reservations"];
+        const validIds = nextIds.filter(id => quickAccessCatalog.some(item => item.id === id));
+        
+        setQuickAccessIds(validIds);
+        localStorage.setItem("admin-dashboard-quick-access", JSON.stringify(validIds));
       }
     } catch {
       localStorage.removeItem("admin-dashboard-quick-access");
@@ -225,7 +247,10 @@ export function AdminDashboard({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsManagingQuickAccess((current) => !current)}
+                  onClick={() => {
+                    setIsManagingQuickAccess((current) => !current);
+                    setQuickAccessSearch("");
+                  }}
                   className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-blue-50"
                 >
                   <Icon name={isManagingQuickAccess ? "check" : "edit"} />
@@ -237,12 +262,26 @@ export function AdminDashboard({
               </div>
             </div>
 
-            <div className="overflow-y-auto p-5">
+            <div className="overflow-y-auto p-5 flex flex-col min-h-[300px]">
               {isManagingQuickAccess ? (
-                <div>
-                  <p className="mb-3 text-sm text-on-surface-variant">Select the menus you want to see in Quick Access.</p>
+                <div className="flex flex-col h-full">
+                  <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <p className="text-sm text-on-surface-variant">Select the menus you want to see in Quick Access.</p>
+                    <div className="relative shrink-0">
+                      <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" />
+                      <input 
+                        type="text" 
+                        placeholder="Search menus..." 
+                        value={quickAccessSearch}
+                        onChange={(e) => setQuickAccessSearch(e.target.value)}
+                        className="wc-input pl-9 text-sm py-1.5 w-full sm:w-[260px] rounded-full"
+                      />
+                    </div>
+                  </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {availableQuickAccessItems.map((item) => {
+                    {availableQuickAccessItems
+                      .filter(item => item.label.toLowerCase().includes(quickAccessSearch.toLowerCase()))
+                      .map((item) => {
                       const checked = quickAccessIds.includes(item.id);
                       return (
                         <label key={item.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${checked ? "border-primary bg-primary-container/50" : "border-outline-variant bg-surface"}`}>
@@ -256,7 +295,7 @@ export function AdminDashboard({
                             }}
                             className="rounded border-outline-variant text-primary focus:ring-primary"
                           />
-                          <Icon name={item.icon} className="text-xl text-primary" />
+                          <Icon name={item.icon} className="text-xl text-primary shrink-0" />
                           <span className="text-sm font-bold text-on-surface">{item.label}</span>
                         </label>
                       );
