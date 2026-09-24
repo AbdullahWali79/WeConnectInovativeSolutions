@@ -70,6 +70,12 @@ export const navCategories: NavCategory[] = [
     ],
   },
   {
+    label: "Simulations",
+    items: [
+      { href: "/simulations", path: "/simulations", label: "All Simulations" },
+    ],
+  },
+  {
     label: "Insights",
     items: [
       { href: "/ai-tools", path: "/ai-tools", label: "AI Tools" },
@@ -109,19 +115,14 @@ export function PublicHeader() {
             label: "All Simulations"
           });
 
-          const simulationCategory: NavCategory = {
-            label: "Simulations",
-            items: simulationNavItems
-          };
-
           setNavItems((prev) => {
-            if (prev.some((p) => p.label === "Simulations")) return prev;
             const newItems = [...prev];
-            const insightsIndex = newItems.findIndex((c) => c.label === "Insights");
-            if (insightsIndex !== -1) {
-              newItems.splice(insightsIndex, 0, simulationCategory);
-            } else {
-              newItems.push(simulationCategory);
+            const simIndex = newItems.findIndex((c) => c.label === "Simulations");
+            if (simIndex !== -1) {
+              newItems[simIndex] = {
+                ...newItems[simIndex],
+                items: simulationNavItems
+              };
             }
             return newItems;
           });
