@@ -151,8 +151,9 @@ export function BlogEditor({ initialId }: { initialId?: string }) {
       setToast({ type: "success", message: "Imported data from LinkedIn!" });
       setShowLinkedInImport(false);
       setLinkedInUrl("");
-    } catch (err: any) {
-      setToast({ type: "error", message: err.message || "Failed to import" });
+    } catch (err) {
+      const error = err as Error;
+      setToast({ type: "error", message: error.message || "Failed to import" });
     } finally {
       setImportingLinkedIn(false);
     }
