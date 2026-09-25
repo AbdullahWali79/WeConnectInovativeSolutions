@@ -70,6 +70,9 @@ export function BlogEditor({ initialId }: { initialId?: string }) {
 
   const [slugEdited, setSlugEdited] = useState(false);
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
+  const [showLinkedInImport, setShowLinkedInImport] = useState(false);
+  const [linkedInUrl, setLinkedInUrl] = useState("");
+  const [importingLinkedIn, setImportingLinkedIn] = useState(false);
 
   const loadBlog = useCallback(async () => {
     if (!initialId) return;
@@ -114,6 +117,45 @@ export function BlogEditor({ initialId }: { initialId?: string }) {
   function updateSlug(value: string) {
     setSlugEdited(true);
     setForm((current) => ({ ...current, slug: slugifyBlogTitle(value) }));
+  }
+
+  async function handleImportLinkedIn() {
+    if (!linkedInUrl.trim()) return;
+    setImportingLinkedIn(true);
+    try {
+      const res = await fetch(`/api/fetch-link-preview?url=${encodeURIComponent(linkedInUrl)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch");
+      
+      const title = data.title?.replace(" | LinkedIn", "") || "";
+      let contentHtml = "";
+      if (data.description) {
+        contentHtml = `<p>${data.description.replace(/\n/g, "<br/>")}</p><p><br/></p><p><a href="${linkedInUrl}" target="_blank">Original Post on LinkedIn</a></p>`;
+      }
+      
+      setForm(curr => ({
+        ...curr,
+        title: title || curr.title,
+        excerpt: data.description?.substring(0, 160) || curr.excerpt,
+        content: contentHtml || curr.content,
+        cover_image_url: data.image || curr.cover_image_url,
+      }));
+      
+      if (title && !slugEdited) {
+        setForm(curr => ({ ...curr, slug: slugifyBlogTitle(title) }));
+      }
+      if (data.image) {
+        setPreviewStatus("loading");
+      }
+      
+      setToast({ type: "success", message: "Imported data from LinkedIn!" });
+      setShowLinkedInImport(false);
+      setLinkedInUrl("");
+    } catch (err: any) {
+      setToast({ type: "error", message: err.message || "Failed to import" });
+    } finally {
+      setImportingLinkedIn(false);
+    }
   }
 
   async function saveBlog(event: React.FormEvent) {
@@ -168,7 +210,45 @@ export function BlogEditor({ initialId }: { initialId?: string }) {
         eyebrow="Blog Editor" 
         title={initialId ? "Edit Blog Post" : "Compose New Blog"} 
         description="Write and format your blog post. Changes are live instantly upon saving." 
-        action={<button type="button" onClick={() => router.push("/admin/blogs")} className="wc-secondary-btn"><Icon name="arrow_back" /> Back to Manage Blogs</button>}
+        action={
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            {showLinkedInImport ? (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="url" 
+                  placeholder="Paste LinkedIn URL..." 
+                  className="wc-input py-2 text-sm w-64" 
+                  value={linkedInUrl} 
+                  onChange={(e) => setLinkedInUrl(e.target.value)} 
+                />
+                <button 
+                  type="button" 
+                  onClick={handleImportLinkedIn} 
+                  disabled={importingLinkedIn || !linkedInUrl.trim()} 
+                  className="wc-primary-btn py-2 px-4 text-sm whitespace-nowrap"
+                >
+                  {importingLinkedIn ? "Importing..." : "Import"}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => { setShowLinkedInImport(false); setLinkedInUrl(""); }} 
+                  className="wc-secondary-btn py-2 px-3 text-sm"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+            ) : (
+              <button 
+                type="button" 
+                onClick={() => setShowLinkedInImport(true)} 
+                className="wc-secondary-btn !border-blue-600 !text-blue-600 hover:!bg-blue-50"
+              >
+                <Icon name="link" /> Import from LinkedIn
+              </button>
+            )}
+            <button type="button" onClick={() => router.push("/admin/blogs")} className="wc-secondary-btn"><Icon name="arrow_back" /> Back to Manage Blogs</button>
+          </div>
+        }
       />
 
       <form onSubmit={saveBlog} className="grid gap-6 xl:grid-cols-[1fr_360px]">
