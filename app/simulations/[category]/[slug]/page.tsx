@@ -2,6 +2,7 @@ import { getPublicSimulationBySlug } from "../../actions";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PublicHeader } from "@/components/public/public-header";
+import { ProtectedSimulationRenderer } from "@/components/public/protected-simulation";
 
 export default async function SimulationExecutionPage({ 
   params 
@@ -32,11 +33,9 @@ export default async function SimulationExecutionPage({
         </div>
 
         <div className="flex-1 p-0 m-0 bg-white relative">
-          <iframe 
-            srcDoc={simulation.html_script} 
-            className="absolute inset-0 w-full h-full border-0"
-            title={simulation.title}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          <ProtectedSimulationRenderer 
+            html={simulation.html_script} 
+            title={simulation.title} 
           />
         </div>
       </div>
