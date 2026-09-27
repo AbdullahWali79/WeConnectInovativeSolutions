@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import type { Course } from "@/lib/supabase/types";
 import { Toast, type ToastState } from "@/components/toast";
 import { submitStudentApplication } from "@/app/apply/actions";
@@ -17,9 +17,20 @@ const initialForm = {
   message: "",
 };
 
+const FREELANCER_COURSE_ID = "501c4f6d-c3db-4ca4-985e-518d5fb6ff29";
+
 export function ApplicationForm({ courses, selectedCourseId }: { courses: Course[]; selectedCourseId?: string }) {
   const initialCourseId = selectedCourseId && courses.some((course) => course.id === selectedCourseId) ? selectedCourseId : "";
-  const [form, setForm] = useState({ ...initialForm, course_id: initialCourseId });
+  
+  const [applyMode, setApplyMode] = useState<"student" | "freelancer">(
+    initialCourseId === FREELANCER_COURSE_ID ? "freelancer" : "student"
+  );
+  
+  const [form, setForm] = useState({ 
+    ...initialForm, 
+    course_id: initialCourseId || (applyMode === "freelancer" ? FREELANCER_COURSE_ID : "") 
+  });
+  
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [resultMessage, setResultMessage] = useState<ToastState>(null);
@@ -43,6 +54,12 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
     const values = Object.fromEntries(
       Object.keys(initialForm).map((name) => [name, String(data.get(name) ?? "")]),
     ) as typeof initialForm;
+    
+    // Ensure hidden field overrides if in freelancer mode
+    if (applyMode === "freelancer") {
+      values.course_id = FREELANCER_COURSE_ID;
+    }
+    
     setResultMessage(null);
 
     const showResult = (result: NonNullable<ToastState>, field?: string) => {
@@ -102,7 +119,7 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
         return;
       }
 
-      setForm({ ...initialForm, course_id: initialCourseId });
+      setForm({ ...initialForm, course_id: applyMode === "freelancer" ? FREELANCER_COURSE_ID : "" });
       setShowPassword(false);
       showResult({
         type: result.warning ? "info" : "success",
@@ -130,20 +147,48 @@ export function ApplicationForm({ courses, selectedCourseId }: { courses: Course
           <div className="rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-4 text-sm text-[var(--wc-on-surface-variant)]">
             Need help? Email us at <a href={CONTACT_EMAIL_HREF} className="break-words [overflow-wrap:anywhere] font-bold text-on-surface underline underline-offset-2">{CONTACT_EMAIL}</a>
           </div>
-          <div>
-            <label htmlFor="application-course" className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Selected Course</label>
-            <select id="application-course" name="course_id" value={form.course_id} onChange={(event) => updateField("course_id", event.target.value)} className="min-w-0 max-w-full w-full scroll-mt-24 rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-base text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" required>
-              <option value="" disabled className="text-gray-500">
-                Choose a course
-              </option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id} className="text-black">
-                  {course.title}
-                </option>
-              ))}
-            </select>
-            {selectedCourse?.description ? <p className="mt-2 break-words text-sm text-[var(--wc-on-surface-variant)]">{selectedCourse.description}</p> : null}
+
+          {/* Toggle Mode */}
+          <div className="flex bg-[var(--wc-surface-low)] rounded-xl p-1.5 mb-6 border border-[var(--wc-outline-variant)] shadow-inner">
+            <button 
+              type="button" 
+              onClick={() => { setApplyMode("student"); updateField("course_id", ""); }}
+              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${applyMode === "student" ? "bg-[var(--wc-secondary)] text-white shadow-md" : "text-[var(--wc-on-surface-variant)] hover:text-white hover:bg-white/5"}`}
+            >
+              Apply as Student
+            </button>
+            <button 
+              type="button" 
+              onClick={() => { setApplyMode("freelancer"); updateField("course_id", FREELANCER_COURSE_ID); }}
+              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${applyMode === "freelancer" ? "bg-[var(--wc-secondary)] text-white shadow-md" : "text-[var(--wc-on-surface-variant)] hover:text-white hover:bg-white/5"}`}
+            >
+              Apply as Freelancer
+            </button>
           </div>
+
+          {applyMode === "student" ? (
+            <div>
+              <label htmlFor="application-course" className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">Selected Course</label>
+              <select id="application-course" name="course_id" value={form.course_id} onChange={(event) => updateField("course_id", event.target.value)} className="min-w-0 max-w-full w-full scroll-mt-24 rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-5 py-4 text-base text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all" required>
+                <option value="" disabled className="text-gray-500">
+                  Choose a course
+                </option>
+                {courses.filter(c => c.id !== FREELANCER_COURSE_ID).map((course) => (
+                  <option key={course.id} value={course.id} className="text-black">
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+              {selectedCourse?.description ? <p className="mt-2 break-words text-sm text-[var(--wc-on-surface-variant)]">{selectedCourse.description}</p> : null}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 p-5 text-center">
+              <Icon name="workspace_premium" className="text-3xl text-[var(--wc-secondary)] mb-2" />
+              <h3 className="text-lg font-bold text-on-surface">Freelancer Application</h3>
+              <p className="text-sm text-[var(--wc-on-surface-variant)] mt-1">You are applying to build a talent portfolio and offer your services on WeConnect.</p>
+              <input type="hidden" name="course_id" value={FREELANCER_COURSE_ID} />
+            </div>
+          )}
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="block min-w-0">

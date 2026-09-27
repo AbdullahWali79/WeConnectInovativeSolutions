@@ -168,7 +168,7 @@ export default function LoginPage() {
                 Don&apos;t have an account? Apply first and choose your login password.
               </p>
               <Link
-                href="/apply"
+                href={next?.includes('talent-portfolio') ? '/apply?course=501c4f6d-c3db-4ca4-985e-518d5fb6ff29' : '/apply'}
                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-secondary)] bg-[var(--wc-surface-lowest)] px-5 py-3 text-sm font-black text-[var(--wc-secondary)] transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary"
               >
                 <Icon name="send" className="text-lg" /> APPLY NOW
