@@ -182,7 +182,6 @@ export function AdminDashboard({
       if (app && app.course_id === "501c4f6d-c3db-4ca4-985e-518d5fb6ff29") {
         const profile = data.profiles.find(p => p.id === applicationId);
         if (profile) {
-          // @ts-expect-error - talent_profiles table type is not generated
           await supabase.from("talent_profiles").insert({
             id: applicationId,
             name: profile.full_name,
