@@ -20,6 +20,20 @@ export default async function TalentManagementPage() {
     .select("*")
     .order("created_at", { ascending: false });
 
-  return <TalentManager initialProfiles={profiles || []} />;
+  const { data: requests } = await supabase
+    .from("talent_requests" as any)
+    .select(`
+      *,
+      talent_services (
+        title,
+        talent_profiles (
+          name,
+          whatsapp_number
+        )
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  return <TalentManager initialProfiles={profiles || []} initialRequests={requests || []} />;
 }
 
