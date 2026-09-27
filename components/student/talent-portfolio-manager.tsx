@@ -65,18 +65,32 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
     if (data) setServices(data);
   };
 
+  const formatImageUrl = (url: string) => {
+    if (!url) return url;
+    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+    }
+    const openMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (url.includes("drive.google.com") && openMatch && openMatch[1]) {
+       return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
+    }
+    return url;
+  };
+
   const handleUpdateProfilePicture = async (newUrl: string) => {
     if (!profile) return;
     setLoading(true);
+    const formattedUrl = formatImageUrl(newUrl);
     const { error } = await supabase
       .from("talent_profiles" as any)
-      .update({ profile_picture_url: newUrl })
+      .update({ profile_picture_url: formattedUrl })
       .eq("id", profile.id);
     setLoading(false);
     if (error) {
       setToast({ type: "error", message: "Failed to update profile picture." });
     } else {
-      setProfile({ ...profile, profile_picture_url: newUrl });
+      setProfile({ ...profile, profile_picture_url: formattedUrl });
       setToast({ type: "success", message: "Profile picture updated." });
     }
   };
@@ -85,12 +99,13 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
     e.preventDefault();
     setLoading(true);
     setToast(null);
+    const formattedUrl = formatImageUrl(pictureUrl);
     const { error } = await supabase.from("talent_profiles" as any).insert({
       id: userId,
       name,
       email,
       whatsapp_number: whatsapp,
-      profile_picture_url: pictureUrl,
+      profile_picture_url: formattedUrl,
       status: "pending",
     });
 
@@ -104,7 +119,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
         name,
         email,
         whatsapp_number: whatsapp,
-        profile_picture_url: pictureUrl,
+        profile_picture_url: formattedUrl,
         status: "pending",
         whatsapp_enabled: true,
       });
@@ -225,7 +240,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
             type="button"
             title="Click to update profile picture"
             onClick={() => {
-              const newUrl = window.prompt("Enter new profile picture URL (Google Drive, Imgur, etc.)", profile.profile_picture_url || "");
+              const newUrl = window.prompt("Enter image URL (Must be a direct image link or a public Google Drive share link):", profile.profile_picture_url || "");
               if (newUrl !== null) handleUpdateProfilePicture(newUrl.trim());
             }}
             className="relative group w-16 h-16 rounded-full overflow-hidden border border-gray-200 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
