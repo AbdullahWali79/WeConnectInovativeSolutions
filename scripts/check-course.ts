@@ -9,14 +9,17 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function run() {
+  const { data, error } = await supabase.from("enrollments").select("*").eq("student_id", "some_id").limit(1);
+  console.log("enrollments error?", error);
+
+  // let's fetch applications
   const { data: profile } = await supabase.from("profiles").select("*").eq("email", "githubprojectmine@gmail.com").single();
-  if (profile) {
-    const { data: student } = await supabase.from("students").select("course_id").eq("id", profile.id).single();
-    console.log("Student course_id:", student?.course_id);
-    console.log("Expected course_id:", "501c4f6d-c3db-4ca4-985e-518d5fb6ff29");
-  } else {
-    console.log("Not found");
-  }
+  const { data: enrolls } = await supabase.from("enrollments").select("*").eq("student_id", profile.id);
+  console.log("enrolls", enrolls);
+
+  // fetch application
+  const { data: app } = await supabase.from("applications").select("*").eq("email", "githubprojectmine@gmail.com");
+  console.log("apps", app);
 }
 
 run();
