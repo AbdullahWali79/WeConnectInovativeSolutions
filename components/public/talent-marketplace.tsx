@@ -5,8 +5,6 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-
-
 import { Toast, type ToastState } from "@/components/toast";
 
 export function TalentMarketplace({ services: initialServices }: { services: any[] }) {
@@ -23,6 +21,13 @@ export function TalentMarketplace({ services: initialServices }: { services: any
   const [reviewComment, setReviewComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   
+  // Hire form state
+  const [showHireForm, setShowHireForm] = useState(false);
+  const [hireName, setHireName] = useState("");
+  const [hireWhatsApp, setHireWhatsApp] = useState("");
+  const [hireDetails, setHireDetails] = useState("");
+  const [isSubmittingHire, setIsSubmittingHire] = useState(false);
+
   const [toast, setToast] = useState<ToastState>(null);
   const supabase = createSupabaseBrowserClient();
 
@@ -38,11 +43,6 @@ export function TalentMarketplace({ services: initialServices }: { services: any
     const matchesCategory = activeCategory === "All" || (s.skills && s.skills.includes(activeCategory));
     return matchesSearch && matchesCategory;
   });
-
-  const handleWhatsApp = (number: string, serviceTitle: string) => {
-    const msg = encodeURIComponent(`Hi, I saw your service "${serviceTitle}" on the Talent Portfolio and I'm interested in working with you.`);
-    window.open(`https://wa.me/${number.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
-  };
 
   const calculateAverageRating = (reviews: any[]) => {
     if (!reviews || reviews.length === 0) return 0;
@@ -69,7 +69,6 @@ export function TalentMarketplace({ services: initialServices }: { services: any
     } else {
       setToast({ type: "success", message: "Review submitted successfully!" });
       
-      // Update local state
       const updatedService = {
         ...selectedService,
         talent_reviews: [data, ...(selectedService.talent_reviews || [])]
@@ -77,18 +76,41 @@ export function TalentMarketplace({ services: initialServices }: { services: any
       setSelectedService(updatedService);
       setServices(services.map(s => s.id === updatedService.id ? updatedService : s));
       
-      // Reset form
       setReviewName("");
       setReviewRating(5);
       setReviewComment("");
     }
   };
 
-  // Sort services by average rating (descending)
+  const handleSubmitHire = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedService) return;
+    
+    setIsSubmittingHire(true);
+    const { error } = await supabase.from("talent_requests" as any).insert({
+      service_id: selectedService.id,
+      client_name: hireName,
+      client_whatsapp: hireWhatsApp,
+      project_details: hireDetails
+    });
+    
+    setIsSubmittingHire(false);
+    
+    if (error) {
+      setToast({ type: "error", message: "Failed to send request: " + error.message });
+    } else {
+      setToast({ type: "success", message: "Request sent successfully! Our Admin will contact you on WhatsApp shortly." });
+      setShowHireForm(false);
+      setHireName("");
+      setHireWhatsApp("");
+      setHireDetails("");
+    }
+  };
+
   const sortedServices = [...filteredServices].sort((a, b) => {
     const aRating = parseFloat(calculateAverageRating(a.talent_reviews) as string);
     const bRating = parseFloat(calculateAverageRating(b.talent_reviews) as string);
-    return bRating - aRating; // highest rating first
+    return bRating - aRating;
   });
 
   return (
@@ -142,7 +164,44 @@ export function TalentMarketplace({ services: initialServices }: { services: any
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8">
+      {/* How it works */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <h2 className="text-2xl font-bold text-center text-[#023E7D] mb-10">How It Works For Clients</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-3xl">search</span>
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">1. Find Freelancer</h3>
+              <p className="text-sm text-gray-500">Search and filter to find the perfect freelancer for your project needs.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-3xl">assignment_turned_in</span>
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">2. Send Request</h3>
+              <p className="text-sm text-gray-500">Review their portfolio and send a request with your WhatsApp number.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-3xl">admin_panel_settings</span>
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">3. Admin Management</h3>
+              <p className="text-sm text-gray-500">Our Admin verifies the task, collects payment, and assigns it to the freelancer.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-3xl">verified</span>
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">4. Guaranteed Delivery</h3>
+              <p className="text-sm text-gray-500">We take full responsibility for quality and timely delivery of your project.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-12">
         {/* Category Tabs */}
         <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide border-b border-gray-200 mb-8">
           {categories.map((cat) => (
@@ -184,7 +243,10 @@ export function TalentMarketplace({ services: initialServices }: { services: any
               return (
                 <div 
                   key={service.id} 
-                  onClick={() => setSelectedService(service)}
+                  onClick={() => {
+                    setSelectedService(service);
+                    setShowHireForm(false);
+                  }}
                   className="bg-white group rounded-xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
                 >
                   
@@ -244,11 +306,9 @@ export function TalentMarketplace({ services: initialServices }: { services: any
                     
                     {service.talent_profiles?.whatsapp_enabled ? (
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleWhatsApp(service.talent_profiles.whatsapp_number, service.title); }}
-                        className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition-colors"
+                        className="flex items-center gap-1.5 bg-[#023E7D] hover:bg-blue-800 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[18px]">chat</span>
-                        Contact
+                        Hire Me
                       </button>
                     ) : (
                       <span className="text-gray-900 font-bold">$Custom</span>
@@ -264,7 +324,7 @@ export function TalentMarketplace({ services: initialServices }: { services: any
 
       {/* Service Details Modal */}
       {selectedService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl relative my-auto border border-gray-200">
             {/* Close button */}
             <button 
@@ -332,99 +392,172 @@ export function TalentMarketplace({ services: initialServices }: { services: any
             </div>
 
             {/* Right Col: Reviews & Actions */}
-            <div className="md:w-2/5 bg-white p-6 md:p-8 flex flex-col border-l border-gray-200 overflow-y-auto">
+            <div className="md:w-2/5 bg-white p-6 md:p-8 flex flex-col border-l border-gray-200 overflow-y-auto relative">
               
-              <div className="bg-green-50 border border-green-100 rounded-xl p-5 mb-8 text-center">
-                <h3 className="font-bold text-gray-900 mb-2 text-lg">Interested in this service?</h3>
-                <p className="text-sm text-gray-600 mb-4">Contact the freelancer directly on WhatsApp to discuss your project requirements and pricing.</p>
-                {selectedService.talent_profiles?.whatsapp_enabled ? (
-                  <button 
-                    onClick={() => handleWhatsApp(selectedService.talent_profiles.whatsapp_number, selectedService.title)}
-                    className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg font-bold transition-all shadow-md hover:shadow-green-500/20"
-                  >
-                    <span className="material-symbols-outlined">chat</span>
-                    Message on WhatsApp
-                  </button>
-                ) : (
-                  <div className="bg-gray-100 text-gray-500 py-2 rounded-md font-medium text-sm">Contact Currently Disabled</div>
-                )}
-              </div>
+              {!showHireForm ? (
+                <>
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-8 text-center">
+                    <h3 className="font-bold text-gray-900 mb-2 text-lg">Interested in this service?</h3>
+                    <p className="text-sm text-gray-600 mb-4">Send a request to our Admin with your requirements. We ensure 100% satisfaction and guarantee the delivery.</p>
+                    {selectedService.talent_profiles?.whatsapp_enabled ? (
+                      <button 
+                        onClick={() => setShowHireForm(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-[#023E7D] hover:bg-blue-800 text-white px-4 py-3 rounded-lg font-bold transition-all shadow-md"
+                      >
+                        Hire This Freelancer
+                      </button>
+                    ) : (
+                      <div className="bg-gray-100 text-gray-500 py-2 rounded-md font-medium text-sm">Currently Unavailable</div>
+                    )}
+                  </div>
 
-              <div className="flex-1 flex flex-col">
-                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center justify-between">
-                  Reviews
-                  <span className="text-sm font-normal text-gray-500">{selectedService.talent_reviews?.length || 0} total</span>
-                </h3>
-                
-                <div className="flex-1 overflow-y-auto mb-6 pr-2 space-y-4 max-h-[300px]">
-                  {!selectedService.talent_reviews || selectedService.talent_reviews.length === 0 ? (
-                    <div className="text-center text-gray-500 py-6 text-sm border border-dashed border-gray-200 rounded-lg">
-                      No reviews yet. Be the first to leave one!
-                    </div>
-                  ) : (
-                    selectedService.talent_reviews.map((rev: any) => (
-                      <div key={rev.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="font-semibold text-gray-900 text-sm">{rev.client_name}</span>
-                          <div className="flex text-yellow-400 text-sm">
-                            {[...Array(5)].map((_, i) => (
-                              <span key={i} className={`material-symbols-outlined text-[14px] ${i < rev.rating ? "filled" : "text-gray-200"}`}>star</span>
-                            ))}
-                          </div>
+                  <div className="flex-1 flex flex-col">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center justify-between">
+                      Reviews
+                      <span className="text-sm font-normal text-gray-500">{selectedService.talent_reviews?.length || 0} total</span>
+                    </h3>
+                    
+                    <div className="flex-1 overflow-y-auto mb-6 pr-2 space-y-4 max-h-[300px]">
+                      {!selectedService.talent_reviews || selectedService.talent_reviews.length === 0 ? (
+                        <div className="text-center text-gray-500 py-6 text-sm border border-dashed border-gray-200 rounded-lg">
+                          No reviews yet. Be the first to leave one!
                         </div>
-                        <p className="text-gray-600 text-sm">{rev.comment}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
+                      ) : (
+                        selectedService.talent_reviews.map((rev: any) => (
+                          <div key={rev.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-semibold text-gray-900 text-sm">{rev.client_name}</span>
+                              <div className="flex text-yellow-400 text-sm">
+                                {[...Array(5)].map((_, i) => (
+                                  <span key={i} className={`material-symbols-outlined text-[14px] ${i < rev.rating ? "filled" : "text-gray-200"}`}>star</span>
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-gray-600 text-sm">{rev.comment}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
 
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-auto shrink-0">
-                  <h4 className="font-bold text-gray-900 mb-3 text-sm">Leave a Review</h4>
-                  <form onSubmit={handleSubmitReview} className="space-y-3">
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-auto shrink-0">
+                      <h4 className="font-bold text-gray-900 mb-3 text-sm">Leave a Review</h4>
+                      <form onSubmit={handleSubmitReview} className="space-y-3">
+                        <div>
+                          <input 
+                            required 
+                            type="text" 
+                            placeholder="Your Name" 
+                            value={reviewName}
+                            onChange={e => setReviewName(e.target.value)}
+                            className="w-full text-sm px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-[#023E7D] outline-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700">Rating:</span>
+                          <select 
+                            value={reviewRating} 
+                            onChange={e => setReviewRating(Number(e.target.value))}
+                            className="text-sm border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#023E7D]"
+                          >
+                            <option value={5}>5 Stars</option>
+                            <option value={4}>4 Stars</option>
+                            <option value={3}>3 Stars</option>
+                            <option value={2}>2 Stars</option>
+                            <option value={1}>1 Star</option>
+                          </select>
+                        </div>
+                        <div>
+                          <textarea 
+                            required 
+                            placeholder="Share your experience working with this freelancer..." 
+                            rows={2}
+                            value={reviewComment}
+                            onChange={e => setReviewComment(e.target.value)}
+                            className="w-full text-sm px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-[#023E7D] outline-none resize-none"
+                          />
+                        </div>
+                        <button 
+                          type="submit" 
+                          disabled={isSubmittingReview}
+                          className="w-full bg-[#023E7D] text-white py-2 rounded-md font-semibold text-sm hover:bg-blue-800 disabled:opacity-50 transition-colors"
+                        >
+                          {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* HIRE FORM */
+                <div className="flex flex-col h-full">
+                  <button onClick={() => setShowHireForm(false)} className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-6">
+                    <span className="material-symbols-outlined mr-1 text-[18px]">arrow_back</span>
+                    Back to details
+                  </button>
+                  
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Request this Service</h3>
+                  <p className="text-gray-600 text-sm mb-6">Fill out this form and our Admin will contact you on WhatsApp to finalize the deal securely.</p>
+                  
+                  <form onSubmit={handleSubmitHire} className="space-y-4">
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
                       <input 
                         required 
                         type="text" 
-                        placeholder="Your Name" 
-                        value={reviewName}
-                        onChange={e => setReviewName(e.target.value)}
-                        className="w-full text-sm px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={hireName}
+                        onChange={e => setHireName(e.target.value)}
+                        placeholder="John Doe"
+                        className="w-full text-sm px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#023E7D] outline-none"
                       />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-700">Rating:</span>
-                      <select 
-                        value={reviewRating} 
-                        onChange={e => setReviewRating(Number(e.target.value))}
-                        className="text-sm border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value={5}>5 Stars</option>
-                        <option value={4}>4 Stars</option>
-                        <option value={3}>3 Stars</option>
-                        <option value={2}>2 Stars</option>
-                        <option value={1}>1 Star</option>
-                      </select>
                     </div>
                     <div>
-                      <textarea 
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Your WhatsApp Number</label>
+                      <input 
                         required 
-                        placeholder="Share your experience working with this freelancer..." 
-                        rows={2}
-                        value={reviewComment}
-                        onChange={e => setReviewComment(e.target.value)}
-                        className="w-full text-sm px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                        type="tel" 
+                        value={hireWhatsApp}
+                        onChange={e => setHireWhatsApp(e.target.value)}
+                        placeholder="+1 234 567 8900"
+                        className="w-full text-sm px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#023E7D] outline-none"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Project Details / Requirements</label>
+                      <textarea 
+                        required 
+                        value={hireDetails}
+                        onChange={e => setHireDetails(e.target.value)}
+                        placeholder="Describe what you need the freelancer to do..."
+                        rows={5}
+                        className="w-full text-sm px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#023E7D] outline-none resize-none"
+                      />
+                    </div>
+                    
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex gap-3 mt-4">
+                      <span className="material-symbols-outlined text-blue-600">verified_user</span>
+                      <p className="text-xs text-gray-600">
+                        <strong>Admin Guarantee:</strong> Your payment is secured by our administration. The freelancer gets paid only upon successful delivery.
+                      </p>
+                    </div>
+
                     <button 
                       type="submit" 
-                      disabled={isSubmittingReview}
-                      className="w-full bg-[#023E7D] text-white py-2 rounded-md font-semibold text-sm hover:bg-blue-800 disabled:opacity-50 transition-colors"
+                      disabled={isSubmittingHire}
+                      className="w-full mt-4 flex justify-center items-center gap-2 bg-[#023E7D] hover:bg-blue-800 text-white py-3 rounded-lg font-bold transition-all disabled:opacity-50"
                     >
-                      {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                      {isSubmittingHire ? (
+                        "Sending Request..."
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[20px]">send</span>
+                          Send Request to Admin
+                        </>
+                      )}
                     </button>
                   </form>
                 </div>
-              </div>
+              )}
+
             </div>
           </div>
         </div>
@@ -432,4 +565,3 @@ export function TalentMarketplace({ services: initialServices }: { services: any
     </div>
   );
 }
-
