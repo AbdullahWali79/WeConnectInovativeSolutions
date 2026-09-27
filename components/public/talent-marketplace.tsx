@@ -5,7 +5,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { toast } from "sonner"; // If this is not installed, it will break. Wait, earlier I found out they don't have sonner! They use Toast from @/components/toast
+
 
 import { Toast, type ToastState } from "@/components/toast";
 
@@ -432,3 +432,4 @@ export function TalentMarketplace({ services: initialServices }: { services: any
     </div>
   );
 }
+
