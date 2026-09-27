@@ -19,6 +19,7 @@ const nav = [
   { href: "/student/ai-tools", label: "AI Tools", icon: "smart_toy" },
   { href: "/student/seat-reservation", label: "Reserve a Seat", icon: "event_seat" },
   { href: "/student/syllabus", label: "Syllabus", icon: "menu_book" },
+  { href: "/student/talent-portfolio", label: "Talent Portfolio", icon: "badge" },
   { href: "/student/client-hunting", label: "Client Hunting", icon: "manage_search" },
   { href: "/student/social-media", label: "Social Media", icon: "share" },
   { href: "/student/assigned-projects", label: "Assigned Projects", icon: "assignment_turned_in" },

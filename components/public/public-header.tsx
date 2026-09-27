@@ -35,6 +35,7 @@ function HeaderChevron({ expanded = false, className = "" }: { expanded?: boolea
 }
 
 export const navCategories: NavCategory[] = [
+  { label: "Talent", href: "/talent", path: "/talent" },
   { label: "Services", href: "/services", path: "/services" },
   {
     label: "Study Abroad",
