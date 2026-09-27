@@ -65,6 +65,22 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
     if (data) setServices(data);
   };
 
+  const handleUpdateProfilePicture = async (newUrl: string) => {
+    if (!profile) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from("talent_profiles" as any)
+      .update({ profile_picture_url: newUrl })
+      .eq("id", profile.id);
+    setLoading(false);
+    if (error) {
+      setToast({ type: "error", message: "Failed to update profile picture." });
+    } else {
+      setProfile({ ...profile, profile_picture_url: newUrl });
+      setToast({ type: "success", message: "Profile picture updated." });
+    }
+  };
+
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -205,13 +221,26 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
       <Toast toast={toast} onClear={() => setToast(null)} />
       <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-4">
-          {profile.profile_picture_url ? (
-            <img src={profile.profile_picture_url} alt="Profile" className="w-16 h-16 rounded-full object-cover border border-gray-200" />
-          ) : (
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl">person</span>
+          <button 
+            type="button"
+            title="Click to update profile picture"
+            onClick={() => {
+              const newUrl = window.prompt("Enter new profile picture URL (Google Drive, Imgur, etc.)", profile.profile_picture_url || "");
+              if (newUrl !== null) handleUpdateProfilePicture(newUrl.trim());
+            }}
+            className="relative group w-16 h-16 rounded-full overflow-hidden border border-gray-200 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {profile.profile_picture_url ? (
+              <img src={profile.profile_picture_url} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-3xl">person</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center transition-colors">
+               <span className="material-symbols-outlined text-white text-xl">edit</span>
             </div>
-          )}
+          </button>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{profile.name}</h2>
             <p className="text-gray-500">{profile.email} • {profile.whatsapp_number}</p>
