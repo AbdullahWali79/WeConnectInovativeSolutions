@@ -115,16 +115,16 @@ export default function LoginPage() {
             </Link>
           </div>
           <p className="mt-10 text-xs font-bold uppercase tracking-[0.3em] text-[var(--wc-secondary)]">WeConnect Innovation</p>
-          <h1 className="mt-3 text-4xl sm:text-5xl font-black leading-tight text-on-surface">Student App</h1>
-          <p className="mt-5 text-lg leading-relaxed text-[var(--wc-on-surface-variant)]">Access your complete student portal, reserve a seat, view tasks, and track your progress from the WeConnect Student App.</p>
+          <h1 className="mt-3 text-4xl sm:text-5xl font-black leading-tight text-on-surface">WeConnect Portal</h1>
+          <p className="mt-5 text-lg leading-relaxed text-[var(--wc-on-surface-variant)]">Access your complete portal, reserve a seat, view tasks, track your progress, and build your freelancer portfolio.</p>
         </section>
 
         <section className="rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-6 shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-xl md:p-10">
           <form onSubmit={submit} className="space-y-6">
             <div className="rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-5">
-              <p className="text-sm font-black text-[var(--wc-secondary)]">Student Login Process</p>
+              <p className="text-sm font-black text-[var(--wc-secondary)]">Student / Freelancer Login Process</p>
               <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-[var(--wc-on-surface-variant)]">
-                <li>Apply on the landing page and choose a password.</li>
+                <li>Apply on the landing page (Select Freelancer course if applicable).</li>
                 <li>Wait for admin to approve your application.</li>
                 <li>Log in right here using your email and password.</li>
               </ol>
@@ -165,7 +165,7 @@ export default function LoginPage() {
 
             <div className="rounded-2xl border border-[var(--wc-secondary)]/40 bg-[var(--wc-secondary)]/10 p-4 text-center">
               <p className="text-sm text-[var(--wc-on-surface-variant)]">
-                Don&apos;t have a student account? Apply first and choose your login password.
+                Don&apos;t have an account? Apply first and choose your login password.
               </p>
               <Link
                 href="/apply"
