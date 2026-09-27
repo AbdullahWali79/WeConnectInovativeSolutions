@@ -45,22 +45,6 @@ export const navCategories: NavCategory[] = [
     ],
   },
   {
-    label: "Work",
-    items: [
-      { href: "/products", path: "/products", label: "Products & Portfolio" },
-      { href: "/videos", path: "/videos", label: "Student Videos" },
-      { href: "/testimonials", path: "/testimonials", label: "Client Reviews" },
-    ],
-  },
-  {
-    label: "About",
-    items: [
-      { href: "/#overview", path: "/", label: "Overview" },
-      { href: "/team", path: "/team", label: "Team" },
-      { href: "/mous", path: "/mous", label: "Partners" },
-    ],
-  },
-  {
     label: "Learning",
     items: [
       { href: "/courses", path: "/courses", label: "Courses" },
@@ -77,15 +61,21 @@ export const navCategories: NavCategory[] = [
     ],
   },
   {
-    label: "Insights",
+    label: "More",
     items: [
+      { href: "/#overview", path: "/", label: "About Us" },
+      { href: "/team", path: "/team", label: "Our Team" },
+      { href: "/mous", path: "/mous", label: "Partners" },
+      { href: "/products", path: "/products", label: "Our Products" },
+      { href: "/videos", path: "/videos", label: "Student Videos" },
+      { href: "/testimonials", path: "/testimonials", label: "Client Reviews" },
       { href: "/ai-tools", path: "/ai-tools", label: "AI Tools" },
       { href: "/prompts", path: "/prompts", label: "Prompts" },
       { href: "/blogs", path: "/blogs", label: "Blogs" },
       { href: "/news", path: "/news", label: "News" },
+      { href: "/contact", path: "/contact", label: "Contact Us" },
     ],
   },
-  { label: "Contact", href: "/contact", path: "/contact" },
 ];
 
 export function PublicHeader() {
