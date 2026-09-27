@@ -132,13 +132,14 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
     setToast(null);
     
     const skillsArray = serviceSkills.split(",").map((s) => s.trim()).filter(Boolean);
+    const formattedServiceImage = formatImageUrl(serviceImage);
 
     const { data, error } = await supabase.from("talent_services" as any).insert({
       talent_id: userId,
       title: serviceTitle,
       description: serviceDesc,
       skills: skillsArray,
-      image_url: serviceImage,
+      image_url: formattedServiceImage,
       video_url: serviceVideo,
       status: "active",
     }).select().single();
@@ -246,7 +247,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
             className="relative group w-16 h-16 rounded-full overflow-hidden border border-gray-200 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {profile.profile_picture_url ? (
-              <img src={profile.profile_picture_url} alt="Profile" className="w-full h-full object-cover" />
+              <img src={formatImageUrl(profile.profile_picture_url)} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-blue-100 text-blue-600 flex items-center justify-center">
                 <span className="material-symbols-outlined text-3xl">person</span>
@@ -326,7 +327,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
           {services.map((service) => (
             <div key={service.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
               {service.image_url ? (
-                <img src={service.image_url} alt={service.title} className="w-full h-40 object-cover" />
+                <img src={formatImageUrl(service.image_url)} alt={service.title} className="w-full h-40 object-cover" />
               ) : (
                 <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400">
                   <span className="material-symbols-outlined text-4xl">image</span>
