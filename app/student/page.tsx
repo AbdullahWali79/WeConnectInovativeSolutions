@@ -6,8 +6,8 @@ export default async function StudentPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
-    const { data: student } = await supabase.from("students").select("course_id").eq("id", user.id).maybeSingle();
-    if (student?.course_id === "501c4f6d-c3db-4ca4-985e-518d5fb6ff29") {
+    const { data: enrollment } = await supabase.from("enrollments").select("course_id").eq("student_id", user.id).eq("course_id", "501c4f6d-c3db-4ca4-985e-518d5fb6ff29").maybeSingle();
+    if (enrollment) {
       redirect("/student/talent-portfolio");
     }
   }

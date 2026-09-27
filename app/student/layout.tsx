@@ -44,8 +44,8 @@ export default async function StudentLayout({ children }: { children: React.Reac
 
   const branding = await loadBrandingSettingsMap().catch(() => getDefaultBrandingSettingsMap());
 
-  const { data: student } = await supabase.from("students").select("course_id").eq("id", user.id).maybeSingle();
-  const isFreelancer = student?.course_id === "501c4f6d-c3db-4ca4-985e-518d5fb6ff29";
+  const { data: enrollment } = await supabase.from("enrollments").select("course_id").eq("student_id", user.id).eq("course_id", "501c4f6d-c3db-4ca4-985e-518d5fb6ff29").maybeSingle();
+  const isFreelancer = !!enrollment;
 
   return <StudentShell profile={profile} branding={branding.student} isFreelancer={isFreelancer}>{children}</StudentShell>;
 }
