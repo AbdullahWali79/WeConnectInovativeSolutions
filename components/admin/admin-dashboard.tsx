@@ -176,6 +176,25 @@ export function AdminDashboard({
       action === "approve_application"
         ? await supabase.rpc("approve_application", { application_id: applicationId })
         : await supabase.rpc("reject_application", { application_id: applicationId });
+
+    if (!error && action === "approve_application") {
+      const app = data.applications.find(a => a.id === applicationId);
+      if (app && app.course_id === "501c4f6d-c3db-4ca4-985e-518d5fb6ff29") {
+        const profile = data.profiles.find(p => p.id === applicationId);
+        if (profile) {
+          // @ts-expect-error - talent_profiles table type is not generated
+          await supabase.from("talent_profiles").insert({
+            id: applicationId,
+            name: profile.full_name,
+            email: profile.email,
+            whatsapp_number: profile.phone,
+            status: "approved",
+            whatsapp_enabled: true
+          });
+        }
+      }
+    }
+
     setBusyId(null);
 
     if (error) {
