@@ -7,6 +7,7 @@ import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { EmptyState } from "@/components/empty-state";
 import { Toast, type ToastState } from "@/components/toast";
+import { normalizeImageUrl } from "@/lib/image-url";
 import type { TalentProfile, TalentService } from "@/components/student/talent-portfolio-manager";
 
 export function TalentManager({ initialProfiles, initialRequests = [] }: { initialProfiles: TalentProfile[], initialRequests?: any[] }) {
@@ -238,7 +239,7 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
               <div key={p.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
                   {p.profile_picture_url ? (
-                    <img src={p.profile_picture_url} alt={p.name} className="w-12 h-12 rounded-full object-cover" />
+                    <img src={normalizeImageUrl(p.profile_picture_url) || undefined} alt={p.name} className="w-12 h-12 rounded-full object-cover" />
                   ) : (
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                       <span className="material-symbols-outlined text-gray-400">person</span>
@@ -273,7 +274,7 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
                 >
                   <div className="flex items-center gap-3">
                     {p.profile_picture_url ? (
-                      <img src={p.profile_picture_url} alt={p.name} className="w-12 h-12 rounded-full object-cover" />
+                      <img src={normalizeImageUrl(p.profile_picture_url) || undefined} alt={p.name} className="w-12 h-12 rounded-full object-cover" />
                     ) : (
                       <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                         <span className="material-symbols-outlined text-gray-400">person</span>
@@ -314,7 +315,7 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
                       <div key={service.id} className="border border-gray-100 rounded-xl p-4 flex flex-col gap-4 shadow-sm bg-gray-50/50">
                         <div className="flex flex-col sm:flex-row gap-4">
                           {service.image_url ? (
-                            <img src={service.image_url} alt={service.title} className="w-full sm:w-40 h-28 object-cover rounded-lg border border-gray-200" />
+                            <img src={normalizeImageUrl(service.image_url) || undefined} alt={service.title} className="w-full sm:w-40 h-28 object-cover rounded-lg border border-gray-200" />
                           ) : (
                             <div className="w-full sm:w-40 h-28 bg-gray-200 flex items-center justify-center rounded-lg text-gray-400">
                               <span className="material-symbols-outlined text-3xl">image</span>

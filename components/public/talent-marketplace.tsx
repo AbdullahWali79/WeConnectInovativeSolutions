@@ -6,6 +6,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Toast, type ToastState } from "@/components/toast";
+import { normalizeImageUrl } from "@/lib/image-url";
 
 export function TalentMarketplace({ services: initialServices }: { services: any[] }) {
   const [services, setServices] = useState(initialServices);
@@ -254,7 +255,7 @@ export function TalentMarketplace({ services: initialServices }: { services: any
                   <div className="relative h-48 w-full overflow-hidden bg-gray-100">
                     {service.image_url ? (
                       <img 
-                        src={service.image_url} 
+                        src={normalizeImageUrl(service.image_url) || undefined} 
                         alt={service.title} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       />
@@ -275,7 +276,7 @@ export function TalentMarketplace({ services: initialServices }: { services: any
                     {/* Seller Info */}
                     <div className="flex items-center gap-3 mb-3">
                       {service.talent_profiles?.profile_picture_url ? (
-                        <img src={service.talent_profiles.profile_picture_url} className="w-8 h-8 rounded-full object-cover border border-gray-200" alt="seller" />
+                        <img src={normalizeImageUrl(service.talent_profiles.profile_picture_url) || undefined} className="w-8 h-8 rounded-full object-cover border border-gray-200" alt={service.talent_profiles.name || "Freelancer"} />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
                           {service.talent_profiles?.name?.charAt(0) || "U"}
@@ -337,7 +338,7 @@ export function TalentMarketplace({ services: initialServices }: { services: any
             {/* Left Col: Media & Info */}
             <div className="md:w-3/5 bg-gray-50 overflow-y-auto">
               {selectedService.image_url ? (
-                <img src={selectedService.image_url} alt={selectedService.title} className="w-full h-64 md:h-80 object-cover" />
+                <img src={normalizeImageUrl(selectedService.image_url) || undefined} alt={selectedService.title} className="w-full h-64 md:h-80 object-cover" />
               ) : (
                 <div className="w-full h-64 md:h-80 bg-gray-200 flex items-center justify-center">
                   <span className="material-symbols-outlined text-6xl text-gray-400">image</span>
@@ -347,7 +348,7 @@ export function TalentMarketplace({ services: initialServices }: { services: any
               <div className="p-6 md:p-8">
                 <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
                   {selectedService.talent_profiles?.profile_picture_url ? (
-                    <img src={selectedService.talent_profiles.profile_picture_url} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md" alt="seller" />
+                    <img src={normalizeImageUrl(selectedService.talent_profiles.profile_picture_url) || undefined} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md" alt={selectedService.talent_profiles.name || "Freelancer"} />
                   ) : (
                     <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xl font-bold shadow-md border-2 border-white">
                       {selectedService.talent_profiles?.name?.charAt(0) || "U"}
