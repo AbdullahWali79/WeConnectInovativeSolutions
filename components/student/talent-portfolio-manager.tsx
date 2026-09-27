@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { EmptyState } from "@/components/empty-state";
 import { Toast, type ToastState } from "@/components/toast";
+import { normalizeImageUrl } from "@/lib/image-url";
 
 export type TalentProfile = {
   id: string;
@@ -66,16 +67,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
   };
 
   const formatImageUrl = (url: string) => {
-    if (!url) return url;
-    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (driveMatch && driveMatch[1]) {
-      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-    }
-    const openMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
-    if (url.includes("drive.google.com") && openMatch && openMatch[1]) {
-       return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
-    }
-    return url;
+    return normalizeImageUrl(url) || "";
   };
 
   const handleUpdateProfilePicture = async (newUrl: string) => {
