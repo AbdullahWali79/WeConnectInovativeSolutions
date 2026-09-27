@@ -15,7 +15,8 @@ export default async function TalentPage() {
     .from("talent_services" as any)
     .select(`
       *,
-      talent_profiles (*)
+      talent_profiles (*),
+      talent_reviews (*)
     `)
     .eq("status", "active")
     .eq("talent_profiles.status", "approved");

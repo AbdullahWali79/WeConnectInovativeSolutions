@@ -228,11 +228,17 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
       </div>
 
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-gray-900">My Services</h3>
-        <button onClick={() => setIsAddingService(!isAddingService)} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center hover:bg-blue-700 transition-colors">
-          <span className="material-symbols-outlined mr-2 text-sm">add</span>
-          Add Service
-        </button>
+        <h3 className="text-xl font-bold text-gray-900">
+          My Services <span className="text-sm font-normal text-gray-500 ml-2">({services.length}/3)</span>
+        </h3>
+        {services.length < 3 ? (
+          <button onClick={() => setIsAddingService(!isAddingService)} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center hover:bg-blue-700 transition-colors">
+            <span className="material-symbols-outlined mr-2 text-sm">add</span>
+            Add Service
+          </button>
+        ) : (
+          <span className="text-sm text-red-500 font-medium bg-red-50 px-3 py-1.5 rounded-md border border-red-100">Maximum 3 services allowed</span>
+        )}
       </div>
 
       {isAddingService && (
