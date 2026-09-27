@@ -14,7 +14,7 @@ import type { BrandingSettingsSnapshot } from "@/lib/supabase/types";
 import { useBranding } from "@/components/branding-provider";
 import { StudentActivityTracker } from "@/components/student/student-activity-tracker";
 
-const nav = [
+const defaultNav = [
   { href: "/student", label: "My Dashboard", icon: "dashboard" },
   { href: "/student/ai-tools", label: "AI Tools", icon: "smart_toy" },
   { href: "/student/seat-reservation", label: "Reserve a Seat", icon: "event_seat" },
@@ -30,7 +30,13 @@ const nav = [
   { href: "/student/helping-videos", label: "Helping Videos", icon: "smart_display" },
 ];
 
-export function StudentShell({ profile, branding, children }: { profile: Profile | null; branding?: BrandingSettingsSnapshot; children: React.ReactNode }) {
+const freelancerNav = [
+  { href: "/student/talent-portfolio", label: "Talent Portfolio", icon: "badge" },
+  { href: "/student/profile", label: "My Profile", icon: "person" },
+];
+
+export function StudentShell({ profile, branding, isFreelancer, children }: { profile: Profile | null; branding?: BrandingSettingsSnapshot; isFreelancer?: boolean; children: React.ReactNode }) {
+  const nav = isFreelancer ? freelancerNav : defaultNav;
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -173,21 +179,23 @@ export function StudentShell({ profile, branding, children }: { profile: Profile
           </nav>
 
           <div className="shrink-0 border-t border-white/10 px-3 py-3">
-            <Link
-              href="/student/tasks?addTask=1"
-              title={collapsed ? "Add Task" : undefined}
-              onClick={() => {
-                setMobileOpen(false);
-                window.dispatchEvent(new Event("open-add-task"));
-              }}
-              className={cn(
-                "mb-3 flex items-center rounded-lg bg-secondary-container font-bold text-on-secondary-fixed transition hover:brightness-105",
-                collapsed ? "h-11 w-11 justify-center" : "w-full justify-center gap-2 px-3 py-3",
-              )}
-            >
-              <Icon name="add_task" className="text-xl" />
-              {!collapsed && "Add Task"}
-            </Link>
+            {!isFreelancer && (
+              <Link
+                href="/student/tasks?addTask=1"
+                title={collapsed ? "Add Task" : undefined}
+                onClick={() => {
+                  setMobileOpen(false);
+                  window.dispatchEvent(new Event("open-add-task"));
+                }}
+                className={cn(
+                  "mb-3 flex items-center rounded-lg bg-secondary-container font-bold text-on-secondary-fixed transition hover:brightness-105",
+                  collapsed ? "h-11 w-11 justify-center" : "w-full justify-center gap-2 px-3 py-3",
+                )}
+              >
+                <Icon name="add_task" className="text-xl" />
+                {!collapsed && "Add Task"}
+              </Link>
+            )}
 
             {!collapsed ? (
               <div className="rounded-xl bg-white/10 p-4">
