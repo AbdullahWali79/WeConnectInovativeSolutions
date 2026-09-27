@@ -32,7 +32,6 @@ const defaultNav = [
 
 const freelancerNav = [
   { href: "/student/talent-portfolio", label: "Talent Portfolio", icon: "badge" },
-  { href: "/student/profile", label: "My Profile", icon: "person" },
 ];
 
 export function StudentShell({ profile, branding, isFreelancer, children }: { profile: Profile | null; branding?: BrandingSettingsSnapshot; isFreelancer?: boolean; children: React.ReactNode }) {

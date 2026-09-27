@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { StudentProfileManager } from "@/components/student/student-profile-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -18,6 +19,11 @@ export default async function StudentProfilePage() {
 
   if (!profile || profile.role !== "student") {
     return <EmptyState title="Profile unavailable" description="Student profile could not be loaded." icon="person" />;
+  }
+
+  const { data: enrollment } = await supabase.from("enrollments").select("course_id").eq("student_id", user.id).eq("course_id", "501c4f6d-c3db-4ca4-985e-518d5fb6ff29").maybeSingle();
+  if (enrollment) {
+    redirect("/student/talent-portfolio");
   }
 
   return <StudentProfileManager profile={profile} />;
