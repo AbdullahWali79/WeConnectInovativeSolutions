@@ -133,14 +133,14 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
       skills: skillsArray,
       image_url: formattedServiceImage,
       video_url: serviceVideo,
-      status: "active",
+      status: "inactive",
     }).select().single();
 
     setLoading(false);
     if (error) {
       setToast({ type: "error", message: "Failed to add service: " + error.message });
     } else {
-      setToast({ type: "success", message: "Service added successfully!" });
+      setToast({ type: "success", message: "Service submitted for admin approval." });
       setServices([data, ...services]);
       setIsAddingService(false);
       setServiceTitle("");

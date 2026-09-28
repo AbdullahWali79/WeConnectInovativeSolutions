@@ -3,14 +3,14 @@
 /* eslint-disable react/no-unescaped-entities */
 "use client";
 
-import { useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { Toast, type ToastState } from "@/components/toast";
 import { normalizeImageUrl } from "@/lib/image-url";
-import type { TalentProfile, TalentService } from "@/components/student/talent-portfolio-manager";
+import type { TalentProfile } from "@/components/student/talent-portfolio-manager";
 
 import { 
+  fetchAllTalentServices,
   fetchTalentServices, 
   approveTalentProfile, 
   rejectTalentProfile, 
@@ -26,10 +26,36 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
   const [activeTab, setActiveTab] = useState<"pending" | "approved" | "requests">("requests");
   const [viewingServicesFor, setViewingServicesFor] = useState<string | null>(null);
   const [services, setServices] = useState<any[]>([]);
+  const [allServices, setAllServices] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
 
   const pendingProfiles = profiles.filter((p) => p.status === "pending");
   const approvedProfiles = profiles.filter((p) => p.status === "approved");
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const matchesText = (...values: Array<string | null | undefined>) => {
+    if (!normalizedSearch) return true;
+    return values.some((value) => value?.toLowerCase().includes(normalizedSearch));
+  };
+  const servicesByProfile = allServices.reduce<Record<string, any[]>>((acc, service) => {
+    const talentId = service.talent_id as string | undefined;
+    if (!talentId) return acc;
+    acc[talentId] = [...(acc[talentId] || []), service];
+    return acc;
+  }, {});
+  const filteredRequests = requests.filter((req) => matchesText(
+    req.client_name,
+    req.client_whatsapp,
+    req.project_details,
+    req.talent_services?.title,
+    req.talent_services?.talent_profiles?.name,
+  ));
+  const filteredPendingProfiles = pendingProfiles.filter((p) => matchesText(p.name, p.email, p.whatsapp_number));
+  const filteredApprovedProfiles = approvedProfiles.filter((p) => {
+    const serviceTitles = (servicesByProfile[p.id] || []).map((service) => service.title).join(" ");
+    return matchesText(p.name, p.email, p.whatsapp_number, serviceTitles);
+  });
+  const pendingServiceCount = allServices.filter((service) => service.status === "inactive").length;
 
   const handleApprove = async (profile: TalentProfile) => {
     setToast(null);
@@ -80,6 +106,15 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
     setServices(data || []);
   };
 
+  const refreshAllServices = async () => {
+    const data = await fetchAllTalentServices();
+    setAllServices(data || []);
+  };
+
+  useEffect(() => {
+    refreshAllServices();
+  }, []);
+
   const handleToggleServiceStatus = async (serviceId: string, currentStatus: string) => {
     setToast(null);
     const { success, newStatus } = await toggleTalentServiceStatus(serviceId, currentStatus);
@@ -88,6 +123,7 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
     } else {
       setToast({ type: "success", message: `Service is now ${newStatus}.` });
       setServices(services.map((s) => (s.id === serviceId ? { ...s, status: newStatus! } : s)));
+      setAllServices(allServices.map((s) => (s.id === serviceId ? { ...s, status: newStatus! } : s)));
     }
   };
 
@@ -100,6 +136,7 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
     } else {
       setToast({ type: "success", message: "Service deleted." });
       setServices(services.filter((s) => s.id !== serviceId));
+      setAllServices(allServices.filter((s) => s.id !== serviceId));
     }
   };
 
@@ -145,13 +182,32 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
         </button>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="relative">
+          <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-gray-400">search</span>
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search freelancer, phone, email, service, or request"
+            className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={refreshAllServices}
+          className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+        >
+          Refresh Services
+        </button>
+      </div>
+
       {activeTab === "requests" && (
         <div className="space-y-4">
-          {requests.length === 0 ? (
+          {filteredRequests.length === 0 ? (
             <EmptyState title="No client requests" description="When clients request a service, they will appear here." icon="inbox" />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {requests.map((req) => (
+              {filteredRequests.map((req) => (
                 <div key={req.id} className={`bg-white p-5 rounded-xl border ${req.status === 'pending' ? 'border-blue-300 shadow-md' : 'border-gray-200 shadow-sm'} flex flex-col gap-3 relative overflow-hidden`}>
                   {req.status === 'pending' && <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">NEW</div>}
                   {req.status === 'completed' && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">COMPLETED</div>}
@@ -218,10 +274,10 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
 
       {activeTab === "pending" && (
         <div className="space-y-4">
-          {pendingProfiles.length === 0 ? (
+          {filteredPendingProfiles.length === 0 ? (
             <EmptyState title="No pending applications" description="There are no students waiting for portfolio approval." icon="check_circle" />
           ) : (
-            pendingProfiles.map((p) => (
+            filteredPendingProfiles.map((p) => (
               <div key={p.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
                   {p.profile_picture_url ? (
@@ -249,10 +305,15 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
       {activeTab === "approved" && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-1 space-y-4 max-h-[800px] overflow-y-auto pr-2">
-            {approvedProfiles.length === 0 ? (
+            {pendingServiceCount > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                {pendingServiceCount} service{pendingServiceCount === 1 ? "" : "s"} waiting for admin activation.
+              </div>
+            )}
+            {filteredApprovedProfiles.length === 0 ? (
               <EmptyState title="No freelancers" description="Approve students from the pending tab to add them to the database." icon="assignment" />
             ) : (
-              approvedProfiles.map((p) => (
+              filteredApprovedProfiles.map((p) => (
                 <div 
                   key={p.id} 
                   className={`bg-white p-4 rounded-xl border shadow-sm cursor-pointer transition-colors ${viewingServicesFor === p.id ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'}`}
@@ -270,6 +331,14 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
                       <h3 className="font-bold text-gray-900 truncate">{p.name}</h3>
                       <p className="text-xs text-gray-500 truncate">{p.whatsapp_number}</p>
                     </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                    <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">
+                      {(servicesByProfile[p.id] || []).length} services
+                    </span>
+                    {(servicesByProfile[p.id] || []).some((service) => service.status === "inactive") && (
+                      <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-700">Needs approval</span>
+                    )}
                   </div>
                   <div className="mt-4 flex gap-2">
                     <button 
@@ -326,6 +395,12 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
                                 onClick={() => handleToggleServiceStatus(service.id, service.status)}
                               >
                                 {service.status === "active" ? "Deactivate Service" : "Activate Service"}
+                              </button>
+                              <button
+                                className="px-3 py-1.5 border border-red-200 bg-white rounded text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                                onClick={() => handleDeleteService(service.id)}
+                              >
+                                Delete
                               </button>
                             </div>
                           </div>

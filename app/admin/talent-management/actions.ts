@@ -1,5 +1,7 @@
 "use server";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export async function fetchTalentServices(profileId: string) {
@@ -14,6 +16,20 @@ export async function fetchTalentServices(profileId: string) {
     
   if (error) {
     console.error("Failed to fetch talent services:", error);
+    return [];
+  }
+  return data;
+}
+
+export async function fetchAllTalentServices() {
+  const supabase = createSupabaseServiceClient();
+  const { data, error } = await supabase
+    .from("talent_services" as any)
+    .select("id, talent_id, title, status, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch all talent services:", error);
     return [];
   }
   return data;
