@@ -8,6 +8,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { EmptyState } from "@/components/empty-state";
 import { Toast, type ToastState } from "@/components/toast";
 import { normalizeImageUrl } from "@/lib/image-url";
+import { addTalentService } from "@/app/student/talent-portfolio/actions";
 
 export type TalentProfile = {
   id: string;
@@ -126,22 +127,20 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
     const skillsArray = serviceSkills.split(",").map((s) => s.trim()).filter(Boolean);
     const formattedServiceImage = formatImageUrl(serviceImage);
 
-    const { data, error } = await supabase.from("talent_services" as any).insert({
-      talent_id: userId,
+    const result = await addTalentService({
       title: serviceTitle,
       description: serviceDesc,
       skills: skillsArray,
-      image_url: formattedServiceImage,
-      video_url: serviceVideo,
-      status: "inactive",
-    }).select().single();
+      imageUrl: formattedServiceImage,
+      videoUrl: serviceVideo,
+    });
 
     setLoading(false);
-    if (error) {
-      setToast({ type: "error", message: "Failed to add service: " + error.message });
+    if (!result.success) {
+      setToast({ type: "error", message: "Failed to add service: " + result.error });
     } else {
       setToast({ type: "success", message: "Service submitted for admin approval." });
-      setServices([data, ...services]);
+      setServices([result.service, ...services]);
       setIsAddingService(false);
       setServiceTitle("");
       setServiceDesc("");
