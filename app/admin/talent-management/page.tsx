@@ -35,6 +35,6 @@ export default async function TalentManagementPage() {
     `)
     .order("created_at", { ascending: false });
 
-  return <TalentManager initialProfiles={(profiles || []) as TalentProfile[]} initialRequests={requests || []} />;
+  return <TalentManager initialProfiles={(profiles || []) as unknown as TalentProfile[]} initialRequests={requests || []} />;
 }
 
