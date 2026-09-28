@@ -10,8 +10,17 @@ import { Toast, type ToastState } from "@/components/toast";
 import { normalizeImageUrl } from "@/lib/image-url";
 import type { TalentProfile, TalentService } from "@/components/student/talent-portfolio-manager";
 
+import { 
+  fetchTalentServices, 
+  approveTalentProfile, 
+  rejectTalentProfile, 
+  toggleTalentWhatsApp, 
+  toggleTalentServiceStatus, 
+  deleteTalentService, 
+  updateTalentRequestStatus 
+} from "@/app/admin/talent-management/actions";
+
 export function TalentManager({ initialProfiles, initialRequests = [] }: { initialProfiles: TalentProfile[], initialRequests?: any[] }) {
-  const supabase = createSupabaseBrowserClient();
   const [profiles, setProfiles] = useState<TalentProfile[]>(initialProfiles);
   const [requests, setRequests] = useState<any[]>(initialRequests);
   const [activeTab, setActiveTab] = useState<"pending" | "approved" | "requests">("requests");
@@ -24,13 +33,10 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
 
   const handleApprove = async (profile: TalentProfile) => {
     setToast(null);
-    const { error } = await supabase
-      .from("talent_profiles" as any)
-      .update({ status: "approved" })
-      .eq("id", profile.id);
+    const { success, error } = await approveTalentProfile(profile.id);
 
-    if (error) {
-      setToast({ type: "error", message: "Failed to approve application: " + error.message });
+    if (!success) {
+      setToast({ type: "error", message: "Failed to approve application: " + error });
       return;
     }
 
@@ -47,11 +53,8 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
   const handleReject = async (id: string) => {
     if (!confirm("Are you sure you want to reject this application?")) return;
     setToast(null);
-    const { error } = await supabase
-      .from("talent_profiles" as any)
-      .update({ status: "rejected" })
-      .eq("id", id);
-    if (error) {
+    const { success } = await rejectTalentProfile(id);
+    if (!success) {
       setToast({ type: "error", message: "Failed to reject application." });
     } else {
       setToast({ type: "success", message: "Profile rejected." });
@@ -62,11 +65,8 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
   const handleToggleWhatsApp = async (id: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
     setToast(null);
-    const { error } = await supabase
-      .from("talent_profiles" as any)
-      .update({ whatsapp_enabled: newStatus })
-      .eq("id", id);
-    if (error) {
+    const { success } = await toggleTalentWhatsApp(id, currentStatus);
+    if (!success) {
       setToast({ type: "error", message: "Failed to update status." });
     } else {
       setToast({ type: "success", message: `WhatsApp button ${newStatus ? "enabled" : "disabled"}.` });
@@ -76,37 +76,26 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
 
   const loadServices = async (profileId: string) => {
     setViewingServicesFor(profileId);
-    // Include reviews so admin can check client feedback
-    const { data } = await supabase
-      .from("talent_services" as any)
-      .select(`
-        *,
-        talent_reviews (*)
-      `)
-      .eq("talent_id", profileId);
-    if (data) setServices(data);
+    const data = await fetchTalentServices(profileId);
+    setServices(data || []);
   };
 
   const handleToggleServiceStatus = async (serviceId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "active" ? "inactive" : "active";
     setToast(null);
-    const { error } = await supabase
-      .from("talent_services" as any)
-      .update({ status: newStatus })
-      .eq("id", serviceId);
-    if (error) {
+    const { success, newStatus } = await toggleTalentServiceStatus(serviceId, currentStatus);
+    if (!success) {
       setToast({ type: "error", message: "Failed to update service status." });
     } else {
       setToast({ type: "success", message: `Service is now ${newStatus}.` });
-      setServices(services.map((s) => (s.id === serviceId ? { ...s, status: newStatus } : s)));
+      setServices(services.map((s) => (s.id === serviceId ? { ...s, status: newStatus! } : s)));
     }
   };
 
   const handleDeleteService = async (serviceId: string) => {
     if (!confirm("Delete this service permanently?")) return;
     setToast(null);
-    const { error } = await supabase.from("talent_services" as any).delete().eq("id", serviceId);
-    if (error) {
+    const { success } = await deleteTalentService(serviceId);
+    if (!success) {
       setToast({ type: "error", message: "Failed to delete service." });
     } else {
       setToast({ type: "success", message: "Service deleted." });
@@ -116,11 +105,8 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
 
   const handleUpdateReqStatus = async (reqId: string, newStatus: string) => {
     setToast(null);
-    const { error } = await supabase
-      .from("talent_requests" as any)
-      .update({ status: newStatus })
-      .eq("id", reqId);
-    if (error) {
+    const { success } = await updateTalentRequestStatus(reqId, newStatus);
+    if (!success) {
       setToast({ type: "error", message: "Failed to update request." });
     } else {
       setToast({ type: "success", message: `Request marked as ${newStatus}.` });

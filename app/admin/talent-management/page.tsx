@@ -2,7 +2,7 @@
 import { AccessDenied } from "@/components/admin/access-denied";
 import { requirePermissionPage } from "@/lib/admin-access";
 import { TalentManager } from "@/components/admin/talent-manager";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export default async function TalentManagementPage() {
   // We can restrict it to adminOnly or just use a generic permission like dashboard.view for teachers if needed.
@@ -13,8 +13,8 @@ export default async function TalentManagementPage() {
     return <AccessDenied description="You do not have permission to access Talent Management." />;
   }
 
-  // Fetch pending applications and approved profiles
-  const supabase = await createSupabaseServerClient();
+  // Fetch pending applications and approved profiles using service client to bypass RLS
+  const supabase = createSupabaseServiceClient();
   const { data: profiles } = await supabase
     .from("talent_profiles" as any)
     .select("*")
