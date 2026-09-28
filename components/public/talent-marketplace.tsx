@@ -15,6 +15,7 @@ export function TalentMarketplace({ services: initialServices }: { services: any
   
   // Modal state
   const [selectedService, setSelectedService] = useState<any | null>(null);
+  const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
   
   // Review form state
   const [reviewName, setReviewName] = useState("");
@@ -338,7 +339,18 @@ export function TalentMarketplace({ services: initialServices }: { services: any
             {/* Left Col: Media & Info */}
             <div className="md:w-3/5 bg-gray-50 overflow-y-auto">
               {selectedService.image_url ? (
-                <img src={normalizeImageUrl(selectedService.image_url) || undefined} alt={selectedService.title} className="w-full h-64 md:h-80 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setZoomImageUrl(normalizeImageUrl(selectedService.image_url))}
+                  className="group relative block w-full overflow-hidden bg-gray-100 text-left"
+                  aria-label="Zoom service image"
+                >
+                  <img src={normalizeImageUrl(selectedService.image_url) || undefined} alt={selectedService.title} className="h-64 w-full object-cover md:h-80" />
+                  <span className="absolute bottom-4 right-4 inline-flex items-center gap-1 rounded-full bg-black/70 px-3 py-1.5 text-xs font-bold text-white opacity-90 transition group-hover:bg-black">
+                    <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+                    Click to zoom
+                  </span>
+                </button>
               ) : (
                 <div className="w-full h-64 md:h-80 bg-gray-200 flex items-center justify-center">
                   <span className="material-symbols-outlined text-6xl text-gray-400">image</span>
@@ -561,6 +573,28 @@ export function TalentMarketplace({ services: initialServices }: { services: any
 
             </div>
           </div>
+        </div>
+      )}
+
+      {zoomImageUrl && (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+          onClick={() => setZoomImageUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setZoomImageUrl(null)}
+            className="absolute right-5 top-5 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+            aria-label="Close image zoom"
+          >
+            <span className="material-symbols-outlined block">close</span>
+          </button>
+          <img
+            src={zoomImageUrl}
+            alt={selectedService?.title || "Service preview"}
+            className="max-h-[92vh] max-w-[96vw] rounded-xl object-contain shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          />
         </div>
       )}
     </div>
