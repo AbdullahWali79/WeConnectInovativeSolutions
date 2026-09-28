@@ -90,3 +90,107 @@ export async function addTalentService(input: TalentServiceInput) {
   revalidatePath("/admin/talent-management");
   return { success: true, service: data as unknown as TalentService };
 }
+
+export async function updateTalentService(serviceId: string, input: TalentServiceInput) {
+  const authClient = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Please sign in again before editing a service." };
+  }
+
+  const title = input.title.trim();
+  const description = input.description.trim();
+  const skills = input.skills.map((skill) => skill.trim()).filter(Boolean);
+
+  if (!title || !description || skills.length === 0) {
+    return { success: false, error: "Title, description, and skills are required." };
+  }
+
+  const supabase = createSupabaseServiceClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("talent_services" as any)
+    .select("id,talent_id,status")
+    .eq("id", serviceId)
+    .maybeSingle();
+
+  if (existingError) {
+    return { success: false, error: existingError.message };
+  }
+
+  const service = existing as unknown as { id: string; talent_id: string; status: string } | null;
+
+  if (!service || service.talent_id !== user.id) {
+    return { success: false, error: "Service not found." };
+  }
+
+  if (service.status === "active") {
+    return { success: false, error: "Active services cannot be edited. Contact admin for changes." };
+  }
+
+  const { data, error } = await supabase
+    .from("talent_services" as any)
+    .update({
+      title,
+      description,
+      skills,
+      image_url: input.imageUrl.trim(),
+      video_url: input.videoUrl.trim(),
+      status: "inactive",
+    })
+    .eq("id", serviceId)
+    .select()
+    .single();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/student/talent-portfolio");
+  revalidatePath("/admin/talent-management");
+  return { success: true, service: data as unknown as TalentService };
+}
+
+export async function deleteTalentService(serviceId: string) {
+  const authClient = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Please sign in again before deleting a service." };
+  }
+
+  const supabase = createSupabaseServiceClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("talent_services" as any)
+    .select("id,talent_id,status")
+    .eq("id", serviceId)
+    .maybeSingle();
+
+  if (existingError) {
+    return { success: false, error: existingError.message };
+  }
+
+  const service = existing as unknown as { id: string; talent_id: string; status: string } | null;
+
+  if (!service || service.talent_id !== user.id) {
+    return { success: false, error: "Service not found." };
+  }
+
+  if (service.status === "active") {
+    return { success: false, error: "Active services cannot be deleted. Contact admin for changes." };
+  }
+
+  const { error } = await supabase.from("talent_services" as any).delete().eq("id", serviceId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/student/talent-portfolio");
+  revalidatePath("/admin/talent-management");
+  return { success: true };
+}

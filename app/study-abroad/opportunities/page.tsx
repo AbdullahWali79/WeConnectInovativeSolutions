@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PublicHeader } from "@/components/public/public-header";
 import { Icon } from "@/components/icon";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -16,10 +16,52 @@ type Opportunity = {
   created_at: string;
 };
 
+const typeFilters = [
+  { value: "all", label: "All Types" },
+  { value: "scholarship", label: "Scholarships", keywords: ["scholarship", "scholarships", "fully funded", "funded", "stipend"] },
+  { value: "admission", label: "Admissions", keywords: ["admission", "admissions", "intake", "apply", "application"] },
+  { value: "funding", label: "Funding", keywords: ["grant", "funding", "financial aid", "fee waiver", "tuition"] },
+  { value: "fellowship", label: "Fellowships", keywords: ["fellowship", "research", "exchange"] },
+];
+
+const countryNames = [
+  "Australia",
+  "Canada",
+  "China",
+  "Finland",
+  "France",
+  "Germany",
+  "Hungary",
+  "Italy",
+  "Japan",
+  "Malaysia",
+  "Netherlands",
+  "Pakistan",
+  "Saudi Arabia",
+  "South Korea",
+  "Turkey",
+  "UAE",
+  "UK",
+  "United Kingdom",
+  "USA",
+  "United States",
+];
+
+const dateFilters = [
+  { value: "all", label: "Any Time" },
+  { value: "7", label: "Last 7 Days" },
+  { value: "30", label: "Last 30 Days" },
+  { value: "90", label: "Last 90 Days" },
+];
+
 export default function StudyAbroadOpportunitiesPage() {
   const supabase = createSupabaseBrowserClient();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [countryFilter, setCountryFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
 
   useEffect(() => {
     async function fetchOpportunities() {
@@ -39,6 +81,36 @@ export default function StudyAbroadOpportunitiesPage() {
     
     fetchOpportunities();
   }, [supabase]);
+
+  const availableCountries = useMemo(() => {
+    const countries = countryNames.filter((country) =>
+      opportunities.some((opp) => `${opp.title} ${opp.description}`.toLowerCase().includes(country.toLowerCase()))
+    );
+    return Array.from(new Set(countries)).sort((a, b) => a.localeCompare(b));
+  }, [opportunities]);
+
+  const filteredOpportunities = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const selectedType = typeFilters.find((filter) => filter.value === typeFilter);
+    const selectedDateDays = dateFilter === "all" ? null : Number(dateFilter);
+    const now = Date.now();
+
+    return opportunities.filter((opp) => {
+      const searchableText = `${opp.title} ${opp.description}`.toLowerCase();
+      const matchesSearch = !query || searchableText.includes(query);
+      const matchesType = typeFilter === "all" || selectedType?.keywords?.some((keyword) => searchableText.includes(keyword));
+      const matchesCountry = countryFilter === "all" || searchableText.includes(countryFilter.toLowerCase());
+      const matchesDate = !selectedDateDays || now - new Date(opp.created_at).getTime() <= selectedDateDays * 24 * 60 * 60 * 1000;
+      return matchesSearch && matchesType && matchesCountry && matchesDate;
+    });
+  }, [countryFilter, dateFilter, opportunities, searchQuery, typeFilter]);
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setTypeFilter("all");
+    setCountryFilter("all");
+    setDateFilter("all");
+  };
 
   return (
     <main className="min-h-screen bg-[var(--wc-bg)] text-on-surface">
@@ -76,8 +148,70 @@ export default function StudyAbroadOpportunitiesPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {opportunities.map((opp) => (
+            <>
+              <div className="mb-8 rounded-2xl border border-outline-variant/60 bg-[var(--wc-surface-lowest)] p-4 shadow-sm">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,0.7fr))_auto]">
+                  <div className="relative">
+                    <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant" />
+                    <input
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Search scholarships, universities, country..."
+                      className="h-12 w-full rounded-xl border border-outline-variant/70 bg-white pl-10 pr-4 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                    />
+                  </div>
+                  <select
+                    value={typeFilter}
+                    onChange={(event) => setTypeFilter(event.target.value)}
+                    className="h-12 rounded-xl border border-outline-variant/70 bg-white px-4 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  >
+                    {typeFilters.map((filter) => (
+                      <option key={filter.value} value={filter.value}>{filter.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={countryFilter}
+                    onChange={(event) => setCountryFilter(event.target.value)}
+                    className="h-12 rounded-xl border border-outline-variant/70 bg-white px-4 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  >
+                    <option value="all">All Countries</option>
+                    {availableCountries.map((country) => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={dateFilter}
+                    onChange={(event) => setDateFilter(event.target.value)}
+                    className="h-12 rounded-xl border border-outline-variant/70 bg-white px-4 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  >
+                    {dateFilters.map((filter) => (
+                      <option key={filter.value} value={filter.value}>{filter.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="h-12 rounded-xl border border-outline-variant/70 bg-white px-5 text-sm font-black text-on-surface-variant transition hover:border-primary hover:text-primary"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <p className="mt-3 text-sm font-semibold text-on-surface-variant">
+                  Showing {filteredOpportunities.length} of {opportunities.length} opportunities
+                </p>
+              </div>
+
+              {filteredOpportunities.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-outline-variant/60 bg-[var(--wc-surface-lowest)] py-24 text-center">
+                  <Icon name="filter_alt_off" className="text-5xl text-on-surface-variant" />
+                  <h2 className="mt-4 text-xl font-bold">No opportunities match these filters</h2>
+                  <button type="button" onClick={clearFilters} className="mt-5 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white">
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredOpportunities.map((opp) => (
                 <article 
                   key={opp.id} 
                   className="group flex flex-col overflow-hidden rounded-3xl border border-outline-variant/60 bg-[var(--wc-surface-lowest)] transition hover:-translate-y-1 hover:border-[var(--wc-primary)]/30 hover:shadow-xl"
@@ -124,8 +258,10 @@ export default function StudyAbroadOpportunitiesPage() {
                     )}
                   </div>
                 </article>
-              ))}
-            </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

@@ -8,7 +8,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { EmptyState } from "@/components/empty-state";
 import { Toast, type ToastState } from "@/components/toast";
 import { normalizeImageUrl } from "@/lib/image-url";
-import { addTalentService } from "@/app/student/talent-portfolio/actions";
+import { addTalentService, deleteTalentService, updateTalentService } from "@/app/student/talent-portfolio/actions";
 
 export type TalentProfile = {
   id: string;
@@ -37,6 +37,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<TalentService[]>([]);
   const [isAddingService, setIsAddingService] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
   // Setup Form State
@@ -51,6 +52,31 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
   const [serviceSkills, setServiceSkills] = useState("");
   const [serviceImage, setServiceImage] = useState("");
   const [serviceVideo, setServiceVideo] = useState("");
+
+  const resetServiceForm = () => {
+    setEditingServiceId(null);
+    setIsAddingService(false);
+    setServiceTitle("");
+    setServiceDesc("");
+    setServiceSkills("");
+    setServiceImage("");
+    setServiceVideo("");
+  };
+
+  const startAddingService = () => {
+    resetServiceForm();
+    setIsAddingService(true);
+  };
+
+  const startEditingService = (service: TalentService) => {
+    setEditingServiceId(service.id);
+    setIsAddingService(true);
+    setServiceTitle(service.title);
+    setServiceDesc(service.description || "");
+    setServiceSkills((service.skills || []).join(", "));
+    setServiceImage(service.image_url || "");
+    setServiceVideo(service.video_url || "");
+  };
 
   useEffect(() => {
     if (profile?.status === "approved") {
@@ -127,35 +153,35 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
     const skillsArray = serviceSkills.split(",").map((s) => s.trim()).filter(Boolean);
     const formattedServiceImage = formatImageUrl(serviceImage);
 
-    const result = await addTalentService({
+    const payload = {
       title: serviceTitle,
       description: serviceDesc,
       skills: skillsArray,
       imageUrl: formattedServiceImage,
       videoUrl: serviceVideo,
-    });
+    };
+    const result = editingServiceId
+      ? await updateTalentService(editingServiceId, payload)
+      : await addTalentService(payload);
 
     setLoading(false);
     if (!result.success) {
-      setToast({ type: "error", message: "Failed to add service: " + result.error });
+      setToast({ type: "error", message: "Failed to save service: " + result.error });
     } else {
-      setToast({ type: "success", message: "Service submitted for admin approval." });
-      setServices([result.service, ...services]);
-      setIsAddingService(false);
-      setServiceTitle("");
-      setServiceDesc("");
-      setServiceSkills("");
-      setServiceImage("");
-      setServiceVideo("");
+      setToast({ type: "success", message: editingServiceId ? "Service updated." : "Service submitted for admin approval." });
+      setServices(editingServiceId
+        ? services.map((service) => (service.id === editingServiceId ? result.service : service))
+        : [result.service, ...services]);
+      resetServiceForm();
     }
   };
 
   const handleDeleteService = async (serviceId: string) => {
     if (!confirm("Are you sure you want to delete this service?")) return;
     setToast(null);
-    const { error } = await supabase.from("talent_services" as any).delete().eq("id", serviceId);
-    if (error) {
-      setToast({ type: "error", message: "Failed to delete service." });
+    const result = await deleteTalentService(serviceId);
+    if (!result.success) {
+      setToast({ type: "error", message: "Failed to delete service: " + result.error });
     } else {
       setToast({ type: "success", message: "Service deleted." });
       setServices(services.filter((s) => s.id !== serviceId));
@@ -268,7 +294,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
           My Services <span className="text-sm font-normal text-gray-500 ml-2">({services.length}/3)</span>
         </h3>
         {services.length < 3 ? (
-          <button onClick={() => setIsAddingService(!isAddingService)} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center hover:bg-blue-700 transition-colors">
+          <button onClick={() => isAddingService ? resetServiceForm() : startAddingService()} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center hover:bg-blue-700 transition-colors">
             <span className="material-symbols-outlined mr-2 text-sm">add</span>
             Add Service
           </button>
@@ -279,7 +305,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
 
       {isAddingService && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in slide-in-from-top-4">
-          <h4 className="font-semibold text-lg mb-4">Add New Service</h4>
+          <h4 className="font-semibold text-lg mb-4">{editingServiceId ? "Edit Service" : "Add New Service"}</h4>
           <form onSubmit={handleAddService} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Service Title</label>
@@ -304,8 +330,8 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
               </div>
             </div>
             <div className="flex gap-2 justify-end pt-2">
-              <button type="button" onClick={() => setIsAddingService(false)} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition-colors">Cancel</button>
-              <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">{loading ? "Saving..." : "Save Service"}</button>
+              <button type="button" onClick={resetServiceForm} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition-colors">Cancel</button>
+              <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">{loading ? "Saving..." : editingServiceId ? "Update Service" : "Save Service"}</button>
             </div>
           </form>
         </div>
@@ -338,9 +364,18 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
                   <span className={`text-xs font-semibold ${service.status === "active" ? "text-green-600" : "text-gray-500"}`}>
                     {service.status.toUpperCase()}
                   </span>
-                  <button onClick={() => handleDeleteService(service.id)} className="text-red-500 hover:bg-red-50 px-3 py-1 rounded-md transition-colors text-sm font-medium">
-                    Delete
-                  </button>
+                  {service.status === "inactive" ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => startEditingService(service)} className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md transition-colors text-sm font-medium">
+                        Edit
+                      </button>
+                      <button onClick={() => handleDeleteService(service.id)} className="text-red-500 hover:bg-red-50 px-3 py-1 rounded-md transition-colors text-sm font-medium">
+                        Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs font-medium text-gray-400">Locked by admin approval</span>
+                  )}
                 </div>
               </div>
             </div>
