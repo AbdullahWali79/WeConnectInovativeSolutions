@@ -2761,7 +2761,7 @@ export async function updateApplicationStatus(applicationId: string, action: "ap
     const supabaseAdmin = createSupabaseServiceClient();
     const supabase = await createSupabaseServerClient();
 
-    const { data: application, error: appError } = await supabaseAdmin.from("applications").select("email").eq("id", applicationId).single();
+    const { data: application, error: appError } = await supabaseAdmin.from("applications").select("email,course_id,full_name,phone").eq("id", applicationId).single();
 
     if (appError || !application) {
       throw new Error("Application not found.");
@@ -2772,13 +2772,46 @@ export async function updateApplicationStatus(applicationId: string, action: "ap
     if (rpcError) throw new Error(rpcError.message);
 
     if (action === "approve_application") {
-      await supabaseAdmin.from("profiles").update({ status: "approved" }).eq("email", application.email).eq("role", "student");
+      const { error: profileError } = await supabaseAdmin.from("profiles").update({ status: "approved" }).eq("email", application.email).eq("role", "student");
+      if (profileError) throw new Error(profileError.message);
+
+      const { data: course, error: courseError } = application.course_id
+        ? await supabaseAdmin.from("courses").select("title").eq("id", application.course_id).single()
+        : { data: null, error: null };
+      if (courseError) throw new Error(courseError.message);
+
+      if (course?.title === "Freelancer Registration (No Course)") {
+        const { data: profile, error: lookupError } = await supabaseAdmin
+          .from("profiles").select("id").eq("email", application.email).maybeSingle();
+        if (lookupError) throw new Error(lookupError.message);
+
+        if (profile) {
+          // Talent tables are not yet included in the generated database types.
+          // Insert only when missing so portfolio details and WhatsApp settings survive.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const talentProfiles = supabaseAdmin.from("talent_profiles" as any);
+          const { error: insertError } = await talentProfiles.upsert({
+            id: profile.id,
+            name: application.full_name,
+            email: application.email,
+            whatsapp_number: application.phone,
+            status: "approved",
+          }, { onConflict: "id", ignoreDuplicates: true });
+          if (insertError) throw new Error(insertError.message);
+
+          const { error: talentError } = await talentProfiles
+            .update({ status: "approved" }).eq("id", profile.id);
+          if (talentError) throw new Error(talentError.message);
+        }
+      }
     } else {
       await supabaseAdmin.from("profiles").update({ status: "rejected" }).eq("email", application.email).eq("role", "student");
     }
 
     revalidatePath("/admin/applications");
     revalidatePath("/admin/students");
+    revalidatePath("/admin/talent-management");
+    revalidatePath("/student/talent-portfolio");
     return { success: true, data: null, error: null };
   } catch (error) {
     return { success: false, data: null, error: actionError(error, "Failed to update application.") };
