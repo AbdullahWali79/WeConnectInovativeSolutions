@@ -2,6 +2,7 @@
 import { AccessDenied } from "@/components/admin/access-denied";
 import { requirePermissionPage } from "@/lib/admin-access";
 import { TalentManager } from "@/components/admin/talent-manager";
+import type { TalentProfile } from "@/components/student/talent-portfolio-manager";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export default async function TalentManagementPage() {
@@ -34,6 +35,6 @@ export default async function TalentManagementPage() {
     `)
     .order("created_at", { ascending: false });
 
-  return <TalentManager initialProfiles={profiles || []} initialRequests={requests || []} />;
+  return <TalentManager initialProfiles={(profiles || []) as TalentProfile[]} initialRequests={requests || []} />;
 }
 
