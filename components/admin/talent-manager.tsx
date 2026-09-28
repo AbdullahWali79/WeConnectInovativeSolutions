@@ -24,6 +24,7 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
   const [profiles, setProfiles] = useState<TalentProfile[]>(initialProfiles);
   const [requests, setRequests] = useState<any[]>(initialRequests);
   const [activeTab, setActiveTab] = useState<"pending" | "approved" | "requests">("requests");
+  const [requestStatusTab, setRequestStatusTab] = useState<"new" | "pending" | "completed">("new");
   const [viewingServicesFor, setViewingServicesFor] = useState<string | null>(null);
   const [services, setServices] = useState<any[]>([]);
   const [allServices, setAllServices] = useState<any[]>([]);
@@ -50,6 +51,12 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
     req.talent_services?.title,
     req.talent_services?.talent_profiles?.name,
   ));
+  const requestGroups = {
+    new: filteredRequests.filter((req) => req.status === "pending"),
+    pending: filteredRequests.filter((req) => req.status === "in_progress"),
+    completed: filteredRequests.filter((req) => req.status === "completed"),
+  };
+  const visibleRequests = requestGroups[requestStatusTab];
   const filteredPendingProfiles = pendingProfiles.filter((p) => matchesText(p.name, p.email, p.whatsapp_number));
   const filteredApprovedProfiles = approvedProfiles.filter((p) => {
     const serviceTitles = (servicesByProfile[p.id] || []).map((service) => service.title).join(" ");
@@ -203,13 +210,35 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
 
       {activeTab === "requests" && (
         <div className="space-y-4">
-          {filteredRequests.length === 0 ? (
-            <EmptyState title="No client requests" description="When clients request a service, they will appear here." icon="inbox" />
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["new", `New Fresh Requests (${requestGroups.new.length})`],
+              ["pending", `Pending Work (${requestGroups.pending.length})`],
+              ["completed", `Completed (${requestGroups.completed.length})`],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setRequestStatusTab(id as "new" | "pending" | "completed")}
+                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${requestStatusTab === id ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {visibleRequests.length === 0 ? (
+            <EmptyState
+              title={requestStatusTab === "new" ? "No new requests" : requestStatusTab === "pending" ? "No pending work" : "No completed requests"}
+              description="Client service requests will appear here based on their current status."
+              icon="inbox"
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredRequests.map((req) => (
+              {visibleRequests.map((req) => (
                 <div key={req.id} className={`bg-white p-5 rounded-xl border ${req.status === 'pending' ? 'border-blue-300 shadow-md' : 'border-gray-200 shadow-sm'} flex flex-col gap-3 relative overflow-hidden`}>
                   {req.status === 'pending' && <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">NEW</div>}
+                  {req.status === 'in_progress' && <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">PENDING</div>}
                   {req.status === 'completed' && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">COMPLETED</div>}
                   
                   <div>
@@ -257,11 +286,35 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
 
                   <div className="flex gap-2 mt-1">
                     {req.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => handleUpdateReqStatus(req.id, 'in_progress')}
+                          className="flex-1 py-1.5 border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold rounded-lg text-xs transition-colors"
+                        >
+                          Move to Pending
+                        </button>
+                        <button
+                          onClick={() => handleUpdateReqStatus(req.id, 'completed')}
+                          className="flex-1 py-1.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-lg text-xs transition-colors"
+                        >
+                          Mark Completed
+                        </button>
+                      </>
+                    )}
+                    {req.status === 'in_progress' && (
                       <button 
                         onClick={() => handleUpdateReqStatus(req.id, 'completed')}
-                        className="flex-1 py-1.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-lg text-xs transition-colors"
+                        className="flex-1 py-1.5 border border-green-200 bg-green-50 hover:bg-green-100 text-green-700 font-semibold rounded-lg text-xs transition-colors"
                       >
                         Mark as Completed
+                      </button>
+                    )}
+                    {req.status === 'completed' && (
+                      <button
+                        onClick={() => handleUpdateReqStatus(req.id, 'in_progress')}
+                        className="flex-1 py-1.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-lg text-xs transition-colors"
+                      >
+                        Reopen as Pending
                       </button>
                     )}
                   </div>
