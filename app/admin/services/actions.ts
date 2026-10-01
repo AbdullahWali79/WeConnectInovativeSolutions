@@ -28,10 +28,14 @@ function validate(input: ServiceInput) {
 }
 
 export async function getAdminServices() {
-  await requireAdminOnly();
-  const { data, error } = await createSupabaseServiceClient().from("services").select("*").order("display_order");
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Service[];
+  try {
+    await requireAdminOnly();
+    const { data, error } = await createSupabaseServiceClient().from("services").select("*").order("display_order");
+    if (error) return { error: error.message, data: null };
+    return { data: (data ?? []) as Service[], error: null };
+  } catch (e: any) {
+    return { error: e.message || "Unknown error", data: null };
+  }
 }
 
 export async function saveService(id: string | null, input: ServiceInput) {
