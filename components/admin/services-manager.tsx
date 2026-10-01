@@ -30,7 +30,9 @@ export function ServicesManager() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await getAdminServices());
+      const res = await getAdminServices();
+      if (res.error) throw new Error(res.error);
+      setRows(res.data || []);
     } catch (error) {
       setToast({ type: "error", message: error instanceof Error ? error.message : "Services could not be loaded." });
     } finally {
