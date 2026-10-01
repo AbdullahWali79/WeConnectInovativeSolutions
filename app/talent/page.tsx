@@ -1,8 +1,8 @@
+import { CmsElement, CmsLink } from "@/components/cms/cms-element";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { PublicHeader } from "@/components/public/public-header";
 import { TalentMarketplace } from "@/components/public/talent-marketplace";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
 
 export default async function TalentPage() {
@@ -27,25 +27,25 @@ export default async function TalentPage() {
   );
 
   return (
-    <main className="min-h-screen flex flex-col bg-gray-50">
+    <CmsElement cmsId="f820f709-0" as="main" className="min-h-screen flex flex-col bg-gray-50">
       <PublicHeader />
-      <div className="flex-1">
+      <CmsElement cmsId="f820f709-1" as="div" className="flex-1">
         <TalentMarketplace services={validServices} />
-      </div>
-      <footer className="border-t py-12" style={{ backgroundColor: "var(--wc-bg)", color: "var(--wc-on-surface-variant)", borderColor: "color-mix(in srgb, var(--wc-on-bg) 5%, transparent)" }}>
-        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center justify-between gap-6 lg:flex-row">
-          <div className="text-xl font-bold" style={{ color: "var(--wc-on-bg)" }}>We Connect Innovative Solutions Pvt. Ltd.</div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
-            <Link href="/internships" className="transition-colors hover:text-[var(--wc-secondary)]">Looking for Internships?</Link>
-            <Link href="/contact" className="transition-colors hover:text-[var(--wc-secondary)]">Contact Us</Link>
-          </div>
-          <p className="text-center text-sm lg:text-right">
+      </CmsElement>
+      <CmsElement cmsId="f820f709-2" as="footer" className="border-t py-12" style={{ backgroundColor: "var(--wc-bg)", color: "var(--wc-on-surface-variant)", borderColor: "color-mix(in srgb, var(--wc-on-bg) 5%, transparent)" }}>
+        <CmsElement cmsId="f820f709-3" as="div" className="max-w-7xl mx-auto px-4 flex flex-col items-center justify-between gap-6 lg:flex-row">
+          <CmsElement cmsId="f820f709-4" as="div" className="text-xl font-bold" style={{ color: "var(--wc-on-bg)" }}>We Connect Innovative Solutions Pvt. Ltd.</CmsElement>
+          <CmsElement cmsId="f820f709-5" as="div" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
+            <CmsLink cmsId="f820f709-6" href="/internships" className="transition-colors hover:text-[var(--wc-secondary)]">Looking for Internships?</CmsLink>
+            <CmsLink cmsId="f820f709-7" href="/contact" className="transition-colors hover:text-[var(--wc-secondary)]">Contact Us</CmsLink>
+          </CmsElement>
+          <CmsElement cmsId="f820f709-8" as="p" className="text-center text-sm lg:text-right">
             &copy; 2026 We Connect Innovative Solutions Pvt. Ltd. All rights reserved.{" "}
-            <a href={CONTACT_EMAIL_HREF} className="hover:underline" style={{ color: "var(--wc-secondary)" }}>{CONTACT_EMAIL}</a>
-          </p>
-        </div>
-      </footer>
-    </main>
+            <CmsElement cmsId="f820f709-9" as="a" href={CONTACT_EMAIL_HREF} className="hover:underline" style={{ color: "var(--wc-secondary)" }}>{CONTACT_EMAIL}</CmsElement>
+          </CmsElement>
+        </CmsElement>
+      </CmsElement>
+    </CmsElement>
   );
 }
 

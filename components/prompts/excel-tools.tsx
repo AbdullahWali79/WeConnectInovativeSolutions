@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement } from "@/components/cms/cms-element";
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -119,49 +120,49 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false, 
     finally { saving.current = false; setBusy(false); }
   }
 
-  return <section className="space-y-5 rounded-2xl border border-outline-variant bg-surface p-6">
-    <div><h2 className="text-xl font-bold">Excel import & export</h2><p className="mt-2 text-sm text-on-surface-variant">Import your Google Form response spreadsheet or use our template. Download responses from Google Sheets as Excel (.xlsx), then upload here. Import up to 100 prompts at once.</p></div>
-    {admin && <details className="rounded-xl border border-outline-variant p-4"><summary className="cursor-pointer font-semibold">Share student submission form</summary><div className="mt-4"><SubmissionFormShare /></div></details>}
-    <div className="flex flex-wrap gap-3">
-      <button type="button" disabled={busy} onClick={() => download(false)} className={buttonClass}>Download Excel template</button>
-      <button type="button" disabled={busy || !prompts.length} onClick={() => download(true)} className={buttonClass}>Export {admin ? "all" : "my"} prompts ({prompts.length})</button>
-    </div>
-    <label className="block text-sm font-semibold">Choose completed Excel file (.xlsx, max 2 MB)<input ref={input} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => void chooseFile(event.target.files?.[0])} className="mt-2 block w-full rounded-xl border border-outline-variant p-3 font-normal" /></label>
-    {admin && <div className="sticky top-2 z-10 space-y-2 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-      <div className="flex flex-wrap gap-3 items-center">
-        <button type="button" disabled={busy || !drafts.length} onClick={() => void importRows("pending")} className={buttonClass}>Save for review{drafts.length ? ` (${drafts.length})` : ""}</button>
-        <button type="button" disabled={busy || !drafts.length} onClick={() => void importRows("approved")} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Save &amp; Publish{drafts.length ? ` (${drafts.length})` : ""}</button>
-        <a href="/prompts" target="_blank" rel="noopener noreferrer" className={buttonClass}>View public prompt library</a>
-        {admin && onManagePrompts && <button type="button" onClick={onManagePrompts} className="rounded-full border border-outline-variant px-5 py-3 font-semibold hover:bg-surface-variant">Manage all prompts →</button>}
-      </div>
-      <p className="text-sm text-on-surface-variant">{drafts.length ? "Save & Publish validates your latest edits, saves valid new submissions and makes them live on the public prompt library. Save for review keeps them hidden until published." : "Choose an Excel file to enable saving and publishing. Match columns and preview rows if needed."}</p>
-      {published && <p role="status" className="font-semibold text-primary">Prompts are now live. <a href="/prompts" target="_blank" rel="noopener noreferrer" className="underline">View published prompts</a></p>}
-    </div>}
-    {sheets.length > 0 && <div className="space-y-4 rounded-xl border border-outline-variant p-4">
-      <label className="block text-sm font-semibold">Response sheet<select disabled={busy} value={sheetName} onChange={(event) => void chooseSheet(event.target.value)} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3">{sheets.map((sheet) => <option key={sheet.name}>{sheet.name}</option>)}</select></label>
-      <div><h3 className="font-semibold">Match your form columns</h3><p className="mt-1 text-sm text-on-surface-variant">Headings must be in the first row. Match each field to your form question. Timestamp, email and other unmapped columns are ignored. Drive URL 1 can contain multiple links separated by commas or new lines. An unmapped price defaults to free (PKR 0).</p></div>
-      <div className="grid gap-3 md:grid-cols-2">{fields.map((field, index) => <label key={field.label} className="block text-sm font-semibold">{field.label}{field.required ? " *" : ""}<select disabled={busy} value={columns[index] ?? -1} onChange={(event) => { const next = [...columns]; next[index] = Number(event.target.value); setColumns(next); setDrafts([]); setRows([]); setIssues([]); setResult(null); }} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 font-normal"><option value={-1}>{field.required ? "Choose a column" : index === 5 ? "Not provided — free (0)" : "Not provided"}</option>{(sheets.find((sheet) => sheet.name === sheetName)?.headers ?? []).map((header, sourceIndex) => <option key={sourceIndex} value={sourceIndex}>{sourceIndex + 1}. {header || "(blank heading)"}</option>)}</select></label>)}</div>
-      <button type="button" disabled={busy} onClick={validateColumns} className={buttonClass}>Validate & preview rows</button>
-    </div>}
-    <p className="text-sm text-on-surface-variant">Imports create new prompts and skip matches already in the library. A matching title (ignoring capital/small letters), image / Drive file, or complete prompt text including variables counts as a duplicate. Shared variable names alone do not count. Duplicates within this file are flagged below. {admin ? "Choose whether to publish or send the imported prompts to review." : autoPublish ? "Your approved direct-publishing permission also applies to Excel imports." : "Imported prompts will be sent to admin for approval."}</p>
-    {issues.length > 0 && <div role="alert" className="rounded-xl border border-red-400 p-4"><p className="font-semibold">{admin ? "Nothing imported yet. Fix these errors in the row editors below, then validate again:" : "Nothing imported. Fix these errors in Excel and select the file again:"}</p><ul className="mt-3 max-h-64 list-disc space-y-1 overflow-auto pl-5 text-sm">{issues.map((issue, index) => <li key={index}>{issue.row ? `Row ${issue.row}: ` : ""}{issue.message}</li>)}</ul></div>}
-    {admin && drafts.length > 0 && <div className="space-y-3">
-      <h3 className="font-semibold">Review & edit submissions ({drafts.length})</h3>
-      <p className="text-sm text-on-surface-variant">Complete missing details before importing. Check placeholder categories such as Option 1. Selecting another file or remapping columns resets preview edits. After import, use Prompts to edit any saved prompt.</p>
+  return <CmsElement cmsId="1f976179-0" as="section" className="space-y-5 rounded-2xl border border-outline-variant bg-surface p-6">
+    <CmsElement cmsId="1f976179-1" as="div"><CmsElement cmsId="1f976179-2" as="h2" className="text-xl font-bold">Excel import & export</CmsElement><CmsElement cmsId="1f976179-3" as="p" className="mt-2 text-sm text-on-surface-variant">Import your Google Form response spreadsheet or use our template. Download responses from Google Sheets as Excel (.xlsx), then upload here. Import up to 100 prompts at once.</CmsElement></CmsElement>
+    {admin && <details className="rounded-xl border border-outline-variant p-4"><summary className="cursor-pointer font-semibold">Share student submission form</summary><CmsElement cmsId="1f976179-4" as="div" className="mt-4"><SubmissionFormShare /></CmsElement></details>}
+    <CmsElement cmsId="1f976179-5" as="div" className="flex flex-wrap gap-3">
+      <CmsElement cmsId="1f976179-6" as="button" type="button" disabled={busy} onClick={() => download(false)} className={buttonClass}>Download Excel template</CmsElement>
+      <CmsElement cmsId="1f976179-7" as="button" type="button" disabled={busy || !prompts.length} onClick={() => download(true)} className={buttonClass}>Export {admin ? "all" : "my"} prompts ({prompts.length})</CmsElement>
+    </CmsElement>
+    <CmsElement cmsId="1f976179-8" as="label" className="block text-sm font-semibold">Choose completed Excel file (.xlsx, max 2 MB)<input ref={input} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => void chooseFile(event.target.files?.[0])} className="mt-2 block w-full rounded-xl border border-outline-variant p-3 font-normal" /></CmsElement>
+    {admin && <CmsElement cmsId="1f976179-9" as="div" className="sticky top-2 z-10 space-y-2 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+      <CmsElement cmsId="1f976179-10" as="div" className="flex flex-wrap gap-3 items-center">
+        <CmsElement cmsId="1f976179-11" as="button" type="button" disabled={busy || !drafts.length} onClick={() => void importRows("pending")} className={buttonClass}>Save for review{drafts.length ? ` (${drafts.length})` : ""}</CmsElement>
+        <CmsElement cmsId="1f976179-12" as="button" type="button" disabled={busy || !drafts.length} onClick={() => void importRows("approved")} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Save &amp; Publish{drafts.length ? ` (${drafts.length})` : ""}</CmsElement>
+        <CmsElement cmsId="1f976179-13" as="a" href="/prompts" target="_blank" rel="noopener noreferrer" className={buttonClass}>View public prompt library</CmsElement>
+        {admin && onManagePrompts && <CmsElement cmsId="1f976179-14" as="button" type="button" onClick={onManagePrompts} className="rounded-full border border-outline-variant px-5 py-3 font-semibold hover:bg-surface-variant">Manage all prompts →</CmsElement>}
+      </CmsElement>
+      <CmsElement cmsId="1f976179-15" as="p" className="text-sm text-on-surface-variant">{drafts.length ? "Save & Publish validates your latest edits, saves valid new submissions and makes them live on the public prompt library. Save for review keeps them hidden until published." : "Choose an Excel file to enable saving and publishing. Match columns and preview rows if needed."}</CmsElement>
+      {published && <CmsElement cmsId="1f976179-16" as="p" role="status" className="font-semibold text-primary">Prompts are now live. <CmsElement cmsId="1f976179-17" as="a" href="/prompts" target="_blank" rel="noopener noreferrer" className="underline">View published prompts</CmsElement></CmsElement>}
+    </CmsElement>}
+    {sheets.length > 0 && <CmsElement cmsId="1f976179-18" as="div" className="space-y-4 rounded-xl border border-outline-variant p-4">
+      <CmsElement cmsId="1f976179-19" as="label" className="block text-sm font-semibold">Response sheet<select disabled={busy} value={sheetName} onChange={(event) => void chooseSheet(event.target.value)} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3">{sheets.map((sheet) => <option key={sheet.name}>{sheet.name}</option>)}</select></CmsElement>
+      <CmsElement cmsId="1f976179-20" as="div"><CmsElement cmsId="1f976179-21" as="h3" className="font-semibold">Match your form columns</CmsElement><CmsElement cmsId="1f976179-22" as="p" className="mt-1 text-sm text-on-surface-variant">Headings must be in the first row. Match each field to your form question. Timestamp, email and other unmapped columns are ignored. Drive URL 1 can contain multiple links separated by commas or new lines. An unmapped price defaults to free (PKR 0).</CmsElement></CmsElement>
+      <CmsElement cmsId="1f976179-23" as="div" className="grid gap-3 md:grid-cols-2">{fields.map((field, index) => <CmsElement cmsId="1f976179-24" as="label" instance={String(field.label)} key={field.label} className="block text-sm font-semibold">{field.label}{field.required ? " *" : ""}<select disabled={busy} value={columns[index] ?? -1} onChange={(event) => { const next = [...columns]; next[index] = Number(event.target.value); setColumns(next); setDrafts([]); setRows([]); setIssues([]); setResult(null); }} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 font-normal"><option value={-1}>{field.required ? "Choose a column" : index === 5 ? "Not provided — free (0)" : "Not provided"}</option>{(sheets.find((sheet) => sheet.name === sheetName)?.headers ?? []).map((header, sourceIndex) => <option key={sourceIndex} value={sourceIndex}>{sourceIndex + 1}. {header || "(blank heading)"}</option>)}</select></CmsElement>)}</CmsElement>
+      <CmsElement cmsId="1f976179-25" as="button" type="button" disabled={busy} onClick={validateColumns} className={buttonClass}>Validate & preview rows</CmsElement>
+    </CmsElement>}
+    <CmsElement cmsId="1f976179-26" as="p" className="text-sm text-on-surface-variant">Imports create new prompts and skip matches already in the library. A matching title (ignoring capital/small letters), image / Drive file, or complete prompt text including variables counts as a duplicate. Shared variable names alone do not count. Duplicates within this file are flagged below. {admin ? "Choose whether to publish or send the imported prompts to review." : autoPublish ? "Your approved direct-publishing permission also applies to Excel imports." : "Imported prompts will be sent to admin for approval."}</CmsElement>
+    {issues.length > 0 && <CmsElement cmsId="1f976179-27" as="div" role="alert" className="rounded-xl border border-red-400 p-4"><CmsElement cmsId="1f976179-28" as="p" className="font-semibold">{admin ? "Nothing imported yet. Fix these errors in the row editors below, then validate again:" : "Nothing imported. Fix these errors in Excel and select the file again:"}</CmsElement><CmsElement cmsId="1f976179-29" as="ul" className="mt-3 max-h-64 list-disc space-y-1 overflow-auto pl-5 text-sm">{issues.map((issue, index) => <CmsElement cmsId="1f976179-30" as="li" instance={String(index)} key={index}>{issue.row ? `Row ${issue.row}: ` : ""}{issue.message}</CmsElement>)}</CmsElement></CmsElement>}
+    {admin && drafts.length > 0 && <CmsElement cmsId="1f976179-31" as="div" className="space-y-3">
+      <CmsElement cmsId="1f976179-32" as="h3" className="font-semibold">Review & edit submissions ({drafts.length})</CmsElement>
+      <CmsElement cmsId="1f976179-33" as="p" className="text-sm text-on-surface-variant">Complete missing details before importing. Check placeholder categories such as Option 1. Selecting another file or remapping columns resets preview edits. After import, use Prompts to edit any saved prompt.</CmsElement>
       {drafts.map((draft, index) => <details key={index} className="rounded-xl border border-outline-variant p-4">
         <summary className="cursor-pointer break-words font-semibold">Row {index + 2}: {draft.title || "Untitled prompt"} — Edit submission{issues.some((issue) => issue.row === index + 2) ? " (needs correction)" : ""}</summary>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">{([['title', 'Title'], ['description', 'Description'], ['category', 'Category'], ['model', 'AI model / tool'], ['template', 'Prompt template'], ['price', 'Price (PKR)'], ['purchase_url', 'Purchase URL'], ['media_urls', 'Google Drive links (one per line)']] as const).map(([key, label]) => <label key={key} className="block text-sm font-semibold">{label}<textarea disabled={busy} rows={key === 'template' ? 8 : ['description', 'media_urls'].includes(key) ? 3 : 1} value={key === 'media_urls' ? draft.media_urls.join('\n') : String(draft[key] ?? '')} onChange={(event) => {
+        <CmsElement cmsId="1f976179-34" as="div" className="mt-4 grid gap-4 md:grid-cols-2">{([['title', 'Title'], ['description', 'Description'], ['category', 'Category'], ['model', 'AI model / tool'], ['template', 'Prompt template'], ['price', 'Price (PKR)'], ['purchase_url', 'Purchase URL'], ['media_urls', 'Google Drive links (one per line)']] as const).map(([key, label]) => <CmsElement cmsId="1f976179-35" as="label" instance={String(key)} key={key} className="block text-sm font-semibold">{label}<textarea disabled={busy} rows={key === 'template' ? 8 : ['description', 'media_urls'].includes(key) ? 3 : 1} value={key === 'media_urls' ? draft.media_urls.join('\n') : String(draft[key] ?? '')} onChange={(event) => {
           const value = event.target.value;
           setDrafts((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: key === 'media_urls' ? value.split(/\r?\n/) : value } : row));
           setRows([]); setIssues([]); setResult(null);
-        }} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 font-normal" /></label>)}</div>
-        <div className="mt-4 space-y-3">
-          <h4 className="text-sm font-semibold">Output image / video previews</h4>
+        }} className="mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 font-normal" /></CmsElement>)}</CmsElement>
+        <CmsElement cmsId="1f976179-36" as="div" className="mt-4 space-y-3">
+          <CmsElement cmsId="1f976179-37" as="h4" className="text-sm font-semibold">Output image / video previews</CmsElement>
           <PromptMedia urls={draft.media_urls.map((url) => url.trim()).filter(Boolean).slice(0, 6)} title={draft.title || `Row ${index + 2}`} />
-          <p className="text-sm text-on-surface-variant">Previews update when you edit the Drive links. Set each file to Anyone with the link. If a preview cannot load, use Open preview in Google Drive.</p>
-        </div>
+          <CmsElement cmsId="1f976179-38" as="p" className="text-sm text-on-surface-variant">Previews update when you edit the Drive links. Set each file to Anyone with the link. If a preview cannot load, use Open preview in Google Drive.</CmsElement>
+        </CmsElement>
       </details>)}
-      <button type="button" disabled={busy} className={buttonClass} onClick={() => {
+      <CmsElement cmsId="1f976179-39" as="button" type="button" disabled={busy} className={buttonClass} onClick={() => {
         const payloadToValidate = drafts.map((draft) => ({
           ...draft,
           title: (draft.title || "Untitled Prompt").trim().padEnd(3, ".").slice(0, 140),
@@ -175,12 +176,12 @@ export function PromptExcelTools({ prompts, admin = false, autoPublish = false, 
         }));
         const checked = validatePromptImport(payloadToValidate, true);
         setRows(checked.rows); setIssues(checked.issues); setResult(null);
-      }}>Validate edited submissions</button>
-    </div>}
-    {rows.length > 0 && <div className="space-y-4"><p className="font-semibold">Ready to import {rows.length} prompts from {filename}</p><div className="max-h-80 overflow-auto rounded-xl border border-outline-variant"><table className="w-full text-left text-sm"><thead className="bg-background"><tr><th className="p-3">Excel row</th><th className="p-3">Title</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Previews</th></tr></thead><tbody>{rows.map((row, index) => <tr key={index} className="border-t border-outline-variant"><td className="p-3">{index + 2}</td><td className="p-3">{row.title}</td><td className="p-3">{row.category}</td><td className="whitespace-nowrap p-3">{row.price ? `PKR ${row.price}` : "Free"}</td><td className="p-3">{row.media_urls.length}</td></tr>)}</tbody></table></div>
-      {!admin && <button type="button" disabled={busy} onClick={() => void importRows()} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Import {rows.length} new prompts</button>}
-    </div>}
-    {busy && <p role="status" className="text-sm">Processing…</p>}
-    {result && <p role={result.ok ? "status" : "alert"} className={`whitespace-pre-wrap rounded-xl border p-4 text-sm ${result.ok ? "border-primary text-primary" : "border-red-400 text-red-600"}`}>{result.message}</p>}
-  </section>;
+      }}>Validate edited submissions</CmsElement>
+    </CmsElement>}
+    {rows.length > 0 && <CmsElement cmsId="1f976179-40" as="div" className="space-y-4"><CmsElement cmsId="1f976179-41" as="p" className="font-semibold">Ready to import {rows.length} prompts from {filename}</CmsElement><CmsElement cmsId="1f976179-42" as="div" className="max-h-80 overflow-auto rounded-xl border border-outline-variant"><CmsElement cmsId="1f976179-43" as="table" className="w-full text-left text-sm"><CmsElement cmsId="1f976179-44" as="thead" className="bg-background"><CmsElement cmsId="1f976179-45" as="tr"><CmsElement cmsId="1f976179-46" as="th" className="p-3">Excel row</CmsElement><CmsElement cmsId="1f976179-47" as="th" className="p-3">Title</CmsElement><CmsElement cmsId="1f976179-48" as="th" className="p-3">Category</CmsElement><CmsElement cmsId="1f976179-49" as="th" className="p-3">Price</CmsElement><CmsElement cmsId="1f976179-50" as="th" className="p-3">Previews</CmsElement></CmsElement></CmsElement><CmsElement cmsId="1f976179-51" as="tbody">{rows.map((row, index) => <CmsElement cmsId="1f976179-52" as="tr" instance={String(index)} key={index} className="border-t border-outline-variant"><CmsElement cmsId="1f976179-53" as="td" className="p-3">{index + 2}</CmsElement><CmsElement cmsId="1f976179-54" as="td" className="p-3">{row.title}</CmsElement><CmsElement cmsId="1f976179-55" as="td" className="p-3">{row.category}</CmsElement><CmsElement cmsId="1f976179-56" as="td" className="whitespace-nowrap p-3">{row.price ? `PKR ${row.price}` : "Free"}</CmsElement><CmsElement cmsId="1f976179-57" as="td" className="p-3">{row.media_urls.length}</CmsElement></CmsElement>)}</CmsElement></CmsElement></CmsElement>
+      {!admin && <CmsElement cmsId="1f976179-58" as="button" type="button" disabled={busy} onClick={() => void importRows()} className="rounded-full bg-primary px-6 py-3 font-semibold text-on-primary disabled:opacity-50">Import {rows.length} new prompts</CmsElement>}
+    </CmsElement>}
+    {busy && <CmsElement cmsId="1f976179-59" as="p" role="status" className="text-sm">Processing…</CmsElement>}
+    {result && <CmsElement cmsId="1f976179-60" as="p" role={result.ok ? "status" : "alert"} className={`whitespace-pre-wrap rounded-xl border p-4 text-sm ${result.ok ? "border-primary text-primary" : "border-red-400 text-red-600"}`}>{result.message}</CmsElement>}
+  </CmsElement>;
 }

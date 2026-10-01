@@ -1,7 +1,7 @@
 "use client";
+import { CmsElement, CmsImage } from "@/components/cms/cms-element";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { Icon } from "@/components/icon";
 
 interface Partner {
@@ -39,24 +39,24 @@ export function MousCarousel({ partners }: MousCarouselProps) {
 
   if (!partners || partners.length === 0) {
     return (
-      <div className="col-span-full rounded-3xl border border-dashed border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-12 text-center text-[var(--wc-on-surface-variant)] backdrop-blur-md max-w-3xl mx-auto">
+      <CmsElement cmsId="2f4f6972-0" as="div" className="col-span-full rounded-3xl border border-dashed border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-12 text-center text-[var(--wc-on-surface-variant)] backdrop-blur-md max-w-3xl mx-auto">
         We are currently onboarding software house partners. Their details will appear here soon.
-      </div>
+      </CmsElement>
     );
   }
 
   return (
-    <div className="relative z-10 w-full h-[450px] sm:h-[500px] flex items-center justify-center px-5 max-w-7xl mx-auto">
+    <CmsElement cmsId="2f4f6972-1" as="div" className="relative z-10 w-full h-[450px] sm:h-[500px] flex items-center justify-center px-5 max-w-7xl mx-auto">
 
       {/* Left Navigation Button */}
-      <button
+      <CmsElement cmsId="2f4f6972-2" as="button"
         onClick={handlePrev}
         className="absolute left-0 md:left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
       >
         <Icon name="arrow_back" className="text-2xl" />
-      </button>
+      </CmsElement>
 
-      <div className="relative w-full max-w-4xl h-full flex justify-center items-center perspective-1000">
+      <CmsElement cmsId="2f4f6972-3" as="div" className="relative w-full max-w-4xl h-full flex justify-center items-center perspective-1000">
         {partners.map((partner, index) => {
           let diff = index - activeIndex;
 
@@ -119,7 +119,7 @@ export function MousCarousel({ partners }: MousCarouselProps) {
           const isActive = diff === 0;
 
           return (
-            <div
+            <CmsElement cmsId="2f4f6972-4" as="div" instance={String(partner.id)}
               key={partner.id}
               className="absolute w-[280px] sm:w-[320px] md:w-[360px] h-[380px] sm:h-[420px] transition-all duration-700 ease-in-out cursor-pointer"
               style={{
@@ -130,34 +130,34 @@ export function MousCarousel({ partners }: MousCarouselProps) {
               }}
               onClick={() => setActiveIndex(index)}
             >
-              <article className={`flex h-full flex-col overflow-hidden rounded-3xl border transition-all duration-500 ${isActive ? 'border-[var(--wc-secondary)]/50 bg-[var(--wc-surface-lowest)] shadow-glow-lg' : 'border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/80 backdrop-blur-xl shadow-xl'}`}>
-                <div className="flex flex-1 flex-col p-8 items-center text-center">
-                  <div className={`mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border transition-all duration-500 ${isActive ? 'bg-[var(--wc-secondary)]/10 border-[var(--wc-secondary)]/30 scale-110 shadow-[0_0_30px_rgba(var(--landing-accent-rgb),0.2)]' : 'border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)]'}`}>
+              <CmsElement cmsId="2f4f6972-5" as="article" className={`flex h-full flex-col overflow-hidden rounded-3xl border transition-all duration-500 ${isActive ? 'border-[var(--wc-secondary)]/50 bg-[var(--wc-surface-lowest)] shadow-glow-lg' : 'border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/80 backdrop-blur-xl shadow-xl'}`}>
+                <CmsElement cmsId="2f4f6972-6" as="div" className="flex flex-1 flex-col p-8 items-center text-center">
+                  <CmsElement cmsId="2f4f6972-7" as="div" className={`mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border transition-all duration-500 ${isActive ? 'bg-[var(--wc-secondary)]/10 border-[var(--wc-secondary)]/30 scale-110 shadow-[0_0_30px_rgba(var(--landing-accent-rgb),0.2)]' : 'border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)]'}`}>
                     {partner.logo_url ? (
-                      <div className="relative h-16 w-16">
-                        <Image src={partner.logo_url} alt={partner.name} fill sizes="64px" className="object-contain" unoptimized />
-                      </div>
+                      <CmsElement cmsId="2f4f6972-8" as="div" className="relative h-16 w-16">
+                        <CmsImage cmsId="2f4f6972-9" src={partner.logo_url} alt={partner.name} fill sizes="64px" className="object-contain" unoptimized />
+                      </CmsElement>
                     ) : (
-                      <span className={`text-2xl font-black ${isActive ? 'text-[var(--wc-secondary)]' : 'text-on-surface'}`}>
+                      <CmsElement cmsId="2f4f6972-10" as="span" className={`text-2xl font-black ${isActive ? 'text-[var(--wc-secondary)]' : 'text-on-surface'}`}>
                         {partner.name.slice(0, 2).toUpperCase()}
-                      </span>
+                      </CmsElement>
                     )}
-                  </div>
+                  </CmsElement>
 
-                  <h3 className={`mb-4 text-2xl font-black transition-colors ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
+                  <CmsElement cmsId="2f4f6972-11" as="h3" className={`mb-4 text-2xl font-black transition-colors ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
                     {partner.name}
-                  </h3>
+                  </CmsElement>
 
                   {partner.tagline && (
-                    <p className="mb-6 flex-1 text-sm leading-relaxed text-[var(--wc-on-surface-variant)]">
+                    <CmsElement cmsId="2f4f6972-12" as="p" className="mb-6 flex-1 text-sm leading-relaxed text-[var(--wc-on-surface-variant)]">
                       {partner.tagline}
-                    </p>
+                    </CmsElement>
                   )}
 
                   {/* Social Links / Website */}
-                  <div className="mt-auto flex flex-wrap justify-center gap-4 pt-5 border-t border-[var(--wc-outline-variant)] w-full">
+                  <CmsElement cmsId="2f4f6972-13" as="div" className="mt-auto flex flex-wrap justify-center gap-4 pt-5 border-t border-[var(--wc-outline-variant)] w-full">
                     {partner.website_url && (
-                      <a
+                      <CmsElement cmsId="2f4f6972-14" as="a"
                         href={partner.website_url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -165,10 +165,10 @@ export function MousCarousel({ partners }: MousCarouselProps) {
                         className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-[var(--wc-secondary)] hover:text-on-surface' : 'text-[var(--wc-on-surface-variant)] hover:text-on-surface'}`}
                       >
                         <Icon name="language" className="text-lg" /> Website
-                      </a>
+                      </CmsElement>
                     )}
                     {partner.facebook_url && (
-                      <a
+                      <CmsElement cmsId="2f4f6972-15" as="a"
                         href={partner.facebook_url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -176,35 +176,35 @@ export function MousCarousel({ partners }: MousCarouselProps) {
                         className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-[var(--wc-secondary)] hover:text-on-surface' : 'text-[var(--wc-on-surface-variant)] hover:text-on-surface'}`}
                       >
                         <Icon name="facebook" className="text-lg" /> Facebook
-                      </a>
+                      </CmsElement>
                     )}
-                  </div>
-                </div>
-              </article>
-            </div>
+                  </CmsElement>
+                </CmsElement>
+              </CmsElement>
+            </CmsElement>
           );
         })}
-      </div>
+      </CmsElement>
 
       {/* Right Navigation Button */}
-      <button
+      <CmsElement cmsId="2f4f6972-16" as="button"
         onClick={handleNext}
         className="absolute right-0 md:right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
       >
         <Icon name="arrow_forward" className="text-2xl" />
-      </button>
+      </CmsElement>
 
       {/* Pagination Dots */}
-      <div className="absolute bottom-[-40px] left-0 right-0 flex justify-center gap-2">
+      <CmsElement cmsId="2f4f6972-17" as="div" className="absolute bottom-[-40px] left-0 right-0 flex justify-center gap-2">
         {partners.map((_, idx) => (
-          <button
+          <CmsElement cmsId="2f4f6972-18" as="button" instance={String(idx)}
             key={idx}
             onClick={() => setActiveIndex(idx)}
             className={`h-2 transition-all rounded-full ${idx === activeIndex ? 'w-8 bg-[var(--wc-secondary)]' : 'w-2 bg-[var(--wc-surface-low)] hover:bg-[var(--wc-surface-low)]'}`}
             aria-label={`Go to slide ${idx + 1}`}
           />
         ))}
-      </div>
-    </div>
+      </CmsElement>
+    </CmsElement>
   );
 }

@@ -1,3 +1,4 @@
+import { CmsElement } from "@/components/cms/cms-element";
 import { ProductsCatalog, fallbackProducts } from "@/components/public/products-catalog";
 import { PublicHeader } from "@/components/public/public-header";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
@@ -40,9 +41,9 @@ export default async function ProductsPage() {
     getWhatsAppSettingsOrDefaults(),
   ]);
   return (
-    <main className="bg-background text-on-background">
+    <CmsElement cmsId="32959515-0" as="main" className="bg-background text-on-background">
       <PublicHeader />
       <ProductsCatalog initialProducts={products} whatsappNumber={whatsappSettings.whatsapp_number} />
-    </main>
+    </CmsElement>
   );
 }

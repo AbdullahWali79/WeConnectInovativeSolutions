@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement } from "@/components/cms/cms-element";
 
 import { useState, useEffect } from "react";
 import { Icon } from "@/components/icon";
@@ -42,27 +43,27 @@ export function VideoCard({ video }: VideoCardProps) {
 
   return (
     <>
-      <article className="group overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-outline/10 transition hover:-translate-y-1 hover:shadow-lg hover:ring-primary/30">
-        <button type="button" onClick={() => setIsModalOpen(true)} className="relative block aspect-video w-full overflow-hidden bg-slate-950 text-left" aria-label={`Play ${video.title}`}>
+      <CmsElement cmsId="84f8fa54-0" as="article" className="group overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-outline/10 transition hover:-translate-y-1 hover:shadow-lg hover:ring-primary/30">
+        <CmsElement cmsId="84f8fa54-1" as="button" type="button" onClick={() => setIsModalOpen(true)} className="relative block aspect-video w-full overflow-hidden bg-slate-950 text-left" aria-label={`Play ${video.title}`}>
           {imageThumbnail ? (
-            <span className="absolute inset-0 bg-cover bg-center transition duration-300 group-hover:scale-105" style={{ backgroundImage: `url(${JSON.stringify(imageThumbnail).slice(1, -1)})` }} />
+            <CmsElement cmsId="84f8fa54-2" as="span" className="absolute inset-0 bg-cover bg-center transition duration-300 group-hover:scale-105" style={{ backgroundImage: `url(${JSON.stringify(imageThumbnail).slice(1, -1)})` }} />
           ) : playableVideoUrl ? (
             <video className="h-full w-full object-cover" src={playableVideoUrl} muted playsInline preload="metadata" />
           ) : (
-            <span className="absolute inset-0 bg-gradient-to-br from-primary/70 to-slate-950" />
+            <CmsElement cmsId="84f8fa54-3" as="span" className="absolute inset-0 bg-gradient-to-br from-primary/70 to-slate-950" />
           )}
-          <span className="absolute inset-0 bg-black/10 transition group-hover:bg-black/25" />
-          <span className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-primary shadow-lg transition group-hover:scale-110">
+          <CmsElement cmsId="84f8fa54-4" as="span" className="absolute inset-0 bg-black/10 transition group-hover:bg-black/25" />
+          <CmsElement cmsId="84f8fa54-5" as="span" className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-primary shadow-lg transition group-hover:scale-110">
             <Icon name="play_arrow" className="text-2xl" />
-          </span>
-        </button>
-        <button type="button" onClick={() => setIsModalOpen(true)} className="block min-h-16 w-full p-3 text-left">
-          <h3 className="line-clamp-2 text-sm font-bold leading-5 text-on-surface transition-colors group-hover:text-primary">{video.title}</h3>
-        </button>
-      </article>
+          </CmsElement>
+        </CmsElement>
+        <CmsElement cmsId="84f8fa54-6" as="button" type="button" onClick={() => setIsModalOpen(true)} className="block min-h-16 w-full p-3 text-left">
+          <CmsElement cmsId="84f8fa54-7" as="h3" className="line-clamp-2 text-sm font-bold leading-5 text-on-surface transition-colors group-hover:text-primary">{video.title}</CmsElement>
+        </CmsElement>
+      </CmsElement>
 
       {isModalOpen && (
-        <div 
+        <CmsElement cmsId="84f8fa54-8" as="div"
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm sm:p-6"
           role="dialog"
           aria-modal="true"
@@ -71,26 +72,26 @@ export function VideoCard({ video }: VideoCardProps) {
             if (e.target === e.currentTarget) setIsModalOpen(false);
           }}
         >
-          <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/20">
-            <div className="flex items-center justify-between border-b border-white/10 bg-slate-900 px-4 py-3 sm:px-6 sm:py-4">
-              <h2 id={`video-title-${video.id}`} className="text-sm font-bold text-white sm:text-base line-clamp-1">
+          <CmsElement cmsId="84f8fa54-9" as="div" className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/20">
+            <CmsElement cmsId="84f8fa54-10" as="div" className="flex items-center justify-between border-b border-white/10 bg-slate-900 px-4 py-3 sm:px-6 sm:py-4">
+              <CmsElement cmsId="84f8fa54-11" as="h2" id={`video-title-${video.id}`} className="text-sm font-bold text-white sm:text-base line-clamp-1">
                 {video.title}
-              </h2>
-              <button
+              </CmsElement>
+              <CmsElement cmsId="84f8fa54-12" as="button"
                 type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
                 aria-label="Close video"
               >
                 <Icon name="close" className="text-xl" />
-              </button>
-            </div>
-            <div className="w-full bg-black">
+              </CmsElement>
+            </CmsElement>
+            <CmsElement cmsId="84f8fa54-13" as="div" className="w-full bg-black">
               {/* ProductVideoPreview will render the iframe or video tag taking full width */}
               <ProductVideoPreview url={video.video_url} title={video.title} className="rounded-none" />
-            </div>
-          </div>
-        </div>
+            </CmsElement>
+          </CmsElement>
+        </CmsElement>
       )}
     </>
   );

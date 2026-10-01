@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement } from "@/components/cms/cms-element";
 
 import { useMemo, useState, useTransition } from "react";
 import { Icon } from "@/components/icon";
@@ -84,21 +85,21 @@ export function FeedbackForm() {
   return (
     <>
       <Toast toast={toast} onClear={() => setToast(null)} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <CmsElement cmsId="7de6de05-0" as="div" className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <form onSubmit={handleSubmit} className="wc-card space-y-5 p-5 md:p-6">
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+          <CmsElement cmsId="7de6de05-1" as="div">
+            <CmsElement cmsId="7de6de05-2" as="div" className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
               <Icon name="chat" className="text-sm" /> Share Your Story
-            </div>
-            <h2 className="text-2xl font-black text-on-surface">Send feedback as student or client</h2>
-            <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+            </CmsElement>
+            <CmsElement cmsId="7de6de05-3" as="h2" className="text-2xl font-black text-on-surface">Send feedback as student or client</CmsElement>
+            <CmsElement cmsId="7de6de05-4" as="p" className="mt-2 text-sm leading-6 text-on-surface-variant">
               Pick your role, choose a category, and submit a review. Admin approval is required before it appears publicly.
-            </p>
-          </div>
+            </CmsElement>
+          </CmsElement>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="wc-label">Your role</span>
+          <CmsElement cmsId="7de6de05-5" as="div" className="grid gap-4 md:grid-cols-2">
+            <CmsElement cmsId="7de6de05-6" as="label" className="block">
+              <CmsElement cmsId="7de6de05-7" as="span" className="wc-label">Your role</CmsElement>
               <select
                 className="wc-input mt-2"
                 value={form.audienceType}
@@ -110,10 +111,10 @@ export function FeedbackForm() {
                   </option>
                 ))}
               </select>
-            </label>
+            </CmsElement>
 
-            <label className="block">
-              <span className="wc-label">Category</span>
+            <CmsElement cmsId="7de6de05-8" as="label" className="block">
+              <CmsElement cmsId="7de6de05-9" as="span" className="wc-label">Category</CmsElement>
               <select
                 className="wc-input mt-2"
                 value={form.category}
@@ -125,35 +126,35 @@ export function FeedbackForm() {
                   </option>
                 ))}
               </select>
-            </label>
-          </div>
+            </CmsElement>
+          </CmsElement>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="wc-label">Your name</span>
+          <CmsElement cmsId="7de6de05-10" as="div" className="grid gap-4 md:grid-cols-2">
+            <CmsElement cmsId="7de6de05-11" as="label" className="block">
+              <CmsElement cmsId="7de6de05-12" as="span" className="wc-label">Your name</CmsElement>
               <input className="wc-input mt-2" value={form.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Enter your name" required />
-            </label>
+            </CmsElement>
 
-            <label className="block">
-              <span className="wc-label">Email</span>
+            <CmsElement cmsId="7de6de05-13" as="label" className="block">
+              <CmsElement cmsId="7de6de05-14" as="span" className="wc-label">Email</CmsElement>
               <input className="wc-input mt-2" type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} placeholder="you@example.com" />
-            </label>
-          </div>
+            </CmsElement>
+          </CmsElement>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="wc-label">Phone</span>
+          <CmsElement cmsId="7de6de05-15" as="div" className="grid gap-4 md:grid-cols-2">
+            <CmsElement cmsId="7de6de05-16" as="label" className="block">
+              <CmsElement cmsId="7de6de05-17" as="span" className="wc-label">Phone</CmsElement>
               <input className="wc-input mt-2" value={form.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="03xx-xxxxxxx" />
-            </label>
+            </CmsElement>
 
-            <label className="block">
-              <span className="wc-label">Title</span>
+            <CmsElement cmsId="7de6de05-18" as="label" className="block">
+              <CmsElement cmsId="7de6de05-19" as="span" className="wc-label">Title</CmsElement>
               <input className="wc-input mt-2" value={form.title} onChange={(event) => updateField("title", event.target.value)} placeholder="Short headline" />
-            </label>
-          </div>
+            </CmsElement>
+          </CmsElement>
 
-          <label className="block">
-            <span className="wc-label">Your feedback</span>
+          <CmsElement cmsId="7de6de05-20" as="label" className="block">
+            <CmsElement cmsId="7de6de05-21" as="span" className="wc-label">Your feedback</CmsElement>
             <textarea
               className="wc-input mt-2 min-h-40"
               value={form.message}
@@ -161,13 +162,13 @@ export function FeedbackForm() {
               placeholder="Tell us about your experience..."
               required
             />
-          </label>
+          </CmsElement>
 
-          <div>
-            <span className="wc-label">Your rating</span>
-            <div className="mt-3 flex items-center gap-2">
+          <CmsElement cmsId="7de6de05-22" as="div">
+            <CmsElement cmsId="7de6de05-23" as="span" className="wc-label">Your rating</CmsElement>
+            <CmsElement cmsId="7de6de05-24" as="div" className="mt-3 flex items-center gap-2">
               {ratingOptions.map((rating) => (
-                <button
+                <CmsElement cmsId="7de6de05-25" as="button" instance={String(rating)}
                   key={rating}
                   type="button"
                   onClick={() => updateField("rating", rating)}
@@ -177,48 +178,48 @@ export function FeedbackForm() {
                   aria-label={`${rating} stars`}
                 >
                   <Icon name="star" className="text-lg" />
-                </button>
+                </CmsElement>
               ))}
-              <span className="ml-2 text-sm font-bold text-on-surface-variant">{form.rating}/5</span>
-            </div>
-          </div>
+              <CmsElement cmsId="7de6de05-26" as="span" className="ml-2 text-sm font-bold text-on-surface-variant">{form.rating}/5</CmsElement>
+            </CmsElement>
+          </CmsElement>
 
-          <div className="flex flex-col gap-3 border-t border-outline-variant pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-on-surface-variant">
+          <CmsElement cmsId="7de6de05-27" as="div" className="flex flex-col gap-3 border-t border-outline-variant pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <CmsElement cmsId="7de6de05-28" as="p" className="text-sm text-on-surface-variant">
               Your feedback will appear on the public page after admin approval.
-            </p>
-            <button disabled={isPending} className="wc-primary-btn">
+            </CmsElement>
+            <CmsElement cmsId="7de6de05-29" as="button" disabled={isPending} className="wc-primary-btn">
               <Icon name="send" className="text-lg" />
               {isPending ? "Submitting..." : "Submit Feedback"}
-            </button>
-          </div>
+            </CmsElement>
+          </CmsElement>
         </form>
 
-        <aside className="wc-card p-5 md:p-6">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <CmsElement cmsId="7de6de05-30" as="aside" className="wc-card p-5 md:p-6">
+          <CmsElement cmsId="7de6de05-31" as="div" className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Icon name="favorite" className="text-3xl" />
-          </div>
-          <h3 className="text-xl font-black text-on-surface">Why your feedback matters</h3>
-          <p className="mt-3 text-sm leading-6 text-on-surface-variant">
+          </CmsElement>
+          <CmsElement cmsId="7de6de05-32" as="h3" className="text-xl font-black text-on-surface">Why your feedback matters</CmsElement>
+          <CmsElement cmsId="7de6de05-33" as="p" className="mt-3 text-sm leading-6 text-on-surface-variant">
             Approved feedback helps students trust the platform and helps our team improve training, delivery, and support.
-          </p>
-          <div className="mt-6 space-y-3">
+          </CmsElement>
+          <CmsElement cmsId="7de6de05-34" as="div" className="mt-6 space-y-3">
             {[
               "Student and client categories",
               "Admin approval before publishing",
               "Category-wise public display",
               "Useful for testimonials and trust building",
             ].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-xl bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CmsElement cmsId="7de6de05-35" as="div" instance={String(item)} key={item} className="flex items-center gap-3 rounded-xl bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface">
+                <CmsElement cmsId="7de6de05-36" as="span" className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Icon name="check" className="text-base" />
-                </span>
-                <span>{item}</span>
-              </div>
+                </CmsElement>
+                <CmsElement cmsId="7de6de05-37" as="span">{item}</CmsElement>
+              </CmsElement>
             ))}
-          </div>
-        </aside>
-      </div>
+          </CmsElement>
+        </CmsElement>
+      </CmsElement>
     </>
   );
 }

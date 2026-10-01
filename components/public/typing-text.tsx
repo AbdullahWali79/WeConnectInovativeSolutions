@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement } from "@/components/cms/cms-element";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -72,15 +73,15 @@ export function TypingText({
   }, [holdDelay, phrases, speed, startDelay]);
 
   return (
-    <span
+    <CmsElement cmsId="98427dd8-0" as="span"
       className={`inline-block max-w-full min-w-0 whitespace-normal align-baseline ${className}`}
       style={{ lineHeight: 1.08, minHeight: "1.2em" }}
     >
-      <span className="inline break-words text-center whitespace-normal">{displayedText}</span>
-      <span
+      <CmsElement cmsId="98427dd8-1" as="span" className="inline break-words text-center whitespace-normal">{displayedText}</CmsElement>
+      <CmsElement cmsId="98427dd8-2" as="span"
         className={`ml-1 inline-block h-[0.95em] w-[3px] rounded-full align-middle animate-pulse shadow-[0_0_14px_currentColor] ${cursorClassName}`}
         aria-hidden="true"
       />
-    </span>
+    </CmsElement>
   );
 }

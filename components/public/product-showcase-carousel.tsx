@@ -1,8 +1,7 @@
 "use client";
+import { CmsElement, CmsImage, CmsLink } from "@/components/cms/cms-element";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { Icon } from "@/components/icon";
 import { AnimatedCounter } from "@/components/public/animations";
 import { normalizeImageUrl } from "@/lib/image-url";
@@ -37,40 +36,40 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
   if (!products || products.length === 0) return null;
 
   return (
-    <div className="w-full bg-[var(--wc-surface-low)] py-20 relative overflow-hidden">
+    <CmsElement cmsId="cffeb34b-0" as="div" className="w-full bg-[var(--wc-surface-low)] py-20 relative overflow-hidden">
       {/* Background radial glow */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_0%,rgba(6,43,127,0.3),transparent)] pointer-events-none"></div>
+      <CmsElement cmsId="cffeb34b-1" as="div" className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_0%,rgba(6,43,127,0.3),transparent)] pointer-events-none"></CmsElement>
 
       {/* Grid Pattern overlay for tech aesthetic */}
-      <div className="absolute inset-0 z-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+      <CmsElement cmsId="cffeb34b-2" as="div" className="absolute inset-0 z-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></CmsElement>
 
-      <div className="homepage-wide-container mb-12 text-center relative z-10 px-5 md:px-margin-page mx-auto max-w-container-max">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--wc-secondary)_30%,transparent)] bg-[color-mix(in_srgb,var(--wc-secondary)_10%,transparent)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
+      <CmsElement cmsId="cffeb34b-3" as="div" className="homepage-wide-container mb-12 text-center relative z-10 px-5 md:px-margin-page mx-auto max-w-container-max">
+        <CmsElement cmsId="cffeb34b-4" as="div" className="mb-4 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--wc-secondary)_30%,transparent)] bg-[color-mix(in_srgb,var(--wc-secondary)_10%,transparent)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
           <Icon name="rocket_launch" className="text-sm" /> Innovation Showcase
-        </div>
-        <h2 className="flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-on-surface md:text-5xl">
-          <span>Featured Digital Products</span>
-          <span className="inline-flex min-w-[3.25rem] items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wc-secondary)_30%,transparent)] bg-[color-mix(in_srgb,var(--wc-secondary)_10%,transparent)] px-3 py-1 text-xl font-black text-[var(--wc-secondary)] tabular-nums md:text-2xl">
+        </CmsElement>
+        <CmsElement cmsId="cffeb34b-5" as="h2" className="flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-on-surface md:text-5xl">
+          <CmsElement cmsId="cffeb34b-6" as="span">Featured Digital Products</CmsElement>
+          <CmsElement cmsId="cffeb34b-7" as="span" className="inline-flex min-w-[3.25rem] items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--wc-secondary)_30%,transparent)] bg-[color-mix(in_srgb,var(--wc-secondary)_10%,transparent)] px-3 py-1 text-xl font-black text-[var(--wc-secondary)] tabular-nums md:text-2xl">
             <AnimatedCounter value={totalCount ?? products.length} />
-          </span>
-        </h2>
-        <p className="mt-4 max-w-2xl mx-auto text-lg leading-relaxed text-on-surface-variant">
+          </CmsElement>
+        </CmsElement>
+        <CmsElement cmsId="cffeb34b-8" as="p" className="mt-4 max-w-2xl mx-auto text-lg leading-relaxed text-on-surface-variant">
           Explore tools, templates, and projects developed by our talented community and mentors.
-        </p>
-      </div>
+        </CmsElement>
+      </CmsElement>
 
       {/* 3D Carousel Container */}
-      <div className="relative z-10 w-full h-[500px] sm:h-[550px] md:h-[600px] flex items-center justify-center px-5">
+      <CmsElement cmsId="cffeb34b-9" as="div" className="relative z-10 w-full h-[500px] sm:h-[550px] md:h-[600px] flex items-center justify-center px-5">
 
         {/* Left Navigation Button - Absolute Left */}
-        <button
+        <CmsElement cmsId="cffeb34b-10" as="button"
           onClick={handlePrev}
           className="absolute left-4 md:left-12 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
         >
           <Icon name="arrow_back" className="text-2xl" />
-        </button>
+        </CmsElement>
 
-        <div className="relative w-full max-w-5xl h-full flex justify-center items-center perspective-1000">
+        <CmsElement cmsId="cffeb34b-11" as="div" className="relative w-full max-w-5xl h-full flex justify-center items-center perspective-1000">
           {products.map((product, index) => {
             // Calculate distance from active index
             let diff = index - activeIndex;
@@ -142,7 +141,7 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
             const isActive = diff === 0;
 
             return (
-              <div
+              <CmsElement cmsId="cffeb34b-12" as="div" instance={String(product.id)}
                 key={product.id}
                 className="absolute w-[300px] sm:w-[350px] md:w-[400px] h-[450px] sm:h-[500px] transition-all duration-700 ease-in-out cursor-pointer"
                 style={{
@@ -153,10 +152,10 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
                 }}
                 onClick={() => setActiveIndex(index)}
               >
-                <article className={`flex h-full flex-col overflow-hidden rounded-3xl border bg-[var(--wc-surface-lowest)] transition-all duration-500 ${isActive ? 'border-[var(--wc-secondary)] shadow-glow-lg' : 'border-[var(--wc-outline-variant)] opacity-90 shadow-xl'}`}>
-                  <div className="relative h-[220px] w-full shrink-0 overflow-hidden bg-[var(--wc-surface-low)]">
+                <CmsElement cmsId="cffeb34b-13" as="article" className={`flex h-full flex-col overflow-hidden rounded-3xl border bg-[var(--wc-surface-lowest)] transition-all duration-500 ${isActive ? 'border-[var(--wc-secondary)] shadow-glow-lg' : 'border-[var(--wc-outline-variant)] opacity-90 shadow-xl'}`}>
+                  <CmsElement cmsId="cffeb34b-14" as="div" className="relative h-[220px] w-full shrink-0 overflow-hidden bg-[var(--wc-surface-low)]">
                     {(product.image_cdn_url ?? product.image_url) ? (
-                      <Image
+                      <CmsImage cmsId="cffeb34b-15"
                         src={normalizeImageUrl(product.image_cdn_url ?? product.image_url ?? "") ?? product.image_cdn_url ?? product.image_url ?? ""}
                         alt={product.name}
                         fill
@@ -164,68 +163,68 @@ export function ProductShowcaseCarousel({ products, totalCount }: ProductShowcas
                         unoptimized
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-[var(--wc-on-surface-variant)] opacity-50">
+                      <CmsElement cmsId="cffeb34b-16" as="div" className="flex h-full items-center justify-center text-[var(--wc-on-surface-variant)] opacity-50">
                         <Icon name="image" className="text-6xl" />
-                      </div>
+                      </CmsElement>
                     )}
 
                     {/* Overlay gradient for text readability if needed */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--wc-surface-lowest)] to-transparent opacity-80" />
+                    <CmsElement cmsId="cffeb34b-17" as="div" className="absolute inset-0 bg-gradient-to-t from-[var(--wc-surface-lowest)] to-transparent opacity-80" />
 
-                    <div className="absolute left-4 bottom-4 flex gap-2 flex-wrap">
-                      <span className="rounded-full border border-[var(--wc-outline-variant)] bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)] backdrop-blur-md">
+                    <CmsElement cmsId="cffeb34b-18" as="div" className="absolute left-4 bottom-4 flex gap-2 flex-wrap">
+                      <CmsElement cmsId="cffeb34b-19" as="span" className="rounded-full border border-[var(--wc-outline-variant)] bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)] backdrop-blur-md">
                         {product.category}
-                      </span>
-                    </div>
-                  </div>
+                      </CmsElement>
+                    </CmsElement>
+                  </CmsElement>
 
-                  <div className="relative z-10 flex flex-1 flex-col bg-[var(--wc-surface-lowest)] p-6">
-                    <h3 className="mb-3 line-clamp-2 text-2xl font-black text-on-surface transition-colors">
+                  <CmsElement cmsId="cffeb34b-20" as="div" className="relative z-10 flex flex-1 flex-col bg-[var(--wc-surface-lowest)] p-6">
+                    <CmsElement cmsId="cffeb34b-21" as="h3" className="mb-3 line-clamp-2 text-2xl font-black text-on-surface transition-colors">
                       {product.name}
-                    </h3>
-                    <p className="mb-6 line-clamp-3 flex-1 text-sm leading-relaxed text-on-surface-variant">
+                    </CmsElement>
+                    <CmsElement cmsId="cffeb34b-22" as="p" className="mb-6 line-clamp-3 flex-1 text-sm leading-relaxed text-on-surface-variant">
                       {product.short_description || product.full_description || "No description available."}
-                    </p>
+                    </CmsElement>
 
-                    <div className="mt-auto">
-                      <Link
+                    <CmsElement cmsId="cffeb34b-23" as="div" className="mt-auto">
+                      <CmsLink cmsId="cffeb34b-24"
                         href="/products"
                         onClick={(e) => { if(!isActive) e.preventDefault(); }}
                         className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 text-sm font-black transition-all ${isActive ? 'bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] text-on-primary shadow-glow hover:scale-[1.02]' : 'border border-[var(--wc-outline-variant)] text-[var(--wc-primary)] hover:bg-[var(--wc-surface-low)]'}`}
                       >
                         <Icon name="visibility" className="text-lg" /> VIEW DETAILS
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              </div>
+                      </CmsLink>
+                    </CmsElement>
+                  </CmsElement>
+                </CmsElement>
+              </CmsElement>
             );
           })}
-        </div>
+        </CmsElement>
 
         {/* Right Navigation Button - Absolute Right */}
-        <button
+        <CmsElement cmsId="cffeb34b-25" as="button"
           onClick={handleNext}
           className="absolute right-4 md:right-12 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
         >
           <Icon name="arrow_forward" className="text-2xl" />
-        </button>
+        </CmsElement>
 
-      </div>
+      </CmsElement>
 
       {/* Pagination Dots */}
-      <div className="flex justify-center gap-2 mt-8 relative z-10">
+      <CmsElement cmsId="cffeb34b-26" as="div" className="flex justify-center gap-2 mt-8 relative z-10">
         {products.map((_, idx) => (
-          <button
+          <CmsElement cmsId="cffeb34b-27" as="button" instance={String(idx)}
             key={idx}
             onClick={() => setActiveIndex(idx)}
             className={`h-2 rounded-full transition-all ${idx === activeIndex ? 'w-8 bg-[var(--wc-secondary)]' : 'w-2 bg-[var(--wc-outline-variant)] hover:bg-[var(--wc-outline)]'}`}
             aria-label={`Go to slide ${idx + 1}`}
           />
         ))}
-      </div>
+      </CmsElement>
 
-    </div>
+    </CmsElement>
   );
 }
 

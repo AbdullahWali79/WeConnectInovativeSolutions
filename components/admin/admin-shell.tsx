@@ -18,6 +18,7 @@ export type NavItem = { href: string; label: string; icon: string; permission?: 
 export type NavGroup = { id: string; label: string; icon: string; items: NavItem[] };
 
 export const dashboardItem: NavItem = { href: "/admin", label: "Dashboard", icon: "dashboard", permission: "dashboard.view" };
+export const pagesItem: NavItem = { href: "/admin/pages", label: "Pages", icon: "auto_stories", adminOnly: true };
 export const navGroups: NavGroup[] = [
   { id: "academics", label: "Academics", icon: "school", items: [
     { href: "/admin/courses", label: "Courses", icon: "school", permission: "courses.view" },
@@ -242,6 +243,9 @@ export function AdminShell({
           <nav className="flex-1 overflow-y-auto space-y-1 px-3 py-4">
             {canSeeItem(dashboardItem) && (
               <SidebarLink item={dashboardItem} active={pathname === "/admin"} collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
+            )}
+            {canSeeItem(pagesItem) && (
+              <SidebarLink item={pagesItem} active={pathname.startsWith("/admin/pages")} collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
             )}
             {visibleGroups.map((group) => {
               const isOpen = !collapsed && openGroupId === group.id;

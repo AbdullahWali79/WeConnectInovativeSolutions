@@ -9,18 +9,9 @@ import { motion, useAnimationControls } from "framer-motion";
 import { Icon } from "@/components/icon";
 import { useBranding } from "@/components/branding-provider";
 
-export type NavItem = {
-  href: string;
-  path: string;
-  label: string;
-};
-
-export type NavCategory = {
-  label: string;
-  href?: string;
-  path?: string;
-  items?: NavItem[];
-};
+import { navCategories, groupId, type NavCategory, type NavItem } from "@/lib/cms/navigation";
+import { useCms } from "@/components/cms/cms-provider";
+import { menuIsVisible } from "@/lib/cms/model";
 
 function HeaderChevron({ expanded = false, className = "" }: { expanded?: boolean; className?: string }) {
   return (
@@ -34,51 +25,9 @@ function HeaderChevron({ expanded = false, className = "" }: { expanded?: boolea
   );
 }
 
-export const navCategories: NavCategory[] = [
-  { label: "Talent", href: "/talent", path: "/talent" },
-  { label: "Services", href: "/services", path: "/services" },
-  {
-    label: "Study Abroad",
-    items: [
-      { href: "/research-consultancy", path: "/research-consultancy", label: "Overview" },
-      { href: "/study-abroad/opportunities", path: "/study-abroad/opportunities", label: "Opportunities" },
-    ],
-  },
-  {
-    label: "Learning",
-    items: [
-      { href: "/courses", path: "/courses", label: "Courses" },
-      { href: "/internships", path: "/internships", label: "Internships" },
-      { href: "/trainees", path: "/trainees", label: "Trainees" },
-      { href: "/completed-students", path: "/completed-students", label: "Completed Students" },
-      { href: "/apply", path: "/apply", label: "Apply Now" },
-    ],
-  },
-  {
-    label: "Simulations",
-    items: [
-      { href: "/simulations", path: "/simulations", label: "All Simulations" },
-    ],
-  },
-  {
-    label: "More",
-    items: [
-      { href: "/#overview", path: "/", label: "About Us" },
-      { href: "/team", path: "/team", label: "Our Team" },
-      { href: "/mous", path: "/mous", label: "Partners" },
-      { href: "/products", path: "/products", label: "Our Products" },
-      { href: "/videos", path: "/videos", label: "Student Videos" },
-      { href: "/testimonials", path: "/testimonials", label: "Client Reviews" },
-      { href: "/ai-tools", path: "/ai-tools", label: "AI Tools" },
-      { href: "/prompts", path: "/prompts", label: "Prompts" },
-      { href: "/blogs", path: "/blogs", label: "Blogs" },
-      { href: "/news", path: "/news", label: "News" },
-      { href: "/contact", path: "/contact", label: "Contact Us" },
-    ],
-  },
-];
 
 export function PublicHeader() {
+  const { settings } = useCms();
   const pathname = usePathname();
   const router = useRouter();
   const currentPath = pathname ?? "";
@@ -179,6 +128,16 @@ export function PublicHeader() {
     { href: "/apply", path: "/apply", label: "Apply", icon: "send" },
   ];
 
+  const visible = (id: string) => menuIsVisible(id, settings);
+  const label = (id: string, fallback: string) => settings.find(s => s.id === id)?.label || fallback;
+  const order = (id: string) => settings.find(s => s.id === id)?.sort_order ?? 0;
+  const visibleNavItems = navItems.filter(cat => visible(cat.href || groupId(cat.label))).map(cat => ({
+    ...cat,
+    menuId: cat.href || groupId(cat.label),
+    label: label(cat.href || groupId(cat.label), cat.label),
+    items: cat.items?.filter(item => visible(item.href)).map(item => ({ ...item, label: label(item.href, item.label) })).sort((a,b) => order(a.href) - order(b.href)),
+  })).filter(cat => cat.href || cat.items?.length).sort((a,b) => order(a.menuId) - order(b.menuId));
+
   return (
     <header className={`public-header ${scrolled ? "is-scrolled" : ""}`}>
       <div className={`public-header-progress ${pendingPath ? "is-visible" : ""}`} />
@@ -206,7 +165,7 @@ export function PublicHeader() {
         </Link>
 
         <nav className="public-header-nav" aria-label="Primary navigation">
-          {navItems.map((cat) => {
+          {visibleNavItems.map((cat) => {
             const isActiveCategory = cat.href 
               ? currentPath === cat.path 
               : cat.items?.some((item) => currentPath === item.path);
@@ -265,9 +224,9 @@ export function PublicHeader() {
           <Link href="/login" prefetch onClick={() => handleNavigate("/login")} className="public-header-login">
             Login
           </Link>
-          <Link href="/contact" prefetch onClick={() => handleNavigate("/contact")} className="public-header-cta">
+          {visible("/contact") && <Link href="/contact" prefetch onClick={() => handleNavigate("/contact")} className="public-header-cta">
             Start a Project
-          </Link>
+          </Link>}
         </div>
 
         <button
@@ -285,7 +244,7 @@ export function PublicHeader() {
       <div className={`public-mobile-backdrop ${menuOpen ? "is-open" : ""}`} onClick={() => setMenuOpen(false)} />
       <div id="public-mobile-menu" className={`public-mobile-menu ${menuOpen ? "is-open" : ""}`}>
         <nav className="public-mobile-nav" aria-label="Mobile navigation">
-          {navItems.map((cat) => {
+          {visibleNavItems.map((cat) => {
             if (cat.href) {
               const active = currentPath === cat.path;
               return (
@@ -341,9 +300,9 @@ export function PublicHeader() {
           <Link href="/login" prefetch onClick={() => handleNavigate("/login")} className="public-mobile-login">
             Login
           </Link>
-          <Link href="/contact" prefetch onClick={() => handleNavigate("/contact")} className="public-mobile-cta">
+          {visible("/contact") && <Link href="/contact" prefetch onClick={() => handleNavigate("/contact")} className="public-mobile-cta">
             Start a Project
-          </Link>
+          </Link>}
         </div>
       </div>
 
@@ -352,7 +311,7 @@ export function PublicHeader() {
         aria-label="Quick mobile navigation"
       >
         <div className="public-bottom-nav-shell">
-          {bottomNavItems.map((item) => {
+          {bottomNavItems.filter(item => visible(item.href)).map((item) => {
             const isActive = item.path === "/"
               ? currentPath === "/"
               : item.path === "/#portfolio"

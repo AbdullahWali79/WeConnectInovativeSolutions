@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement, CmsInstance } from "@/components/cms/cms-element";
 
 import { useEffect, useMemo, useState } from "react";
 import { LoadingState } from "@/components/loading-state";
@@ -390,28 +391,28 @@ export function TraineesBoard({
   }
 
   if (loading) return (
-    <div className="flex h-[60vh] w-full items-center justify-center bg-[var(--wc-bg)]">
+    <CmsElement cmsId="49e2edfd-0" as="div" className="flex h-[60vh] w-full items-center justify-center bg-[var(--wc-bg)]">
       <LoadingState label="Loading trainees..." />
-    </div>
+    </CmsElement>
   );
 
   return (
-    <section className="relative overflow-hidden bg-[var(--wc-bg)] py-20 lg:py-24">
+    <CmsElement cmsId="49e2edfd-1" as="section" className="relative overflow-hidden bg-[var(--wc-bg)] py-20 lg:py-24">
       {/* Background radial glow */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),transparent)] pointer-events-none"></div>
+      <CmsElement cmsId="49e2edfd-2" as="div" className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,43,127,0.4),transparent)] pointer-events-none"></CmsElement>
 
-      <div className="relative z-10 mx-auto max-w-container-max px-5 md:px-margin-page">
+      <CmsElement cmsId="49e2edfd-3" as="div" className="relative z-10 mx-auto max-w-container-max px-5 md:px-margin-page">
         <FadeIn>
-          <div className="mb-12">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)] mb-4">
+          <CmsElement cmsId="49e2edfd-4" as="div" className="mb-12">
+            <CmsElement cmsId="49e2edfd-5" as="div" className="inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)] mb-4">
               <Icon name="school" className="text-sm" /> Trainees
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black text-on-surface leading-tight">Trainee Progress Overview</h1>
-            <p className="mt-4 max-w-3xl text-lg text-[var(--wc-on-surface-variant)]">Track trainee activity, assigned tasks, completion rates, and current status.</p>
-          </div>
+            </CmsElement>
+            <CmsElement cmsId="49e2edfd-6" as="h1" className="text-4xl md:text-5xl font-black text-on-surface leading-tight">Trainee Progress Overview</CmsElement>
+            <CmsElement cmsId="49e2edfd-7" as="p" className="mt-4 max-w-3xl text-lg text-[var(--wc-on-surface-variant)]">Track trainee activity, assigned tasks, completion rates, and current status.</CmsElement>
+          </CmsElement>
 
-          <div className="mb-10 grid gap-4 md:grid-cols-4 bg-[var(--wc-surface-lowest)]/40 backdrop-blur-md p-6 rounded-3xl border border-[var(--wc-outline-variant)] shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-            <div className="relative md:col-span-2">
+          <CmsElement cmsId="49e2edfd-8" as="div" className="mb-10 grid gap-4 md:grid-cols-4 bg-[var(--wc-surface-lowest)]/40 backdrop-blur-md p-6 rounded-3xl border border-[var(--wc-outline-variant)] shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+            <CmsElement cmsId="49e2edfd-9" as="div" className="relative md:col-span-2">
               <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#7D8BA6]" />
               <input
                 className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] pl-11 pr-4 py-3 text-on-surface placeholder-[#5B6B88] focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
@@ -419,7 +420,7 @@ export function TraineesBoard({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search by name or email"
               />
-            </div>
+            </CmsElement>
             <select
               className="w-full rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-4 py-3 text-on-surface focus:border-[var(--wc-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--wc-secondary)] transition-all"
               value={courseFilter}
@@ -436,89 +437,89 @@ export function TraineesBoard({
               <option value="all" className="text-black">All Statuses</option>
               {Object.keys(statusTone).map((status) => <option key={status} value={status} className="text-black">{status.charAt(0).toUpperCase() + status.slice(1)}</option>)}
             </select>
-          </div>
+          </CmsElement>
         </FadeIn>
 
         {filtered.length === 0 ? (
           <FadeIn>
-            <div className="rounded-3xl border border-dashed border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-12 text-center backdrop-blur-md">
+            <CmsElement cmsId="49e2edfd-10" as="div" className="rounded-3xl border border-dashed border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] p-12 text-center backdrop-blur-md">
               <Icon name="monitoring" className="mx-auto text-5xl text-[var(--wc-on-surface-variant)]" />
-              <h3 className="mt-5 text-2xl font-black text-on-surface">No trainees found</h3>
-              <p className="mt-2 text-[var(--wc-on-surface-variant)]">Trainees matching your criteria will appear here.</p>
-            </div>
+              <CmsElement cmsId="49e2edfd-11" as="h3" className="mt-5 text-2xl font-black text-on-surface">No trainees found</CmsElement>
+              <CmsElement cmsId="49e2edfd-12" as="p" className="mt-2 text-[var(--wc-on-surface-variant)]">Trainees matching your criteria will appear here.</CmsElement>
+            </CmsElement>
           </FadeIn>
         ) : (
           <StaggerContainer className="grid gap-6 lg:grid-cols-2" staggerDelay={0.05}>
             {filtered.map((trainee) => (
-              <StaggerItem key={trainee.id}>
-                <article className="group relative overflow-hidden rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all hover:-translate-y-1 hover:border-[var(--wc-secondary)]/30 hover:bg-[var(--wc-surface-lowest)]/80">
-                  <div className="mb-5 flex justify-end">
-                    <button
+              <CmsInstance key={trainee.id} instance={String(trainee.id)}><StaggerItem key={trainee.id}>
+                <CmsElement cmsId="49e2edfd-13" as="article" className="group relative overflow-hidden rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)]/60 p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all hover:-translate-y-1 hover:border-[var(--wc-secondary)]/30 hover:bg-[var(--wc-surface-lowest)]/80">
+                  <CmsElement cmsId="49e2edfd-14" as="div" className="mb-5 flex justify-end">
+                    <CmsElement cmsId="49e2edfd-15" as="button"
                       type="button"
                       onClick={() => downloadTraineeCard(trainee)}
                       className="inline-flex items-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)] transition hover:bg-[var(--wc-secondary)]/15"
                     >
                       <Icon name="download" className="text-sm" />
                       Download Card
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-2xl font-black text-on-surface group-hover:text-[var(--wc-secondary)] transition-colors">{trainee.name}</h3>
-                      <p className="text-sm font-bold text-[var(--wc-on-surface-variant)] mb-2">{trainee.email}</p>
-                      <p className="text-sm text-[var(--wc-on-surface-variant)] mb-4">Course: <strong className="text-on-surface">{trainee.course_id ? (courseById.get(trainee.course_id)?.title ?? "Unknown") : "Not assigned"}</strong></p>
+                    </CmsElement>
+                  </CmsElement>
+                  <CmsElement cmsId="49e2edfd-16" as="div" className="flex flex-wrap items-start justify-between gap-4">
+                    <CmsElement cmsId="49e2edfd-17" as="div">
+                      <CmsElement cmsId="49e2edfd-18" as="h3" className="text-2xl font-black text-on-surface group-hover:text-[var(--wc-secondary)] transition-colors">{trainee.name}</CmsElement>
+                      <CmsElement cmsId="49e2edfd-19" as="p" className="text-sm font-bold text-[var(--wc-on-surface-variant)] mb-2">{trainee.email}</CmsElement>
+                      <CmsElement cmsId="49e2edfd-20" as="p" className="text-sm text-[var(--wc-on-surface-variant)] mb-4">Course: <CmsElement cmsId="49e2edfd-21" as="strong" className="text-on-surface">{trainee.course_id ? (courseById.get(trainee.course_id)?.title ?? "Unknown") : "Not assigned"}</CmsElement></CmsElement>
 
-                      <div className="flex flex-wrap gap-2">
-                        {trainee.university ? <span className="rounded-full bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">{trainee.university}</span> : null}
-                        {trainee.training_duration ? <span className="rounded-full bg-[var(--wc-secondary)]/10 border border-[var(--wc-secondary)]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)]">{trainee.training_duration}</span> : null}
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-bold ${statusTone[trainee.displayStatus] ?? "bg-[var(--wc-surface-low)] text-on-surface border border-[var(--wc-outline-variant)]"}`}>
+                      <CmsElement cmsId="49e2edfd-22" as="div" className="flex flex-wrap gap-2">
+                        {trainee.university ? <CmsElement cmsId="49e2edfd-23" as="span" className="rounded-full bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-on-surface-variant)]">{trainee.university}</CmsElement> : null}
+                        {trainee.training_duration ? <CmsElement cmsId="49e2edfd-24" as="span" className="rounded-full bg-[var(--wc-secondary)]/10 border border-[var(--wc-secondary)]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--wc-secondary)]">{trainee.training_duration}</CmsElement> : null}
+                      </CmsElement>
+                    </CmsElement>
+                    <CmsElement cmsId="49e2edfd-25" as="span" className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-bold ${statusTone[trainee.displayStatus] ?? "bg-[var(--wc-surface-low)] text-on-surface border border-[var(--wc-outline-variant)]"}`}>
                       {trainee.displayStatus}
-                    </span>
-                  </div>
+                    </CmsElement>
+                  </CmsElement>
 
-                  <div className="mt-6 grid grid-cols-2 gap-y-4 rounded-2xl bg-[var(--wc-surface-lowest)] p-4 text-center border border-[var(--wc-outline-variant)] sm:grid-cols-4 sm:gap-y-0">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Assigned</p>
-                      <strong className="text-xl font-black text-on-surface">{trainee.assigned_tasks}</strong>
-                    </div>
-                    <div className="border-l border-[var(--wc-outline-variant)]">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Tasks Completed</p>
-                      <strong className="text-xl font-black text-green-400">{trainee.completed_tasks}</strong>
-                    </div>
-                    <div className="border-l border-[var(--wc-outline-variant)]">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Projects Completed</p>
-                      <strong className="text-xl font-black text-sky-400">{trainee.completed_projects}</strong>
-                    </div>
-                    <div className="border-l border-[var(--wc-outline-variant)]">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Pending</p>
-                      <strong className="text-xl font-black text-[var(--wc-secondary)]">{trainee.pending_tasks}</strong>
-                    </div>
-                  </div>
+                  <CmsElement cmsId="49e2edfd-26" as="div" className="mt-6 grid grid-cols-2 gap-y-4 rounded-2xl bg-[var(--wc-surface-lowest)] p-4 text-center border border-[var(--wc-outline-variant)] sm:grid-cols-4 sm:gap-y-0">
+                    <CmsElement cmsId="49e2edfd-27" as="div">
+                      <CmsElement cmsId="49e2edfd-28" as="p" className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Assigned</CmsElement>
+                      <CmsElement cmsId="49e2edfd-29" as="strong" className="text-xl font-black text-on-surface">{trainee.assigned_tasks}</CmsElement>
+                    </CmsElement>
+                    <CmsElement cmsId="49e2edfd-30" as="div" className="border-l border-[var(--wc-outline-variant)]">
+                      <CmsElement cmsId="49e2edfd-31" as="p" className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Tasks Completed</CmsElement>
+                      <CmsElement cmsId="49e2edfd-32" as="strong" className="text-xl font-black text-green-400">{trainee.completed_tasks}</CmsElement>
+                    </CmsElement>
+                    <CmsElement cmsId="49e2edfd-33" as="div" className="border-l border-[var(--wc-outline-variant)]">
+                      <CmsElement cmsId="49e2edfd-34" as="p" className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Projects Completed</CmsElement>
+                      <CmsElement cmsId="49e2edfd-35" as="strong" className="text-xl font-black text-sky-400">{trainee.completed_projects}</CmsElement>
+                    </CmsElement>
+                    <CmsElement cmsId="49e2edfd-36" as="div" className="border-l border-[var(--wc-outline-variant)]">
+                      <CmsElement cmsId="49e2edfd-37" as="p" className="text-[10px] font-bold uppercase tracking-widest text-[#7D8BA6] mb-1">Pending</CmsElement>
+                      <CmsElement cmsId="49e2edfd-38" as="strong" className="text-xl font-black text-[var(--wc-secondary)]">{trainee.pending_tasks}</CmsElement>
+                    </CmsElement>
+                  </CmsElement>
 
-                  <div className="mt-6">
-                    <div className="mb-2 flex items-center justify-between text-xs font-bold text-on-surface">
-                      <span>Progress</span>
-                      <span className="text-[var(--wc-secondary)]">{trainee.progress_percentage}%</span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-black/40 border border-[var(--wc-outline-variant)]">
-                      <div
+                  <CmsElement cmsId="49e2edfd-39" as="div" className="mt-6">
+                    <CmsElement cmsId="49e2edfd-40" as="div" className="mb-2 flex items-center justify-between text-xs font-bold text-on-surface">
+                      <CmsElement cmsId="49e2edfd-41" as="span">Progress</CmsElement>
+                      <CmsElement cmsId="49e2edfd-42" as="span" className="text-[var(--wc-secondary)]">{trainee.progress_percentage}%</CmsElement>
+                    </CmsElement>
+                    <CmsElement cmsId="49e2edfd-43" as="div" className="h-2 w-full overflow-hidden rounded-full bg-black/40 border border-[var(--wc-outline-variant)]">
+                      <CmsElement cmsId="49e2edfd-44" as="div"
                         className="h-full rounded-full bg-gradient-to-r from-[var(--wc-secondary)] to-[var(--wc-brand-accent)] shadow-[0_0_10px_rgba(var(--landing-accent-rgb),0.5)] transition-all duration-1000 ease-out"
                         style={{ width: `${trainee.progress_percentage}%` }}
                       />
-                    </div>
-                  </div>
+                    </CmsElement>
+                  </CmsElement>
 
-                  <p className="mt-6 text-[11px] font-bold uppercase tracking-widest text-[#5B6B88]">
-                    Enrolled: <span className="text-[var(--wc-on-surface-variant)]">{formatDate(trainee.created_at)}</span>
-                  </p>
-                </article>
-              </StaggerItem>
+                  <CmsElement cmsId="49e2edfd-45" as="p" className="mt-6 text-[11px] font-bold uppercase tracking-widest text-[#5B6B88]">
+                    Enrolled: <CmsElement cmsId="49e2edfd-46" as="span" className="text-[var(--wc-on-surface-variant)]">{formatDate(trainee.created_at)}</CmsElement>
+                  </CmsElement>
+                </CmsElement>
+              </StaggerItem></CmsInstance>
             ))}
           </StaggerContainer>
         )}
-      </div>
-    </section>
+      </CmsElement>
+    </CmsElement>
   );
 }

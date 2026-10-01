@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement, CmsInstance } from "@/components/cms/cms-element";
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,25 +44,25 @@ export function FAQSection() {
   );
 
   return (
-    <section className="relative overflow-hidden py-16 md:py-24 bg-gradient-to-b from-white to-[#F0F3FF]">
+    <CmsElement cmsId="75709eb1-0" as="section" className="relative overflow-hidden py-16 md:py-24 bg-gradient-to-b from-white to-[#F0F3FF]">
       {/* Dynamic Background Gradients */}
-      <div className="absolute top-1/2 left-1/2 -z-10 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/30 blur-[120px]" />
+      <CmsElement cmsId="75709eb1-1" as="div" className="absolute top-1/2 left-1/2 -z-10 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/30 blur-[120px]" />
 
-      <div className="homepage-wide-container">
+      <CmsElement cmsId="75709eb1-2" as="div" className="homepage-wide-container">
         {/* Header */}
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <div className="wc-section-label mb-4">
+        <CmsElement cmsId="75709eb1-3" as="div" className="mx-auto mb-12 max-w-2xl text-center">
+          <CmsElement cmsId="75709eb1-4" as="div" className="wc-section-label mb-4">
             <Icon name="help" className="text-sm" /> FAQ Accordion
-          </div>
-          <h2 className="text-3xl font-extrabold text-[var(--wc-primary)] sm:text-4xl">
+          </CmsElement>
+          <CmsElement cmsId="75709eb1-5" as="h2" className="text-3xl font-extrabold text-[var(--wc-primary)] sm:text-4xl">
             Frequently Asked Questions
-          </h2>
-          <p className="mt-3 text-sm text-on-surface-variant sm:text-base">
+          </CmsElement>
+          <CmsElement cmsId="75709eb1-6" as="p" className="mt-3 text-sm text-on-surface-variant sm:text-base">
             Find answers to commonly asked questions about our structured training pathway and internship portal.
-          </p>
+          </CmsElement>
 
           {/* Search Box */}
-          <div className="relative mt-8 max-w-md mx-auto">
+          <CmsElement cmsId="75709eb1-7" as="div" className="relative mt-8 max-w-md mx-auto">
             <input
               type="text"
               placeholder="Search questions..."
@@ -74,24 +75,24 @@ export function FAQSection() {
               className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[#5B6B88]"
             />
             {searchQuery && (
-              <button
+              <CmsElement cmsId="75709eb1-8" as="button"
                 onClick={() => setSearchQuery("")}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--wc-primary)]"
               >
                 Clear
-              </button>
+              </CmsElement>
             )}
-          </div>
-        </div>
+          </CmsElement>
+        </CmsElement>
 
         {/* FAQ List */}
-        <div className="mx-auto max-w-3xl space-y-4">
+        <CmsElement cmsId="75709eb1-9" as="div" className="mx-auto max-w-3xl space-y-4">
           <AnimatePresence initial={false}>
             {filteredFaqs.length > 0 ? (
               filteredFaqs.map((faq, idx) => {
                 const isOpen = activeIndex === idx;
                 return (
-                  <motion.div
+                  <CmsInstance key={faq.question} instance={String(faq.question)}><motion.div
                     key={faq.question}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -102,14 +103,14 @@ export function FAQSection() {
                         : "border-[#DDE6F5] bg-[var(--wc-surface-low)] backdrop-blur-md hover:border-[var(--wc-primary)]/20 hover:shadow-sm"
                     }`}
                   >
-                    <button
+                    <CmsElement cmsId="75709eb1-10" as="button"
                       onClick={() => setActiveIndex(isOpen ? null : idx)}
                       className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors sm:p-6"
                     >
-                      <span className="text-base font-bold text-[#071A3B] sm:text-lg">
+                      <CmsElement cmsId="75709eb1-11" as="span" className="text-base font-bold text-[#071A3B] sm:text-lg">
                         {faq.question}
-                      </span>
-                      <div
+                      </CmsElement>
+                      <CmsElement cmsId="75709eb1-12" as="div"
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform duration-300 ${
                           isOpen
                             ? "bg-[var(--wc-primary)] text-on-surface"
@@ -122,8 +123,8 @@ export function FAQSection() {
                             isOpen ? "rotate-180" : ""
                           }`}
                         />
-                      </div>
-                    </button>
+                      </CmsElement>
+                    </CmsElement>
 
                     <AnimatePresence initial={false}>
                       {isOpen && (
@@ -133,24 +134,24 @@ export function FAQSection() {
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
                         >
-                          <div className="border-t border-[#DDE6F5]/50 px-5 pb-5 pt-4 text-sm leading-relaxed text-[#5B6B88] sm:px-6 sm:pb-6 sm:text-base">
+                          <CmsElement cmsId="75709eb1-13" as="div" className="border-t border-[#DDE6F5]/50 px-5 pb-5 pt-4 text-sm leading-relaxed text-[#5B6B88] sm:px-6 sm:pb-6 sm:text-base">
                             {faq.answer}
-                          </div>
+                          </CmsElement>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </motion.div>
+                  </motion.div></CmsInstance>
                 );
               })
             ) : (
-              <div className="text-center py-10 bg-[var(--wc-surface-low)] backdrop-blur-sm rounded-2xl border border-dashed border-[#DDE6F5]">
+              <CmsElement cmsId="75709eb1-14" as="div" className="text-center py-10 bg-[var(--wc-surface-low)] backdrop-blur-sm rounded-2xl border border-dashed border-[#DDE6F5]">
                 <Icon name="search_off" className="text-4xl text-[#5B6B88] mb-2" />
-                <p className="text-sm font-semibold text-[#071A3B]">No questions found matching &quot;{searchQuery}&quot;</p>
-              </div>
+                <CmsElement cmsId="75709eb1-15" as="p" className="text-sm font-semibold text-[#071A3B]">No questions found matching &quot;{searchQuery}&quot;</CmsElement>
+              </CmsElement>
             )}
           </AnimatePresence>
-        </div>
-      </div>
-    </section>
+        </CmsElement>
+      </CmsElement>
+    </CmsElement>
   );
 }

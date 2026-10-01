@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement } from "@/components/cms/cms-element";
 
 import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -123,16 +124,16 @@ export function AnimatedCounter({
   }, [isInView, value]);
 
   return (
-    <span ref={ref} className={className}>
+    <CmsElement cmsId="e7665489-0" as="span" ref={ref} className={className}>
       {displayValue.toLocaleString()}{suffix}
-    </span>
+    </CmsElement>
   );
 }
 
 // Floating orbs for hero background
 export function FloatingOrbs() {
   return (
-    <div className="absolute inset-0 -z-10 overflow-hidden">
+    <CmsElement cmsId="e7665489-1" as="div" className="absolute inset-0 -z-10 overflow-hidden">
       <motion.div
         animate={{
           x: [0, 30, -20, 0],
@@ -160,7 +161,7 @@ export function FloatingOrbs() {
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         className="absolute bottom-20 left-1/4 h-[350px] w-[350px] rounded-full bg-blue-300/15 blur-[100px]"
       />
-    </div>
+    </CmsElement>
   );
 }
 
@@ -173,9 +174,9 @@ export function GradientText({
   className?: string;
 }) {
   return (
-    <span className={`bg-gradient-to-r from-primary via-blue-600 to-primary bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x ${className}`}>
+    <CmsElement cmsId="e7665489-2" as="span" className={`bg-gradient-to-r from-primary via-blue-600 to-primary bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x ${className}`}>
       {children}
-    </span>
+    </CmsElement>
   );
 }
 
@@ -226,9 +227,9 @@ export function MagneticButton({
 // Shimmer loading effect
 export function Shimmer({ className = "" }: { className?: string }) {
   return (
-    <div className={`relative overflow-hidden ${className}`}>
-      <div className="animate-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-    </div>
+    <CmsElement cmsId="e7665489-3" as="div" className={`relative overflow-hidden ${className}`}>
+      <CmsElement cmsId="e7665489-4" as="div" className="animate-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+    </CmsElement>
   );
 }
 
@@ -246,12 +247,12 @@ export function ScrollProgress() {
   }, []);
 
   return (
-    <div className="fixed left-0 top-0 z-[60] h-[3px] w-full bg-transparent">
+    <CmsElement cmsId="e7665489-5" as="div" className="fixed left-0 top-0 z-[60] h-[3px] w-full bg-transparent">
       <motion.div
         className="h-full bg-gradient-to-r from-primary via-blue-500 to-secondary-container"
         style={{ width: `${progress}%` }}
         transition={{ duration: 0.1 }}
       />
-    </div>
+    </CmsElement>
   );
 }

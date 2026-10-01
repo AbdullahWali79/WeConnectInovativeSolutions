@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement } from "@/components/cms/cms-element";
 
 import { useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
@@ -73,9 +74,9 @@ export function CompletedStudentsList({ students }: CompletedStudentsListProps) 
 
   return (
     <>
-      <div className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_240px_240px]">
-        <label className="relative block">
-          <span className="sr-only">Search completed students</span>
+      <CmsElement cmsId="968e1ab2-0" as="div" className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_240px_240px]">
+        <CmsElement cmsId="968e1ab2-1" as="label" className="relative block">
+          <CmsElement cmsId="968e1ab2-2" as="span" className="sr-only">Search completed students</CmsElement>
           <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-primary" />
           <input
             value={searchTerm}
@@ -83,10 +84,10 @@ export function CompletedStudentsList({ students }: CompletedStudentsListProps) 
             placeholder="Search by student name or course"
             className="h-14 w-full rounded-lg border border-outline-variant bg-surface-lowest pl-12 pr-4 text-on-surface shadow-inner-light outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
-        </label>
+        </CmsElement>
 
-        <label className="relative block">
-          <span className="sr-only">Filter by course</span>
+        <CmsElement cmsId="968e1ab2-3" as="label" className="relative block">
+          <CmsElement cmsId="968e1ab2-4" as="span" className="sr-only">Filter by course</CmsElement>
           <select
             value={courseFilter}
             onChange={(event) => setCourseFilter(event.target.value)}
@@ -99,10 +100,10 @@ export function CompletedStudentsList({ students }: CompletedStudentsListProps) 
               </option>
             ))}
           </select>
-        </label>
+        </CmsElement>
 
-        <label className="relative block">
-          <span className="sr-only">Filter by record type</span>
+        <CmsElement cmsId="968e1ab2-5" as="label" className="relative block">
+          <CmsElement cmsId="968e1ab2-6" as="span" className="sr-only">Filter by record type</CmsElement>
           <select
             value={sourceFilter}
             onChange={(event) => setSourceFilter(event.target.value)}
@@ -115,16 +116,16 @@ export function CompletedStudentsList({ students }: CompletedStudentsListProps) 
               </option>
             ))}
           </select>
-        </label>
-      </div>
+        </CmsElement>
+      </CmsElement>
 
-      <div className="mb-4 flex items-center justify-between gap-3 text-sm text-on-surface-variant">
-        <p>
-          Showing <span className="font-bold text-primary">{filteredStudents.length}</span> of{" "}
-          <span className="font-bold text-primary">{students.length}</span> completed students
-        </p>
+      <CmsElement cmsId="968e1ab2-7" as="div" className="mb-4 flex items-center justify-between gap-3 text-sm text-on-surface-variant">
+        <CmsElement cmsId="968e1ab2-8" as="p">
+          Showing <CmsElement cmsId="968e1ab2-9" as="span" className="font-bold text-primary">{filteredStudents.length}</CmsElement> of{" "}
+          <CmsElement cmsId="968e1ab2-10" as="span" className="font-bold text-primary">{students.length}</CmsElement> completed students
+        </CmsElement>
         {(searchTerm || courseFilter !== "all" || sourceFilter !== "all") && (
-          <button
+          <CmsElement cmsId="968e1ab2-11" as="button"
             type="button"
             onClick={() => {
               setSearchTerm("");
@@ -135,106 +136,106 @@ export function CompletedStudentsList({ students }: CompletedStudentsListProps) 
           >
             <Icon name="close" className="text-base" />
             Clear
-          </button>
+          </CmsElement>
         )}
-      </div>
+      </CmsElement>
 
       {filteredStudents.length > 0 ? (
         <>
-          <div className="hidden overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-lowest shadow-card md:block">
-            <table className="w-full text-left">
-              <thead className="bg-surface-container-low text-label-sm uppercase tracking-widest text-primary">
-                <tr>
-                  <th className="p-5">Student Name</th>
-                  <th className="p-5">Course Name</th>
-                  <th className="p-5">Record Type</th>
-                  <th className="p-5">Progress</th>
-                  <th className="p-5">Final Score</th>
-                  <th className="p-5">Completion Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/50">
+          <CmsElement cmsId="968e1ab2-12" as="div" className="hidden overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-lowest shadow-card md:block">
+            <CmsElement cmsId="968e1ab2-13" as="table" className="w-full text-left">
+              <CmsElement cmsId="968e1ab2-14" as="thead" className="bg-surface-container-low text-label-sm uppercase tracking-widest text-primary">
+                <CmsElement cmsId="968e1ab2-15" as="tr">
+                  <CmsElement cmsId="968e1ab2-16" as="th" className="p-5">Student Name</CmsElement>
+                  <CmsElement cmsId="968e1ab2-17" as="th" className="p-5">Course Name</CmsElement>
+                  <CmsElement cmsId="968e1ab2-18" as="th" className="p-5">Record Type</CmsElement>
+                  <CmsElement cmsId="968e1ab2-19" as="th" className="p-5">Progress</CmsElement>
+                  <CmsElement cmsId="968e1ab2-20" as="th" className="p-5">Final Score</CmsElement>
+                  <CmsElement cmsId="968e1ab2-21" as="th" className="p-5">Completion Date</CmsElement>
+                </CmsElement>
+              </CmsElement>
+              <CmsElement cmsId="968e1ab2-22" as="tbody" className="divide-y divide-outline-variant/50">
                 {filteredStudents.map((student) => {
                   const progress = progressValue(student.progress_percentage);
 
                   return (
-                    <tr key={student.id} className="transition-colors hover:bg-surface-container-lowest/80">
-                      <td className="p-5 font-bold text-on-surface">{student.student_name ?? "Student"}</td>
-                      <td className="p-5 text-on-surface-variant">{student.course_name ?? "Course"}</td>
-                      <td className="p-5">
-                        <span className="rounded-full bg-[#EEF4FF] px-3 py-1 text-xs font-bold text-primary">
+                    <CmsElement cmsId="968e1ab2-23" as="tr" instance={String(student.id)} key={student.id} className="transition-colors hover:bg-surface-container-lowest/80">
+                      <CmsElement cmsId="968e1ab2-24" as="td" className="p-5 font-bold text-on-surface">{student.student_name ?? "Student"}</CmsElement>
+                      <CmsElement cmsId="968e1ab2-25" as="td" className="p-5 text-on-surface-variant">{student.course_name ?? "Course"}</CmsElement>
+                      <CmsElement cmsId="968e1ab2-26" as="td" className="p-5">
+                        <CmsElement cmsId="968e1ab2-27" as="span" className="rounded-full bg-[#EEF4FF] px-3 py-1 text-xs font-bold text-primary">
                           {student.source_type ? sourceLabels[student.source_type] : "Certificate Records"}
-                        </span>
-                      </td>
-                      <td className="p-5">
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-16 overflow-hidden rounded-full bg-surface-container-low">
-                            <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
-                          </div>
-                          <span className="text-sm font-bold text-primary">{progress}%</span>
-                        </div>
-                      </td>
-                      <td className="p-5 font-bold text-on-surface">{formatScore(student.final_score)}</td>
-                      <td className="p-5 text-on-surface-variant">{formatDate(student.completed_at)}</td>
-                    </tr>
+                        </CmsElement>
+                      </CmsElement>
+                      <CmsElement cmsId="968e1ab2-28" as="td" className="p-5">
+                        <CmsElement cmsId="968e1ab2-29" as="div" className="flex items-center gap-3">
+                          <CmsElement cmsId="968e1ab2-30" as="div" className="h-2 w-16 overflow-hidden rounded-full bg-surface-container-low">
+                            <CmsElement cmsId="968e1ab2-31" as="div" className="h-full bg-primary" style={{ width: `${progress}%` }} />
+                          </CmsElement>
+                          <CmsElement cmsId="968e1ab2-32" as="span" className="text-sm font-bold text-primary">{progress}%</CmsElement>
+                        </CmsElement>
+                      </CmsElement>
+                      <CmsElement cmsId="968e1ab2-33" as="td" className="p-5 font-bold text-on-surface">{formatScore(student.final_score)}</CmsElement>
+                      <CmsElement cmsId="968e1ab2-34" as="td" className="p-5 text-on-surface-variant">{formatDate(student.completed_at)}</CmsElement>
+                    </CmsElement>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </CmsElement>
+            </CmsElement>
+          </CmsElement>
 
-          <div className="grid gap-4 md:hidden">
+          <CmsElement cmsId="968e1ab2-35" as="div" className="grid gap-4 md:hidden">
             {filteredStudents.map((student) => {
               const progress = progressValue(student.progress_percentage);
 
               return (
-                <article key={student.id} className="rounded-lg border border-outline-variant/50 bg-surface-lowest p-5 shadow-card">
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-bold uppercase tracking-widest text-primary">Student Name</p>
-                      <h2 className="mt-1 text-lg font-bold text-on-surface">{student.student_name ?? "Student"}</h2>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold uppercase tracking-widest text-primary">Score</p>
-                      <p className="mt-1 text-lg font-bold text-on-surface">{formatScore(student.final_score)}</p>
-                    </div>
-                  </div>
+                <CmsElement cmsId="968e1ab2-36" as="article" instance={String(student.id)} key={student.id} className="rounded-lg border border-outline-variant/50 bg-surface-lowest p-5 shadow-card">
+                  <CmsElement cmsId="968e1ab2-37" as="div" className="mb-4 flex items-start justify-between gap-4">
+                    <CmsElement cmsId="968e1ab2-38" as="div">
+                      <CmsElement cmsId="968e1ab2-39" as="p" className="text-sm font-bold uppercase tracking-widest text-primary">Student Name</CmsElement>
+                      <CmsElement cmsId="968e1ab2-40" as="h2" className="mt-1 text-lg font-bold text-on-surface">{student.student_name ?? "Student"}</CmsElement>
+                    </CmsElement>
+                    <CmsElement cmsId="968e1ab2-41" as="div" className="text-right">
+                      <CmsElement cmsId="968e1ab2-42" as="p" className="text-sm font-bold uppercase tracking-widest text-primary">Score</CmsElement>
+                      <CmsElement cmsId="968e1ab2-43" as="p" className="mt-1 text-lg font-bold text-on-surface">{formatScore(student.final_score)}</CmsElement>
+                    </CmsElement>
+                  </CmsElement>
 
-                  <div className="mb-4">
-                    <p className="text-sm font-bold uppercase tracking-widest text-primary">Course Name</p>
-                    <p className="mt-1 text-on-surface-variant">{student.course_name ?? "Course"}</p>
-                  </div>
+                  <CmsElement cmsId="968e1ab2-44" as="div" className="mb-4">
+                    <CmsElement cmsId="968e1ab2-45" as="p" className="text-sm font-bold uppercase tracking-widest text-primary">Course Name</CmsElement>
+                    <CmsElement cmsId="968e1ab2-46" as="p" className="mt-1 text-on-surface-variant">{student.course_name ?? "Course"}</CmsElement>
+                  </CmsElement>
 
-                  <div className="mb-4">
-                    <p className="text-sm font-bold uppercase tracking-widest text-primary">Record Type</p>
-                    <p className="mt-1 text-on-surface-variant">{student.source_type ? sourceLabels[student.source_type] : "Certificate Records"}</p>
-                  </div>
+                  <CmsElement cmsId="968e1ab2-47" as="div" className="mb-4">
+                    <CmsElement cmsId="968e1ab2-48" as="p" className="text-sm font-bold uppercase tracking-widest text-primary">Record Type</CmsElement>
+                    <CmsElement cmsId="968e1ab2-49" as="p" className="mt-1 text-on-surface-variant">{student.source_type ? sourceLabels[student.source_type] : "Certificate Records"}</CmsElement>
+                  </CmsElement>
 
-                  <div className="mb-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-sm font-bold uppercase tracking-widest text-primary">Progress</p>
-                      <span className="text-sm font-bold text-primary">{progress}%</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-surface-container-low">
-                      <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
-                    </div>
-                  </div>
+                  <CmsElement cmsId="968e1ab2-50" as="div" className="mb-4">
+                    <CmsElement cmsId="968e1ab2-51" as="div" className="mb-2 flex items-center justify-between">
+                      <CmsElement cmsId="968e1ab2-52" as="p" className="text-sm font-bold uppercase tracking-widest text-primary">Progress</CmsElement>
+                      <CmsElement cmsId="968e1ab2-53" as="span" className="text-sm font-bold text-primary">{progress}%</CmsElement>
+                    </CmsElement>
+                    <CmsElement cmsId="968e1ab2-54" as="div" className="h-2 overflow-hidden rounded-full bg-surface-container-low">
+                      <CmsElement cmsId="968e1ab2-55" as="div" className="h-full bg-primary" style={{ width: `${progress}%` }} />
+                    </CmsElement>
+                  </CmsElement>
 
-                  <div>
-                    <p className="text-sm font-bold uppercase tracking-widest text-primary">Completion Date</p>
-                    <p className="mt-1 text-on-surface-variant">{formatDate(student.completed_at)}</p>
-                  </div>
-                </article>
+                  <CmsElement cmsId="968e1ab2-56" as="div">
+                    <CmsElement cmsId="968e1ab2-57" as="p" className="text-sm font-bold uppercase tracking-widest text-primary">Completion Date</CmsElement>
+                    <CmsElement cmsId="968e1ab2-58" as="p" className="mt-1 text-on-surface-variant">{formatDate(student.completed_at)}</CmsElement>
+                  </CmsElement>
+                </CmsElement>
               );
             })}
-          </div>
+          </CmsElement>
         </>
       ) : (
-        <div className="rounded-lg border border-outline-variant/50 bg-surface-lowest p-8 text-center shadow-card">
+        <CmsElement cmsId="968e1ab2-59" as="div" className="rounded-lg border border-outline-variant/50 bg-surface-lowest p-8 text-center shadow-card">
           <Icon name="search_off" className="text-4xl text-primary" />
-          <h2 className="mt-3 text-xl font-extrabold text-on-surface">No matching student found</h2>
-          <p className="mt-2 text-on-surface-variant">Try another student name or course filter.</p>
-        </div>
+          <CmsElement cmsId="968e1ab2-60" as="h2" className="mt-3 text-xl font-extrabold text-on-surface">No matching student found</CmsElement>
+          <CmsElement cmsId="968e1ab2-61" as="p" className="mt-2 text-on-surface-variant">Try another student name or course filter.</CmsElement>
+        </CmsElement>
       )}
     </>
   );

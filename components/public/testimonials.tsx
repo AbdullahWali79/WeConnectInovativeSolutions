@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement, CmsInstance } from "@/components/cms/cms-element";
 
 import React, { useState, useCallback } from "react";
 import { Icon } from "@/components/icon";
@@ -71,35 +72,35 @@ export function TestimonialsSection() {
   }
 
   return (
-    <section className="bg-[var(--wc-bg)] py-20 lg:py-28 relative overflow-hidden border-t border-[var(--wc-outline-variant)]">
+    <CmsElement cmsId="6d376088-0" as="section" className="bg-[var(--wc-bg)] py-20 lg:py-28 relative overflow-hidden border-t border-[var(--wc-outline-variant)]">
       {/* Decorative Glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_50%,rgba(6,43,127,0.3),transparent)] pointer-events-none" />
+      <CmsElement cmsId="6d376088-1" as="div" className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_50%,rgba(6,43,127,0.3),transparent)] pointer-events-none" />
 
-      <div className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
+      <CmsElement cmsId="6d376088-2" as="div" className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
         <FadeIn>
-          <div className="mb-16 max-w-3xl text-center mx-auto">
-            <div className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
+          <CmsElement cmsId="6d376088-3" as="div" className="mb-16 max-w-3xl text-center mx-auto">
+            <CmsElement cmsId="6d376088-4" as="div" className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
               <Icon name="favorite" className="text-sm" /> Student Reviews
-            </div>
-            <h2 className="text-3xl font-black text-on-surface md:text-4xl lg:text-5xl mt-3 mb-4 leading-tight">
-              Success Stories from <span className="bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] bg-clip-text text-transparent">Our Graduates</span>
-            </h2>
-            <p className="mt-4 text-lg text-[var(--wc-on-surface-variant)]">
+            </CmsElement>
+            <CmsElement cmsId="6d376088-5" as="h2" className="text-3xl font-black text-on-surface md:text-4xl lg:text-5xl mt-3 mb-4 leading-tight">
+              Success Stories from <CmsElement cmsId="6d376088-6" as="span" className="bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] bg-clip-text text-transparent">Our Graduates</CmsElement>
+            </CmsElement>
+            <CmsElement cmsId="6d376088-7" as="p" className="mt-4 text-lg text-[var(--wc-on-surface-variant)]">
               Discover how our hands-on training tasks, professional code reviews, and structured pathways helped students secure real jobs and paid internships.
-            </p>
-          </div>
+            </CmsElement>
+          </CmsElement>
         </FadeIn>
 
-        <div className="relative w-full h-[550px] md:h-[600px] flex items-center justify-center mt-12 mb-8">
+        <CmsElement cmsId="6d376088-8" as="div" className="relative w-full h-[550px] md:h-[600px] flex items-center justify-center mt-12 mb-8">
           {/* Left Nav Button */}
-          <button
+          <CmsElement cmsId="6d376088-9" as="button"
             onClick={handlePrev}
             className="absolute left-0 md:left-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
           >
             <Icon name="arrow_back" className="text-2xl" />
-          </button>
+          </CmsElement>
 
-          <div className="relative w-full max-w-5xl h-full flex justify-center items-center perspective-1000">
+          <CmsElement cmsId="6d376088-10" as="div" className="relative w-full max-w-5xl h-full flex justify-center items-center perspective-1000">
             {testimonialsData.map((testimonial, index) => {
               let diff = index - activeIndex;
 
@@ -162,7 +163,7 @@ export function TestimonialsSection() {
               const isActive = diff === 0;
 
               return (
-                <div
+                <CmsElement cmsId="6d376088-11" as="div" instance={String(index)}
                   key={index}
                   className="absolute w-[300px] sm:w-[350px] md:w-[380px] h-[500px] sm:h-[530px] transition-all duration-700 ease-in-out cursor-pointer [perspective:1000px]"
                   style={{
@@ -176,7 +177,7 @@ export function TestimonialsSection() {
                     }
                   }}
                 >
-                  <article
+                  <CmsElement cmsId="6d376088-12" as="article"
                     className={`flex h-full w-full flex-col overflow-hidden rounded-[28px] border transition-all duration-500 bg-[var(--wc-surface-lowest)] text-left ${
                       isActive
                         ? 'border-[var(--wc-secondary)]/50 shadow-glow-lg bg-gradient-to-b from-[var(--wc-surface-lowest)] to-[var(--wc-primary)]'
@@ -185,90 +186,90 @@ export function TestimonialsSection() {
                   >
                     {/* Glow effect for active card */}
                     {isActive && (
-                      <div className="absolute -inset-px rounded-[28px] bg-gradient-to-b from-[var(--wc-secondary)]/20 to-transparent blur-sm pointer-events-none" />
+                      <CmsElement cmsId="6d376088-13" as="div" className="absolute -inset-px rounded-[28px] bg-gradient-to-b from-[var(--wc-secondary)]/20 to-transparent blur-sm pointer-events-none" />
                     )}
 
                     {/* Top Content */}
-                    <div className="p-8 pb-0 relative z-10 flex-1">
-                      <div className="absolute top-6 right-8 text-6xl font-serif text-[var(--wc-on-surface-variant)] select-none pointer-events-none">
+                    <CmsElement cmsId="6d376088-14" as="div" className="p-8 pb-0 relative z-10 flex-1">
+                      <CmsElement cmsId="6d376088-15" as="div" className="absolute top-6 right-8 text-6xl font-serif text-[var(--wc-on-surface-variant)] select-none pointer-events-none">
                         “
-                      </div>
+                      </CmsElement>
 
-                      <div className="flex gap-1 mb-6 text-[var(--wc-secondary)]">
+                      <CmsElement cmsId="6d376088-16" as="div" className="flex gap-1 mb-6 text-[var(--wc-secondary)]">
                         {[...Array(testimonial.rating)].map((_, i) => (
-                          <Icon key={i} name="star" className="text-xl" />
+                          <CmsInstance key={i} instance={String(i)}><Icon key={i} name="star" className="text-xl" /></CmsInstance>
                         ))}
-                      </div>
+                      </CmsElement>
 
-                      <p className={`text-base leading-relaxed italic font-medium transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
+                      <CmsElement cmsId="6d376088-17" as="p" className={`text-base leading-relaxed italic font-medium transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
                         &ldquo;{testimonial.text}&rdquo;
-                      </p>
-                    </div>
+                      </CmsElement>
+                    </CmsElement>
 
                     {/* User Profile */}
-                    <div className="px-8 py-6 relative z-10 flex items-center gap-4">
-                      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr ${testimonial.gradient} text-on-surface font-extrabold text-lg shadow-lg`}>
+                    <CmsElement cmsId="6d376088-18" as="div" className="px-8 py-6 relative z-10 flex items-center gap-4">
+                      <CmsElement cmsId="6d376088-19" as="div" className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr ${testimonial.gradient} text-on-surface font-extrabold text-lg shadow-lg`}>
                         {testimonial.initials}
-                      </div>
-                      <div>
-                        <h4 className={`text-lg font-black transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
+                      </CmsElement>
+                      <CmsElement cmsId="6d376088-20" as="div">
+                        <CmsElement cmsId="6d376088-21" as="h4" className={`text-lg font-black transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
                           {testimonial.name}
-                        </h4>
-                        <p className={`text-xs font-bold uppercase tracking-wider transition-colors duration-500 ${isActive ? 'text-[var(--wc-secondary)]' : 'text-[#5B6B88]'}`}>
+                        </CmsElement>
+                        <CmsElement cmsId="6d376088-22" as="p" className={`text-xs font-bold uppercase tracking-wider transition-colors duration-500 ${isActive ? 'text-[var(--wc-secondary)]' : 'text-[#5B6B88]'}`}>
                           {testimonial.role}
-                        </p>
-                      </div>
-                    </div>
+                        </CmsElement>
+                      </CmsElement>
+                    </CmsElement>
 
                     {/* Bottom Course Details */}
-                    <div className="bg-[var(--wc-surface-lowest)] p-6 sm:p-8 mt-auto border-t border-[var(--wc-outline-variant)] relative z-10">
-                      <div className="mb-2">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${isActive ? 'bg-[var(--wc-secondary)] text-on-primary' : 'bg-[var(--wc-surface-low)] text-on-surface'}`}>
+                    <CmsElement cmsId="6d376088-23" as="div" className="bg-[var(--wc-surface-lowest)] p-6 sm:p-8 mt-auto border-t border-[var(--wc-outline-variant)] relative z-10">
+                      <CmsElement cmsId="6d376088-24" as="div" className="mb-2">
+                        <CmsElement cmsId="6d376088-25" as="span" className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${isActive ? 'bg-[var(--wc-secondary)] text-on-primary' : 'bg-[var(--wc-surface-low)] text-on-surface'}`}>
                           Completed Program
-                        </span>
-                      </div>
-                      <h3 className={`text-xl font-black leading-snug line-clamp-1 transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
+                        </CmsElement>
+                      </CmsElement>
+                      <CmsElement cmsId="6d376088-26" as="h3" className={`text-xl font-black leading-snug line-clamp-1 transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
                         {testimonial.course}
-                      </h3>
-                      <div className="mt-4 flex items-center justify-between">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#5B6B88]">Final Assessment</p>
-                          <p className={`text-lg font-black transition-colors duration-500 ${isActive ? 'text-[var(--wc-secondary)]' : 'text-on-surface'}`}>94 / 100</p>
-                        </div>
-                        <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors duration-500 ${isActive ? 'bg-[var(--wc-surface-low)] text-on-surface' : 'bg-[var(--wc-surface-low)] text-[var(--wc-on-surface-variant)]'}`}>
+                      </CmsElement>
+                      <CmsElement cmsId="6d376088-27" as="div" className="mt-4 flex items-center justify-between">
+                        <CmsElement cmsId="6d376088-28" as="div">
+                          <CmsElement cmsId="6d376088-29" as="p" className="text-[10px] font-bold uppercase tracking-widest text-[#5B6B88]">Final Assessment</CmsElement>
+                          <CmsElement cmsId="6d376088-30" as="p" className={`text-lg font-black transition-colors duration-500 ${isActive ? 'text-[var(--wc-secondary)]' : 'text-on-surface'}`}>94 / 100</CmsElement>
+                        </CmsElement>
+                        <CmsElement cmsId="6d376088-31" as="div" className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors duration-500 ${isActive ? 'bg-[var(--wc-surface-low)] text-on-surface' : 'bg-[var(--wc-surface-low)] text-[var(--wc-on-surface-variant)]'}`}>
                           <Icon name="verified" className={`text-sm ${isActive ? 'text-[var(--wc-secondary)]' : 'text-[#5B6B88]'}`} />
-                          <span>Verified</span>
-                        </div>
-                      </div>
-                    </div>
+                          <CmsElement cmsId="6d376088-32" as="span">Verified</CmsElement>
+                        </CmsElement>
+                      </CmsElement>
+                    </CmsElement>
 
-                  </article>
-                </div>
+                  </CmsElement>
+                </CmsElement>
               );
             })}
-          </div>
+          </CmsElement>
 
           {/* Right Nav Button */}
-          <button
+          <CmsElement cmsId="6d376088-33" as="button"
             onClick={handleNext}
             className="absolute right-0 md:right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
           >
             <Icon name="arrow_forward" className="text-2xl" />
-          </button>
+          </CmsElement>
 
           {/* Pagination Dots */}
-          <div className="absolute bottom-[-30px] left-0 right-0 flex justify-center gap-2">
+          <CmsElement cmsId="6d376088-34" as="div" className="absolute bottom-[-30px] left-0 right-0 flex justify-center gap-2">
             {testimonialsData.map((_, idx) => (
-              <button
+              <CmsElement cmsId="6d376088-35" as="button" instance={String(idx)}
                 key={idx}
                 onClick={() => setActiveIndex(idx)}
                 className={`h-2 transition-all rounded-full ${idx === activeIndex ? 'w-8 bg-[var(--wc-secondary)]' : 'w-2 bg-[var(--wc-surface-low)] hover:bg-[var(--wc-surface-low)]'}`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}
-          </div>
-        </div>
-      </div>
-    </section>
+          </CmsElement>
+        </CmsElement>
+      </CmsElement>
+    </CmsElement>
   );
 }

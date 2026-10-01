@@ -1,3 +1,4 @@
+import { CmsElement } from "@/components/cms/cms-element";
 import { Icon } from "@/components/icon";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { FadeIn } from "@/components/public/animations";
@@ -89,34 +90,34 @@ export default async function CompletedStudentsPage() {
     });
 
   return (
-    <main className="bg-background text-on-background">
+    <CmsElement cmsId="b07d1848-0" as="main" className="bg-background text-on-background">
       <PublicHeader />
 
       {/* Page Header */}
-      <section className="relative bg-[linear-gradient(180deg,var(--wc-surface-lowest)_0%,var(--wc-surface)_100%)] py-16">
-        <div className="mx-auto max-w-container-max px-5 md:px-margin-page">
+      <CmsElement cmsId="b07d1848-1" as="section" className="relative bg-[linear-gradient(180deg,var(--wc-surface-lowest)_0%,var(--wc-surface)_100%)] py-16">
+        <CmsElement cmsId="b07d1848-2" as="div" className="mx-auto max-w-container-max px-5 md:px-margin-page">
           <FadeIn>
-            <div className="max-w-3xl">
-              <div className="wc-section-label mb-4">
+            <CmsElement cmsId="b07d1848-3" as="div" className="max-w-3xl">
+              <CmsElement cmsId="b07d1848-4" as="div" className="wc-section-label mb-4">
                 <Icon name="workspace_premium" className="text-sm" /> Student Achievements
-              </div>
-              <h1 className="text-4xl md:text-5xl font-extrabold text-primary mb-4">Completed Students</h1>
-              <p className="text-lg text-on-surface-variant">
+              </CmsElement>
+              <CmsElement cmsId="b07d1848-5" as="h1" className="text-4xl md:text-5xl font-extrabold text-primary mb-4">Completed Students</CmsElement>
+              <CmsElement cmsId="b07d1848-6" as="p" className="text-lg text-on-surface-variant">
                 Verify completed trainees by student name or course. This public record shows each graduate&apos;s course,
                 progress, final score, and completion date.
-              </p>
-            </div>
+              </CmsElement>
+            </CmsElement>
           </FadeIn>
-        </div>
-      </section>
+        </CmsElement>
+      </CmsElement>
 
       {/* Students Section */}
-      <section className="relative bg-[linear-gradient(180deg,var(--wc-surface-low)_0%,var(--wc-surface)_100%)] py-xxl">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,color-mix(in_srgb,var(--wc-primary)_8%,transparent),transparent_50%)]" />
-        <div className="relative mx-auto max-w-container-max px-5 md:px-margin-page">
+      <CmsElement cmsId="b07d1848-7" as="section" className="relative bg-[linear-gradient(180deg,var(--wc-surface-low)_0%,var(--wc-surface)_100%)] py-xxl">
+        <CmsElement cmsId="b07d1848-8" as="div" className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,color-mix(in_srgb,var(--wc-primary)_8%,transparent),transparent_50%)]" />
+        <CmsElement cmsId="b07d1848-9" as="div" className="relative mx-auto max-w-container-max px-5 md:px-margin-page">
           <CompletedStudentsList students={students} />
-        </div>
-      </section>
-    </main>
+        </CmsElement>
+      </CmsElement>
+    </CmsElement>
   );
 }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CmsElement, CmsLink } from "@/components/cms/cms-element";
 import { PublicHeader } from "@/components/public/public-header";
 import { FeedbackGallery } from "@/components/public/feedback-gallery";
 import { Icon } from "@/components/icon";
@@ -65,35 +65,35 @@ export default async function TestimonialsPage({ searchParams }: { searchParams?
   }, {});
 
   return (
-    <main className="overflow-x-clip bg-[linear-gradient(180deg,#F7F9FF_0%,#EEF4FF_100%)] text-on-background">
+    <CmsElement cmsId="fae7859d-0" as="main" className="overflow-x-clip bg-[linear-gradient(180deg,#F7F9FF_0%,#EEF4FF_100%)] text-on-background">
       <PublicHeader />
 
-      <section className="relative overflow-hidden py-20 sm:py-24">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(6,43,127,0.12),transparent_45%)]" />
-        <div className="relative z-10 mx-auto max-w-container-max px-5 md:px-margin-page">
-          <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
+      <CmsElement cmsId="fae7859d-1" as="section" className="relative overflow-hidden py-20 sm:py-24">
+        <CmsElement cmsId="fae7859d-2" as="div" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(6,43,127,0.12),transparent_45%)]" />
+        <CmsElement cmsId="fae7859d-3" as="div" className="relative z-10 mx-auto max-w-container-max px-5 md:px-margin-page">
+          <CmsElement cmsId="fae7859d-4" as="div" className="mb-10 flex flex-wrap items-center justify-between gap-4">
+            <CmsElement cmsId="fae7859d-5" as="div" className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
               <Icon name="favorite" className="text-sm" /> Approved Stories
-            </div>
-            <Link href="/feedback" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-surface shadow-card transition hover:opacity-95">
+            </CmsElement>
+            <CmsLink cmsId="fae7859d-6" href="/feedback" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-surface shadow-card transition hover:opacity-95">
               <Icon name="send" className="text-sm" /> Share feedback
-            </Link>
-          </div>
+            </CmsLink>
+          </CmsElement>
 
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-black tracking-tight text-[#0A2A72] sm:text-5xl">
-              Testimonials and <span className="text-[#0A2A72]">approved feedback</span>
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-[#4B628F]">
+          <CmsElement cmsId="fae7859d-7" as="div" className="max-w-3xl">
+            <CmsElement cmsId="fae7859d-8" as="h1" className="text-4xl font-black tracking-tight text-[#0A2A72] sm:text-5xl">
+              Testimonials and <CmsElement cmsId="fae7859d-9" as="span" className="text-[#0A2A72]">approved feedback</CmsElement>
+            </CmsElement>
+            <CmsElement cmsId="fae7859d-10" as="p" className="mt-4 text-lg leading-8 text-[#4B628F]">
               Filter approved feedback by student or client categories. Only admin-approved stories appear here.
-            </p>
-          </div>
+            </CmsElement>
+          </CmsElement>
 
-          <div className="mt-12">
+          <CmsElement cmsId="fae7859d-11" as="div" className="mt-12">
             {error ? (
-              <div className="rounded-2xl border border-orange-300 bg-orange-50 p-5 text-sm font-semibold text-orange-800">
+              <CmsElement cmsId="fae7859d-12" as="div" className="rounded-2xl border border-orange-300 bg-orange-50 p-5 text-sm font-semibold text-orange-800">
                 Feedback table is not ready yet. Please run the feedback migration in Supabase.
-              </div>
+              </CmsElement>
             ) : (
               <FeedbackGallery
                 entries={filteredEntries}
@@ -103,9 +103,9 @@ export default async function TestimonialsPage({ searchParams }: { searchParams?
                 categoryCounts={categoryCounts}
               />
             )}
-          </div>
-        </div>
-      </section>
-    </main>
+          </CmsElement>
+        </CmsElement>
+      </CmsElement>
+    </CmsElement>
   );
 }

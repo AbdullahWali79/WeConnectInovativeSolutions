@@ -1,3 +1,4 @@
+import { CmsElement } from "@/components/cms/cms-element";
 import { PublicHeader } from "@/components/public/public-header";
 import { TraineesBoard } from "@/components/public/trainees-board";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -41,7 +42,7 @@ export default async function TraineesPage() {
   const certificates = (certificateResult.data ?? []) as { student_name: string; course_name: string }[];
 
   return (
-    <main className="min-h-screen bg-[var(--wc-bg)] text-on-surface">
+    <CmsElement cmsId="d498079f-0" as="main" className="min-h-screen bg-[var(--wc-bg)] text-on-surface">
       <PublicHeader />
       <TraineesBoard
         initialTrainees={trainees}
@@ -56,6 +57,6 @@ export default async function TraineesPage() {
         initialReports={reports}
         initialCertificates={certificates}
       />
-    </main>
+    </CmsElement>
   );
 }

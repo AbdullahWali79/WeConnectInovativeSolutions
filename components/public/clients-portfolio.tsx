@@ -1,7 +1,7 @@
 "use client";
+import { CmsElement, CmsImage } from "@/components/cms/cms-element";
 
 import React, { useState, useCallback } from "react";
-import Image from "next/image";
 import { FadeIn } from "@/components/public/animations";
 import { Icon } from "@/components/icon";
 import { happyClients } from "@/lib/data/clients";
@@ -24,38 +24,38 @@ export function ClientsPortfolio() {
   }
 
   return (
-    <section className="bg-[var(--wc-bg)] py-20 lg:py-28 relative overflow-hidden border-t border-[var(--wc-outline-variant)]">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_50%,rgba(6,43,127,0.2),transparent)] pointer-events-none" />
+    <CmsElement cmsId="e4b092bb-0" as="section" className="bg-[var(--wc-bg)] py-20 lg:py-28 relative overflow-hidden border-t border-[var(--wc-outline-variant)]">
+      <CmsElement cmsId="e4b092bb-1" as="div" className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_50%,rgba(6,43,127,0.2),transparent)] pointer-events-none" />
 
-      <div className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
+      <CmsElement cmsId="e4b092bb-2" as="div" className="mx-auto max-w-container-max px-5 md:px-margin-page relative z-10">
         <FadeIn>
-          <div className="mb-16 max-w-3xl text-center mx-auto">
-            <div className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
+          <CmsElement cmsId="e4b092bb-3" as="div" className="mb-16 max-w-3xl text-center mx-auto">
+            <CmsElement cmsId="e4b092bb-4" as="div" className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--wc-secondary)]/30 bg-[var(--wc-secondary)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--wc-secondary)]">
               <Icon name="work_history" className="text-sm" /> Happy Clients Portfolio
-            </div>
-            <h2 className="text-3xl font-black text-on-surface md:text-4xl lg:text-5xl mt-3 mb-4 leading-tight">
+            </CmsElement>
+            <CmsElement cmsId="e4b092bb-5" as="h2" className="text-3xl font-black text-on-surface md:text-4xl lg:text-5xl mt-3 mb-4 leading-tight">
               Where Our Trainees <br className="hidden md:block" />
-              <span className="bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] bg-clip-text text-transparent">Make an Impact</span>
-            </h2>
-            <p className="mt-4 text-lg text-[var(--wc-on-surface-variant)] mb-6">
+              <CmsElement cmsId="e4b092bb-6" as="span" className="bg-gradient-to-r from-[var(--wc-primary)] to-[var(--wc-secondary)] bg-clip-text text-transparent">Make an Impact</CmsElement>
+            </CmsElement>
+            <CmsElement cmsId="e4b092bb-7" as="p" className="mt-4 text-lg text-[var(--wc-on-surface-variant)] mb-6">
               WeConnect-Innovation trainees have actively contributed to building modern, robust solutions for these amazing clients.
-            </p>
-            <div className="inline-flex items-center self-start rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-1.5 text-xs font-bold text-on-surface shadow-sm">
+            </CmsElement>
+            <CmsElement cmsId="e4b092bb-8" as="div" className="inline-flex items-center self-start rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] px-4 py-1.5 text-xs font-bold text-on-surface shadow-sm">
               Real Projects. Real Impact.
-            </div>
-          </div>
+            </CmsElement>
+          </CmsElement>
         </FadeIn>
 
-        <div className="relative w-full h-[450px] md:h-[500px] flex items-center justify-center mt-12 mb-8">
+        <CmsElement cmsId="e4b092bb-9" as="div" className="relative w-full h-[450px] md:h-[500px] flex items-center justify-center mt-12 mb-8">
           {/* Left Nav Button */}
-          <button
+          <CmsElement cmsId="e4b092bb-10" as="button"
             onClick={handlePrev}
             className="absolute left-0 md:left-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
           >
             <Icon name="arrow_back" className="text-2xl" />
-          </button>
+          </CmsElement>
 
-          <div className="relative w-full max-w-5xl h-full flex justify-center items-center perspective-1000">
+          <CmsElement cmsId="e4b092bb-11" as="div" className="relative w-full max-w-5xl h-full flex justify-center items-center perspective-1000">
             {happyClients.map((client, index) => {
               let diff = index - activeIndex;
 
@@ -118,7 +118,7 @@ export function ClientsPortfolio() {
               const isActive = diff === 0;
 
               return (
-                <div
+                <CmsElement cmsId="e4b092bb-12" as="div" instance={String(client.id)}
                   key={client.id}
                   className="absolute w-[300px] sm:w-[320px] md:w-[350px] h-[350px] sm:h-[380px] transition-all duration-700 ease-in-out cursor-pointer [perspective:1000px]"
                   style={{
@@ -132,7 +132,7 @@ export function ClientsPortfolio() {
                     }
                   }}
                 >
-                  <article
+                  <CmsElement cmsId="e4b092bb-13" as="article"
                     className={`flex h-full w-full flex-col overflow-hidden rounded-[28px] border transition-all duration-500 bg-[var(--wc-surface-lowest)] p-6 sm:p-8 text-center items-center justify-center ${
                       isActive
                         ? 'border-[var(--wc-secondary)]/50 shadow-glow-lg bg-gradient-to-br from-[var(--wc-surface-lowest)] to-[var(--wc-primary)]'
@@ -141,65 +141,65 @@ export function ClientsPortfolio() {
                   >
                     {/* Glow effect for active card */}
                     {isActive && (
-                      <div className="absolute -inset-px rounded-[28px] bg-gradient-to-b from-[var(--wc-secondary)]/20 to-transparent blur-sm pointer-events-none" />
+                      <CmsElement cmsId="e4b092bb-14" as="div" className="absolute -inset-px rounded-[28px] bg-gradient-to-b from-[var(--wc-secondary)]/20 to-transparent blur-sm pointer-events-none" />
                     )}
 
-                    <div className="flex flex-1 flex-col items-center relative z-10 w-full">
-                      <div className={`mb-6 flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-all duration-500 ${
+                    <CmsElement cmsId="e4b092bb-15" as="div" className="flex flex-1 flex-col items-center relative z-10 w-full">
+                      <CmsElement cmsId="e4b092bb-16" as="div" className={`mb-6 flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-all duration-500 ${
                         isActive ? 'bg-[var(--wc-secondary)]/10 border border-[var(--wc-secondary)]/30 shadow-glow-lg' : 'bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)]'
                       }`}>
                         {client.logoUrl ? (
-                          <div className="relative h-12 w-12">
-                            <Image src={client.logoUrl} alt={client.name} fill className="object-contain" unoptimized />
-                          </div>
+                          <CmsElement cmsId="e4b092bb-17" as="div" className="relative h-12 w-12">
+                            <CmsImage cmsId="e4b092bb-18" src={client.logoUrl} alt={client.name} fill className="object-contain" unoptimized />
+                          </CmsElement>
                         ) : (
-                          <span className={`text-2xl font-black ${isActive ? 'text-[var(--wc-secondary)]' : 'text-on-surface'}`}>
+                          <CmsElement cmsId="e4b092bb-19" as="span" className={`text-2xl font-black ${isActive ? 'text-[var(--wc-secondary)]' : 'text-on-surface'}`}>
                             {client.name.slice(0, 2).toUpperCase()}
-                          </span>
+                          </CmsElement>
                         )}
-                      </div>
+                      </CmsElement>
 
-                      <div className={`mb-4 inline-flex items-center rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${
+                      <CmsElement cmsId="e4b092bb-20" as="div" className={`mb-4 inline-flex items-center rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${
                         isActive ? 'bg-[var(--wc-secondary)] text-on-primary' : 'bg-[var(--wc-surface-low)] text-[var(--wc-on-surface-variant)]'
                       }`}>
                         {client.industry}
-                      </div>
+                      </CmsElement>
 
-                      <h3 className={`mb-4 text-2xl font-black transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
+                      <CmsElement cmsId="e4b092bb-21" as="h3" className={`mb-4 text-2xl font-black transition-colors duration-500 ${isActive ? 'text-on-surface' : 'text-[var(--wc-on-surface-variant)]'}`}>
                         {client.name}
-                      </h3>
+                      </CmsElement>
 
-                      <p className="text-sm leading-relaxed text-[var(--wc-on-surface-variant)]">
+                      <CmsElement cmsId="e4b092bb-22" as="p" className="text-sm leading-relaxed text-[var(--wc-on-surface-variant)]">
                         {client.shortDescription}
-                      </p>
-                    </div>
-                  </article>
-                </div>
+                      </CmsElement>
+                    </CmsElement>
+                  </CmsElement>
+                </CmsElement>
               );
             })}
-          </div>
+          </CmsElement>
 
           {/* Right Nav Button */}
-          <button
+          <CmsElement cmsId="e4b092bb-23" as="button"
             onClick={handleNext}
             className="absolute right-0 md:right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110 shadow-lg backdrop-blur-md"
           >
             <Icon name="arrow_forward" className="text-2xl" />
-          </button>
+          </CmsElement>
 
           {/* Pagination Dots */}
-          <div className="absolute bottom-[-30px] left-0 right-0 flex justify-center gap-2">
+          <CmsElement cmsId="e4b092bb-24" as="div" className="absolute bottom-[-30px] left-0 right-0 flex justify-center gap-2">
             {happyClients.map((_, idx) => (
-              <button
+              <CmsElement cmsId="e4b092bb-25" as="button" instance={String(idx)}
                 key={idx}
                 onClick={() => setActiveIndex(idx)}
                 className={`h-2 transition-all rounded-full ${idx === activeIndex ? 'w-8 bg-[var(--wc-secondary)]' : 'w-2 bg-[var(--wc-surface-low)] hover:bg-[var(--wc-surface-low)]'}`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}
-          </div>
-        </div>
-      </div>
-    </section>
+          </CmsElement>
+        </CmsElement>
+      </CmsElement>
+    </CmsElement>
   );
 }

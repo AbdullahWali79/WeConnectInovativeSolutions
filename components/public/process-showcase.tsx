@@ -1,4 +1,5 @@
 "use client";
+import { CmsElement, CmsInstance } from "@/components/cms/cms-element";
 
 import { motion } from "framer-motion";
 import { Icon } from "@/components/icon";
@@ -11,11 +12,11 @@ const processSteps = [
 
 export function ProcessShowcase() {
   return (
-    <div className="relative pb-2 md:pb-12">
-      <div className="absolute bottom-12 left-8 top-12 w-px bg-[#DCE4F0] md:hidden" />
-      <div className="grid gap-4 md:grid-cols-3 md:gap-7 lg:gap-10">
+    <CmsElement cmsId="5c69d5ad-0" as="div" className="relative pb-2 md:pb-12">
+      <CmsElement cmsId="5c69d5ad-1" as="div" className="absolute bottom-12 left-8 top-12 w-px bg-[#DCE4F0] md:hidden" />
+      <CmsElement cmsId="5c69d5ad-2" as="div" className="grid gap-4 md:grid-cols-3 md:gap-7 lg:gap-10">
         {processSteps.map((feature, index) => (
-          <motion.article
+          <CmsInstance key={feature.step} instance={String(feature.step)}><motion.article
             key={feature.step}
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -29,9 +30,9 @@ export function ProcessShowcase() {
               y: index * 30,
             }}
           >
-            <div className="absolute -left-4 top-8 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white text-[11px] font-extrabold text-on-surface shadow-sm md:hidden" style={{ backgroundColor: feature.color }}>
+            <CmsElement cmsId="5c69d5ad-3" as="div" className="absolute -left-4 top-8 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white text-[11px] font-extrabold text-on-surface shadow-sm md:hidden" style={{ backgroundColor: feature.color }}>
               {feature.step}
-            </div>
+            </CmsElement>
 
             {index < processSteps.length - 1 ? (
               <motion.div
@@ -43,22 +44,22 @@ export function ProcessShowcase() {
               </motion.div>
             ) : null}
 
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:rotate-3 group-hover:scale-110" style={{ backgroundColor: feature.tint, color: feature.color }}>
+            <CmsElement cmsId="5c69d5ad-4" as="div" className="mb-5 flex items-start justify-between gap-4">
+              <CmsElement cmsId="5c69d5ad-5" as="div" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:rotate-3 group-hover:scale-110" style={{ backgroundColor: feature.tint, color: feature.color }}>
                 <Icon name={feature.icon} className="text-[25px]" />
-              </div>
-              <span className="text-4xl font-black leading-none text-[#E9EEF6]">{feature.step}</span>
-            </div>
+              </CmsElement>
+              <CmsElement cmsId="5c69d5ad-6" as="span" className="text-4xl font-black leading-none text-[#E9EEF6]">{feature.step}</CmsElement>
+            </CmsElement>
 
-            <div className="mb-3 flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.16em]" style={{ color: feature.color }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: feature.color }} />
+            <CmsElement cmsId="5c69d5ad-7" as="div" className="mb-3 flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.16em]" style={{ color: feature.color }}>
+              <CmsElement cmsId="5c69d5ad-8" as="span" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: feature.color }} />
               {feature.eyebrow}
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-[#071A3B]">{feature.title}</h3>
-            <p className="text-sm leading-6 text-[#5B6B88]">{feature.desc}</p>
-          </motion.article>
+            </CmsElement>
+            <CmsElement cmsId="5c69d5ad-9" as="h3" className="mb-2 text-xl font-extrabold text-[#071A3B]">{feature.title}</CmsElement>
+            <CmsElement cmsId="5c69d5ad-10" as="p" className="text-sm leading-6 text-[#5B6B88]">{feature.desc}</CmsElement>
+          </motion.article></CmsInstance>
         ))}
-      </div>
-    </div>
+      </CmsElement>
+    </CmsElement>
   );
 }
