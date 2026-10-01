@@ -13,7 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Application, CompletedStudent, Course, Enrollment, Profile, Task } from "@/lib/supabase/types";
 import { buildApprovedStudentWhatsappUrl, formatDate, type WhatsappMessageTemplate, whatsappMessageTemplateOptions } from "@/lib/utils";
-import { navGroups, dashboardItem } from "./admin-shell";
+import { navGroups, dashboardItem, pagesItem } from "./admin-shell";
 
 type DashboardData = {
   courses: Course[];
@@ -27,6 +27,7 @@ type DashboardData = {
 const defaultQuickAccessIds = ["/admin/fees", "/admin/tasks", "/admin/task-analytics", "/admin/client-hunting", "/admin/seat-reservations"];
 const quickAccessCatalog = [
   dashboardItem,
+  pagesItem,
   ...navGroups.flatMap(group => group.items)
 ].map(item => ({
   id: item.href,
