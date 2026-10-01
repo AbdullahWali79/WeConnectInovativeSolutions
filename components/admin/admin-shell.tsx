@@ -43,7 +43,8 @@ export const navGroups: NavGroup[] = [
     { href: "/admin/trainees", label: "Trainees", icon: "school", permission: "trainees.view" },
     { href: "/admin/manual-enrollments", label: "Manual Enrollments", icon: "how_to_reg", adminOnly: true },
   ]},
-  { id: "finance", label: "Finance", icon: "payments", items: [
+  { id: "finance", label: "Finance & Sales", icon: "payments", items: [
+    { href: "/admin/accounts-manager", label: "Accounts Manager", icon: "manage_accounts", adminOnly: true },
     { href: "/admin/fees", label: "Fees", icon: "receipt_long", adminOnly: true },
     { href: "/admin/products", label: "Products", icon: "inventory_2", permission: "products.view" },
     { href: "/admin/services", label: "Services", icon: "design_services", adminOnly: true },
