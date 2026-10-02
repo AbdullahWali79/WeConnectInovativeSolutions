@@ -22,6 +22,7 @@ export function ServicesManager() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
@@ -29,12 +30,15 @@ export function ServicesManager() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await getAdminServices();
       if (res.error) throw new Error(res.error);
       setRows(res.data || []);
     } catch (error) {
-      setToast({ type: "error", message: error instanceof Error ? error.message : "Services could not be loaded." });
+      const message = error instanceof Error && !error.message.includes("Server Components") ? error.message : "Services could not be loaded. Please retry or sign in again.";
+      setLoadError(message);
+      setToast({ type: "error", message });
     } finally {
       setLoading(false);
     }
@@ -72,21 +76,30 @@ export function ServicesManager() {
       highlights: form.highlights.split("\n"), cta_label: form.cta_label, cta_link: form.cta_link,
       featured: form.featured, status: form.status, display_order: Number(form.display_order),
     };
+    try {
     const result = await saveService(editingId, input);
-    setSaving(false);
     if (!result.ok) return setToast({ type: "error", message: result.error ?? "Service could not be saved." });
     setToast({ type: "success", message: editingId ? "Service updated." : "Service created." });
     reset();
     await load();
+    } catch {
+      setToast({ type: "error", message: "Service could not be saved. Please retry or sign in again." });
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function remove(id: string) {
     if (!window.confirm("Delete this service permanently?")) return;
+    try {
     const result = await deleteService(id);
     if (!result.ok) return setToast({ type: "error", message: result.error ?? "Service could not be deleted." });
     setToast({ type: "success", message: "Service deleted." });
     if (editingId === id) reset();
     await load();
+    } catch {
+      setToast({ type: "error", message: "Service could not be deleted. Please retry or sign in again." });
+    }
   }
 
   if (loading) return <LoadingState label="Loading services..." />;
@@ -131,7 +144,7 @@ export function ServicesManager() {
 
         <section className="wc-card overflow-hidden">
           <div className="border-b border-outline-variant bg-surface-container-low p-4"><input className="wc-input" placeholder="Search services..." value={query} onChange={(event) => setQuery(event.target.value)} /></div>
-          {filtered.length === 0 ? <div className="p-5"><EmptyState title="No services found" description="Add your first service or adjust the search." icon="design_services" /></div> : (
+          {loadError ? <div className="p-5" role="alert"><EmptyState title="Services could not be loaded" description={loadError} icon="error" /><button type="button" onClick={() => void load()} className="wc-secondary-btn mt-4">Retry</button></div> : filtered.length === 0 ? <div className="p-5"><EmptyState title="No services found" description="Add your first service or adjust the search." icon="design_services" /></div> : (
             <div className="divide-y divide-outline-variant">
               {filtered.map((row) => (
                 <article key={row.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">

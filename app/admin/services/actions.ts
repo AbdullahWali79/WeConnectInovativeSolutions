@@ -27,35 +27,57 @@ function validate(input: ServiceInput) {
   return { data };
 }
 
+function serviceError(error: unknown) {
+  console.error("Admin services operation failed:", error);
+  const message = error instanceof Error ? error.message : "Services could not be loaded. Please retry.";
+  if (message.includes("SUPABASE_SERVICE_ROLE_KEY")) return "Services are unavailable because the server database credentials are not configured.";
+  return message;
+}
+
+function databaseError(error: { code: string; message: string }) {
+  if (error.code === "23505") return "Service slug must be unique.";
+  if (["42P01", "PGRST205"].includes(error.code)) return "The services database table is missing. Apply the services database migration and retry.";
+  console.error("Admin services database request failed:", error);
+  return "The services database request failed. Please retry or check the server logs.";
+}
+
 export async function getAdminServices() {
   try {
     await requireAdminOnly();
     const { data, error } = await createSupabaseServiceClient().from("services").select("*").order("display_order");
-    if (error) return { error: error.message, data: null };
+    if (error) return { error: databaseError(error), data: null };
     return { data: (data ?? []) as Service[], error: null };
-  } catch (e: any) {
-    return { error: e.message || "Unknown error", data: null };
+  } catch (error: unknown) {
+    return { error: serviceError(error), data: null };
   }
 }
 
 export async function saveService(id: string | null, input: ServiceInput) {
-  await requireAdminOnly();
-  const result = validate(input);
-  if (!result.data) return { ok: false, error: result.error };
-  const supabase = createSupabaseServiceClient();
-  const request = id ? supabase.from("services").update(result.data).eq("id", id) : supabase.from("services").insert(result.data);
-  const { error } = await request;
-  if (error) return { ok: false, error: error.code === "23505" ? "Service slug must be unique." : error.message };
-  revalidatePath("/services");
-  revalidatePath("/admin/services");
-  return { ok: true };
+  try {
+    await requireAdminOnly();
+    const result = validate(input);
+    if (!result.data) return { ok: false, error: result.error };
+    const supabase = createSupabaseServiceClient();
+    const request = id ? supabase.from("services").update(result.data).eq("id", id) : supabase.from("services").insert(result.data);
+    const { error } = await request;
+    if (error) return { ok: false, error: databaseError(error) };
+    revalidatePath("/services");
+    revalidatePath("/admin/services");
+    return { ok: true };
+  } catch (error: unknown) {
+    return { ok: false, error: serviceError(error) };
+  }
 }
 
 export async function deleteService(id: string) {
-  await requireAdminOnly();
-  const { error } = await createSupabaseServiceClient().from("services").delete().eq("id", id);
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/services");
-  revalidatePath("/admin/services");
-  return { ok: true };
+  try {
+    await requireAdminOnly();
+    const { error } = await createSupabaseServiceClient().from("services").delete().eq("id", id);
+    if (error) return { ok: false, error: databaseError(error) };
+    revalidatePath("/services");
+    revalidatePath("/admin/services");
+    return { ok: true };
+  } catch (error: unknown) {
+    return { ok: false, error: serviceError(error) };
+  }
 }
