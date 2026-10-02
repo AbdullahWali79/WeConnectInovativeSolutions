@@ -11,7 +11,7 @@ import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { PermissionKey } from "@/lib/admin-permissions";
-import type { Application, CompletedStudent, Course, Enrollment, Profile, Task } from "@/lib/supabase/types";
+import type { Application, CompletedStudent, Course, Enrollment, Profile } from "@/lib/supabase/types";
 import { buildApprovedStudentWhatsappUrl, formatDate, type WhatsappMessageTemplate, whatsappMessageTemplateOptions } from "@/lib/utils";
 import { navGroups, dashboardItem, pagesItem } from "./admin-shell";
 
@@ -20,7 +20,6 @@ type DashboardData = {
   applications: Application[];
   profiles: Profile[];
   enrollments: Enrollment[];
-  tasks: Task[];
   completed: CompletedStudent[];
 };
 
@@ -49,7 +48,7 @@ export function AdminDashboard({
 }) {
   const supabase = createSupabaseBrowserClient();
   const canUse = useCallback((permission: PermissionKey) => currentRole === "admin" || permissions.includes(permission), [currentRole, permissions]);
-  const [data, setData] = useState<DashboardData>({ courses: [], applications: [], profiles: [], enrollments: [], tasks: [], completed: [] });
+  const [data, setData] = useState<DashboardData>({ courses: [], applications: [], profiles: [], enrollments: [], completed: [] });
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedWhatsappTemplate, setSelectedWhatsappTemplate] = useState<WhatsappMessageTemplate>("default");
@@ -63,16 +62,15 @@ export function AdminDashboard({
   const loadData = useCallback(async () => {
     setLoading(true);
     const isAdmin = currentRole === "admin";
-    const [courses, applications, profiles, enrollments, tasks, completed] = await Promise.all([
+    const [courses, applications, profiles, enrollments, completed] = await Promise.all([
       supabase.from("courses").select("*").order("created_at", { ascending: false }),
       isAdmin ? supabase.from("applications").select("*").order("created_at", { ascending: false }).limit(12) : Promise.resolve({ data: [], error: null }),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("enrollments").select("*").order("created_at", { ascending: false }),
-      supabase.from("tasks").select("*").order("created_at", { ascending: false }),
       isAdmin ? supabase.from("completed_students").select("*").order("completed_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const error = courses.error ?? applications.error ?? profiles.error ?? enrollments.error ?? tasks.error ?? completed.error;
+    const error = courses.error ?? applications.error ?? profiles.error ?? enrollments.error ?? completed.error;
     if (error) setToast({ type: "error", message: error.message });
 
     setData({
@@ -80,7 +78,6 @@ export function AdminDashboard({
       applications: applications.data ?? [],
       profiles: profiles.data ?? [],
       enrollments: enrollments.data ?? [],
-      tasks: tasks.data ?? [],
       completed: completed.data ?? [],
     });
     setLoading(false);
@@ -168,8 +165,10 @@ export function AdminDashboard({
     canUse("progress.view") ? { href: "/admin/progress", icon: "monitoring", title: "Progress", description: "Monitor student progress and scores." } : null,
   ].filter((item): item is { href: string; icon: string; title: string; description: string } => Boolean(item));
   const pendingApplications = data.applications.filter((application) => application.status === "pending");
-  const approvedStudents = data.profiles.filter((profile) => profile.role === "student" && profile.status === "approved");
-  const activeTasks = data.tasks.filter((task) => task.status !== "reviewed" && task.status !== "rejected");
+  const registeredStudents = data.profiles.filter((profile) => profile.role === "student");
+  const approvedStudents = registeredStudents.filter((profile) => profile.status === "approved");
+  const activeStudentIds = new Set(data.enrollments.filter((enrollment) => enrollment.status === "active").map((enrollment) => enrollment.student_id));
+  const activeStudents = approvedStudents.filter((student) => activeStudentIds.has(student.id));
 
   async function updateApplication(applicationId: string, action: "approve_application" | "reject_application") {
     setBusyId(applicationId);
@@ -340,11 +339,12 @@ export function AdminDashboard({
       ) : null}
 
       {/* Stat Cards */}
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <StatCard icon="school" label="Total Courses" value={data.courses.length} />
         {isAdmin ? <StatCard icon="pending_actions" label="Pending Apps" value={pendingApplications.length} tone="secondary" /> : null}
+        <StatCard icon="groups" label="Total Students" value={registeredStudents.length} />
         <StatCard icon="groups" label="Approved Students" value={approvedStudents.length} />
-        <StatCard icon="assignment" label="Active Tasks" value={activeTasks.length} />
+        <StatCard icon="groups" label="Active Students" value={activeStudents.length} />
         {isAdmin ? <StatCard icon="workspace_premium" label="Completed" value={data.completed.length} dark /> : null}
       </div>
 
