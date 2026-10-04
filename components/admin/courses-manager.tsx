@@ -1,5 +1,5 @@
-import Link from "next/link";
 "use client";
+import Link from "next/link";
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
