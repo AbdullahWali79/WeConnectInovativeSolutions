@@ -130,6 +130,8 @@ export async function StudentCourseRoadmap({
                 </summary>
 
                 <div className="border-t border-outline-variant px-4 py-4">
+
+                  <Link href={`/student/courses/${course.id}`} className="mb-6 w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-md transition"><Icon name="play_circle" className="text-[24px]" /> Watch Full Course</Link>
                   {course.description ? <p className="mb-4 text-sm text-on-surface-variant">{course.description}</p> : null}
 
                   <section className="mb-4 rounded-lg border border-outline-variant bg-surface-container-low p-3">

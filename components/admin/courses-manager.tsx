@@ -1,3 +1,4 @@
+import Link from "next/link";
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -324,7 +325,8 @@ export function CoursesManager({
                               <div className="flex justify-end gap-1">
                                 {canCreate ? <button title="Use as template" onClick={() => loadCourseTemplate(course)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-container hover:bg-primary/10 p-1 text-primary transition"><Icon name="content_copy" className="text-[14px]" /></button> : null}
                                 {canCreate ? <button title="Duplicate course" onClick={() => void duplicateCourse(course)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-container hover:bg-primary/10 p-1 text-primary transition"><Icon name="post_add" className="text-[14px]" /></button> : null}
-                                {canEdit ? <button onClick={() => editCourse(course)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-container hover:bg-primary/10 p-1 text-primary transition"><Icon name="edit" className="text-[14px]" /></button> : null}
+                                {canEdit ? <Link href={`/admin/courses/${course.id}/content`} title="Manage Content" className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-container hover:bg-emerald-500/10 p-1 text-emerald-500 transition"><Icon name="video_library" className="text-[14px]" /></Link> : null}
+                                  {canEdit ? <button onClick={() => editCourse(course)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-container hover:bg-primary/10 p-1 text-primary transition"><Icon name="edit" className="text-[14px]" /></button> : null}
                                 {canDelete ? <button onClick={() => deleteRow("courses", course.id)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-error-container hover:bg-error/20 p-1 text-error transition"><Icon name="delete" className="text-[14px]" /></button> : null}
                               </div>
                             </td>
