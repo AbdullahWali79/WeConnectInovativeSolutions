@@ -37,13 +37,13 @@ export const navCategories: NavCategory[] = [
       { href: "/simulations", path: "/simulations", label: "All Simulations" },
     ],
   },
+  { label: "Our Products", href: "/products", path: "/products" },
   {
     label: "More",
     items: [
       { href: "/#overview", path: "/", label: "About Us" },
       { href: "/team", path: "/team", label: "Our Team" },
       { href: "/mous", path: "/mous", label: "Partners" },
-      { href: "/products", path: "/products", label: "Our Products" },
       { href: "/videos", path: "/videos", label: "Student Videos" },
       { href: "/testimonials", path: "/testimonials", label: "Client Reviews" },
       { href: "/ai-tools", path: "/ai-tools", label: "AI Tools" },
