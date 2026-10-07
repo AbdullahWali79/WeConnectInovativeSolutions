@@ -437,7 +437,7 @@ export function AccountsManager() {
 
       {/* Add Shared Account Modal */}
       {isAddAccountModalOpen && (
-        <AccountFormModal account={accountToEdit} clients={clients} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); loadData(); setToast({type:'success', message:'Account saved successfully'}); }} />
+        <AccountFormModal account={accountToEdit} accounts={accounts} clients={clients} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); loadData(); setToast({type:'success', message:'Account saved successfully'}); }} />
       )}
       
       {/* Shared Bank Accounts Modal */}
@@ -642,7 +642,7 @@ function AddClientModal({ onClose, onSave }: { onClose: () => void, onSave: () =
   );
 }
 
-function AccountFormModal({ account, clients, sellers, onClose, onSave }: { account?: any, clients: any[], sellers: any[], onClose: () => void, onSave: () => void }) {
+function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave }: { account?: any, accounts: any[], clients: any[], sellers: any[], onClose: () => void, onSave: () => void }) {
   const [form, setForm] = useState({ 
     id: account?.id || "",
     tool_name: account?.tool_name || "", label: account?.label || "", link: account?.link || "", seller_id: account?.seller_id || "", 
@@ -668,12 +668,20 @@ function AccountFormModal({ account, clients, sellers, onClose, onSave }: { acco
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
+  // Custom tool dropdown logic
+  const uniqueTools = Array.from(new Set(accounts.map((a: any) => a.tool_name).filter(Boolean)));
+  const [showToolDropdown, setShowToolDropdown] = useState(false);
+  const toolDropdownRef = useRef<HTMLDivElement>(null);
+  
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowClientDropdown(false);
+      }
+      if (toolDropdownRef.current && !toolDropdownRef.current.contains(e.target as Node)) {
+        setShowToolDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -737,9 +745,25 @@ function AccountFormModal({ account, clients, sellers, onClose, onSave }: { acco
             
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative" ref={toolDropdownRef}>
                   <label className="mb-1 block text-xs font-bold text-gray-400">Tool Name</label>
-                  <input required type="text" value={form.tool_name} onChange={e=>setForm({...form, tool_name: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="ChatGPT, Canva..." />
+                  <input required type="text" value={form.tool_name} onFocus={() => setShowToolDropdown(true)} onChange={e => { setForm({...form, tool_name: e.target.value}); setShowToolDropdown(true); }} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="ChatGPT, Canva..." />
+                  {showToolDropdown && uniqueTools.filter((t:any) => t.toLowerCase().includes(form.tool_name.toLowerCase()) && t !== form.tool_name).length > 0 && (
+                    <div className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-[#2d3748] bg-[#1e2532] shadow-xl custom-scrollbar">
+                      {uniqueTools.filter((t:any) => t.toLowerCase().includes(form.tool_name.toLowerCase()) && t !== form.tool_name).map(t => (
+                        <div 
+                          key={t as string}
+                          onClick={() => {
+                            setForm({...form, tool_name: t as string});
+                            setShowToolDropdown(false);
+                          }}
+                          className="cursor-pointer p-2 px-3 text-sm text-white hover:bg-[#2d3748] border-b border-[#2d3748] last:border-0"
+                        >
+                          {t as string}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-bold text-gray-400">Label (Optional)</label>
