@@ -6,12 +6,16 @@ import { Toast, type ToastState } from "@/components/toast";
 import { 
   fetchAccountsData, addSeller, addClient, addSharedAccount, 
   deleteSharedAccount, assignClientToAccount, updateAssignmentPayment, 
-  removeAssignment, addBankAccount, deleteBankAccount 
+  removeAssignment, addBankAccount, deleteBankAccount, importClients 
 } from "@/app/admin/accounts-manager/actions";
 import { Icon } from "@/components/icon";
 
 export function AccountsManager() {
   const [toast, setToast] = useState<ToastState>(null);
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -36,6 +40,86 @@ export function AccountsManager() {
   useEffect(() => {
     loadData();
   }, []);
+
+  
+  const handleImportCsv = async (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true);
+    
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target?.result as string;
+      const lines = text.split("\n").filter(l => l.trim() !== "");
+      const headers = lines[0].split(",");
+
+      const firstNameIdx = headers.findIndex((h) => h.includes("First Name"));
+      const middleNameIdx = headers.findIndex((h) => h.includes("Middle Name"));
+      const lastNameIdx = headers.findIndex((h) => h.includes("Last Name"));
+      const phone1Idx = headers.findIndex((h) => h === "Phone 1 - Value");
+      const email1Idx = headers.findIndex((h) => h === "E-mail 1 - Value");
+      const orgIdx = headers.findIndex((h) => h === "Organization Name");
+      const labelsIdx = headers.findIndex((h) => h === "Labels");
+
+      const importedClients = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const rowStr = lines[i];
+        const row = [];
+        let insideQuote = false;
+        let currentVal = "";
+        for (let char of rowStr) {
+          if (char === '"') {
+            insideQuote = !insideQuote;
+          } else if (char === "," && !insideQuote) {
+            row.push(currentVal);
+            currentVal = "";
+          } else {
+            currentVal += char;
+          }
+        }
+        row.push(currentVal);
+
+        if (row.length < 5) continue;
+
+        const fn = row[firstNameIdx] || "";
+        const mn = row[middleNameIdx] || "";
+        const ln = row[lastNameIdx] || "";
+        const name = [fn, mn, ln].filter(Boolean).join(" ");
+        
+        const phone = row[phone1Idx] ? row[phone1Idx].replace(/"/g, "") : null;
+        const email = row[email1Idx] ? row[email1Idx].replace(/"/g, "") : null;
+        const company = row[orgIdx] ? row[orgIdx].replace(/"/g, "") : null;
+        const labels = row[labelsIdx] ? row[labelsIdx].replace(/"/g, "") : null;
+
+        if (!name && !phone && !email) continue;
+
+        importedClients.push({
+          name: name || "Unknown Contact",
+          phone: phone || null,
+          email: email || null,
+          company: company || null,
+          labels: labels || null,
+        });
+      }
+
+      if (importedClients.length > 0) {
+        setToast({ type: "success", message: `Processing ${importedClients.length} contacts...` });
+        const res = await importClients(importedClients);
+        if (res.success) {
+          setToast({ type: "success", message: `Successfully imported ${res.inserted} new contacts!` });
+          loadData();
+        } else {
+          setToast({ type: "error", message: res.error || "Import failed" });
+        }
+      } else {
+        setToast({ type: "error", message: "No valid contacts found in CSV." });
+      }
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsText(file);
+  };
 
   async function loadData() {
     setLoading(true);
@@ -91,7 +175,12 @@ export function AccountsManager() {
             <Icon name="key" className="text-[18px]" />
             Add Shared Account
           </button>
-          <button onClick={() => setIsAddClientModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+          <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCsv} className="hidden" />
+            <button disabled={importing} onClick={() => fileInputRef.current?.click()} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+              <Icon name={importing ? "sync" : "upload_file"} className={`text-[18px] ${importing ? "animate-spin" : ""}`} />
+              {importing ? "Importing..." : "Import CSV"}
+            </button>
+            <button onClick={() => setIsAddClientModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
             <Icon name="person_add" className="text-[18px]" />
             Add Client
           </button>
