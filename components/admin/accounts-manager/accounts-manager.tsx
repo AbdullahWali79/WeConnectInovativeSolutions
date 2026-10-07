@@ -68,7 +68,7 @@ export function AccountsManager() {
         const row = [];
         let insideQuote = false;
         let currentVal = "";
-        for (let char of rowStr) {
+        for (const char of rowStr) {
           if (char === '"') {
             insideQuote = !insideQuote;
           } else if (char === "," && !insideQuote) {
