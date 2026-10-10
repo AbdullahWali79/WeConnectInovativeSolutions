@@ -55,10 +55,10 @@ export function PersonalPrompts() {
       <Toast toast={toast} onClear={() => setToast(null)} />
       
       {/* Header section */}
-      <div className="bg-[#1e2330] rounded-xl p-6 border border-gray-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="rounded-xl bg-primary p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-xl font-bold text-white mb-1">My Personal Prompts</h1>
-          <p className="text-sm text-gray-400">Save and organize your frequently used AI prompts.</p>
+          <p className="text-sm text-blue-100">Save and organize your frequently used AI prompts.</p>
         </div>
         <button onClick={() => { setEditData(null); setIsModalOpen(true); }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
           <Icon name="auto_awesome" className="text-[18px]" />
@@ -77,13 +77,13 @@ export function PersonalPrompts() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by title or tag..." 
-              className="w-full bg-[#1e2330] border border-gray-700 rounded-lg py-2.5 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-blue-500"
+              className="w-full bg-white border border-gray-300 rounded-lg py-2.5 pl-10 pr-4 text-gray-900 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
             />
           </div>
         </div>
         <div className="w-full md:w-48">
           <label className="text-xs font-semibold text-gray-400 mb-1 block">Category</label>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full bg-[#1e2330] border border-gray-700 rounded-lg py-2.5 px-4 text-white text-sm focus:outline-none focus:border-blue-500">
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg py-2.5 px-4 text-gray-900 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
             <option value="All">All Categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -95,19 +95,19 @@ export function PersonalPrompts() {
         {loading ? (
           <div className="col-span-full text-center py-10 text-gray-400">Loading prompts...</div>
         ) : filteredPrompts.length === 0 ? (
-          <div className="col-span-full text-center py-10 text-gray-500 bg-[#1e2330] rounded-xl border border-gray-800">
+          <div className="col-span-full text-center py-10 text-gray-500 bg-white rounded-xl border border-gray-200 shadow-sm">
             No prompts found.
           </div>
         ) : (
           filteredPrompts.map(p => (
-            <div key={p.id} className="bg-[#1e2330] border border-gray-800 rounded-xl p-5 flex flex-col relative">
+            <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col relative shadow-sm hover:shadow transition">
               {p.is_favorite && <Icon name="star" className="absolute top-4 right-4 text-yellow-500 text-[20px]" />}
               
               <div className="mb-4 pr-8">
                 <span className="text-[10px] font-bold tracking-wider text-emerald-500 bg-emerald-900/20 px-2 py-0.5 rounded-full border border-emerald-800/30 mb-2 inline-block">
                   {p.category.toUpperCase()}
                 </span>
-                <h3 className="text-white font-bold text-lg leading-tight">{p.title}</h3>
+                <h3 className="text-lg font-bold leading-tight text-gray-900">{p.title}</h3>
                 {p.tags && (
                   <p className="text-xs text-gray-400 mt-1">Tags: {p.tags}</p>
                 )}
@@ -115,7 +115,7 @@ export function PersonalPrompts() {
 
               <div className="space-y-3 flex-1 mb-4">
                 {(p.prompts_data || []).map((pt: any, i: number) => (
-                  <div key={i} className="bg-[#151923] border border-gray-800 rounded-lg p-3">
+                  <div key={i} className="bg-gray-50 border border-gray-100 rounded-lg p-3">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="text-xs font-bold text-gray-300">{pt.label || `Prompt Text ${i + 1}`}</h4>
                       <button onClick={() => handleCopy(pt.text)} className="text-gray-500 hover:text-gray-300 ml-2 shrink-0">
@@ -215,77 +215,77 @@ function AddPromptModal({ editData, onClose, onSave }: { editData: any, onClose:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-[#1e2330] border border-gray-700 rounded-xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-[#151923]">
+      <div className="w-full max-w-3xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center border-b border-gray-200 bg-blue-50 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-900/30 flex items-center justify-center text-emerald-500">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700">
               <Icon name="auto_awesome" />
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg leading-tight">{editData ? "Edit Prompt" : "Add Prompt"}</h2>
-              <p className="text-xs text-gray-400">Same topic ke liye multiple prompts save karein with tags and template placeholders.</p>
+              <h2 className="text-lg font-bold leading-tight text-gray-900">{editData ? "Edit Prompt" : "Add Prompt"}</h2>
+              <p className="text-xs text-gray-500">Same topic ke liye multiple prompts save karein with tags and template placeholders.</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">
+          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900">
             <Icon name="close" />
           </button>
         </div>
         <div className="p-6 overflow-y-auto">
           <form id="prompt-form" onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="text-xs font-bold text-gray-300 block mb-1">Category</label>
-              <input required type="text" value={form.category} onChange={e=>setForm({...form, category: e.target.value})} className="w-full bg-[#151923] border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-emerald-500 outline-none" placeholder="e.g. Assignments, Research, Emails" />
+              <label className="mb-1 block text-xs font-bold text-gray-600">Category</label>
+              <input required type="text" value={form.category} onChange={e=>setForm({...form, category: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" placeholder="e.g. Assignments, Research, Emails" />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-300 block mb-1">Topic / Title</label>
-              <input required type="text" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} className="w-full bg-[#151923] border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-emerald-500 outline-none" placeholder="Same topic par multiple prompts save kar sakte hain" />
-              <p className="text-[10px] text-gray-500 mt-1">Ek hi topic ke neeche multiple prompts allowed hain.</p>
+              <label className="mb-1 block text-xs font-bold text-gray-600">Topic / Title</label>
+              <input required type="text" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" placeholder="Same topic par multiple prompts save kar sakte hain" />
+              <p className="text-xs text-gray-500 mt-1">Ek hi topic ke neeche multiple prompts allowed hain.</p>
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-300 block mb-1">Tags</label>
-              <input type="text" value={form.tags} onChange={e=>setForm({...form, tags: e.target.value})} className="w-full bg-[#151923] border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-emerald-500 outline-none" placeholder="comma separated tags" />
+              <label className="mb-1 block text-xs font-bold text-gray-600">Tags</label>
+              <input type="text" value={form.tags} onChange={e=>setForm({...form, tags: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" placeholder="comma separated tags" />
             </div>
             
             <label className="flex items-center gap-2 cursor-pointer w-max">
-              <input type="checkbox" checked={form.is_favorite} onChange={e=>setForm({...form, is_favorite: e.target.checked})} className="rounded bg-[#151923] border-gray-700 text-emerald-500 focus:ring-emerald-500" />
-              <span className="text-sm text-gray-300 font-bold">Mark as favorite</span>
+              <input type="checkbox" checked={form.is_favorite} onChange={e=>setForm({...form, is_favorite: e.target.checked})} className="rounded bg-white border-gray-300 text-primary focus:ring-primary" />
+              <span className="text-sm font-bold text-gray-700">Mark as favorite</span>
             </label>
 
-            <div className="pt-4 border-t border-gray-800">
+            <div className="pt-4 border-t border-gray-200">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-white leading-tight">Prompt Texts</h3>
-                  <p className="text-[10px] text-gray-500">Aik hi topic ke neeche jitne prompt texts chahen add ya edit kar sakte hain.</p>
+                  <h3 className="text-sm font-bold text-gray-900 leading-tight">Prompt Texts</h3>
+                  <p className="text-xs text-gray-500">Aik hi topic ke neeche jitne prompt texts chahen add ya edit kar sakte hain.</p>
                 </div>
-                <button type="button" onClick={addPromptText} className="px-3 py-1.5 border border-gray-600 hover:bg-gray-800 text-gray-300 rounded-lg text-xs font-bold flex items-center gap-1">
+                <button type="button" onClick={addPromptText} className="px-3 py-1.5 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors">
                   <Icon name="add" className="text-[16px]" /> Add Prompt Text
                 </button>
               </div>
 
               <div className="space-y-4">
                 {promptsData.map((pt, index) => (
-                  <div key={index} className="bg-[#151923] border border-gray-800 rounded-xl p-4 relative">
+                  <div key={index} className="bg-gray-50 border border-gray-200 rounded-xl p-4 relative">
                     {promptsData.length > 1 && (
-                      <button type="button" onClick={() => removePromptText(index)} className="absolute top-2 right-2 p-1 text-gray-500 hover:text-red-400">
+                      <button type="button" onClick={() => removePromptText(index)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 transition-colors">
                         <Icon name="close" className="text-[18px]" />
                       </button>
                     )}
-                    <h4 className="text-xs font-bold text-gray-400 mb-2">Prompt Text {index + 1}</h4>
+                    <h4 className="mb-1 block text-xs font-bold text-gray-600">Prompt Text {index + 1}</h4>
                     <textarea 
                       required
                       value={pt.text} 
                       onChange={e=>updatePromptText(index, "text", e.target.value)} 
                       rows={4} 
-                      className="w-full bg-[#1e2330] border border-gray-700 rounded-lg p-3 text-gray-300 text-sm focus:border-emerald-500 outline-none mb-3 resize-none" 
+                      className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100 mb-3 resize-none" 
                       placeholder="Write the full prompt here. Example: Write feedback for {{student_name}} on {{assignment_name}}."
                     ></textarea>
                     
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Label for Prompt Text {index + 1}</label>
+                    <label className="mb-1 block text-xs font-bold text-gray-600">Label for Prompt Text {index + 1}</label>
                     <input 
                       type="text" 
                       value={pt.label} 
                       onChange={e=>updatePromptText(index, "label", e.target.value)} 
-                      className="w-full bg-[#1e2330] border border-gray-700 rounded-lg p-2.5 text-gray-300 text-sm focus:border-emerald-500 outline-none" 
+                      className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" 
                       placeholder="LinkedIn Post, Logo Output, Website Copy" 
                     />
                   </div>
@@ -294,11 +294,11 @@ function AddPromptModal({ editData, onClose, onSave }: { editData: any, onClose:
             </div>
           </form>
         </div>
-        <div className="p-4 border-t border-gray-800 bg-[#151923] flex gap-3">
-          <button type="submit" form="prompt-form" disabled={saving} className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-sm flex items-center gap-2">
+        <div className="flex gap-3 border-t border-gray-200 bg-gray-50 p-4">
+          <button type="submit" form="prompt-form" disabled={saving} className="rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-800 flex items-center gap-2">
             <Icon name="save" className="text-[18px]" /> {saving ? "Saving..." : "Save Prompt"}
           </button>
-          <button type="button" onClick={onClose} className="px-5 py-2.5 border border-gray-600 hover:bg-gray-800 text-gray-300 font-bold rounded-lg text-sm flex items-center gap-2">
+          <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 flex items-center gap-2">
             <Icon name="close" className="text-[18px]" /> Cancel
           </button>
         </div>
