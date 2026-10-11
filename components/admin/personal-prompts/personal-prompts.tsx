@@ -39,6 +39,17 @@ export function PersonalPrompts() {
     setToast({ type: "success", message: "Copied to clipboard!" });
   };
 
+  const handleDuplicatePrompt = (p: any) => {
+    const clone = {
+      ...p,
+      id: undefined,
+      title: `${p.title} (Copy)`,
+      prompts_data: JSON.parse(JSON.stringify(p.prompts_data || []))
+    };
+    setEditData(clone);
+    setIsModalOpen(true);
+  };
+
   const toggleCollapse = (id: string) => {
     setCollapsedMap(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -156,6 +167,53 @@ export function PersonalPrompts() {
         </div>
       </div>
       
+      {/* Category Quick Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+        <button
+          type="button"
+          onClick={() => { setCategoryFilter("All"); setFavoriteFilter(false); }}
+          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            categoryFilter === "All" && !favoriteFilter
+              ? "bg-primary text-white shadow-2xs"
+              : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          All ({prompts.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFavoriteFilter(prev => !prev)}
+          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${
+            favoriteFilter
+              ? "bg-amber-500 text-white shadow-2xs"
+              : "bg-white text-gray-600 border border-gray-200 hover:bg-amber-50/50 hover:border-amber-300"
+          }`}
+        >
+          <Icon name="star" className={`text-[13px] ${favoriteFilter ? "text-white" : "text-amber-500"}`} />
+          Favorites ({favoriteCount})
+        </button>
+
+        {categories.map(c => {
+          const count = prompts.filter(p => (p.category || "").toLowerCase() === c.toLowerCase()).length;
+          const isActive = categoryFilter.toLowerCase() === c.toLowerCase() && !favoriteFilter;
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => { setCategoryFilter(c); setFavoriteFilter(false); }}
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                isActive
+                  ? "bg-primary text-white shadow-2xs"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {c} ({count})
+            </button>
+          );
+        })}
+      </div>
+
       {/* Prompts List - Grid with items-start to prevent blank vertical stretching */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-start">
         {loading ? (
@@ -252,6 +310,13 @@ export function PersonalPrompts() {
 
                     <div className="flex gap-1.5 justify-end border-t border-gray-100 pt-2.5 mt-auto">
                       <button 
+                        onClick={() => handleDuplicatePrompt(p)} 
+                        className="px-2.5 py-1 rounded-md text-xs font-bold text-gray-700 hover:bg-gray-100 border border-gray-200 flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Clone / Duplicate this prompt"
+                      >
+                        <Icon name="content_copy" className="text-[13px] text-gray-500" /> Duplicate
+                      </button>
+                      <button 
                         onClick={() => { setEditData(p); setIsModalOpen(true); }} 
                         className="px-2.5 py-1 rounded-md text-xs font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 flex items-center gap-1 transition-colors cursor-pointer">
                         <Icon name="edit" className="text-[14px]" /> Edit
@@ -302,6 +367,7 @@ function PromptItemViewer({
   }, [pt.text]);
 
   const [varValues, setVarValues] = useState<Record<string, string>>({});
+  const [copied, setCopied] = useState(false);
 
   const filledText = useMemo(() => {
     return (pt.text || "").replace(/\{\{\s*([^}]+?)\s*\}\}/g, (original, key: string) => {
@@ -310,6 +376,19 @@ function PromptItemViewer({
     });
   }, [pt.text, varValues]);
 
+  const handleCopyClick = () => {
+    onCopy(filledText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOpenChatGPT = () => {
+    onCopy(filledText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    window.open("https://chatgpt.com", "_blank");
+  };
+
   const handleShareWhatsApp = () => {
     const url = `https://wa.me/?text=${encodeURIComponent(filledText)}`;
     window.open(url, "_blank");
@@ -317,23 +396,41 @@ function PromptItemViewer({
 
   return (
     <div className="bg-gray-50/70 border border-gray-200/80 rounded-lg p-3 transition-all hover:border-gray-300 space-y-2.5">
-      {/* Header with Title and Copy/Share buttons */}
+      {/* Header with Title and Action buttons */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h4 className="text-[11px] font-bold text-gray-700 tracking-wider uppercase flex items-center gap-1.5">
           <Icon name="description" className="text-[14px] text-gray-500" />
           {pt.label || `Prompt Text ${index + 1}`}
         </h4>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Copy Button with micro-interaction */}
           <button 
             type="button"
-            onClick={() => onCopy(filledText)} 
+            onClick={handleCopyClick} 
             title="Copy filled prompt"
-            className="px-2.5 py-1 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs cursor-pointer"
+            className={`px-2.5 py-1 rounded-md border text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs cursor-pointer ${
+              copied 
+                ? "bg-emerald-50 border-emerald-300 text-emerald-700" 
+                : "border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+            }`}
           >
-            <Icon name="content_copy" className="text-[13px] text-gray-500" />
-            Copy
+            <Icon name={copied ? "check" : "content_copy"} className={`text-[13px] ${copied ? "text-emerald-600" : "text-gray-500"}`} />
+            {copied ? "Copied!" : "Copy"}
           </button>
+
+          {/* Launch ChatGPT Button */}
+          <button 
+            type="button"
+            onClick={handleOpenChatGPT} 
+            title="Copy & Open in ChatGPT"
+            className="px-2.5 py-1 rounded-md border border-gray-200 bg-white hover:bg-emerald-50/60 hover:border-emerald-300 text-gray-700 text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs cursor-pointer"
+          >
+            <Icon name="smart_toy" className="text-[14px] text-emerald-600" />
+            ChatGPT
+          </button>
+
+          {/* Share via WhatsApp */}
           <button 
             type="button"
             onClick={handleShareWhatsApp} 
@@ -354,9 +451,20 @@ function PromptItemViewer({
               <Icon name="tune" className="text-[13px] text-blue-600" />
               Template Variables
             </span>
-            <span className="text-[10px] font-medium text-blue-600">
-              Type values below to fill prompt live
-            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={() => setVarValues({})}
+                title="Clear all variable inputs"
+                className="text-[10px] text-blue-700 hover:text-red-600 font-semibold flex items-center gap-0.5 cursor-pointer transition-colors"
+              >
+                <Icon name="restart_alt" className="text-[13px]" />
+                Reset
+              </button>
+              <span className="text-[10px] font-normal text-blue-500 hidden sm:inline">
+                (Type values to fill live)
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {variables.map(v => (
