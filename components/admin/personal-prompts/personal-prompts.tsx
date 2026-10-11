@@ -69,84 +69,86 @@ export function PersonalPrompts() {
   const categories = Array.from(new Set(["Tricky", ...prompts.map(p => p.category).filter(Boolean)]));
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-3.5 max-w-7xl mx-auto">
       <Toast toast={toast} onClear={() => setToast(null)} />
       
-      {/* Header section */}
-      <div className="rounded-xl bg-primary p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Header section - Modern & Compact */}
+      <div className="rounded-xl bg-primary px-4 py-3 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">My Personal Prompts</h1>
-          <p className="text-sm text-blue-100">Save and organize your frequently used AI prompts.</p>
+          <h1 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <Icon name="stars" className="text-amber-400 text-[20px]" />
+            My Personal Prompts
+          </h1>
+          <p className="text-xs text-blue-100/90 mt-0.5">Save, customize template variables, and quickly copy or share prompts.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button 
             type="button" 
             onClick={expandAll}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             title="Expand all topics"
           >
-            <Icon name="unfold_more" className="text-[16px]" />
+            <Icon name="unfold_more" className="text-[15px]" />
             Expand All
           </button>
           <button 
             type="button" 
             onClick={collapseAll}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             title="Collapse all topics"
           >
-            <Icon name="unfold_less" className="text-[16px]" />
+            <Icon name="unfold_less" className="text-[15px]" />
             Collapse All
           </button>
           <button 
             onClick={() => { setEditData(null); setIsModalOpen(true); }} 
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           >
-            <Icon name="auto_awesome" className="text-[18px]" />
+            <Icon name="add" className="text-[16px]" />
             Add Prompt
           </button>
         </div>
       </div>
       
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-3 items-end">
-        <div className="flex-1 w-full">
-          <label className="text-xs font-semibold text-gray-600 mb-1 block">Search Prompts</label>
-          <div className="relative">
-            <Icon name="search" className="absolute left-3 top-2.5 text-gray-400 text-[20px]" />
-            <input 
-              type="text" 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search prompts by title..." 
-              className="w-full bg-white border border-gray-300 rounded-lg py-2.5 pl-10 pr-4 text-gray-900 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
-            />
+      {/* Search and Filters - Sleek Single-Line Toolbar */}
+      <div className="bg-white border border-gray-200 rounded-xl p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-center shadow-2xs">
+        <div className="relative flex-1 w-full">
+          <Icon name="search" className="absolute left-3 top-2 text-gray-400 text-[18px]" />
+          <input 
+            type="text" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search prompts by title or category..." 
+            className="w-full bg-gray-50/70 hover:bg-gray-50 border border-gray-200 rounded-lg py-1.5 pl-9 pr-3 text-xs text-gray-900 outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary transition-all"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="relative min-w-[130px] flex-1 sm:flex-initial">
+            <select 
+              value={categoryFilter} 
+              onChange={(e) => setCategoryFilter(e.target.value)} 
+              className="w-full bg-gray-50 hover:bg-gray-100/80 border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-medium text-gray-800 outline-none focus:border-primary transition-colors cursor-pointer"
+            >
+              <option value="All">All Categories</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
-        </div>
 
-        <div className="w-full md:w-48">
-          <label className="text-xs font-semibold text-gray-600 mb-1 block">Category</label>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg py-2.5 px-3 text-gray-900 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
-            <option value="All">All Categories</option>
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-
-        {/* Favorites Filter Button */}
-        <div className="w-full md:w-auto">
           <button
             type="button"
             onClick={() => setFavoriteFilter(prev => !prev)}
-            className={`w-full md:w-auto h-[42px] px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all border shadow-sm ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border cursor-pointer shrink-0 ${
               favoriteFilter 
-                ? "bg-amber-500 text-white border-amber-600 ring-2 ring-amber-200" 
-                : "bg-white text-gray-700 border-gray-300 hover:bg-amber-50/50 hover:border-amber-300"
+                ? "bg-amber-500 text-white border-amber-600 shadow-2xs" 
+                : "bg-gray-50 hover:bg-amber-50/60 text-gray-700 border-gray-200 hover:border-amber-300"
             }`}
-            title="Filter by favorites"
+            title="Filter favorite prompts"
           >
-            <Icon name={favoriteFilter ? "star" : "star_outline"} className={`text-[19px] ${favoriteFilter ? "text-white" : "text-amber-500"}`} />
+            <Icon name={favoriteFilter ? "star" : "star_outline"} className={`text-[16px] ${favoriteFilter ? "text-white" : "text-amber-500"}`} />
             <span>Favorites</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-              favoriteFilter ? "bg-white/25 text-white" : "bg-amber-100 text-amber-800"
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              favoriteFilter ? "bg-white/30 text-white" : "bg-amber-100 text-amber-800"
             }`}>
               {favoriteCount}
             </span>
@@ -154,20 +156,20 @@ export function PersonalPrompts() {
         </div>
       </div>
       
-      {/* Prompts List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Prompts List - Grid with items-start to prevent blank vertical stretching */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-start">
         {loading ? (
-          <div className="col-span-full text-center py-10 text-gray-400">Loading prompts...</div>
+          <div className="col-span-full text-center py-10 text-gray-400 text-xs">Loading prompts...</div>
         ) : filteredPrompts.length === 0 ? (
           <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200 shadow-sm">
             <Icon name={favoriteFilter ? "star_outline" : "search_off"} className="text-4xl text-amber-400 mb-2 inline-block" />
-            <p className="font-semibold text-gray-700 text-base">
+            <p className="font-semibold text-gray-700 text-sm">
               {favoriteFilter ? "No favorite prompts found." : "No prompts found."}
             </p>
             {favoriteFilter && (
               <button 
                 onClick={() => setFavoriteFilter(false)} 
-                className="mt-2 text-xs text-primary hover:underline font-bold inline-block"
+                className="mt-2 text-xs text-primary hover:underline font-bold inline-block cursor-pointer"
               >
                 Show all prompts
               </button>
@@ -179,20 +181,20 @@ export function PersonalPrompts() {
             const promptCount = (p.prompts_data || []).length;
 
             return (
-              <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col relative shadow-sm hover:shadow transition-shadow">
+              <div key={p.id} className="bg-white border border-gray-200/90 rounded-xl p-4 flex flex-col relative shadow-2xs hover:shadow-xs transition-shadow">
                 {/* Card Header Row */}
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-2.5">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="text-[11px] font-bold tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                      <span className="text-[10px] font-bold tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 uppercase">
                         {p.category.toUpperCase()}
                       </span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+                      <span className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-medium">
                         {promptCount} {promptCount === 1 ? "Prompt" : "Prompts"}
                       </span>
                       {p.is_favorite && (
-                        <span className="flex items-center text-yellow-500 text-xs font-semibold gap-0.5">
-                          <Icon name="star" className="text-[15px]" /> Favorite
+                        <span className="flex items-center text-amber-600 text-[11px] font-semibold gap-0.5">
+                          <Icon name="star" className="text-[14px]" /> Favorite
                         </span>
                       )}
                     </div>
@@ -201,16 +203,14 @@ export function PersonalPrompts() {
                       onClick={() => toggleCollapse(p.id)} 
                       className="cursor-pointer group select-none"
                     >
-                      <h3 className="text-lg font-bold leading-tight text-gray-900 group-hover:text-primary transition-colors">
+                      <h3 className="text-base font-bold leading-snug text-gray-900 group-hover:text-primary transition-colors">
                         {p.title}
                       </h3>
                     </div>
-
-
                   </div>
 
                   {/* Actions: Favorite & Expand/Collapse */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button 
                       type="button"
                       onClick={async () => {
@@ -219,19 +219,19 @@ export function PersonalPrompts() {
                         loadData();
                       }} 
                       title={p.is_favorite ? "Unmark Favorite" : "Mark as Favorite"}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-yellow-500 hover:bg-gray-100 transition-colors"
+                      className="p-1 rounded-md text-gray-400 hover:text-amber-500 hover:bg-gray-100 transition-colors cursor-pointer"
                     >
-                      <Icon name={p.is_favorite ? "star" : "star_outline"} className={`text-[20px] ${p.is_favorite ? "text-yellow-500" : ""}`} />
+                      <Icon name={p.is_favorite ? "star" : "star_outline"} className={`text-[19px] ${p.is_favorite ? "text-amber-500" : ""}`} />
                     </button>
 
                     <button 
                       type="button"
                       onClick={() => toggleCollapse(p.id)}
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold flex items-center gap-1 transition-colors"
+                      className="px-2 py-1 rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                       title={isCollapsed ? "Expand Box" : "Collapse Box"}
                     >
-                      <span className="hidden sm:inline">{isCollapsed ? "Expand" : "Collapse"}</span>
-                      <Icon name={isCollapsed ? "expand_more" : "expand_less"} className="text-[18px]" />
+                      <span>{isCollapsed ? "Expand" : "Collapse"}</span>
+                      <Icon name={isCollapsed ? "expand_more" : "expand_less"} className="text-[17px]" />
                     </button>
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export function PersonalPrompts() {
                 {/* Collapsible Body */}
                 {!isCollapsed && (
                   <>
-                    <div className="space-y-3 flex-1 my-4 pt-3 border-t border-gray-100">
+                    <div className="space-y-2.5 flex-1 my-3 pt-3 border-t border-gray-100">
                       {(p.prompts_data || []).map((pt: any, i: number) => (
                         <PromptItemViewer
                           key={i}
@@ -250,11 +250,11 @@ export function PersonalPrompts() {
                       ))}
                     </div>
 
-                    <div className="flex gap-2 justify-end border-t border-gray-100 pt-3 mt-auto">
+                    <div className="flex gap-1.5 justify-end border-t border-gray-100 pt-2.5 mt-auto">
                       <button 
                         onClick={() => { setEditData(p); setIsModalOpen(true); }} 
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 flex items-center gap-1 transition-colors">
-                        <Icon name="edit" className="text-[16px]" /> Edit
+                        className="px-2.5 py-1 rounded-md text-xs font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 flex items-center gap-1 transition-colors cursor-pointer">
+                        <Icon name="edit" className="text-[14px]" /> Edit
                       </button>
                       <button 
                         onClick={async () => {
@@ -263,8 +263,8 @@ export function PersonalPrompts() {
                             loadData();
                           }
                         }} 
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 flex items-center gap-1 transition-colors">
-                        <Icon name="delete" className="text-[16px]" /> Delete
+                        className="px-2.5 py-1 rounded-md text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 flex items-center gap-1 transition-colors cursor-pointer">
+                        <Icon name="delete" className="text-[14px]" /> Delete
                       </button>
                     </div>
                   </>
@@ -316,31 +316,31 @@ function PromptItemViewer({
   };
 
   return (
-    <div className="bg-gray-50/80 border border-gray-200/90 rounded-xl p-4 transition-all hover:border-gray-300 space-y-3">
+    <div className="bg-gray-50/70 border border-gray-200/80 rounded-lg p-3 transition-all hover:border-gray-300 space-y-2.5">
       {/* Header with Title and Copy/Share buttons */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h4 className="text-xs font-bold text-gray-700 tracking-wider uppercase flex items-center gap-1.5">
-          <Icon name="description" className="text-[15px] text-gray-500" />
+        <h4 className="text-[11px] font-bold text-gray-700 tracking-wider uppercase flex items-center gap-1.5">
+          <Icon name="description" className="text-[14px] text-gray-500" />
           {pt.label || `Prompt Text ${index + 1}`}
         </h4>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button 
             type="button"
             onClick={() => onCopy(filledText)} 
             title="Copy filled prompt"
-            className="px-3 py-1 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            className="px-2.5 py-1 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs cursor-pointer"
           >
-            <Icon name="content_copy" className="text-[14px] text-gray-500" />
+            <Icon name="content_copy" className="text-[13px] text-gray-500" />
             Copy
           </button>
           <button 
             type="button"
             onClick={handleShareWhatsApp} 
             title="Share via WhatsApp"
-            className="px-3 py-1 rounded-lg border border-emerald-600 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            className="px-2.5 py-1 rounded-md border border-emerald-600 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs cursor-pointer"
           >
-            <Icon name="chat" className="text-[14px]" />
+            <Icon name="chat" className="text-[13px]" />
             Share
           </button>
         </div>
@@ -348,20 +348,20 @@ function PromptItemViewer({
 
       {/* Template Variables Section if any */}
       {variables.length > 0 && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 space-y-2">
+        <div className="rounded-lg border border-blue-200/70 bg-blue-50/50 p-2.5 space-y-2">
           <div className="text-[10px] font-bold text-blue-900 tracking-wider uppercase flex items-center justify-between">
             <span className="flex items-center gap-1">
-              <Icon name="tune" className="text-[14px] text-blue-600" />
+              <Icon name="tune" className="text-[13px] text-blue-600" />
               Template Variables
             </span>
             <span className="text-[10px] font-medium text-blue-600">
               Type values below to fill prompt live
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {variables.map(v => (
               <div key={v}>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1 truncate" title={v}>
+                <label className="block text-[11px] font-bold text-gray-700 mb-0.5 truncate" title={v}>
                   {v}
                 </label>
                 <input 
@@ -369,7 +369,7 @@ function PromptItemViewer({
                   value={varValues[v] || ""} 
                   onChange={e => setVarValues(prev => ({ ...prev, [v]: e.target.value }))}
                   placeholder={`Enter ${v}...`} 
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
+                  className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
                 />
               </div>
             ))}
@@ -378,8 +378,8 @@ function PromptItemViewer({
       )}
 
       {/* Rendered prompt preview text */}
-      <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-2xs">
-        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed select-all font-normal">
+      <div className="rounded-md border border-gray-200/80 bg-white p-2.5 shadow-2xs">
+        <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed select-all font-normal">
           {filledText}
         </p>
       </div>
