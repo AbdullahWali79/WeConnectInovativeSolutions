@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Toast, type ToastState } from "@/components/toast";
 import { fetchPersonalPrompts, addPersonalPrompt, updatePersonalPrompt, deletePersonalPrompt } from "@/app/admin/personal-prompts/actions";
 import { Icon } from "@/components/icon";
@@ -241,20 +241,12 @@ export function PersonalPrompts() {
                   <>
                     <div className="space-y-3 flex-1 my-4 pt-3 border-t border-gray-100">
                       {(p.prompts_data || []).map((pt: any, i: number) => (
-                        <div key={i} className="bg-gray-50 border border-gray-200/80 rounded-lg p-3.5 transition-colors hover:border-gray-300">
-                          <div className="flex justify-between items-start mb-1.5">
-                            <h4 className="text-xs font-bold text-gray-700">{pt.label || `Prompt Text ${i + 1}`}</h4>
-                            <button 
-                              onClick={() => handleCopy(pt.text)} 
-                              title="Copy prompt"
-                              className="text-gray-500 hover:text-primary hover:bg-white border border-transparent hover:border-gray-200 px-2 py-0.5 rounded text-xs flex items-center gap-1 transition-all ml-2 shrink-0 font-medium"
-                            >
-                              <Icon name="content_copy" className="text-[14px]" />
-                              Copy
-                            </button>
-                          </div>
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed select-all">{pt.text}</p>
-                        </div>
+                        <PromptItemViewer
+                          key={i}
+                          pt={pt}
+                          index={i}
+                          onCopy={handleCopy}
+                        />
                       ))}
                     </div>
 
@@ -291,6 +283,106 @@ export function PersonalPrompts() {
           onSave={() => { setIsModalOpen(false); loadData(); setToast({type:'success', message: editData ? 'Updated!' : 'Saved!'}); }} 
         />
       )}
+    </div>
+  );
+}
+
+function PromptItemViewer({ 
+  pt, 
+  index, 
+  onCopy 
+}: { 
+  pt: { label?: string; text: string }; 
+  index: number; 
+  onCopy: (text: string) => void;
+}) {
+  const variables = useMemo(() => {
+    const matches = Array.from((pt.text || "").matchAll(/\{\{\s*([^}]+?)\s*\}\}/g), m => m[1].trim());
+    return [...new Set(matches.filter(Boolean))];
+  }, [pt.text]);
+
+  const [varValues, setVarValues] = useState<Record<string, string>>({});
+
+  const filledText = useMemo(() => {
+    return (pt.text || "").replace(/\{\{\s*([^}]+?)\s*\}\}/g, (original, key: string) => {
+      const trimmed = key.trim();
+      return varValues[trimmed] && varValues[trimmed].trim() !== "" ? varValues[trimmed].trim() : original;
+    });
+  }, [pt.text, varValues]);
+
+  const handleShareWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(filledText)}`;
+    window.open(url, "_blank");
+  };
+
+  return (
+    <div className="bg-gray-50/80 border border-gray-200/90 rounded-xl p-4 transition-all hover:border-gray-300 space-y-3">
+      {/* Header with Title and Copy/Share buttons */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h4 className="text-xs font-bold text-gray-700 tracking-wider uppercase flex items-center gap-1.5">
+          <Icon name="description" className="text-[15px] text-gray-500" />
+          {pt.label || `Prompt Text ${index + 1}`}
+        </h4>
+
+        <div className="flex items-center gap-2">
+          <button 
+            type="button"
+            onClick={() => onCopy(filledText)} 
+            title="Copy filled prompt"
+            className="px-3 py-1 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+          >
+            <Icon name="content_copy" className="text-[14px] text-gray-500" />
+            Copy
+          </button>
+          <button 
+            type="button"
+            onClick={handleShareWhatsApp} 
+            title="Share via WhatsApp"
+            className="px-3 py-1 rounded-lg border border-emerald-600 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+          >
+            <Icon name="chat" className="text-[14px]" />
+            Share
+          </button>
+        </div>
+      </div>
+
+      {/* Template Variables Section if any */}
+      {variables.length > 0 && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 space-y-2">
+          <div className="text-[10px] font-bold text-blue-900 tracking-wider uppercase flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Icon name="tune" className="text-[14px] text-blue-600" />
+              Template Variables
+            </span>
+            <span className="text-[10px] font-medium text-blue-600">
+              Type values below to fill prompt live
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {variables.map(v => (
+              <div key={v}>
+                <label className="block text-[11px] font-bold text-gray-700 mb-1 truncate" title={v}>
+                  {v}
+                </label>
+                <input 
+                  type="text" 
+                  value={varValues[v] || ""} 
+                  onChange={e => setVarValues(prev => ({ ...prev, [v]: e.target.value }))}
+                  placeholder={`Enter ${v}...`} 
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rendered prompt preview text */}
+      <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-2xs">
+        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed select-all font-normal">
+          {filledText}
+        </p>
+      </div>
     </div>
   );
 }
