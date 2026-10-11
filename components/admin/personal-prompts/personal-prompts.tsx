@@ -14,6 +14,7 @@ export function PersonalPrompts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [favoriteFilter, setFavoriteFilter] = useState(false);
 
   const [editData, setEditData] = useState<any>(null);
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
@@ -52,13 +53,15 @@ export function PersonalPrompts() {
     setCollapsedMap({});
   };
 
+  const favoriteCount = prompts.filter(p => p.is_favorite).length;
+
   const filteredPrompts = prompts.filter(p => {
+    if (favoriteFilter && !p.is_favorite) return false;
     if (categoryFilter !== "All" && p.category !== categoryFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       return p.title.toLowerCase().includes(q) || 
-             p.category.toLowerCase().includes(q) || 
-             (p.tags && p.tags.toLowerCase().includes(q));
+             p.category.toLowerCase().includes(q);
     }
     return true;
   });
@@ -105,11 +108,11 @@ export function PersonalPrompts() {
       </div>
       
       {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 items-end">
-        <div className="flex-1">
-          <label className="text-xs font-semibold text-gray-400 mb-1 block">Search Prompts</label>
+      <div className="flex flex-col md:flex-row gap-3 items-end">
+        <div className="flex-1 w-full">
+          <label className="text-xs font-semibold text-gray-600 mb-1 block">Search Prompts</label>
           <div className="relative">
-            <Icon name="search" className="absolute left-3 top-2.5 text-gray-500 text-[20px]" />
+            <Icon name="search" className="absolute left-3 top-2.5 text-gray-400 text-[20px]" />
             <input 
               type="text" 
               value={search}
@@ -119,12 +122,35 @@ export function PersonalPrompts() {
             />
           </div>
         </div>
+
         <div className="w-full md:w-48">
-          <label className="text-xs font-semibold text-gray-400 mb-1 block">Category</label>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg py-2.5 px-4 text-gray-900 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
+          <label className="text-xs font-semibold text-gray-600 mb-1 block">Category</label>
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg py-2.5 px-3 text-gray-900 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
             <option value="All">All Categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+        </div>
+
+        {/* Favorites Filter Button */}
+        <div className="w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => setFavoriteFilter(prev => !prev)}
+            className={`w-full md:w-auto h-[42px] px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all border shadow-sm ${
+              favoriteFilter 
+                ? "bg-amber-500 text-white border-amber-600 ring-2 ring-amber-200" 
+                : "bg-white text-gray-700 border-gray-300 hover:bg-amber-50/50 hover:border-amber-300"
+            }`}
+            title="Filter by favorites"
+          >
+            <Icon name={favoriteFilter ? "star" : "star_outline"} className={`text-[19px] ${favoriteFilter ? "text-white" : "text-amber-500"}`} />
+            <span>Favorites</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+              favoriteFilter ? "bg-white/25 text-white" : "bg-amber-100 text-amber-800"
+            }`}>
+              {favoriteCount}
+            </span>
+          </button>
         </div>
       </div>
       
@@ -133,8 +159,19 @@ export function PersonalPrompts() {
         {loading ? (
           <div className="col-span-full text-center py-10 text-gray-400">Loading prompts...</div>
         ) : filteredPrompts.length === 0 ? (
-          <div className="col-span-full text-center py-10 text-gray-500 bg-white rounded-xl border border-gray-200 shadow-sm">
-            No prompts found.
+          <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <Icon name={favoriteFilter ? "star_outline" : "search_off"} className="text-4xl text-amber-400 mb-2 inline-block" />
+            <p className="font-semibold text-gray-700 text-base">
+              {favoriteFilter ? "No favorite prompts found." : "No prompts found."}
+            </p>
+            {favoriteFilter && (
+              <button 
+                onClick={() => setFavoriteFilter(false)} 
+                className="mt-2 text-xs text-primary hover:underline font-bold inline-block"
+              >
+                Show all prompts
+              </button>
+            )}
           </div>
         ) : (
           filteredPrompts.map(p => {
