@@ -114,7 +114,7 @@ export function PersonalPrompts() {
               type="text" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title or tag..." 
+              placeholder="Search prompts by title..." 
               className="w-full bg-white border border-gray-300 rounded-lg py-2.5 pl-10 pr-4 text-gray-900 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
             />
           </div>
@@ -169,9 +169,7 @@ export function PersonalPrompts() {
                       </h3>
                     </div>
 
-                    {p.tags && (
-                      <p className="text-xs text-gray-500 mt-1">Tags: {p.tags}</p>
-                    )}
+
                   </div>
 
                   {/* Actions: Favorite & Expand/Collapse */}
@@ -312,7 +310,7 @@ function AddPromptModal({ editData, onClose, onSave }: { editData: any, onClose:
             </div>
             <div>
               <h2 className="text-lg font-bold leading-tight text-gray-900">{editData ? "Edit Prompt" : "Add Prompt"}</h2>
-              <p className="text-xs text-gray-500">Same topic ke liye multiple prompts save karein with tags and template placeholders.</p>
+              <p className="text-xs text-gray-500">Same topic ke liye multiple prompts save karein.</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900">
@@ -330,10 +328,7 @@ function AddPromptModal({ editData, onClose, onSave }: { editData: any, onClose:
               <input required type="text" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" placeholder="Same topic par multiple prompts save kar sakte hain" />
               <p className="text-xs text-gray-500 mt-1">Ek hi topic ke neeche multiple prompts allowed hain.</p>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold text-gray-600">Tags</label>
-              <input type="text" value={form.tags} onChange={e=>setForm({...form, tags: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" placeholder="comma separated tags" />
-            </div>
+
             
             <label className="flex items-center gap-2 cursor-pointer w-max">
               <input type="checkbox" checked={form.is_favorite} onChange={e=>setForm({...form, is_favorite: e.target.checked})} className="rounded bg-white border-gray-300 text-primary focus:ring-primary" />
