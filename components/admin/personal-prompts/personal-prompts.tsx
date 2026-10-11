@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Toast, type ToastState } from "@/components/toast";
 import { fetchPersonalPrompts, addPersonalPrompt, updatePersonalPrompt, deletePersonalPrompt } from "@/app/admin/personal-prompts/actions";
 import { Icon } from "@/components/icon";
@@ -63,7 +63,7 @@ export function PersonalPrompts() {
     return true;
   });
 
-  const categories = Array.from(new Set(prompts.map(p => p.category)));
+  const categories = Array.from(new Set(["Tricky", ...prompts.map(p => p.category).filter(Boolean)]));
 
   return (
     <div className="p-6 space-y-6">
@@ -249,6 +249,7 @@ export function PersonalPrompts() {
       {isModalOpen && (
         <AddPromptModal 
           editData={editData} 
+          categories={categories}
           onClose={() => setIsModalOpen(false)} 
           onSave={() => { setIsModalOpen(false); loadData(); setToast({type:'success', message: editData ? 'Updated!' : 'Saved!'}); }} 
         />
@@ -257,15 +258,38 @@ export function PersonalPrompts() {
   );
 }
 
-function AddPromptModal({ editData, onClose, onSave }: { editData: any, onClose: () => void, onSave: () => void }) {
+function AddPromptModal({ 
+  editData, 
+  categories = [], 
+  onClose, 
+  onSave 
+}: { 
+  editData: any; 
+  categories: string[]; 
+  onClose: () => void; 
+  onSave: () => void;
+}) {
   const [form, setForm] = useState({ 
-    category: editData?.category || "", 
+    category: editData?.category || "Tricky", 
     title: editData?.title || "", 
     tags: editData?.tags || "", 
     is_favorite: editData?.is_favorite || false 
   });
   const [promptsData, setPromptsData] = useState<any[]>(editData?.prompts_data || [{ label: "", text: "" }]);
   const [saving, setSaving] = useState(false);
+
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -319,10 +343,76 @@ function AddPromptModal({ editData, onClose, onSave }: { editData: any, onClose:
         </div>
         <div className="p-6 overflow-y-auto">
           <form id="prompt-form" onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="mb-1 block text-xs font-bold text-gray-600">Category</label>
-              <input required type="text" value={form.category} onChange={e=>setForm({...form, category: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" placeholder="e.g. Assignments, Research, Emails" />
+            <div className="relative" ref={categoryDropdownRef}>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-xs font-bold text-gray-700">Category</label>
+                {/* Quick Select Category Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {categories.slice(0, 5).map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setForm(f => ({ ...f, category: c }));
+                        setShowCategoryDropdown(false);
+                      }}
+                      className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold transition-all ${
+                        form.category.trim().toLowerCase() === c.toLowerCase() 
+                          ? "bg-primary text-white shadow-sm" 
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative">
+                <input 
+                  required 
+                  type="text" 
+                  value={form.category} 
+                  onFocus={() => setShowCategoryDropdown(true)}
+                  onChange={e => {
+                    setForm(f => ({ ...f, category: e.target.value }));
+                    setShowCategoryDropdown(true);
+                  }} 
+                  className="w-full rounded-lg border border-gray-300 bg-white p-2.5 pr-10 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" 
+                  placeholder="Select or type new category..." 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryDropdown(v => !v)}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-700 p-0.5"
+                >
+                  <Icon name={showCategoryDropdown ? "expand_less" : "expand_more"} className="text-[20px]" />
+                </button>
+              </div>
+
+              {showCategoryDropdown && categories.length > 0 && (
+                <div className="absolute z-30 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-xl py-1">
+                  {categories
+                    .filter(c => !form.category || c.toLowerCase().includes(form.category.toLowerCase()))
+                    .map(c => (
+                      <div 
+                        key={c}
+                        onClick={() => {
+                          setForm(f => ({ ...f, category: c }));
+                          setShowCategoryDropdown(false);
+                        }}
+                        className="cursor-pointer px-3.5 py-2 text-sm text-gray-800 hover:bg-blue-50 hover:text-primary transition-colors flex items-center justify-between"
+                      >
+                        <span className="font-medium">{c}</span>
+                        {form.category.trim().toLowerCase() === c.toLowerCase() && (
+                          <Icon name="check" className="text-primary text-[16px]" />
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
+
             <div>
               <label className="mb-1 block text-xs font-bold text-gray-600">Topic / Title</label>
               <input required type="text" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" placeholder="Same topic par multiple prompts save kar sakte hain" />
