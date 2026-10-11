@@ -16,6 +16,7 @@ export function PersonalPrompts() {
   const [categoryFilter, setCategoryFilter] = useState("All");
 
   const [editData, setEditData] = useState<any>(null);
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadData();
@@ -35,6 +36,20 @@ export function PersonalPrompts() {
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setToast({ type: "success", message: "Copied to clipboard!" });
+  };
+
+  const toggleCollapse = (id: string) => {
+    setCollapsedMap(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const collapseAll = () => {
+    const map: Record<string, boolean> = {};
+    prompts.forEach(p => { map[p.id] = true; });
+    setCollapsedMap(map);
+  };
+
+  const expandAll = () => {
+    setCollapsedMap({});
   };
 
   const filteredPrompts = prompts.filter(p => {
@@ -60,10 +75,33 @@ export function PersonalPrompts() {
           <h1 className="text-xl font-bold text-white mb-1">My Personal Prompts</h1>
           <p className="text-sm text-blue-100">Save and organize your frequently used AI prompts.</p>
         </div>
-        <button onClick={() => { setEditData(null); setIsModalOpen(true); }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
-          <Icon name="auto_awesome" className="text-[18px]" />
-          Add Prompt
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button 
+            type="button" 
+            onClick={expandAll}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+            title="Expand all topics"
+          >
+            <Icon name="unfold_more" className="text-[16px]" />
+            Expand All
+          </button>
+          <button 
+            type="button" 
+            onClick={collapseAll}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+            title="Collapse all topics"
+          >
+            <Icon name="unfold_less" className="text-[16px]" />
+            Collapse All
+          </button>
+          <button 
+            onClick={() => { setEditData(null); setIsModalOpen(true); }} 
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Icon name="auto_awesome" className="text-[18px]" />
+            Add Prompt
+          </button>
+        </div>
       </div>
       
       {/* Search and Filters */}
@@ -99,63 +137,114 @@ export function PersonalPrompts() {
             No prompts found.
           </div>
         ) : (
-          filteredPrompts.map(p => (
-            <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col relative shadow-sm hover:shadow transition">
-              {p.is_favorite && <Icon name="star" className="absolute top-4 right-4 text-yellow-500 text-[20px]" />}
-              
-              <div className="mb-4 pr-8">
-                <span className="text-[10px] font-bold tracking-wider text-emerald-500 bg-emerald-900/20 px-2 py-0.5 rounded-full border border-emerald-800/30 mb-2 inline-block">
-                  {p.category.toUpperCase()}
-                </span>
-                <h3 className="text-lg font-bold leading-tight text-gray-900">{p.title}</h3>
-                {p.tags && (
-                  <p className="text-xs text-gray-400 mt-1">Tags: {p.tags}</p>
-                )}
-              </div>
+          filteredPrompts.map(p => {
+            const isCollapsed = Boolean(collapsedMap[p.id]);
+            const promptCount = (p.prompts_data || []).length;
 
-              <div className="space-y-3 flex-1 mb-4">
-                {(p.prompts_data || []).map((pt: any, i: number) => (
-                  <div key={i} className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-xs font-bold text-gray-300">{pt.label || `Prompt Text ${i + 1}`}</h4>
-                      <button onClick={() => handleCopy(pt.text)} className="text-gray-500 hover:text-gray-300 ml-2 shrink-0">
-                        <Icon name="content_copy" className="text-[16px]" />
+            return (
+              <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col relative shadow-sm hover:shadow transition-shadow">
+                {/* Card Header Row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <span className="text-[11px] font-bold tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        {p.category.toUpperCase()}
+                      </span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+                        {promptCount} {promptCount === 1 ? "Prompt" : "Prompts"}
+                      </span>
+                      {p.is_favorite && (
+                        <span className="flex items-center text-yellow-500 text-xs font-semibold gap-0.5">
+                          <Icon name="star" className="text-[15px]" /> Favorite
+                        </span>
+                      )}
+                    </div>
+
+                    <div 
+                      onClick={() => toggleCollapse(p.id)} 
+                      className="cursor-pointer group select-none"
+                    >
+                      <h3 className="text-lg font-bold leading-tight text-gray-900 group-hover:text-primary transition-colors">
+                        {p.title}
+                      </h3>
+                    </div>
+
+                    {p.tags && (
+                      <p className="text-xs text-gray-500 mt-1">Tags: {p.tags}</p>
+                    )}
+                  </div>
+
+                  {/* Actions: Favorite & Expand/Collapse */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button 
+                      type="button"
+                      onClick={async () => {
+                        const newFav = !p.is_favorite;
+                        await updatePersonalPrompt(p.id, { is_favorite: newFav });
+                        loadData();
+                      }} 
+                      title={p.is_favorite ? "Unmark Favorite" : "Mark as Favorite"}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-yellow-500 hover:bg-gray-100 transition-colors"
+                    >
+                      <Icon name={p.is_favorite ? "star" : "star_outline"} className={`text-[20px] ${p.is_favorite ? "text-yellow-500" : ""}`} />
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => toggleCollapse(p.id)}
+                      className="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold flex items-center gap-1 transition-colors"
+                      title={isCollapsed ? "Expand Box" : "Collapse Box"}
+                    >
+                      <span className="hidden sm:inline">{isCollapsed ? "Expand" : "Collapse"}</span>
+                      <Icon name={isCollapsed ? "expand_more" : "expand_less"} className="text-[18px]" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Collapsible Body */}
+                {!isCollapsed && (
+                  <>
+                    <div className="space-y-3 flex-1 my-4 pt-3 border-t border-gray-100">
+                      {(p.prompts_data || []).map((pt: any, i: number) => (
+                        <div key={i} className="bg-gray-50 border border-gray-200/80 rounded-lg p-3.5 transition-colors hover:border-gray-300">
+                          <div className="flex justify-between items-start mb-1.5">
+                            <h4 className="text-xs font-bold text-gray-700">{pt.label || `Prompt Text ${i + 1}`}</h4>
+                            <button 
+                              onClick={() => handleCopy(pt.text)} 
+                              title="Copy prompt"
+                              className="text-gray-500 hover:text-primary hover:bg-white border border-transparent hover:border-gray-200 px-2 py-0.5 rounded text-xs flex items-center gap-1 transition-all ml-2 shrink-0 font-medium"
+                            >
+                              <Icon name="content_copy" className="text-[14px]" />
+                              Copy
+                            </button>
+                          </div>
+                          <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed select-all">{pt.text}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2 justify-end border-t border-gray-100 pt-3 mt-auto">
+                      <button 
+                        onClick={() => { setEditData(p); setIsModalOpen(true); }} 
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 flex items-center gap-1 transition-colors">
+                        <Icon name="edit" className="text-[16px]" /> Edit
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if(confirm("Delete this prompt?")) {
+                            await deletePersonalPrompt(p.id);
+                            loadData();
+                          }
+                        }} 
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 flex items-center gap-1 transition-colors">
+                        <Icon name="delete" className="text-[16px]" /> Delete
                       </button>
                     </div>
-                    <p className="text-sm text-gray-400 whitespace-pre-wrap">{pt.text}</p>
-                  </div>
-                ))}
+                  </>
+                )}
               </div>
-
-              <div className="flex gap-2 justify-end border-t border-gray-800 pt-3 mt-auto">
-                 <button 
-                  onClick={async () => {
-                    const newFav = !p.is_favorite;
-                    await updatePersonalPrompt(p.id, { is_favorite: newFav });
-                    loadData();
-                  }} 
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:bg-gray-800 flex items-center gap-1">
-                   <Icon name={p.is_favorite ? "star_outline" : "star"} className="text-[16px]" /> 
-                   {p.is_favorite ? "Unfavorite" : "Favorite"}
-                 </button>
-                 <button 
-                  onClick={() => { setEditData(p); setIsModalOpen(true); }} 
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-blue-400 hover:bg-blue-900/30 flex items-center gap-1">
-                   <Icon name="edit" className="text-[16px]" /> Edit
-                 </button>
-                 <button 
-                  onClick={async () => {
-                    if(confirm("Delete this prompt?")) {
-                      await deletePersonalPrompt(p.id);
-                      loadData();
-                    }
-                  }} 
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-400 hover:bg-red-900/30 flex items-center gap-1">
-                   <Icon name="delete" className="text-[16px]" /> Delete
-                 </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
