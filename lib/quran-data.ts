@@ -704,25 +704,26 @@ export const QURAN_TRANSLATORS = [
 ];
 
 export function buildDetailedTafseerPrompt(surahName: string, ayahNum: number, arabic: string, translation: string) {
-  return `براہ کرم قرآن مجید کی اس آیت مبارکہ کی جامع اور مفصل تفسیر بیان فرمائیں:
+  return `Please provide a detailed Tafseer and explanation of this Quranic Ayah with real-life examples in Roman Urdu:
 
-📖 سورۃ: ${surahName} (آیت نمبر: ${ayahNum})
+📖 Surah: ${surahName} (Ayah: ${ayahNum})
 
-✨ عربی آیت:
+✨ Arabic:
 ${arabic}
 
-🌸 اردو ترجمہ:
+🌸 Urdu Translation:
 ${translation}
 
-مطلوبہ وضاحت:
-1. شانِ نزول اور پس منظر (اگر موجود ہے)
-2. کلمات اور معانی کی مفصل تفہیم
-3. موجودہ دور اور روزمرہ زندگی کے لیے اہم اسباق، ہدایات اور عملی پیغامات۔`;
+Requirements:
+1. Tafseer and detailed explanation in easy-to-understand Roman Urdu.
+2. Real-life examples (rozmarrah zindagi ki practical misalein) showing how to apply this in our daily lives today.
+3. Shan-e-Nuzool aur background context (agar applicable ho).
+4. Key lessons and actionable guidance for our daily life.`;
 }
 
 export function buildShortPrompt(surahName: string, ayahNum: number, arabic: string, translation: string) {
-  return `قرآن مجید کی اس آیت مبارکہ (${surahName}، آیت ${ayahNum}) کا آسان اور عام فہم الفاظ میں مختصر خلاصہ اور مرکزی پیغام بیان کریں:
+  return `Is Quranic Ayah (${surahName}, Ayah ${ayahNum}) ki mukhtasar Tafseer and explanation with real-life examples in Roman Urdu provide karein:
 
-عربی: ${arabic}
-ترجمہ: ${translation}`;
+Arabic: ${arabic}
+Translation: ${translation}`;
 }

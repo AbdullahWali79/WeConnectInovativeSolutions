@@ -157,10 +157,22 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
     setTimeout(() => setCopiedType(null), 2000);
   };
 
-  // Open in AI (ChatGPT)
+  // Open in AI (ChatGPT) with pre-filled prompt query
   const handleOpenInAI = (type: "detailed" | "short" = "detailed") => {
-    handleCopyPrompt(type);
-    window.open("https://chatgpt.com", "_blank");
+    const text = type === "detailed"
+      ? buildDetailedTafseerPrompt(currentSurah.englishName, ayahNumber, arabicText, urduText)
+      : buildShortPrompt(currentSurah.englishName, ayahNumber, arabicText, urduText);
+
+    try {
+      navigator.clipboard.writeText(text);
+    } catch {
+      // ignore
+    }
+    setCopiedType(type === "detailed" ? "ai" : type);
+    setTimeout(() => setCopiedType(null), 2500);
+
+    const chatGptUrl = `https://chatgpt.com/?q=${encodeURIComponent(text)}`;
+    window.open(chatGptUrl, "_blank", "noopener,noreferrer");
   };
 
   const fontStyle = useMemo(() => {
@@ -291,11 +303,15 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
               <button 
                 type="button"
                 onClick={() => handleOpenInAI("detailed")}
-                className="px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                title="Tafseer prompt copy kar k ChatGPT kholein"
+                className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                  copiedType === "ai"
+                    ? "border-teal-400 bg-teal-100 text-teal-900"
+                    : "border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800"
+                }`}
+                title="ChatGPT mein is ayat ki Tafseer with real life examples (Roman Urdu) direct kholein"
               >
-                <Icon name="smart_toy" className="text-[14px] text-teal-700" />
-                AI Tafseer
+                <Icon name={copiedType === "ai" ? "check" : "smart_toy"} className="text-[14px] text-teal-700" />
+                {copiedType === "ai" ? "Opened in ChatGPT!" : "AI Tafseer"}
               </button>
             </div>
           </div>
@@ -307,10 +323,15 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
               <button 
                 type="button"
                 onClick={() => handleOpenInAI("detailed")}
-                className="px-3 py-1.5 rounded-lg border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                  copiedType === "ai"
+                    ? "border-purple-400 bg-purple-100 text-purple-900"
+                    : "border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-800"
+                }`}
+                title="ChatGPT mein Tafseer with real life examples (Roman Urdu) direct kholein"
               >
-                <Icon name="open_in_new" className="text-[14px]" />
-                Open in AI
+                <Icon name={copiedType === "ai" ? "check" : "open_in_new"} className="text-[14px]" />
+                {copiedType === "ai" ? "Opened in ChatGPT!" : "Open in AI"}
               </button>
 
               {/* Copy Short Prompt */}
