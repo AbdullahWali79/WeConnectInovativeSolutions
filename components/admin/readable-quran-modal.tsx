@@ -32,6 +32,9 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Lock state: When locked, Next button is disabled
+  const [isLocked, setIsLocked] = useState<boolean>(false);
+
   // Jump selector state
   const [isJumpOpen, setIsJumpOpen] = useState<boolean>(false);
   const [jumpSurah, setJumpSurah] = useState<number>(2);
@@ -133,13 +136,15 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-      if (e.key === "ArrowRight") handleNext();
+      if (e.key === "ArrowRight") {
+        if (!isLocked) handleNext();
+      }
       if (e.key === "ArrowLeft") handlePrev();
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, handleNext, handlePrev, onClose]);
+  }, [isOpen, handleNext, handlePrev, onClose, isLocked]);
 
   // Copy Prompt
   const handleCopyPrompt = (type: "detailed" | "short") => {
@@ -194,12 +199,26 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
                 <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
                   Juz {juzNumber}
                 </span>
+                {isLocked && (
+                  <span className="text-[11px] bg-amber-100 text-amber-900 border border-amber-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Icon name="lock" className="text-[12px] text-amber-700" />
+                    Locked
+                  </span>
+                )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5 flex items-center gap-2">
-                <span>{currentSurah.englishName}</span>
-                <span className="text-emerald-700 font-bold text-lg">{surahNumber}:{ayahNumber}</span>
-                <span className="text-sm font-normal text-gray-500 font-arabic">({currentSurah.name})</span>
-              </h2>
+              <button
+                type="button"
+                onClick={() => setIsJumpOpen(v => !v)}
+                className="group flex items-center gap-2 mt-0.5 text-left hover:opacity-85 transition-opacity cursor-pointer"
+                title="Surah ya Ayat tabdeel karne ke liye click karein"
+              >
+                <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2">
+                  <span>{currentSurah.englishName}</span>
+                  <span className="text-emerald-700 font-bold text-lg">{surahNumber}:{ayahNumber}</span>
+                  <span className="text-sm font-normal text-gray-500 font-arabic">({currentSurah.name})</span>
+                </h2>
+                <Icon name={isJumpOpen ? "expand_less" : "expand_more"} className="text-gray-400 group-hover:text-emerald-700 text-xl" />
+              </button>
               <p className="text-xs text-gray-500 mt-0.5">
                 Arabic aur Urdu translation ko apni readability ke hisaab se adjust karein.
               </p>
@@ -325,22 +344,31 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
               <button 
                 type="button"
                 onClick={handleNext}
-                disabled={surahNumber === 114 && ayahNumber === currentSurah.numberOfAyahs}
-                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1 transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                disabled={isLocked || (surahNumber === 114 && ayahNumber === currentSurah.numberOfAyahs)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all shadow-xs ${
+                  isLocked || (surahNumber === 114 && ayahNumber === currentSurah.numberOfAyahs)
+                    ? "bg-emerald-600/35 text-white/70 cursor-not-allowed shadow-none"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95"
+                }`}
+                title={isLocked ? "Ayat locked hai! Agli ayat par jane ke liye pehle Unlock karein." : "Agli Ayat"}
               >
                 Next
                 <Icon name="chevron_right" className="text-[16px]" />
               </button>
 
-              {/* Jump to Surah / Ayah */}
+              {/* Lock / Unlock Toggle Button */}
               <button 
                 type="button"
-                onClick={() => setIsJumpOpen(v => !v)}
-                className="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                title="Kisi bhi Surah ya Ayat par direct jayein"
+                onClick={() => setIsLocked(v => !v)}
+                className={`px-3.5 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer ${
+                  isLocked 
+                    ? "border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 ring-2 ring-amber-300/40" 
+                    : "border-gray-300 bg-white hover:bg-gray-100 text-gray-700"
+                }`}
+                title={isLocked ? "Unlock karein (Next button dobara enable ho jayega)" : "Lock karein (Next button disable ho jayega)"}
               >
-                <Icon name={isJumpOpen ? "lock_open" : "lock"} className="text-[14px]" />
-                {isJumpOpen ? "Selecting..." : "Unlock / Jump"}
+                <Icon name={isLocked ? "lock" : "lock_open"} className={`text-[15px] ${isLocked ? "text-amber-700" : "text-gray-500"}`} />
+                {isLocked ? "Unlock" : "Lock"}
               </button>
 
               {/* Close Modal */}
@@ -464,9 +492,9 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
                   <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px]">←</kbd>
                   Previous
                 </span>
-                <span className="flex items-center gap-1">
+                <span className={`flex items-center gap-1 ${isLocked ? "opacity-40" : ""}`}>
                   <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px]">→</kbd>
-                  Next
+                  Next {isLocked ? "(Locked)" : ""}
                 </span>
                 <span className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px]">ESC</kbd>
