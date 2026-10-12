@@ -14,6 +14,7 @@ import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Application, CompletedStudent, Course, Enrollment, Profile } from "@/lib/supabase/types";
 import { buildApprovedStudentWhatsappUrl, formatDate, type WhatsappMessageTemplate, whatsappMessageTemplateOptions } from "@/lib/utils";
 import { navGroups, dashboardItem, pagesItem } from "./admin-shell";
+import { ReadableQuranModal } from "./readable-quran-modal";
 
 type DashboardData = {
   courses: Course[];
@@ -52,6 +53,7 @@ export function AdminDashboard({
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedWhatsappTemplate, setSelectedWhatsappTemplate] = useState<WhatsappMessageTemplate>("default");
+  const [isQuranOpen, setIsQuranOpen] = useState(false);
   const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(false);
   const [isManagingQuickAccess, setIsManagingQuickAccess] = useState(false);
   const [quickAccessSearch, setQuickAccessSearch] = useState("");
@@ -242,9 +244,19 @@ export function AdminDashboard({
         eyebrow={isAdmin ? "Admin Portal" : "Teacher Portal"}
         title="Operations dashboard"
         action={
-          <button type="button" onClick={() => setIsQuickAccessOpen(true)} className="wc-primary-btn text-sm">
-            <Icon name="apps" /> Quick Access
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsQuranOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-800 shadow-2xs transition-all hover:bg-emerald-100 hover:border-emerald-400 active:scale-95 cursor-pointer"
+            >
+              <Icon name="menu_book" className="text-emerald-700 text-base" />
+              Readable Quran
+            </button>
+            <button type="button" onClick={() => setIsQuickAccessOpen(true)} className="wc-primary-btn text-sm">
+              <Icon name="apps" /> Quick Access
+            </button>
+          </div>
         }
       />
 
@@ -505,6 +517,8 @@ export function AdminDashboard({
           </motion.div>
         </aside>
       </section>
+
+      <ReadableQuranModal isOpen={isQuranOpen} onClose={() => setIsQuranOpen(false)} />
     </>
   );
 }
