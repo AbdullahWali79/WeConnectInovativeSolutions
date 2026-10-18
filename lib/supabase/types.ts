@@ -45,6 +45,7 @@ export type Profile = {
   status: ProfileStatus;
   admin_status: "approved" | "active" | "completed" | "inactive" | null;
   daily_task_limit: number | null;
+  social_media_drive_folder_url: string | null;
   is_fee_blocked?: boolean;
   fee_block_reason?: string | null;
   fee_blocked_at?: string | null;

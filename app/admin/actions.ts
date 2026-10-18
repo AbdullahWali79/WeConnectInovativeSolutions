@@ -1321,6 +1321,27 @@ export async function updateStudentDailyTaskLimit(studentId: string, dailyLimit:
   }
 }
 
+export async function updateStudentDriveFolder(studentId: string, folderUrl: string | null) {
+  try {
+    await requirePermission("students.edit");
+    const trimmedUrl = folderUrl?.trim() || null;
+    if (trimmedUrl) {
+      const parsed = new URL(trimmedUrl);
+      if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname.includes('drive.google.com')) {
+        return { success: false, error: "Enter a valid Google Drive folder URL." };
+      }
+    }
+    const supabase = createSupabaseServiceClient();
+    const { error } = await supabase.from("profiles").update({ social_media_drive_folder_url: trimmedUrl }).eq("id", studentId).eq("role", "student");
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/admin/students");
+    revalidatePath("/student/videos");
+    return { success: true, error: null };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to save Drive folder." };
+  }
+}
+
 export async function updateStudentStatus(studentId: string, status: Extract<ProfileStatus, "approved" | "rejected">) {
   try {
     await requirePermission("students.edit");

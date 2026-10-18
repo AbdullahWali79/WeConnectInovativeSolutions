@@ -12,7 +12,7 @@ import { StatusPill } from "@/components/status-pill";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { filterCoursesByScope, filterEnrollmentsByScope, loadTeacherCourseScope, courseInScope, type CourseScope } from "@/lib/admin-course-scope";
-import { deleteStudentAccount, renewStudentInternship, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary, updateStudentDailyTaskLimit } from "@/app/admin/actions";
+import { deleteStudentAccount, renewStudentInternship, resetStudentPassword, setStudentLifecycleStatus, toggleStudentCompletion, updateStudentGithubUrl, updateStudentNotes, updateStudentProgressSummary, updateStudentDailyTaskLimit, updateStudentDriveFolder } from "@/app/admin/actions";
 import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Application, CompletedStudent, Course, Enrollment, Profile, ProgressReport, StudentFeeRecord, StudentProject, Submission, Task } from "@/lib/supabase/types";
 import { normalizeProfileLinkUrl } from "@/lib/profile-links";
@@ -1453,6 +1453,7 @@ function StudentTable({
                             </div>
                           )}
                         </div>
+                        <DriveFolderEditor student={student} canEdit={canEditStudents} />
                       </div>
                     </td>
                   </tr>
@@ -1465,6 +1466,29 @@ function StudentTable({
       </div>
     </div>
   );
+}
+
+function DriveFolderEditor({ student, canEdit }: { student: StudentViewRow; canEdit: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(student.social_media_drive_folder_url ?? "");
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    setSaving(true);
+    const result = await updateStudentDriveFolder(student.id, draft);
+    setSaving(false);
+    if (result.success) setEditing(false);
+    else alert(result.error);
+  };
+  return <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
+    <p className="text-xs font-bold uppercase tracking-wider text-primary">Social Media Drive Folder</p>
+    {editing ? <div className="mt-2 flex flex-col gap-2">
+      <input type="url" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="https://drive.google.com/drive/folders/..." className="wc-input text-xs" />
+      <div className="flex gap-2"><button type="button" disabled={saving} onClick={() => void save()} className="wc-primary-btn px-3 py-1.5 text-xs">{saving ? "Saving..." : "Save"}</button><button type="button" onClick={() => { setDraft(student.social_media_drive_folder_url ?? ""); setEditing(false); }} className="wc-secondary-btn px-3 py-1.5 text-xs">Cancel</button></div>
+    </div> : <div className="mt-2 flex items-center gap-2 text-xs">
+      {student.social_media_drive_folder_url ? <a href={student.social_media_drive_folder_url} target="_blank" rel="noreferrer" className="font-semibold text-primary hover:underline"><Icon name="folder_open" className="mr-1 align-middle" />Open assigned folder</a> : <span className="text-on-surface-variant">Not assigned</span>}
+      {canEdit ? <button type="button" onClick={() => setEditing(true)} className="text-primary hover:underline">{student.social_media_drive_folder_url ? "Edit" : "Assign"}</button> : null}
+    </div>}
+  </div>;
 }
 
 function ProfileLinkRow({ label, url }: { label: string; url: string | null }) {

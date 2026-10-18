@@ -16,6 +16,7 @@ export default async function StudentVideosPage() {
     .select("*")
     .eq("student_id", user.id)
     .order("created_at", { ascending: false });
+  const { data: profile } = await supabase.from("profiles").select("social_media_drive_folder_url").eq("id", user.id).maybeSingle();
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -32,6 +33,12 @@ export default async function StudentVideosPage() {
           </Link>
         }
       />
+      {profile?.social_media_drive_folder_url ? (
+        <section className="mb-5 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="text-xs font-black uppercase tracking-wider text-blue-700">Assigned Google Drive folder</p><p className="mt-1 text-sm text-blue-900">Upload your social media videos in this folder. Admin can review them from your student record.</p></div>
+          <a href={profile.social_media_drive_folder_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"><Icon name="folder_open" /> Open Drive Folder</a>
+        </section>
+      ) : null}
 
       {!videos || videos.length === 0 ? (
         <EmptyState
