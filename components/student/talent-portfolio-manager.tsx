@@ -18,6 +18,7 @@ export type TalentProfile = {
   profile_picture_url: string | null;
   status: "pending" | "approved" | "rejected";
   whatsapp_enabled: boolean;
+  service_limit?: number;
 };
 
 export type TalentService = {
@@ -39,6 +40,7 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
   const [isAddingService, setIsAddingService] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const serviceLimit = Math.min(4, Math.max(1, Number(profile?.service_limit) || 1));
 
   // Setup Form State
   const [name, setName] = useState(profile?.name || "");
@@ -291,15 +293,15 @@ export function TalentPortfolioManager({ talentProfile: initialProfile, userId }
 
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold text-gray-900">
-          My Services <span className="text-sm font-normal text-gray-500 ml-2">({services.length}/3)</span>
+          My Services <span className="text-sm font-normal text-gray-500 ml-2">({services.length}/{serviceLimit})</span>
         </h3>
-        {services.length < 3 ? (
+        {services.length < serviceLimit ? (
           <button onClick={() => isAddingService ? resetServiceForm() : startAddingService()} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center hover:bg-blue-700 transition-colors">
             <span className="material-symbols-outlined mr-2 text-sm">add</span>
             Add Service
           </button>
         ) : (
-          <span className="text-sm text-red-500 font-medium bg-red-50 px-3 py-1.5 rounded-md border border-red-100">Maximum 3 services allowed</span>
+          <span className="text-sm text-red-500 font-medium bg-red-50 px-3 py-1.5 rounded-md border border-red-100">Maximum {serviceLimit} service{serviceLimit === 1 ? "" : "s"} allowed</span>
         )}
       </div>
 

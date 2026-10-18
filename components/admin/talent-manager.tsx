@@ -18,6 +18,7 @@ import {
   toggleTalentServiceStatus, 
   deleteTalentService, 
   updateTalentRequestStatus 
+  ,updateTalentServiceLimit
 } from "@/app/admin/talent-management/actions";
 
 export function TalentManager({ initialProfiles, initialRequests = [] }: { initialProfiles: TalentProfile[], initialRequests?: any[] }) {
@@ -106,6 +107,17 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
       setToast({ type: "success", message: `WhatsApp button ${newStatus ? "enabled" : "disabled"}.` });
       setProfiles(profiles.map((p) => (p.id === id ? { ...p, whatsapp_enabled: newStatus } : p)));
     }
+  };
+
+  const handleServiceLimitChange = async (profile: TalentProfile, value: string) => {
+    const limit = Number(value);
+    const result = await updateTalentServiceLimit(profile.id, limit);
+    if (!result.success) {
+      setToast({ type: "error", message: "Failed to update service limit: " + result.error });
+      return;
+    }
+    setProfiles(profiles.map((p) => p.id === profile.id ? { ...p, service_limit: result.serviceLimit } : p));
+    setToast({ type: "success", message: `${profile.name} can now add ${result.serviceLimit} service${result.serviceLimit === 1 ? "" : "s"}.` });
   };
 
   const loadServices = async (profileId: string) => {
@@ -408,6 +420,12 @@ export function TalentManager({ initialProfiles, initialRequests = [] }: { initi
                     {(servicesByProfile[p.id] || []).some((service) => service.status === "inactive") && (
                       <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-700">Needs approval</span>
                     )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                    <label htmlFor={`service-limit-${p.id}`} className="text-xs font-semibold text-gray-600">Service limit</label>
+                    <select id={`service-limit-${p.id}`} value={p.service_limit || 1} onChange={(e) => handleServiceLimitChange(p, e.target.value)} className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-700 outline-none focus:border-blue-500">
+                      {[1, 2, 3, 4].map((limit) => <option key={limit} value={limit}>{limit} service{limit === 1 ? "" : "s"}</option>)}
+                    </select>
                   </div>
                   <div className="mt-3 flex gap-2">
                     <button 

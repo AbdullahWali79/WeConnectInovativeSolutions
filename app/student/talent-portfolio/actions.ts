@@ -41,7 +41,7 @@ export async function addTalentService(input: TalentServiceInput) {
   const supabase = createSupabaseServiceClient();
   const { data: profile, error: profileError } = await supabase
     .from("talent_profiles" as any)
-    .select("id,status")
+    .select("id,status,service_limit")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -49,7 +49,7 @@ export async function addTalentService(input: TalentServiceInput) {
     return { success: false, error: profileError.message };
   }
 
-  const talentProfile = profile as unknown as TalentProfileStatus | null;
+  const talentProfile = profile as unknown as (TalentProfileStatus & { service_limit?: number }) | null;
 
   if (!talentProfile || talentProfile.status !== "approved") {
     return { success: false, error: "Your talent profile must be approved before adding services." };
@@ -64,8 +64,9 @@ export async function addTalentService(input: TalentServiceInput) {
     return { success: false, error: countError.message };
   }
 
-  if ((count || 0) >= 3) {
-    return { success: false, error: "You can add maximum 3 services." };
+  const serviceLimit = Math.min(4, Math.max(1, Number(talentProfile.service_limit) || 1));
+  if ((count || 0) >= serviceLimit) {
+    return { success: false, error: `You can add maximum ${serviceLimit} service${serviceLimit === 1 ? "" : "s"}.` };
   }
 
   const { data, error } = await supabase

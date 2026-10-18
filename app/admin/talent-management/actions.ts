@@ -62,6 +62,16 @@ export async function toggleTalentWhatsApp(profileId: string, currentStatus: boo
   return { success: !error, error: error?.message };
 }
 
+export async function updateTalentServiceLimit(profileId: string, limit: number) {
+  const normalizedLimit = Math.min(4, Math.max(1, Math.trunc(Number(limit) || 1)));
+  const supabase = createSupabaseServiceClient();
+  const { error } = await supabase
+    .from("talent_profiles" as any)
+    .update({ service_limit: normalizedLimit })
+    .eq("id", profileId);
+  return { success: !error, error: error?.message, serviceLimit: normalizedLimit };
+}
+
 export async function toggleTalentServiceStatus(serviceId: string, currentStatus: string) {
   const supabase = createSupabaseServiceClient();
   const newStatus = currentStatus === "active" ? "inactive" : "active";
