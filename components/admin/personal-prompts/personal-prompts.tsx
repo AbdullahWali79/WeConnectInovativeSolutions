@@ -27,7 +27,12 @@ export function PersonalPrompts() {
     setLoading(true);
     const res = await fetchPersonalPrompts();
     if (res.success) {
-      setPrompts(res.prompts || []);
+      const loadedPrompts = res.prompts || [];
+      setPrompts(loadedPrompts);
+      // Topics should open as compact tiles whenever the page is entered.
+      const initialCollapsed: Record<string, boolean> = {};
+      loadedPrompts.forEach((p: any) => { initialCollapsed[p.id] = true; });
+      setCollapsedMap(initialCollapsed);
     } else {
       setToast({ type: "error", message: res.error || "Failed to load data" });
     }
@@ -264,6 +269,15 @@ export function PersonalPrompts() {
                       <h3 className="text-base font-bold leading-snug text-gray-900 group-hover:text-primary transition-colors">
                         {p.title}
                       </h3>
+                      {promptCount > 1 && (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {(p.prompts_data || []).map((pt: any, i: number) => (
+                            <span key={i} className="max-w-full truncate rounded-md bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-500 border border-gray-100">
+                              {pt.label?.trim() || `Prompt ${i + 1}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -681,7 +695,15 @@ function AddPromptModal({
                         <Icon name="close" className="text-[18px]" />
                       </button>
                     )}
-                    <h4 className="mb-1 block text-xs font-bold text-gray-600">Prompt Text {index + 1}</h4>
+                    <label className="mb-1 block text-xs font-bold text-gray-700">Prompt {index + 1} Title / Subtitle</label>
+                    <input 
+                      type="text" 
+                      value={pt.label} 
+                      onChange={e=>updatePromptText(index, "label", e.target.value)} 
+                      className="mb-3 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm font-medium text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" 
+                      placeholder={`e.g. ${index === 3 ? "Complete Advanced Web Technologies Project Portal" : "Lecture Slides / Website Copy"}`} 
+                    />
+                    <label className="mb-1 block text-xs font-bold text-gray-600">Prompt Instructions</label>
                     <textarea 
                       required
                       value={pt.text} 
@@ -690,15 +712,6 @@ function AddPromptModal({
                       className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100 mb-3 resize-none" 
                       placeholder="Write the full prompt here. Example: Write feedback for {{student_name}} on {{assignment_name}}."
                     ></textarea>
-                    
-                    <label className="mb-1 block text-xs font-bold text-gray-600">Label for Prompt Text {index + 1}</label>
-                    <input 
-                      type="text" 
-                      value={pt.label} 
-                      onChange={e=>updatePromptText(index, "label", e.target.value)} 
-                      className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-blue-100" 
-                      placeholder="LinkedIn Post, Logo Output, Website Copy" 
-                    />
                   </div>
                 ))}
               </div>
