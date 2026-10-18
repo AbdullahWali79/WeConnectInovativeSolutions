@@ -1,0 +1,21 @@
+-- Run in Supabase SQL Editor to install or upgrade student menu controls.
+create table if not exists public.course_student_menu_controls (
+  course_id uuid not null references public.courses(id) on delete cascade,
+  menu_key text not null,
+  is_visible boolean not null default true,
+  sort_order integer not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (course_id, menu_key)
+);
+alter table public.course_student_menu_controls
+  add column if not exists sort_order integer not null default 0;
+alter table public.course_student_menu_controls enable row level security;
+drop policy if exists "Students read menu controls for enrolled courses" on public.course_student_menu_controls;
+create policy "Students read menu controls for enrolled courses" on public.course_student_menu_controls
+  for select using (exists (select 1 from public.enrollments e where e.student_id = auth.uid() and e.course_id = course_student_menu_controls.course_id));
+drop policy if exists "Admins manage course menu controls" on public.course_student_menu_controls;
+create policy "Admins manage course menu controls" on public.course_student_menu_controls
+  for all using (public.is_admin(auth.uid())) with check (public.is_admin(auth.uid()));
+grant select, insert, update, delete on public.course_student_menu_controls to authenticated;
+grant all on public.course_student_menu_controls to service_role;
+notify pgrst, 'reload schema';

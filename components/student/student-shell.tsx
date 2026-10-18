@@ -45,15 +45,17 @@ export function StudentShell({ profile, branding, isFreelancer, children }: { pr
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuVisibility, setMenuVisibility] = useState<Record<string, boolean> | null>(null);
+  const [menuOrder, setMenuOrder] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (isFreelancer || !profile?.id) return;
     void (async () => {
       const { data: enrollment } = await supabase.from("enrollments").select("course_id").eq("student_id", profile.id).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (!enrollment?.course_id) return;
-      const { data: controls } = await supabase.from("course_student_menu_controls").select("menu_key,is_visible").eq("course_id", enrollment.course_id);
+      const { data: controls } = await supabase.from("course_student_menu_controls").select("*").eq("course_id", enrollment.course_id);
       if (!controls?.length) return;
       setMenuVisibility(Object.fromEntries(controls.map((control) => [control.menu_key, control.is_visible])));
+      setMenuOrder(Object.fromEntries(controls.map((control) => [control.menu_key, control.sort_order ?? 0])));
     })();
   }, [isFreelancer, profile?.id, supabase]);
 
@@ -166,7 +168,11 @@ export function StudentShell({ profile, branding, isFreelancer, children }: { pr
           </div>
 
           <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-color:rgba(255,255,255,0.35)_transparent] [scrollbar-width:thin]">
-            {nav.filter((item) => item.href === "/student" || menuVisibility?.[item.href.replace("/student/", "")] !== false).map((item) => {
+            {nav.filter((item) => item.href === "/student" || menuVisibility?.[item.href.replace("/student/", "")] !== false).sort((a, b) => {
+              if (a.href === "/student") return -1;
+              if (b.href === "/student") return 1;
+              return (menuOrder[a.href.replace("/student/", "")] ?? 0) - (menuOrder[b.href.replace("/student/", "")] ?? 0);
+            }).map((item) => {
               const active = pathname === item.href || (item.href !== "/student" && pathname.startsWith(`${item.href}/`));
               return (
               <Link

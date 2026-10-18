@@ -10,13 +10,84 @@ const MENU_OPTIONS = [
   ["assigned-projects", "Assigned Projects", "assignment_turned_in"], ["projects", "Projects", "folder_special"], ["progress", "My Progress", "monitoring"],
   ["videos", "My Videos", "videocam"], ["helping-videos", "Helping Videos", "smart_display"],
 ] as const;
+type MenuKey = typeof MENU_OPTIONS[number][0];
+const defaultOrder = MENU_OPTIONS.map(([key]) => key);
+type Control = { menu_key: string; is_visible: boolean; sort_order?: number };
 
 export function StudentMenuControls() {
   const supabase = createSupabaseBrowserClient();
-  const [courses, setCourses] = useState<Array<{ id: string; title: string; status: string }>>([]); const [selected, setSelected] = useState<string>("");
-  const [visible, setVisible] = useState<Record<string, boolean>>({}); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
-  useEffect(() => { void (async () => { const { data } = await supabase.from("courses").select("id,title,status").order("title"); setCourses(data ?? []); if (data?.[0]) setSelected(data[0].id); })(); }, [supabase]);
-  useEffect(() => { if (!selected) return; void (async () => { const { data } = await supabase.from("course_student_menu_controls").select("menu_key,is_visible").eq("course_id", selected); const next: Record<string, boolean> = {}; MENU_OPTIONS.forEach(([key]) => { next[key] = true; }); (data ?? []).forEach((row) => { next[row.menu_key] = row.is_visible; }); setVisible(next); })(); }, [selected, supabase]);
-  async function save() { setSaving(true); setMessage(""); const rows = MENU_OPTIONS.map(([menu_key]) => ({ course_id: selected, menu_key, is_visible: visible[menu_key] !== false, updated_at: new Date().toISOString() })); const { error } = await supabase.from("course_student_menu_controls").upsert(rows, { onConflict: "course_id,menu_key" }); setSaving(false); setMessage(error ? error.message : "Menu settings saved."); }
-  return <div className="mx-auto max-w-5xl space-y-6"><header><p className="text-xs font-black uppercase tracking-widest text-primary">Student access</p><h1 className="mt-1 text-3xl font-black text-on-surface">Student Menu Controls</h1><p className="mt-2 text-sm text-on-surface-variant">Choose which student-hub menus appear for each course. Hidden menus are removed from the sidebar.</p></header><section className="rounded-2xl border border-outline-variant bg-surface p-5 shadow-card"><label className="block max-w-md text-sm font-bold text-on-surface">Course<select value={selected} onChange={(e) => setSelected(e.target.value)} className="wc-input mt-2">{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{MENU_OPTIONS.map(([key, label, icon]) => <label key={key} className="flex cursor-pointer items-center gap-3 rounded-xl border border-outline-variant p-4 hover:bg-surface-container-low"><input type="checkbox" checked={visible[key] !== false} onChange={(e) => setVisible((current) => ({ ...current, [key]: e.target.checked }))} className="h-4 w-4" /><Icon name={icon} className="text-primary" /><span className="text-sm font-bold text-on-surface">{label}</span></label>)}</div><div className="mt-6 flex items-center gap-4"><button disabled={!selected || saving} onClick={() => void save()} className="wc-primary-btn"><Icon name="save" />{saving ? "Saving..." : "Save Menu Settings"}</button>{message && <span className="text-sm font-semibold text-emerald-700">{message}</span>}</div></section></div>;
+  const [courses, setCourses] = useState<Array<{ id: string; title: string }>>([]);
+  const [selected, setSelected] = useState("");
+  const [visible, setVisible] = useState<Record<string, boolean>>({});
+  const [order, setOrder] = useState<MenuKey[]>(defaultOrder);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      const result = await supabase.from("courses").select("id,title").order("title");
+      if (result.error) { setError(result.error.message); setLoading(false); return; }
+      setCourses(result.data ?? []);
+      if (result.data?.[0]) setSelected(result.data[0].id);
+      else setLoading(false);
+    })();
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!selected) return;
+    let cancelled = false;
+    setLoading(true); setMessage(""); setError("");
+    void (async () => {
+      const result = await supabase.from("course_student_menu_controls").select("*").eq("course_id", selected);
+      if (cancelled) return;
+      if (result.error) {
+        setError(result.error.message.includes("schema cache") ? "Database setup required: run supabase/student-menu-controls-setup.sql in the Supabase SQL Editor." : result.error.message);
+      }
+      const rows = (result.data ?? []) as Control[];
+      setVisible(Object.fromEntries(rows.map(row => [row.menu_key, row.is_visible])));
+      setOrder([...defaultOrder].sort((a, b) => (rows.find(row => row.menu_key === a)?.sort_order ?? 0) - (rows.find(row => row.menu_key === b)?.sort_order ?? 0)));
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [selected, supabase]);
+
+  function move(index: number, direction: number) {
+    setOrder(current => {
+      const next = [...current];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return current;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setMessage("");
+  }
+
+  async function save() {
+    setSaving(true); setMessage("");
+    const rows = order.map((menu_key, sort_order) => ({ course_id: selected, menu_key, sort_order, is_visible: visible[menu_key] !== false, updated_at: new Date().toISOString() }));
+    const result = await supabase.from("course_student_menu_controls").upsert(rows, { onConflict: "course_id,menu_key" });
+    setSaving(false);
+    if (result.error) setError(result.error.message);
+    else { setError(""); setMessage("Menu visibility and order saved."); }
+  }
+
+  return <div className="mx-auto max-w-5xl space-y-6">
+    <header><p className="text-xs font-black uppercase tracking-widest text-primary">Student access</p><h1 className="mt-1 text-3xl font-black text-on-surface">Student Menu Controls</h1><p className="mt-2 text-sm text-on-surface-variant">Choose visible menus and use the arrows to arrange their order for each course. Dashboard stays first.</p></header>
+    <section className="rounded-2xl border border-outline-variant bg-surface p-5 shadow-card">
+      <label className="block max-w-md text-sm font-bold text-on-surface">Course<select disabled={saving} value={selected} onChange={e => setSelected(e.target.value)} className="wc-input mt-2">{courses.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>
+      {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <div className="mt-6 space-y-2">{order.map((key, index) => {
+        const option = MENU_OPTIONS.find(item => item[0] === key)!;
+        return <div key={key} className="flex items-center gap-3 rounded-xl border border-outline-variant p-3">
+          <span className="w-5 text-xs text-on-surface-variant">{index + 1}</span>
+          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"><input disabled={loading || saving} type="checkbox" checked={visible[key] !== false} onChange={e => setVisible(current => ({ ...current, [key]: e.target.checked }))} className="h-4 w-4" /><Icon name={option[2]} className="text-primary" /><span className="text-sm font-bold text-on-surface">{option[1]}</span></label>
+          <button type="button" aria-label={`Move ${option[1]} up`} disabled={loading || saving || index === 0} onClick={() => move(index, -1)} className="rounded-lg border border-outline-variant p-1.5 text-primary hover:bg-surface-container-low disabled:opacity-30"><Icon name="arrow_upward" /></button>
+          <button type="button" aria-label={`Move ${option[1]} down`} disabled={loading || saving || index === order.length - 1} onClick={() => move(index, 1)} className="rounded-lg border border-outline-variant p-1.5 text-primary hover:bg-surface-container-low disabled:opacity-30"><Icon name="arrow_downward" /></button>
+        </div>;
+      })}</div>
+      <div className="mt-6 flex flex-wrap items-center gap-4"><button disabled={!selected || loading || saving || !!error} onClick={() => void save()} className="wc-primary-btn"><Icon name="save" />{saving ? "Saving..." : "Save Menu Settings"}</button>{message && <span role="status" className="text-sm font-semibold text-emerald-700">{message}</span>}</div>
+    </section>
+  </div>;
 }
