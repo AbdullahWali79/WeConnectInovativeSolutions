@@ -1,7 +1,7 @@
 "use client";
 import { CmsElement, CmsImage, CmsInstance } from "@/components/cms/cms-element";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { ProductVideoPreview } from "@/components/product-video-preview";
 import { normalizeImageUrl } from "@/lib/image-url";
@@ -89,6 +89,29 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<Product | null>(null);
+
+  useEffect(() => {
+    const productId = new URLSearchParams(window.location.search).get("product");
+    if (productId) setSelected(products.find((product) => String(product.id) === productId) ?? null);
+  }, [products]);
+
+  const openProduct = (product: Product) => {
+    setSelected(product);
+    window.history.replaceState(null, "", `/products?product=${encodeURIComponent(String(product.id))}`);
+  };
+
+  const closeProduct = () => {
+    setSelected(null);
+    window.history.replaceState(null, "", "/products");
+  };
+
+  const shareProduct = async (product: Product) => {
+    const url = `${window.location.origin}/products?product=${encodeURIComponent(String(product.id))}`;
+    try {
+      if (navigator.share) await navigator.share({ title: product.name, text: `View ${product.name} details`, url });
+      else { await navigator.clipboard.writeText(url); alert("Product link copied."); }
+    } catch { /* User cancelled sharing. */ }
+  };
 
   const categories = useMemo(() => {
     const values = new Set(products.map((product) => product.category));
@@ -184,7 +207,7 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
                   </CmsElement>
                   <CmsElement cmsId="a44d6aea-32" as="div" className="flex flex-1 flex-col p-4">
                     <CmsElement cmsId="a44d6aea-33" as="h3" className="mb-4 line-clamp-2 min-h-12 text-lg font-bold leading-snug text-on-surface transition-colors group-hover:text-[var(--wc-secondary)]">{product.name}</CmsElement>
-                    <CmsElement cmsId="a44d6aea-34" as="button" onClick={() => setSelected(product)} className="flex w-full items-center justify-center gap-1 rounded-lg border border-[var(--wc-outline-variant)] bg-transparent py-2.5 text-xs font-bold text-on-surface transition-all hover:border-[var(--wc-secondary)] hover:bg-[var(--wc-secondary)] hover:text-on-primary">
+                    <CmsElement cmsId="a44d6aea-34" as="button" onClick={() => openProduct(product)} className="flex w-full items-center justify-center gap-1 rounded-lg border border-[var(--wc-outline-variant)] bg-transparent py-2.5 text-xs font-bold text-on-surface transition-all hover:border-[var(--wc-secondary)] hover:bg-[var(--wc-secondary)] hover:text-on-primary">
                       View Details <Icon name="arrow_forward" className="text-base" />
                     </CmsElement>
                   </CmsElement>
@@ -196,7 +219,7 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
 
         {/* Product Modal */}
         {selected && (
-          <CmsElement cmsId="a44d6aea-35" as="div" className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--wc-bg)]/80 backdrop-blur-md p-4 sm:p-6" onClick={() => setSelected(null)}>
+          <CmsElement cmsId="a44d6aea-35" as="div" className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--wc-bg)]/80 backdrop-blur-md p-4 sm:p-6" onClick={closeProduct}>
             <CmsElement cmsId="a44d6aea-36" as="div" className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] shadow-[0_0_80px_rgba(0,0,0,0.8)]" onClick={(event) => event.stopPropagation()}>
 
               {/* Header / Sticky Close */}
@@ -205,7 +228,7 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
                   <CmsElement cmsId="a44d6aea-39" as="p" className="text-[10px] font-bold tracking-widest text-[var(--wc-secondary)] uppercase mb-1">{selected.category}</CmsElement>
                   <CmsElement cmsId="a44d6aea-40" as="h2" className="text-2xl font-black text-on-surface line-clamp-1">{selected.name}</CmsElement>
                 </CmsElement>
-                <CmsElement cmsId="a44d6aea-41" as="button" onClick={() => setSelected(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110">
+                <CmsElement cmsId="a44d6aea-41" as="button" onClick={closeProduct} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--wc-surface-low)] text-on-surface transition-all hover:bg-[var(--wc-secondary)] hover:text-on-primary hover:scale-110">
                   <Icon name="close" />
                 </CmsElement>
               </CmsElement>
@@ -256,6 +279,10 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
                 </CmsElement>
 
                 <CmsElement cmsId="a44d6aea-62" as="div" className="mt-10 border-t border-[var(--wc-outline-variant)] pt-8 pb-4 text-center">
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button type="button" onClick={() => shareProduct(selected)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline-variant)] px-6 py-4 text-sm font-black text-on-surface hover:border-[var(--wc-secondary)] hover:bg-[var(--wc-secondary)]/10">
+                    <Icon name="share" className="text-lg" /> SHARE PRODUCT LINK
+                  </button>
                   <CmsElement cmsId="a44d6aea-63" as="a"
                     href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello, I am interested in "${selected.name}". Please share its details and access options.`)}`}
                     target="_blank"
@@ -264,6 +291,7 @@ export function ProductsCatalog({ initialProducts = fallbackProducts, whatsappNu
                   >
                     CONTACT ON WHATSAPP <Icon name="open_in_new" className="text-lg" />
                   </CmsElement>
+                  </div>
                 </CmsElement>
               </CmsElement>
             </CmsElement>
