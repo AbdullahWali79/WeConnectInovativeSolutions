@@ -269,7 +269,7 @@ export function PersonalPrompts() {
                       <h3 className="text-base font-bold leading-snug text-gray-900 group-hover:text-primary transition-colors">
                         {p.title}
                       </h3>
-                      {promptCount > 1 && (
+                      {(p.prompts_data || []).some((pt: any) => pt.label?.trim()) && (
                         <div className="mt-1 flex flex-wrap gap-1.5">
                           {(p.prompts_data || []).map((pt: any, i: number) => (
                             <span key={i} className="max-w-full truncate rounded-md bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-500 border border-gray-100">
