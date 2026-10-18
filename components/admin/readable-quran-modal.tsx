@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Icon } from "@/components/icon";
 import { 
   QURAN_SURAHS, 
@@ -31,6 +31,10 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
   const [juzNumber, setJuzNumber] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const requestId = useRef(0);
+  const lastLoaded = useRef<{ surah: number; ayah: number; trans: string } | null>(null);
 
   // Lock state: When locked, Next button is disabled
   const [isLocked, setIsLocked] = useState<boolean>(false);
@@ -59,27 +63,44 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
             setAyahNumber(parsed.ayah);
             setJumpSurah(parsed.surah);
             setJumpAyah(parsed.ayah);
+            setIsLocked(parsed.locked === true);
+            if (QURAN_TRANSLATORS.some(t => t.id === parsed.translator)) setTranslator(parsed.translator);
           }
         }
       } catch {
         // ignore
       }
+      setRestored(true);
     }
   }, []);
 
   // Save current position
   useEffect(() => {
-    if (typeof window !== "undefined" && surahNumber && ayahNumber) {
+    if (restored && typeof window !== "undefined" && surahNumber && ayahNumber) {
       try {
-        localStorage.setItem("weconnect_quran_last_read", JSON.stringify({ surah: surahNumber, ayah: ayahNumber }));
+        localStorage.setItem("weconnect_quran_last_read", JSON.stringify({ surah: surahNumber, ayah: ayahNumber, locked: isLocked, translator }));
       } catch {
         // ignore
       }
     }
-  }, [surahNumber, ayahNumber]);
+  }, [surahNumber, ayahNumber, isLocked, translator, restored]);
 
   // Fetch Ayah data from API
   const fetchAyah = useCallback(async (surah: number, ayah: number, trans: string) => {
+    const id = ++requestId.current;
+    const cacheKey = `weconnect_quran_ayah_v1:${surah}:${ayah}:${trans}`;
+    try {
+      const saved = JSON.parse(localStorage.getItem(cacheKey) || "null");
+      if (typeof saved?.arabic === "string" && saved.arabic && typeof saved?.urdu === "string" && saved.urdu) {
+        setArabicText(saved.arabic);
+        setUrduText(saved.urdu);
+        setJuzNumber(saved.juz || 1);
+        lastLoaded.current = { surah, ayah, trans };
+        setLoading(false);
+        setError(null);
+        return;
+      }
+    } catch { /* Storage may be unavailable; continue with the network. */ }
     setLoading(true);
     setError(null);
     try {
@@ -87,28 +108,44 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
         cache: "force-cache"
       });
       const data = await res.json();
-      if (data.code === 200 && Array.isArray(data.data) && data.data.length >= 2) {
+      if (id !== requestId.current) return;
+      if (data.code === 200 && Array.isArray(data.data) && data.data.length >= 2 && typeof data.data[0]?.text === "string" && data.data[0].text && typeof data.data[1]?.text === "string" && data.data[1].text) {
         setArabicText(data.data[0].text);
         setUrduText(data.data[1].text);
         setJuzNumber(data.data[0].juz || 1);
+        lastLoaded.current = { surah, ayah, trans };
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ arabic: data.data[0].text, urdu: data.data[1].text, juz: data.data[0].juz || 1 }));
+        } catch { /* Keep the loaded ayah readable even when storage is full. */ }
       } else {
-        setError("Ayat load karnay mein masla hua. Dobara koshish karein.");
+        throw new Error("Unable to load ayah");
       }
     } catch {
+      if (id !== requestId.current) return;
+      const previous = lastLoaded.current;
+      if (previous) {
+        setOfflineNotice("The requested ayah could not be loaded. Your last loaded ayah is still available. Previously opened ayahs can be read offline.");
+        setSurahNumber(previous.surah);
+        setAyahNumber(previous.ayah);
+        setTranslator(previous.trans);
+        setError(null);
+        return;
+      }
       setError("Network masla. Please check your internet connection.");
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && restored) {
       fetchAyah(surahNumber, ayahNumber, translator);
     }
-  }, [isOpen, surahNumber, ayahNumber, translator, fetchAyah]);
+  }, [isOpen, surahNumber, ayahNumber, translator, fetchAyah, restored]);
 
   // Navigation handlers
   const handleNext = useCallback(() => {
+    setOfflineNotice("");
     if (ayahNumber < currentSurah.numberOfAyahs) {
       setAyahNumber(prev => prev + 1);
     } else if (surahNumber < 114) {
@@ -120,6 +157,7 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
   }, [ayahNumber, currentSurah.numberOfAyahs, surahNumber]);
 
   const handlePrev = useCallback(() => {
+    setOfflineNotice("");
     if (ayahNumber > 1) {
       setAyahNumber(prev => prev - 1);
     } else if (surahNumber > 1) {
@@ -457,6 +495,7 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
         </div>
 
         {/* Ayah Content Area */}
+        {offlineNotice && <p role="status" className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-xs text-amber-900">{offlineNotice}</p>}
         <div className="p-6 sm:p-10 overflow-y-auto flex-1 flex flex-col items-center justify-center bg-radial from-slate-50 to-white min-h-[380px]">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
