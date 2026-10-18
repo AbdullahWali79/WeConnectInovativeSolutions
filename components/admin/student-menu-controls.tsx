@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Icon } from "@/components/icon";
 
 const MENU_OPTIONS = [
+  ["dashboard", "My Dashboard", "dashboard"], ["profile", "My Profile", "person"], ["tasks", "Tasks / Add Task", "add_task"],
   ["ai-tools", "AI Tools", "smart_toy"], ["seat-reservation", "Reserve a Seat", "event_seat"], ["syllabus", "Syllabus", "menu_book"],
   ["talent-portfolio", "Talent Portfolio", "badge"], ["client-hunting", "Client Hunting", "manage_search"], ["social-media", "Social Media", "share"],
   ["assigned-projects", "Assigned Projects", "assignment_turned_in"], ["projects", "Projects", "folder_special"], ["progress", "My Progress", "monitoring"],
@@ -46,7 +47,7 @@ export function StudentMenuControls() {
         setError(result.error.message.includes("schema cache") ? "Database setup required: run supabase/student-menu-controls-setup.sql in the Supabase SQL Editor." : result.error.message);
       }
       const rows = (result.data ?? []) as Control[];
-      setVisible(Object.fromEntries(rows.map(row => [row.menu_key, row.is_visible])));
+      setVisible(Object.fromEntries(defaultOrder.map(key => [key, rows.some(row => row.menu_key === key && row.is_visible)])));
       setOrder([...defaultOrder].sort((a, b) => (rows.find(row => row.menu_key === a)?.sort_order ?? 0) - (rows.find(row => row.menu_key === b)?.sort_order ?? 0)));
       setLoading(false);
     })();
@@ -74,7 +75,7 @@ export function StudentMenuControls() {
   }
 
   return <div className="mx-auto max-w-5xl space-y-6">
-    <header><p className="text-xs font-black uppercase tracking-widest text-primary">Student access</p><h1 className="mt-1 text-3xl font-black text-on-surface">Student Menu Controls</h1><p className="mt-2 text-sm text-on-surface-variant">Choose visible menus and use the arrows to arrange their order for each course. Dashboard stays first.</p></header>
+    <header><p className="text-xs font-black uppercase tracking-widest text-primary">Student access</p><h1 className="mt-1 text-3xl font-black text-on-surface">Student Menu Controls</h1><p className="mt-2 text-sm text-on-surface-variant">Enable only the features students in this course should use. Uncheck My Dashboard to hide it and open the first enabled feature instead. Tasks / Add Task and My Profile are also optional.</p></header>
     <section className="rounded-2xl border border-outline-variant bg-surface p-5 shadow-card">
       <label className="block max-w-md text-sm font-bold text-on-surface">Course<select disabled={saving} value={selected} onChange={e => setSelected(e.target.value)} className="wc-input mt-2">{courses.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}

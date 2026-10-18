@@ -1470,23 +1470,32 @@ function StudentTable({
 
 function DriveFolderEditor({ student, canEdit }: { student: StudentViewRow; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
+  const [savedFolder, setSavedFolder] = useState(student.social_media_drive_folder_url ?? "");
   const [draft, setDraft] = useState(student.social_media_drive_folder_url ?? "");
   const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    setSavedFolder(student.social_media_drive_folder_url ?? "");
+    setDraft(student.social_media_drive_folder_url ?? "");
+  }, [student.id, student.social_media_drive_folder_url]);
   const save = async () => {
     setSaving(true);
     const result = await updateStudentDriveFolder(student.id, draft);
     setSaving(false);
-    if (result.success) setEditing(false);
+    if (result.success) {
+      setSavedFolder(result.folderUrl ?? "");
+      setDraft(result.folderUrl ?? "");
+      setEditing(false);
+    }
     else alert(result.error);
   };
   return <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
     <p className="text-xs font-bold uppercase tracking-wider text-primary">Social Media Drive Folder</p>
     {editing ? <div className="mt-2 flex flex-col gap-2">
       <input type="url" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="https://drive.google.com/drive/folders/..." className="wc-input text-xs" />
-      <div className="flex gap-2"><button type="button" disabled={saving} onClick={() => void save()} className="wc-primary-btn px-3 py-1.5 text-xs">{saving ? "Saving..." : "Save"}</button><button type="button" onClick={() => { setDraft(student.social_media_drive_folder_url ?? ""); setEditing(false); }} className="wc-secondary-btn px-3 py-1.5 text-xs">Cancel</button></div>
+      <div className="flex gap-2"><button type="button" disabled={saving} onClick={() => void save()} className="wc-primary-btn px-3 py-1.5 text-xs">{saving ? "Saving..." : "Save"}</button><button type="button" disabled={saving} onClick={() => { setDraft(savedFolder); setEditing(false); }} className="wc-secondary-btn px-3 py-1.5 text-xs">Cancel</button></div>
     </div> : <div className="mt-2 flex items-center gap-2 text-xs">
-      {student.social_media_drive_folder_url ? <a href={student.social_media_drive_folder_url} target="_blank" rel="noreferrer" className="font-semibold text-primary hover:underline"><Icon name="folder_open" className="mr-1 align-middle" />Open assigned folder</a> : <span className="text-on-surface-variant">Not assigned</span>}
-      {canEdit ? <button type="button" onClick={() => setEditing(true)} className="text-primary hover:underline">{student.social_media_drive_folder_url ? "Edit" : "Assign"}</button> : null}
+      {savedFolder ? <a href={savedFolder} target="_blank" rel="noreferrer" className="font-semibold text-primary hover:underline"><Icon name="folder_open" className="mr-1 align-middle" />Open assigned folder</a> : <span className="text-on-surface-variant">Not assigned</span>}
+      {canEdit ? <button type="button" onClick={() => setEditing(true)} className="text-primary hover:underline">{savedFolder ? "Edit" : "Assign"}</button> : null}
     </div>}
   </div>;
 }

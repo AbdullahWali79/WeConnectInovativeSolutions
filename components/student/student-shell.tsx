@@ -16,6 +16,7 @@ import { StudentActivityTracker } from "@/components/student/student-activity-tr
 
 const defaultNav = [
   { href: "/student", label: "My Dashboard", icon: "dashboard" },
+  { href: "/student/tasks", label: "Tasks", icon: "assignment" },
   { href: "/student/ai-tools", label: "AI Tools", icon: "smart_toy" },
   { href: "/student/seat-reservation", label: "Reserve a Seat", icon: "event_seat" },
   { href: "/student/syllabus", label: "Syllabus", icon: "menu_book" },
@@ -30,12 +31,8 @@ const defaultNav = [
   { href: "/student/helping-videos", label: "Helping Videos", icon: "smart_display" },
 ];
 
-const freelancerNav = [
-  { href: "/student/talent-portfolio", label: "Talent Portfolio", icon: "badge" },
-];
-
 export function StudentShell({ profile, branding, isFreelancer, children }: { profile: Profile | null; branding?: BrandingSettingsSnapshot; isFreelancer?: boolean; children: React.ReactNode }) {
-  const nav = isFreelancer ? freelancerNav : defaultNav;
+  const nav = defaultNav;
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -48,12 +45,12 @@ export function StudentShell({ profile, branding, isFreelancer, children }: { pr
   const [menuOrder, setMenuOrder] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (isFreelancer || !profile?.id) return;
+    if (!profile?.id) return;
     void (async () => {
       const { data: enrollment } = await supabase.from("enrollments").select("course_id").eq("student_id", profile.id).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (!enrollment?.course_id) return;
       const { data: controls } = await supabase.from("course_student_menu_controls").select("*").eq("course_id", enrollment.course_id);
-      if (!controls?.length) return;
+      if (!controls?.length) { setMenuVisibility({}); return; }
       setMenuVisibility(Object.fromEntries(controls.map((control) => [control.menu_key, control.is_visible])));
       setMenuOrder(Object.fromEntries(controls.map((control) => [control.menu_key, control.sort_order ?? 0])));
     })();
@@ -168,7 +165,7 @@ export function StudentShell({ profile, branding, isFreelancer, children }: { pr
           </div>
 
           <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-color:rgba(255,255,255,0.35)_transparent] [scrollbar-width:thin]">
-            {nav.filter((item) => item.href === "/student" || menuVisibility?.[item.href.replace("/student/", "")] !== false).sort((a, b) => {
+            {nav.filter((item) => menuVisibility?.[item.href === "/student" ? "dashboard" : item.href.replace("/student/", "")] === true).sort((a, b) => {
               if (a.href === "/student") return -1;
               if (b.href === "/student") return 1;
               return (menuOrder[a.href.replace("/student/", "")] ?? 0) - (menuOrder[b.href.replace("/student/", "")] ?? 0);
@@ -196,7 +193,7 @@ export function StudentShell({ profile, branding, isFreelancer, children }: { pr
           </nav>
 
           <div className="shrink-0 border-t border-white/10 px-3 py-3">
-            {!isFreelancer && (
+            {!isFreelancer && menuVisibility?.tasks === true && (
               <Link
                 href="/student/tasks?addTask=1"
                 title={collapsed ? "Add Task" : undefined}
