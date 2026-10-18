@@ -27,6 +27,7 @@ export function AccountsManager() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [toolFilter, setToolFilter] = useState("All");
+  const [workspaceTab, setWorkspaceTab] = useState<"accounts" | "pending">("accounts");
 
   // Modals state
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -161,6 +162,12 @@ export function AccountsManager() {
     return true;
   });
 
+  const pendingPayments = accounts.flatMap(account =>
+    (account.am_assignments || [])
+      .filter((assignment: any) => assignment.payment_status === "pending" || Number(assignment.pending_amount) > 0)
+      .map((assignment: any) => ({ ...assignment, account }))
+  );
+
   if (!unlocked) return (
     <div className="flex h-[80vh] flex-col items-center justify-center p-4">
       <div className="bg-surface-container border border-white/10 p-8 rounded-2xl w-full max-w-sm text-center shadow-xl">
@@ -248,6 +255,38 @@ export function AccountsManager() {
       </div>
       
       {/* Search and Filters */}
+      <div className="flex flex-wrap gap-2 border-b border-gray-200">
+        <button onClick={() => setWorkspaceTab("accounts")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold ${workspaceTab === "accounts" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+          Accounts & Members ({accounts.length})
+        </button>
+        <button onClick={() => setWorkspaceTab("pending")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold flex items-center gap-2 ${workspaceTab === "pending" ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-amber-50"}`}>
+          <Icon name="pending_actions" className="text-[17px]" /> Pending Payments ({pendingPayments.length})
+        </button>
+      </div>
+
+      {workspaceTab === "pending" ? (
+        <div className="space-y-3">
+          {pendingPayments.length === 0 ? (
+            <div className="wc-card py-10 text-center text-gray-500">No pending member payments.</div>
+          ) : pendingPayments.map((item: any) => (
+            <div key={item.id} className="wc-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-bold text-gray-900">{item.am_clients?.name || "Unknown member"}</h3>
+                  <span className="rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 border border-amber-200">PAYMENT PENDING</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Access email: <span className="font-semibold text-gray-700">{item.account.login_email}</span></p>
+                <p className="text-xs text-gray-500">Account: {item.account.tool_name} · {item.am_clients?.phone || item.am_clients?.whatsapp || "No phone"}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right"><p className="text-[10px] font-bold uppercase text-gray-500">Pending amount</p><p className="text-lg font-black text-amber-600">{item.pending_amount || 0}</p></div>
+                <button onClick={async () => { const amount = prompt("Update pending amount:", item.pending_amount); if (amount !== null) { const next = Number(amount) || 0; const res = await updateAssignmentPayment(item.id, next > 0 ? "pending" : "cleared", next); if (res.success) { setToast({ type: "success", message: "Payment updated" }); loadData(); } } }} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">Update Payment</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+      <>
       <div className="flex flex-col md:flex-row gap-4 items-end">
         <div className="flex-1">
           <label className="block mb-1 text-xs font-semibold text-gray-500">Search Accounts</label>
@@ -313,6 +352,7 @@ export function AccountsManager() {
                     </span>
                  </div>
                  <div className="flex gap-2">
+                   <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Edit</button>
                    <button onClick={() => toggleExpand(acc.id)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50 flex items-center gap-1">
                      {expandedAccs[acc.id] ? "Collapse" : "Expand"} <Icon name={expandedAccs[acc.id] ? "expand_less" : "expand_more"} className="text-[16px]" />
                    </button>
@@ -424,6 +464,8 @@ export function AccountsManager() {
           ))
         )}
       </div>
+      </>
+      )}
 
       {/* Add Seller Modal */}
       {isAddSellerModalOpen && (
