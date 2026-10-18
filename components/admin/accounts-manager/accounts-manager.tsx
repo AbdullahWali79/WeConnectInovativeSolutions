@@ -6,7 +6,7 @@ import { Toast, type ToastState } from "@/components/toast";
 import { 
   fetchAccountsData, addSeller, addClient, addSharedAccount, 
   deleteSharedAccount, assignClientToAccount, updateAssignmentPayment, 
-  removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients 
+  removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients, updateClient
 } from "@/app/admin/accounts-manager/actions";
 import { Icon } from "@/components/icon";
 
@@ -33,6 +33,7 @@ export function AccountsManager() {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<any>(null);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  const [clientToEdit, setClientToEdit] = useState<any>(null);
   const [isSharedAccountsModalOpen, setIsSharedAccountsModalOpen] = useState(false);
   const [isAddSellerModalOpen, setIsAddSellerModalOpen] = useState(false);
 
@@ -219,7 +220,7 @@ export function AccountsManager() {
               <Icon name={importing ? "sync" : "upload_file"} className={`text-[18px] ${importing ? "animate-spin" : ""}`} />
               {importing ? "Importing..." : "Import CSV"}
             </button>
-            <button onClick={() => setIsAddClientModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+            <button onClick={() => { setClientToEdit(null); setIsAddClientModalOpen(true); }} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
             <Icon name="person_add" className="text-[18px]" />
             Add Client
           </button>
@@ -408,6 +409,7 @@ export function AccountsManager() {
                       <h4 className="text-sm font-bold text-blue-700 flex items-center gap-1">
                         <Icon name="link" className="text-[18px]" /> Linked Clients
                       </h4>
+                      <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Add / Manage Members</button>
                       
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -432,16 +434,17 @@ export function AccountsManager() {
                             }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 flex items-center gap-1">
                               <Icon name="chat" className="text-[14px]" /> Share Access
                             </button>
-                            <button onClick={async () => {
+                            <button disabled={as.payment_status !== 'pending' && Number(as.pending_amount) <= 0} onClick={async () => {
                               const amount = prompt("Update pending amount:", as.pending_amount);
                               if (amount !== null) {
                                 const status = parseInt(amount) > 0 ? 'pending' : 'cleared';
                                 const res = await updateAssignmentPayment(as.id, status, parseInt(amount));
                                 if (res.success) { setToast({type:'success', message:'Updated!'}); loadData(); }
                               }
-                            }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50">
+                            }} className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${as.payment_status === 'pending' || Number(as.pending_amount) > 0 ? 'border-gray-300 text-gray-600 hover:bg-gray-50' : 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-300'}`}>
                               Payment
                             </button>
+                            <button onClick={() => { setClientToEdit(as.am_clients); setIsAddClientModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Edit Member</button>
                             <button onClick={async () => {
                               if(confirm("Remove this client from this account?")) {
                                 const res = await removeAssignment(as.id);
@@ -474,7 +477,7 @@ export function AccountsManager() {
 
       {/* Add Client Modal */}
       {isAddClientModalOpen && (
-        <AddClientModal onClose={() => setIsAddClientModalOpen(false)} onSave={() => { setIsAddClientModalOpen(false); loadData(); setToast({type:'success', message:'Client added'}); }} />
+        <AddClientModal client={clientToEdit} onClose={() => { setIsAddClientModalOpen(false); setClientToEdit(null); }} onSave={() => { setIsAddClientModalOpen(false); setClientToEdit(null); loadData(); setToast({type:'success', message: clientToEdit ? 'Member updated' : 'Client added'}); }} />
       )}
 
       {/* Add Shared Account Modal */}
@@ -614,14 +617,14 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
   );
 }
 
-function AddClientModal({ onClose, onSave }: { onClose: () => void, onSave: () => void }) {
-  const [form, setForm] = useState({ name: "", phone: "", whatsapp: "", email: "", company: "", notes: "" });
+function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: () => void, onSave: () => void }) {
+  const [form, setForm] = useState({ name: client?.name || "", phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "" });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setSaving(true);
-    const res = await addClient(form);
+    const res = client ? await updateClient(client.id, form) : await addClient(form);
     if(res.success) onSave();
     else alert(res.error);
     setSaving(false);
@@ -636,7 +639,7 @@ function AddClientModal({ onClose, onSave }: { onClose: () => void, onSave: () =
               <Icon name="group" />
             </div>
             <div>
-              <h2 className="text-lg font-bold leading-tight text-gray-900">Add Client</h2>
+              <h2 className="text-lg font-bold leading-tight text-gray-900">{client ? "Edit Member" : "Add Client"}</h2>
               <p className="text-xs text-gray-500">Manual entry support.</p>
             </div>
           </div>

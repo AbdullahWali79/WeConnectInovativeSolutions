@@ -58,6 +58,12 @@ export async function addClient(data: any) {
   return { success: !error, error: error?.message };
 }
 
+export async function updateClient(id: string, data: any) {
+  const supabase = createSupabaseServiceClient();
+  const { error } = await supabase.from("am_clients" as any).update(data).eq("id", id);
+  return { success: !error, error: error?.message };
+}
+
 export async function addSharedAccount(data: any) {
   const supabase = createSupabaseServiceClient();
   const { error } = await supabase.from("am_accounts" as any).insert(data);
