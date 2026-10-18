@@ -104,7 +104,9 @@ export function ReadableQuranModal({ isOpen, onClose }: ReadableQuranModalProps)
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,${trans}`, {
+      // Use our same-origin proxy so browser CORS/network restrictions do not
+      // prevent the ayah from loading in the admin dashboard.
+      const res = await fetch(`/api/quran/ayah?surah=${surah}&ayah=${ayah}&translator=${encodeURIComponent(trans)}`, {
         cache: "force-cache"
       });
       const data = await res.json();
