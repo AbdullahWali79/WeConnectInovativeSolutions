@@ -382,6 +382,7 @@ function PromptItemViewer({
 
   const [varValues, setVarValues] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const filledText = useMemo(() => {
     return (pt.text || "").replace(/\{\{\s*([^}]+?)\s*\}\}/g, (original, key: string) => {
@@ -418,6 +419,15 @@ function PromptItemViewer({
         </h4>
 
         <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(prev => !prev)}
+            title={isCollapsed ? "Expand prompt" : "Collapse prompt"}
+            className="px-2.5 py-1 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs cursor-pointer"
+          >
+            {isCollapsed ? "Expand" : "Collapse"}
+            <Icon name={isCollapsed ? "expand_more" : "expand_less"} className="text-[15px]" />
+          </button>
           {/* Copy Button with micro-interaction */}
           <button 
             type="button"
@@ -457,6 +467,7 @@ function PromptItemViewer({
         </div>
       </div>
 
+      {!isCollapsed && <>
       {/* Template Variables Section if any */}
       {variables.length > 0 && (
         <div className="rounded-lg border border-blue-200/70 bg-blue-50/50 p-2.5 space-y-2">
@@ -505,6 +516,7 @@ function PromptItemViewer({
           {filledText}
         </p>
       </div>
+      </>}
     </div>
   );
 }
