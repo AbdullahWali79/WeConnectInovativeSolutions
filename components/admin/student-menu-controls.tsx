@@ -13,7 +13,7 @@ const MENU_OPTIONS = [
 
 export function StudentMenuControls() {
   const supabase = createSupabaseBrowserClient();
-  const [courses, setCourses] = useState<any[]>([]); const [selected, setSelected] = useState<string>("");
+  const [courses, setCourses] = useState<Array<{ id: string; title: string; status: string }>>([]); const [selected, setSelected] = useState<string>("");
   const [visible, setVisible] = useState<Record<string, boolean>>({}); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
   useEffect(() => { void (async () => { const { data } = await supabase.from("courses").select("id,title,status").order("title"); setCourses(data ?? []); if (data?.[0]) setSelected(data[0].id); })(); }, [supabase]);
   useEffect(() => { if (!selected) return; void (async () => { const { data } = await supabase.from("course_student_menu_controls").select("menu_key,is_visible").eq("course_id", selected); const next: Record<string, boolean> = {}; MENU_OPTIONS.forEach(([key]) => { next[key] = true; }); (data ?? []).forEach((row) => { next[row.menu_key] = row.is_visible; }); setVisible(next); })(); }, [selected, supabase]);
