@@ -39,6 +39,7 @@ export const navGroups: NavGroup[] = [
     { href: "/admin/applications", label: "Applications", icon: "pending_actions", permission: "applications.view" },
     { href: "/admin/talent-management", label: "Talent Management", icon: "badge", adminOnly: true },
     { href: "/admin/students", label: "Students", icon: "groups", permission: "students.view" },
+    { href: "/admin/student-menu-controls", label: "Student Menu Controls", icon: "tune", permission: "students.view" },
     { href: "/admin/student-reports", label: "Reports", icon: "summarize", permission: "students.view" },
     { href: "/admin/trainees", label: "Trainees", icon: "school", permission: "trainees.view" },
     { href: "/admin/manual-enrollments", label: "Manual Enrollments", icon: "how_to_reg", adminOnly: true },
