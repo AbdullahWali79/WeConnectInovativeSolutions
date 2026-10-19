@@ -123,6 +123,8 @@ html[data-branding-scope="landing"][data-landing-palette="logo"] {
   display: inline-block;
   white-space: nowrap;
   word-wrap: normal;
+  /* Keep the ligature fallback inside fixed icon boxes while the font loads. */
+  overflow: hidden;
   direction: ltr;
   -webkit-font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
