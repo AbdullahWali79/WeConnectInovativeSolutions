@@ -73,11 +73,20 @@ export function PersonalPrompts() {
 
   const filteredPrompts = prompts.filter(p => {
     if (favoriteFilter && !p.is_favorite) return false;
-    if (categoryFilter !== "All" && p.category !== categoryFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return p.title.toLowerCase().includes(q) || 
-             p.category.toLowerCase().includes(q);
+    if (categoryFilter !== "All" && (p.category || "").toLowerCase() !== categoryFilter.toLowerCase()) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const titleMatch = (p.title || "").toLowerCase().includes(q);
+      const subtitleMatch = (p.subtitle || p.sub_title || p.description || "").toLowerCase().includes(q);
+      const categoryMatch = (p.category || "").toLowerCase().includes(q);
+      const tagsMatch = (p.tags || "").toLowerCase().includes(q);
+      const promptLabelsMatch = (p.prompts_data || []).some((pt: any) => 
+        (pt.label || "").toLowerCase().includes(q)
+      );
+      const promptTextMatch = (p.prompts_data || []).some((pt: any) => 
+        (pt.text || "").toLowerCase().includes(q)
+      );
+      return titleMatch || subtitleMatch || promptLabelsMatch || promptTextMatch || categoryMatch || tagsMatch;
     }
     return true;
   });
@@ -134,9 +143,19 @@ export function PersonalPrompts() {
             type="text" 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search prompts by title or category..." 
-            className="w-full bg-gray-50/70 hover:bg-gray-50 border border-gray-200 rounded-lg py-1.5 pl-9 pr-3 text-xs text-gray-900 outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary transition-all"
+            placeholder="Search prompts by title, subtitle, or category..." 
+            className="w-full bg-gray-50/70 hover:bg-gray-50 border border-gray-200 rounded-lg py-1.5 pl-9 pr-8 text-xs text-gray-900 outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary transition-all"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-2 text-gray-400 hover:text-gray-600 p-0.5 rounded transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <Icon name="close" className="text-[16px]" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
@@ -271,11 +290,27 @@ export function PersonalPrompts() {
                       </h3>
                       {(p.prompts_data || []).some((pt: any) => pt.label?.trim()) && (
                         <div className="mt-1 flex flex-wrap gap-1.5">
-                          {(p.prompts_data || []).map((pt: any, i: number) => (
-                            <span key={i} className="max-w-full truncate rounded-md bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-500 border border-gray-100">
-                              {pt.label?.trim() || `Prompt ${i + 1}`}
-                            </span>
-                          ))}
+                          {(p.prompts_data || []).map((pt: any, i: number) => {
+                            const labelText = pt.label?.trim() || `Prompt ${i + 1}`;
+                            const isMatch = Boolean(
+                              search.trim() && (
+                                labelText.toLowerCase().includes(search.trim().toLowerCase()) ||
+                                (pt.text || "").toLowerCase().includes(search.trim().toLowerCase())
+                              )
+                            );
+                            return (
+                              <span 
+                                key={i} 
+                                className={`max-w-full truncate rounded-md px-2 py-0.5 text-[10px] font-medium border transition-colors ${
+                                  isMatch
+                                    ? "bg-amber-100 text-amber-900 border-amber-300 font-bold"
+                                    : "bg-gray-50 text-gray-500 border-gray-100"
+                                }`}
+                              >
+                                {labelText}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
