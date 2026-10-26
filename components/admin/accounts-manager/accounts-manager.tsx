@@ -14,6 +14,7 @@ export function AccountsManager() {
   const [toast, setToast] = useState<ToastState>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [password, setPassword] = useState("");
+  const [unlockError, setUnlockError] = useState("");
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -169,36 +170,154 @@ export function AccountsManager() {
       .map((assignment: any) => ({ ...assignment, account }))
   );
 
-  if (!unlocked) return (
-    <div className="flex h-[80vh] flex-col items-center justify-center p-4">
-      <div className="bg-surface-container border border-white/10 p-8 rounded-2xl w-full max-w-sm text-center shadow-xl">
-        <h2 className="text-xl font-bold text-white mb-2">Accounts Manager Locked</h2>
-        <p className="text-sm text-gray-400 mb-6">Enter password to unlock this module</p>
-        <input 
-          type="password" 
-          value={password} 
-          onChange={e => setPassword(e.target.value)} 
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              if (password === 'Abdullah123@') setUnlocked(true);
-              else alert('Incorrect password');
-            }
-          }}
-          placeholder="Password" 
-          className="w-full bg-[#0d1117] border border-white/20 rounded-lg px-4 py-3 text-white mb-4 outline-none focus:border-primary" 
+  if (!unlocked) {
+    const handleUnlock = () => {
+      if (password === "Abdullah123@") {
+        setUnlocked(true);
+        setUnlockError("");
+      } else {
+        setUnlockError("Incorrect password. Please try again.");
+        setPassword("");
+      }
+    };
+
+    return (
+      <div className="relative flex min-h-[80vh] items-center justify-center overflow-hidden p-4">
+        {/* Ambient background glows matching the navy/gold theme */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-[120px]"
+          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-primary) 22%, transparent), transparent 70%)" }}
         />
-        <button 
-          onClick={() => {
-            if (password === 'Abdullah123@') setUnlocked(true);
-            else alert('Incorrect password');
-          }}
-          className="w-full bg-primary text-white font-bold py-3 rounded-lg transition"
-        >
-          Unlock Module
-        </button>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-32 right-0 h-[380px] w-[380px] rounded-full blur-[120px]"
+          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 18%, transparent), transparent 70%)" }}
+        />
+
+        <div className="relative w-full max-w-md">
+          {/* Card */}
+          <div className="wc-card overflow-hidden rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,33,110,0.28)]">
+            {/* Navy header band with gold accent line */}
+            <div className="relative overflow-hidden bg-primary px-8 pb-10 pt-9 text-on-primary">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-24 -left-10 h-48 w-48 rounded-full blur-3xl"
+                style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 26%, transparent), transparent 70%)" }}
+              />
+
+              <div className="relative flex flex-col items-center text-center">
+                {/* Lock badge */}
+                <div className="relative mb-5 flex h-[70px] w-[70px] items-center justify-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur-md">
+                  <span className="absolute inset-0 rounded-2xl bg-secondary-container/20 blur-md" />
+                  <Icon name="lock" className="relative text-[34px] text-secondary-container" />
+                </div>
+
+                <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
+                  <Icon name="verified_user" className="text-[13px] text-secondary-container" />
+                  Restricted Module
+                </span>
+
+                <h2 className="text-2xl font-black leading-tight tracking-tight">
+                  Accounts Manager
+                </h2>
+                <p className="mt-2 max-w-xs text-sm leading-relaxed text-blue-100">
+                  This module is protected. Enter the authorised password to continue.
+                </p>
+              </div>
+
+              {/* Gold accent line */}
+              <div className="absolute inset-x-0 bottom-0 h-[3px] bg-gradient-to-r from-transparent via-secondary-container to-transparent" />
+            </div>
+
+            {/* Body */}
+            <div className="px-8 pb-8 pt-7">
+              <label htmlFor="module-unlock-password" className="wc-label mb-2 block">
+                Module Password
+              </label>
+
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]">
+                  <Icon name="key" className="text-[20px]" />
+                </span>
+                <input
+                  id="module-unlock-password"
+                  type="password"
+                  value={password}
+                  autoFocus
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (unlockError) setUnlockError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleUnlock();
+                  }}
+                  placeholder="Enter password"
+                  aria-invalid={Boolean(unlockError)}
+                  className="wc-input w-full pl-12 pr-12"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]">
+                  <Icon name={password ? "visibility" : "visibility_off"} className="text-[20px]" />
+                </span>
+              </div>
+
+              {/* Inline error */}
+              <div
+                role="alert"
+                aria-live="polite"
+                className={`overflow-hidden transition-all duration-300 ${
+                  unlockError ? "mt-3 max-h-20 opacity-100" : "mt-0 max-h-0 opacity-0"
+                }`}
+              >
+                <div className="flex items-start gap-2 rounded-xl border border-error/25 bg-error/10 px-3.5 py-2.5">
+                  <Icon name="error" className="mt-px text-[17px] text-error" />
+                  <p className="text-[13px] font-semibold leading-snug text-error">{unlockError}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleUnlock}
+                className="group mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-black text-on-primary shadow-[0_10px_24px_-6px_rgba(0,33,110,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_rgba(0,33,110,0.55)] active:translate-y-0"
+              >
+                <Icon name="lock_open" className="text-[18px]" />
+                Unlock Module
+                <Icon name="arrow_forward" className="text-[16px] transition-transform duration-200 group-hover:translate-x-1" />
+              </button>
+
+              {/* Security note */}
+              <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-outline-variant/60 pt-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">
+                <Icon name="shield" className="text-[14px] text-secondary" />
+                Authorized personnel only
+              </div>
+            </div>
+          </div>
+
+          {/* Decorative feature chips */}
+          <div className="mt-6 grid grid-cols-3 gap-2.5">
+            {[
+              { icon: "receipt_long", label: "Fees" },
+              { icon: "manage_accounts", label: "Accounts" },
+              { icon: "inventory_2", label: "Products" },
+            ].map((chip) => (
+              <div
+                key={chip.label}
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-outline-variant/70 bg-surface-lowest px-2 py-3 text-center opacity-70"
+              >
+                <Icon name={chip.icon} className="text-[19px] text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">
+                  {chip.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
