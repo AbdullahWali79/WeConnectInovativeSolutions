@@ -232,6 +232,8 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
     return queryMatch && roleMatch && deptMatch;
   }), [withLead, query, roleFilter, departmentFilter]);
 
+  const hasActiveFilters = query.trim().length > 0 || roleFilter !== "all" || departmentFilter !== "all";
+
   // Ensure activeIndex is within bounds when filters change
   useEffect(() => {
     if (activeIndex >= filtered.length && filtered.length > 0) {
@@ -294,50 +296,69 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
         </CmsElement>
 
         {/* Leadership cards */}
-        <CmsElement cmsId="22c09694-10" as="div" className="mx-auto mb-20 grid max-w-4xl gap-8 sm:grid-cols-2">
-          <CmsElement cmsId="22c09694-11" as="div" className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
-            <CmsElement cmsId="22c09694-12" as="div" className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
-              <TeamMemberPhoto name="Dr. Hammad Habib Qazi" />
-            </CmsElement>
-            <CmsElement cmsId="22c09694-13" as="h2" className="text-xl font-bold">Dr. Hammad Habib Qazi</CmsElement>
-            <CmsElement cmsId="22c09694-14" as="p" className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Founder &amp; CEO</CmsElement>
-            <CmsElement cmsId="22c09694-15" as="p" className="mt-4 flex-grow text-sm text-[var(--wc-on-surface-variant)]">
-              Leading the vision and strategy for digital excellence and innovation.
-            </CmsElement>
-            <CmsElement cmsId="22c09694-16" as="div" className="mt-6 flex w-full flex-col gap-3">
-              <CmsElement cmsId="22c09694-17" as="h3" className="text-sm font-bold text-[var(--wc-on-surface)]">Contact Information</CmsElement>
-              <CmsElement cmsId="22c09694-18" as="a" href="tel:+447454498664" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
-                <Icon name="call" className="text-[18px]" /> +44 7454 498664
-              </CmsElement>
-              <CmsElement cmsId="22c09694-19" as="a" href="https://www.linkedin.com/in/hummad-h-qazi-01bb8662/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
-                <CmsElement cmsId="22c09694-20" as="span" className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</CmsElement> LinkedIn
-              </CmsElement>
-            </CmsElement>
-          </CmsElement>
-
-          <CmsElement cmsId="22c09694-21" as="div" className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
-            <CmsElement cmsId="22c09694-22" as="div" className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
-              <TeamMemberPhoto name="Muhammad Abdullah" />
-            </CmsElement>
-            <CmsElement cmsId="22c09694-23" as="h2" className="text-xl font-bold">Muhammad Abdullah</CmsElement>
-            <CmsElement cmsId="22c09694-24" as="p" className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">Co-Founder &amp; Operational Manager</CmsElement>
-            <CmsElement cmsId="22c09694-25" as="p" className="mt-4 flex-grow text-sm text-[var(--wc-on-surface-variant)]">
-              Overseeing operations, product development, and ensuring client success.
-            </CmsElement>
-            <CmsElement cmsId="22c09694-26" as="div" className="mt-6 flex w-full flex-col gap-3">
-              <CmsElement cmsId="22c09694-27" as="h3" className="text-sm font-bold text-[var(--wc-on-surface)]">Contact Information</CmsElement>
-              <CmsElement cmsId="22c09694-28" as="a" href="tel:03046983794" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white">
-                <Icon name="call" className="text-[18px]" /> 0304 698 3794
-              </CmsElement>
-              <CmsElement cmsId="22c09694-29" as="a" href="https://www.linkedin.com/in/abdullahwale/" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white">
-                <CmsElement cmsId="22c09694-30" as="span" className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</CmsElement> LinkedIn
-              </CmsElement>
-            </CmsElement>
-          </CmsElement>
-        </CmsElement>
+        <div className="mx-auto mb-20 grid max-w-4xl gap-8 sm:grid-cols-2">
+          {leadership.map((member) => (
+            <div
+              key={member.id}
+              className="group relative flex h-full flex-col items-center rounded-3xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] p-8 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
+            >
+              <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wc-primary-container)] text-[var(--wc-on-primary-container)]">
+                <TeamMemberPhoto src={member.image_cdn_url?.trim() || member.image_url} name={member.name} />
+              </div>
+              <h2 className="text-xl font-bold">{member.name}</h2>
+              <p className="mt-1 text-xs font-black uppercase tracking-wider text-[var(--wc-primary)]">{member.role}</p>
+              <p className="mt-4 flex-grow text-sm text-[var(--wc-on-surface-variant)]">
+                {member.bio ?? "Core contributor to our digital product initiatives."}
+              </p>
+              <div className="mt-6 flex w-full flex-col gap-3">
+                {member.phone || member.linkedin_url || member.github_url ? (
+                  <h3 className="text-sm font-bold text-[var(--wc-on-surface)]">Contact Information</h3>
+                ) : null}
+                {member.phone ? (
+                  <a
+                    href={`tel:${telHref(member.phone)}`}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-surface-container)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:bg-[var(--wc-primary)] hover:text-white"
+                  >
+                    <Icon name="call" className="text-[18px]" /> {member.phone}
+                  </a>
+                ) : null}
+                {member.linkedin_url ? (
+                  <a
+                    href={normalizeExternalUrl(member.linkedin_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white"
+                  >
+                    <span className="font-serif text-[14px] font-bold leading-none" aria-hidden="true">in</span> LinkedIn
+                  </a>
+                ) : null}
+                {member.github_url ? (
+                  <a
+                    href={normalizeExternalUrl(member.github_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[#24292f] hover:bg-[#24292f] hover:text-white"
+                  >
+                    <Icon name="code" className="text-[18px]" /> GitHub
+                  </a>
+                ) : null}
+                {member.portfolio_url ? (
+                  <a
+                    href={normalizeExternalUrl(member.portfolio_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--wc-outline)] px-4 py-2.5 text-sm font-bold text-[var(--wc-on-surface)] transition-colors hover:border-[var(--wc-secondary)] hover:bg-[var(--wc-secondary)] hover:text-white"
+                  >
+                    <Icon name="work" className="text-[18px]" /> Portfolio
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* 3D Coverflow Carousel */}
-        {filtered.length === 0 ? (
+        {filtered.length === 0 && !hasActiveFilters ? null : filtered.length === 0 ? (
           <CmsElement cmsId="22c09694-31" as="div" className="bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] rounded-3xl p-12 text-center max-w-2xl mx-auto mt-8">
             <Icon name="person_search" className="text-6xl text-[#5B6B88] mb-4" />
             <CmsElement cmsId="22c09694-32" as="h3" className="text-2xl font-bold text-on-surface mb-2">No experts found</CmsElement>
@@ -481,17 +502,41 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
                           </CmsElement>
                         </CmsElement>
 
-                        {member.portfolio_url && (
-                          <CmsElement cmsId="22c09694-58" as="div" className="absolute bottom-6 left-6 right-6">
-                            <CmsElement cmsId="22c09694-59" as="a"
-                              href={normalizeExternalUrl(member.portfolio_url)}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(event) => event.stopPropagation()}
-                              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wc-secondary)] py-3 text-sm font-bold text-on-primary shadow-glow transition hover:scale-[1.02]"
-                            >
-                              View Portfolio <Icon name="open_in_new" className="text-[16px]" />
-                            </CmsElement>
+                        {(member.portfolio_url || member.github_url || member.linkedin_url) && (
+                          <CmsElement cmsId="22c09694-58" as="div" className="absolute bottom-6 left-6 right-6 flex flex-wrap gap-2">
+                            {member.portfolio_url ? (
+                              <CmsElement cmsId="22c09694-59" as="a"
+                                href={normalizeExternalUrl(member.portfolio_url)}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(event) => event.stopPropagation()}
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--wc-secondary)] px-3 py-2.5 text-xs font-bold text-on-primary shadow-glow transition hover:scale-[1.02]"
+                              >
+                                <Icon name="open_in_new" className="text-[15px]" /> Portfolio
+                              </CmsElement>
+                            ) : null}
+                            {member.github_url ? (
+                              <CmsElement cmsId="22c09694-63" as="a"
+                                href={normalizeExternalUrl(member.github_url)}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(event) => event.stopPropagation()}
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-3 py-2.5 text-xs font-bold text-on-surface transition hover:border-[#24292f] hover:bg-[#24292f] hover:text-white"
+                              >
+                                <Icon name="code" className="text-[15px]" /> GitHub
+                              </CmsElement>
+                            ) : null}
+                            {member.linkedin_url ? (
+                              <CmsElement cmsId="22c09694-64" as="a"
+                                href={normalizeExternalUrl(member.linkedin_url)}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(event) => event.stopPropagation()}
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-lowest)] px-3 py-2.5 text-xs font-bold text-on-surface transition hover:border-[#0077b5] hover:bg-[#0077b5] hover:text-white"
+                              >
+                                <span className="font-serif text-[12px] font-bold leading-none" aria-hidden="true">in</span> LinkedIn
+                              </CmsElement>
+                            ) : null}
                           </CmsElement>
                         )}
                       </CmsElement>

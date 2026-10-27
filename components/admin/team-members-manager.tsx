@@ -63,6 +63,7 @@ export function TeamMembersManager({
   const [studentQuery, setStudentQuery] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [socialColumnsMissing, setSocialColumnsMissing] = useState(false);
 
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -71,6 +72,11 @@ export function TeamMembersManager({
     const { data, error } = await supabase.from("team_members").select("*").order("display_order", { ascending: true });
     if (error) setToast({ type: "error", message: error.message });
     setRows(data ?? []);
+
+    // Detect whether migration 20261027000001 has been applied yet.
+    const probe = await supabase.from("team_members").select("github_url").limit(1);
+    setSocialColumnsMissing(Boolean(probe.error && /github_url|linkedin_url|column/i.test(probe.error.message)));
+
     setLoading(false);
   }, [supabase]);
 
@@ -360,6 +366,19 @@ export function TeamMembersManager({
       />
 
       <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+        {socialColumnsMissing ? (
+          <section className="xl:col-span-2 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <Icon name="warning" className="mt-0.5 text-[20px] text-amber-600" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">Database migration pending</p>
+              <p className="mt-1 text-sm leading-6 text-amber-800">
+                GitHub, LinkedIn and leadership-card fields need a database update. Run{" "}
+                <code className="rounded bg-amber-100 px-1.5 py-0.5 text-[12px] font-bold">supabase/migrations/20261027000001_team_member_social_links.sql</code>{" "}
+                in the Supabase SQL editor, then reload this page. Until then, those fields are saved as blank and the public Team page keeps showing the default leadership cards.
+              </p>
+            </div>
+          </section>
+        ) : null}
         {(canCreate || editingId) ? <form onSubmit={saveRow} className="wc-card space-y-3 p-4">
           <h2 className="text-base font-bold text-on-surface">{editingId ? "Edit Member" : "Add Member"}</h2>
           {!editingId ? <div className="rounded-xl border border-outline-variant bg-surface-container-low p-3">
