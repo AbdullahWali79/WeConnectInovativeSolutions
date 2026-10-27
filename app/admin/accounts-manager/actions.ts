@@ -118,12 +118,20 @@ export async function assignClientToAccount(accountId: string, clientId: string,
 
 export async function updateAssignmentPayment(assignmentId: string, paymentStatus: string, pendingAmount: number) {
   await requireAdminOnly();
+  if (!assignmentId || !["pending", "cleared"].includes(paymentStatus) ||
+      !Number.isFinite(pendingAmount) || pendingAmount < 0 ||
+      (paymentStatus === "cleared" && pendingAmount !== 0) ||
+      (paymentStatus === "pending" && pendingAmount === 0)) {
+    return { success: false, error: "Enter a valid remaining balance, or mark the payment paid." };
+  }
   const supabase = createSupabaseServiceClient();
-  const { error } = await supabase.from("am_assignments" as any).update({
+  const { data, error } = await supabase.from("am_assignments" as any).update({
     payment_status: paymentStatus,
     pending_amount: pendingAmount
-  }).eq("id", assignmentId);
-  return { success: !error, error: error?.message };
+  }).eq("id", assignmentId).select("id, payment_status, pending_amount").maybeSingle();
+  if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "Payment record was not found." };
+  return { success: true, assignment: data };
 }
 
 export async function removeAssignment(assignmentId: string) {
@@ -188,9 +196,13 @@ export async function saveSharedAccountWithClients(accountData: any, assignments
   if (incoming.size !== assignmentsData.length) return { success: false, error: "A client is linked more than once." };
 
   for (const assignment of assignmentsData) {
+    const paymentStatus = String(assignment.payment_status || "pending").toLowerCase();
+    if (!["pending", "cleared", "advance"].includes(paymentStatus)) {
+      return { success: false, error: "Choose a valid payment status." };
+    }
     const payload = {
-      payment_status: String(assignment.payment_status || "pending").toLowerCase(),
-      pending_amount: Math.max(0, Number(assignment.pending_amount) || 0),
+      payment_status: paymentStatus,
+      pending_amount: paymentStatus === "pending" ? Math.max(0, Number(assignment.pending_amount) || 0) : 0,
       notes: assignment.notes || null,
     };
     const prior = ((existing || []) as any[]).find((row) => row.client_id === assignment.client_id);

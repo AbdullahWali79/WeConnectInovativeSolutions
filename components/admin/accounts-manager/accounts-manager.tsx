@@ -24,6 +24,7 @@ export function AccountsManager() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
+  const [savingPaymentId, setSavingPaymentId] = useState<string | null>(null);
   
   const [accounts, setAccounts] = useState<any[]>([]);
   const [sellers, setSellers] = useState<any[]>([]);
@@ -147,6 +148,46 @@ export function AccountsManager() {
       setToast({ type: "error", message: res.error || "Failed to load data" });
     }
     setLoading(false);
+  }
+
+  async function savePaymentBalance(assignmentId: string, remainingBalance: number) {
+    if (!Number.isFinite(remainingBalance) || remainingBalance < 0) {
+      setToast({ type: "error", message: "Enter a valid remaining balance of 0 or more." });
+      return;
+    }
+    setSavingPaymentId(assignmentId);
+    try {
+      const status = remainingBalance > 0 ? "pending" : "cleared";
+      const result = await updateAssignmentPayment(assignmentId, status, remainingBalance);
+      if (!result.success) {
+        setToast({ type: "error", message: result.error || "Could not update payment." });
+        return;
+      }
+      const savedPayment = result.assignment as { payment_status: string; pending_amount: number };
+      setAccounts(previous => previous.map(account => ({
+        ...account,
+        am_assignments: account.am_assignments?.map((assignment: any) =>
+          assignment.id === assignmentId
+            ? { ...assignment, payment_status: savedPayment.payment_status, pending_amount: savedPayment.pending_amount }
+            : assignment
+        ),
+      })));
+      setToast({ type: "success", message: Number(savedPayment.pending_amount) === 0 ? "Payment marked paid" : "Remaining balance updated" });
+    } catch {
+      setToast({ type: "error", message: "Could not update payment. Please try again." });
+    } finally {
+      setSavingPaymentId(null);
+    }
+  }
+
+  function editPaymentBalance(assignmentId: string, currentBalance: number) {
+    const input = prompt("Remaining unpaid balance (enter 0 if fully paid):", String(currentBalance));
+    if (input === null) return;
+    if (!input.trim()) {
+      setToast({ type: "error", message: "Enter the remaining unpaid balance." });
+      return;
+    }
+    void savePaymentBalance(assignmentId, Number(input));
   }
 
   const toggleExpand = (id: string) => {
@@ -274,9 +315,10 @@ export function AccountsManager() {
                 <p className="mt-1 text-xs text-gray-500">Access email: <span className="font-semibold text-gray-700">{item.account.login_email}</span></p>
                 <p className="text-xs text-gray-500">Account: {item.account.tool_name} · {item.am_clients?.phone || item.am_clients?.whatsapp || "No phone"}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 <div className="text-right"><p className="text-[10px] font-bold uppercase text-gray-500">Pending amount</p><p className="text-lg font-black text-amber-600">{item.pending_amount || 0}</p></div>
-                <button onClick={async () => { const amount = prompt("Update pending amount:", item.pending_amount); if (amount !== null) { const next = Number(amount) || 0; const res = await updateAssignmentPayment(item.id, next > 0 ? "pending" : "cleared", next); if (res.success) { setToast({ type: "success", message: "Payment updated" }); loadData(); } } }} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">Update Payment</button>
+                <button disabled={savingPaymentId === item.id} onClick={() => editPaymentBalance(item.id, Number(item.pending_amount) || 0)} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">Edit Balance</button>
+                <button disabled={savingPaymentId === item.id} onClick={() => void savePaymentBalance(item.id, 0)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Mark Paid</button>
               </div>
             </div>
           ))}
@@ -430,15 +472,8 @@ export function AccountsManager() {
                             }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 flex items-center gap-1">
                               <Icon name="chat" className="text-[14px]" /> Share Access
                             </button>
-                            <button disabled={as.payment_status !== 'pending' && Number(as.pending_amount) <= 0} onClick={async () => {
-                              const amount = prompt("Update pending amount:", as.pending_amount);
-                              if (amount !== null) {
-                                const status = parseInt(amount) > 0 ? 'pending' : 'cleared';
-                                const res = await updateAssignmentPayment(as.id, status, parseInt(amount));
-                                if (res.success) { setToast({type:'success', message:'Updated!'}); loadData(); }
-                              }
-                            }} className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${as.payment_status === 'pending' || Number(as.pending_amount) > 0 ? 'border-gray-300 text-gray-600 hover:bg-gray-50' : 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-300'}`}>
-                              Payment
+                            <button disabled={savingPaymentId === as.id || (as.payment_status !== 'pending' && Number(as.pending_amount) <= 0)} onClick={() => editPaymentBalance(as.id, Number(as.pending_amount) || 0)} className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${as.payment_status === 'pending' || Number(as.pending_amount) > 0 ? 'border-gray-300 text-gray-600 hover:bg-gray-50' : 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-300'}`}>
+                              Edit Balance
                             </button>
                             <button onClick={() => { setClientToEdit(as.am_clients); setIsAddClientModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Edit Member</button>
                             <button onClick={async () => {
@@ -955,6 +990,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                             onChange={(e) => {
                               const newArr = [...selectedClients];
                               newArr[i].payment_status = e.target.value;
+                              if (e.target.value !== "pending") newArr[i].pending_amount = 0;
                               setSelectedClients(newArr);
                             }}
                             className="w-1/3 rounded border border-[#2d3748] bg-[#1e2532] p-2 text-xs text-white outline-none focus:border-emerald-500"
@@ -965,14 +1001,18 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                           </select>
                           <input 
                             type="number" 
+                            min="0"
+                            step="0.01"
+                            aria-label={`Remaining unpaid balance for ${sc.name}`}
                             value={sc.pending_amount} 
                             onChange={(e) => {
                               const newArr = [...selectedClients];
-                              newArr[i].pending_amount = parseInt(e.target.value) || 0;
+                              newArr[i].pending_amount = Math.max(0, Number(e.target.value) || 0);
+                              if (newArr[i].pending_amount > 0) newArr[i].payment_status = "pending";
                               setSelectedClients(newArr);
                             }}
                             className="w-1/3 rounded border border-[#2d3748] bg-[#1e2532] p-2 text-xs text-white outline-none focus:border-emerald-500"
-                            placeholder="Amount"
+                            placeholder="Remaining balance"
                           />
                         </div>
                       ))}
