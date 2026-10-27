@@ -35,3 +35,7 @@ tmp/
 # Android signing secrets and generated APK copies
 android/keystore.properties
 android/signing/*.jks
+
+# Local agent worktrees (never commit these)
+.cindy-worktrees/
+.worktrees/
