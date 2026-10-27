@@ -23,6 +23,9 @@ const defaultForm = {
   image_github_url: "",
   image_cdn_url: "",
   portfolio_url: "",
+  github_url: "",
+  linkedin_url: "",
+  is_leadership: false,
   email: "",
   phone: "",
   skills: "",
@@ -138,6 +141,9 @@ export function TeamMembersManager({
       image_github_url: row.image_github_url ?? "",
       image_cdn_url: row.image_cdn_url ?? "",
       portfolio_url: row.portfolio_url ?? "",
+      github_url: row.github_url ?? "",
+      linkedin_url: row.linkedin_url ?? "",
+      is_leadership: row.is_leadership ?? false,
       email: row.email ?? "",
       phone: row.phone ?? "",
       skills: (row.skills ?? []).join(", "),
@@ -228,6 +234,9 @@ export function TeamMembersManager({
       image_github_url: form.image_github_url || null,
       image_cdn_url: form.image_cdn_url || null,
       portfolio_url: form.portfolio_url.trim() || null,
+      github_url: form.github_url.trim() || null,
+      linkedin_url: form.linkedin_url.trim() || null,
+      is_leadership: form.is_leadership,
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
       skills: form.skills.trim() ? form.skills.split(",").map((item) => item.trim()).filter(Boolean) : [],
@@ -238,8 +247,34 @@ export function TeamMembersManager({
       updated_at: new Date().toISOString(),
     };
 
-    const request = editingId ? supabase.from("team_members").update(payload).eq("id", editingId) : supabase.from("team_members").insert(payload);
-    const { error } = await request;
+    const runSave = (body: Record<string, unknown>) =>
+      editingId
+        ? supabase.from("team_members").update(body as never).eq("id", editingId)
+        : supabase.from("team_members").insert(body as never);
+
+    let { error } = await runSave(payload);
+
+    // The social-link columns arrive with migration 20261027000001. If it has not
+    // been applied yet, save the rest of the member instead of failing outright.
+    if (error && /github_url|linkedin_url|is_leadership|column/i.test(error.message)) {
+      const socialKeys = ["github_url", "linkedin_url", "is_leadership"];
+      const legacyPayload = Object.fromEntries(
+        Object.entries(payload).filter(([key]) => !socialKeys.includes(key)),
+      );
+      const retry = await runSave(legacyPayload);
+      if (!retry.error) {
+        setSaving(false);
+        setToast({
+          type: "error",
+          message: "Member saved, but GitHub/LinkedIn/leadership fields were skipped. Run migration 20261027000001_team_member_social_links.sql to enable them.",
+        });
+        resetForm();
+        await loadRows();
+        return;
+      }
+      error = retry.error;
+    }
+
     setSaving(false);
 
     if (error) {
@@ -353,8 +388,39 @@ export function TeamMembersManager({
             <input className="wc-input" placeholder="Phone (optional)" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
           </div>
           <input className="wc-input" placeholder="Image URL" value={form.image_url} onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))} />
-          <input className="wc-input" placeholder="Portfolio URL" value={form.portfolio_url} onChange={(event) => setForm((current) => ({ ...current, portfolio_url: event.target.value }))} />
           <input className="wc-input" type="file" accept="image/*" onChange={onPickImage} />
+
+          <div className="rounded-xl border border-outline-variant bg-surface-container-low p-3">
+            <p className="text-sm font-bold text-on-surface">Social &amp; portfolio links</p>
+            <p className="mt-1 text-xs text-on-surface-variant">These buttons appear on the public Team card. Leave a field empty to hide it.</p>
+            <div className="mt-3 space-y-2">
+              <div className="relative">
+                <Icon name="link" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+                <input className="wc-input pl-10" placeholder="LinkedIn URL (e.g. linkedin.com/in/username)" value={form.linkedin_url} onChange={(event) => setForm((current) => ({ ...current, linkedin_url: event.target.value }))} />
+              </div>
+              <div className="relative">
+                <Icon name="code" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+                <input className="wc-input pl-10" placeholder="GitHub URL (e.g. github.com/username)" value={form.github_url} onChange={(event) => setForm((current) => ({ ...current, github_url: event.target.value }))} />
+              </div>
+              <div className="relative">
+                <Icon name="work" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+                <input className="wc-input pl-10" placeholder="Portfolio URL" value={form.portfolio_url} onChange={(event) => setForm((current) => ({ ...current, portfolio_url: event.target.value }))} />
+              </div>
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant bg-surface-container-low p-3">
+            <input
+              type="checkbox"
+              checked={form.is_leadership}
+              onChange={(event) => setForm((current) => ({ ...current, is_leadership: event.target.checked }))}
+              className="mt-0.5 h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+            />
+            <span>
+              <span className="block text-sm font-bold text-on-surface">Show as a leadership card</span>
+              <span className="mt-0.5 block text-xs text-on-surface-variant">Leadership members get a large card at the top of the public Team page instead of the carousel.</span>
+            </span>
+          </label>
           <input className="wc-input" placeholder="Skills (comma separated)" value={form.skills} onChange={(event) => setForm((current) => ({ ...current, skills: event.target.value }))} />
           <textarea className="wc-input min-h-24" placeholder="Short bio" value={form.bio} onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} />
 
@@ -415,7 +481,7 @@ export function TeamMembersManager({
                           {(row.image_cdn_url ?? row.image_url) ? <Image src={row.image_cdn_url ?? row.image_url ?? ""} alt={row.name} width={40} height={40} unoptimized className="h-full w-full object-cover" /> : null}
                         </div>
                       </td>
-                      <td className="px-4 py-3"><p className="text-sm font-bold text-on-surface">{row.name}</p><p className="text-xs text-on-surface-variant">{row.email ?? "-"}</p>{row.profile_id ? <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Student profile</span> : null}</td>
+                      <td className="px-4 py-3"><p className="text-sm font-bold text-on-surface">{row.name}</p><p className="text-xs text-on-surface-variant">{row.email ?? "-"}</p><div className="mt-1 flex flex-wrap gap-1">{row.profile_id ? <span className="inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Student profile</span> : null}{row.is_leadership ? <span className="inline-block rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-bold text-secondary">Leadership card</span> : null}</div></td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.role}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.department ?? "-"}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.reports_to ? byId.get(row.reports_to)?.name ?? "-" : "-"}</td>

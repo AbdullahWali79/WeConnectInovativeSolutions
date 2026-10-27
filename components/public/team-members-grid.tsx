@@ -30,6 +30,11 @@ function normalizeExternalUrl(url: string) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
+function telHref(phone: string) {
+  const digits = phone.replace(/[^\d+]/g, "");
+  return digits.startsWith("+") ? `+${digits.slice(1).replace(/\+/g, "")}` : digits;
+}
+
 export const fallbackTeamMembers: TeamMember[] = [
   {
     id: "muhammad-abdullah",
@@ -122,6 +127,54 @@ type TeamMembersGridProps = {
   readonly initialMembers: TeamMember[];
 };
 
+/**
+ * Shown only until a team member is flagged `is_leadership` in the database.
+ * Admins can edit these two cards from /admin/team-members once migration
+ * 20261027000001_team_member_social_links.sql has been applied.
+ */
+export const fallbackLeadershipMembers: TeamMember[] = [
+  {
+    id: "leader-hammad-habib-qazi",
+    name: "Dr. Hammad Habib Qazi",
+    role: "Founder & CEO",
+    department: "Leadership",
+    image_url: null,
+    portfolio_url: null,
+    github_url: null,
+    linkedin_url: "https://www.linkedin.com/in/hummad-h-qazi-01bb8662/",
+    email: null,
+    phone: "+44 7454 498664",
+    skills: [],
+    bio: "Leading the vision and strategy for digital excellence and innovation.",
+    reports_to: null,
+    status: "active",
+    is_leadership: true,
+    display_order: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "leader-muhammad-abdullah",
+    name: "Muhammad Abdullah",
+    role: "Co-Founder & Operational Manager",
+    department: "Leadership",
+    image_url: null,
+    portfolio_url: null,
+    github_url: null,
+    linkedin_url: "https://www.linkedin.com/in/abdullahwale/",
+    email: null,
+    phone: "0304 698 3794",
+    skills: [],
+    bio: "Overseeing operations, product development, and ensuring client success.",
+    reports_to: null,
+    status: "active",
+    is_leadership: true,
+    display_order: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
   const [members, setMembers] = useState<TeamMember[]>(initialMembers);
   const [query, setQuery] = useState("");
@@ -164,7 +217,14 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
     [withLead]
   );
 
+  const leadership = useMemo<TeamMemberWithLead[]>(() => {
+    const flagged = withLead.filter((member) => member.is_leadership);
+    return flagged.length ? flagged : fallbackLeadershipMembers;
+  }, [withLead]);
+
   const filtered = useMemo(() => withLead.filter((member) => {
+    // Leadership members render as large cards above the carousel.
+    if (member.is_leadership) return false;
     const text = `${member.name} ${member.role} ${member.department ?? ""} ${member.email ?? ""}`.toLowerCase();
     const queryMatch = text.includes(query.trim().toLowerCase());
     const roleMatch = roleFilter === "all" || member.role === roleFilter;
