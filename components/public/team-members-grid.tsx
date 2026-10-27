@@ -181,6 +181,7 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
   const [roleFilter, setRoleFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [flippedMemberId, setFlippedMemberId] = useState<string | null>(null);
+  const [dbPopulated, setDbPopulated] = useState(false);
 
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -195,8 +196,12 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
         .eq("status", "active")
         .order("display_order", { ascending: true });
 
-      if (!mounted || error || !data || data.length === 0) return;
+      // A successful (even empty) response is authoritative: if the admin hid
+      // every member, the page must stay empty instead of falling back to the
+      // built-in placeholder people.
+      if (!mounted || error || !data) return;
       setMembers(data);
+      setDbPopulated(true);
     }
 
     void refreshMembers();
@@ -219,8 +224,12 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
 
   const leadership = useMemo<TeamMemberWithLead[]>(() => {
     const flagged = withLead.filter((member) => member.is_leadership);
-    return flagged.length ? flagged : fallbackLeadershipMembers;
-  }, [withLead]);
+    if (flagged.length) return flagged;
+    // Nothing flagged as leadership. If the database is populated, the admin
+    // deliberately hid every leadership card — respect that instead of
+    // resurrecting the built-in defaults.
+    return dbPopulated ? [] : fallbackLeadershipMembers;
+  }, [withLead, dbPopulated]);
 
   const filtered = useMemo(() => withLead.filter((member) => {
     // Leadership members render as large cards above the carousel.
@@ -358,7 +367,15 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
         </div>
 
         {/* 3D Coverflow Carousel */}
-        {filtered.length === 0 && !hasActiveFilters ? null : filtered.length === 0 ? (
+        {filtered.length === 0 && !hasActiveFilters ? (
+          leadership.length === 0 ? (
+            <CmsElement cmsId="22c09694-65" as="div" className="bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] rounded-3xl p-12 text-center max-w-2xl mx-auto mt-8">
+              <Icon name="groups" className="text-6xl text-[#5B6B88] mb-4" />
+              <CmsElement cmsId="22c09694-66" as="h3" className="text-2xl font-bold text-on-surface mb-2">Team profiles are being updated</CmsElement>
+              <CmsElement cmsId="22c09694-67" as="p" className="text-[var(--wc-on-surface-variant)]">Please check back soon.</CmsElement>
+            </CmsElement>
+          ) : null
+        ) : filtered.length === 0 ? (
           <CmsElement cmsId="22c09694-31" as="div" className="bg-[var(--wc-surface-low)] border border-[var(--wc-outline-variant)] rounded-3xl p-12 text-center max-w-2xl mx-auto mt-8">
             <Icon name="person_search" className="text-6xl text-[#5B6B88] mb-4" />
             <CmsElement cmsId="22c09694-32" as="h3" className="text-2xl font-bold text-on-surface mb-2">No experts found</CmsElement>

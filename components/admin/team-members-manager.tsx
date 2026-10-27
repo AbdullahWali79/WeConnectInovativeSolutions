@@ -322,8 +322,8 @@ export function TeamMembersManager({
       type: "success",
       message:
         nextStatus === "active"
-          ? `${row.name} activated — now visible on the public Team page.`
-          : `${row.name} deactivated — hidden from the public Team page.`,
+          ? `${row.name} is now visible on the public Team page.`
+          : `${row.name} is now hidden from the public Team page.`,
     });
   }
 
@@ -361,7 +361,7 @@ export function TeamMembersManager({
       <PageHeader
         eyebrow="Team Members"
         title="Manage team members"
-        description="Add, edit, activate or deactivate team profile cards shown on the public Team page. Deactivated members are hidden from the public site."
+        description="Add, edit, show or hide team profile cards on the public Team page. Hidden members disappear from the public site without being deleted."
         action={<Link href="/team" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Team Page</Link>}
       />
 
@@ -473,7 +473,7 @@ export function TeamMembersManager({
             <select className="wc-input" value={deptFilter} onChange={(event) => setDeptFilter(event.target.value)}><option value="all">All Departments</option>{departments.map((item) => <option key={item}>{item}</option>)}</select>
             <select className="wc-input" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="all">All Sources</option><option value="student">Student Profiles</option><option value="manual">Manual Members</option></select>
             <div className="grid grid-cols-2 gap-2">
-              <select className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+              <select className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All Visibility</option><option value="active">Visible</option><option value="inactive">Hidden</option></select>
               <select className="wc-input" value={leadFilter} onChange={(event) => setLeadFilter(event.target.value)}><option value="all">All Leads</option>{leads.map((item) => <option key={item}>{item}</option>)}</select>
             </div>
           </div>
@@ -488,7 +488,7 @@ export function TeamMembersManager({
                     <th className="px-4 py-3">Role</th>
                     <th className="px-4 py-3">Department</th>
                     <th className="px-4 py-3">Lead</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Visibility</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -514,14 +514,14 @@ export function TeamMembersManager({
                                 type="button"
                                 role="switch"
                                 aria-checked={isActive}
-                                aria-label={`${isActive ? "Deactivate" : "Activate"} ${row.name}`}
+                                aria-label={`${isActive ? "Hide" : "Show"} ${row.name} on the public Team page`}
                                 disabled={!canEdit || isBusy}
                                 onClick={() => void toggleStatus(row)}
                                 title={
                                   canEdit
                                     ? isActive
-                                      ? "Click to deactivate"
-                                      : "Click to activate"
+                                      ? "Hide from the public Team page"
+                                      : "Show on the public Team page"
                                     : "You do not have permission to change status"
                                 }
                                 className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
@@ -539,7 +539,7 @@ export function TeamMembersManager({
                                   isActive ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-700"
                                 }`}
                               >
-                                {isBusy ? "saving..." : row.status}
+                                {isBusy ? "saving..." : isActive ? "Visible" : "Hidden"}
                               </span>
                             </div>
                           );
@@ -547,7 +547,8 @@ export function TeamMembersManager({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <Link className="rounded-lg bg-surface-container p-2 text-primary" href="/team" title="View"><Icon name="visibility" /></Link>
+                          <Link className="rounded-lg bg-surface-container p-2 text-primary" href="/team" title="Open public Team page"><Icon name="preview" /></Link>
+                          {canEdit ? <button className={`rounded-lg p-2 transition-colors ${row.status === "active" ? "bg-surface-container text-primary hover:bg-surface-container-high" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} disabled={togglingId === row.id} onClick={() => void toggleStatus(row)} title={row.status === "active" ? "Hide from public Team page" : "Show on public Team page"} aria-label={row.status === "active" ? `Hide ${row.name}` : `Show ${row.name}`}><Icon name={row.status === "active" ? "visibility_off" : "visibility"} /></button> : null}
                           {canEdit ? <button className="rounded-lg bg-surface-container p-2 text-primary" onClick={() => startEdit(row)} title="Edit"><Icon name="edit" /></button> : null}
                           {canDelete ? <button className="rounded-lg bg-error-container p-2 text-error" onClick={() => deleteRow(row.id)} title="Delete"><Icon name="delete" /></button> : null}
                         </div>
