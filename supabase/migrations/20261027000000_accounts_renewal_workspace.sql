@@ -44,6 +44,9 @@ create index if not exists am_renewal_followups_next_idx
 alter table public.am_client_subscriptions enable row level security;
 alter table public.am_renewal_followups enable row level security;
 
+-- The SQL Editor may have applied this before the CLI records migration history.
+drop policy if exists "Admins can manage am_client_subscriptions" on public.am_client_subscriptions;
+drop policy if exists "Admins can manage am_renewal_followups" on public.am_renewal_followups;
 create policy "Admins can manage am_client_subscriptions"
   on public.am_client_subscriptions for all
   using (public.is_admin(auth.uid())) with check (public.is_admin(auth.uid()));
@@ -84,6 +87,7 @@ begin
 end;
 $$;
 
+drop trigger if exists am_assignment_estimated_subscription on public.am_assignments;
 create trigger am_assignment_estimated_subscription
   after insert on public.am_assignments
   for each row execute function public.am_estimate_subscription_for_assignment();
