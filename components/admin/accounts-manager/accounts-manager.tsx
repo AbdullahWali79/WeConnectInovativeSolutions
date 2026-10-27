@@ -4,17 +4,23 @@
 import { useState, useEffect, useRef } from "react";
 import { Toast, type ToastState } from "@/components/toast";
 import { 
-  fetchAccountsData, addSeller, addClient, addSharedAccount, 
-  deleteSharedAccount, assignClientToAccount, updateAssignmentPayment, 
+  fetchAccountsData, addSeller, addClient,
+  deleteSharedAccount, updateAssignmentPayment,
   removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients, updateClient
 } from "@/app/admin/accounts-manager/actions";
 import { Icon } from "@/components/icon";
+import { accountStatus, daysUntil } from "@/lib/accounts-renewal";
+import { RenewalWorkspace } from "./renewal-workspace";
+
+function expiryLabel(date: string): string {
+  const days = daysUntil(date);
+  if (days === null) return date;
+  if (days === 0) return `${date} · today`;
+  return days < 0 ? `${date} · ${Math.abs(days)} days ago` : `${date} · ${days} days left`;
+}
 
 export function AccountsManager() {
   const [toast, setToast] = useState<ToastState>(null);
-  const [unlocked, setUnlocked] = useState(false);
-  const [password, setPassword] = useState("");
-  const [unlockError, setUnlockError] = useState("");
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -23,12 +29,14 @@ export function AccountsManager() {
   const [sellers, setSellers] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [banks, setBanks] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [followups, setFollowups] = useState<any[]>([]);
 
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [toolFilter, setToolFilter] = useState("All");
-  const [workspaceTab, setWorkspaceTab] = useState<"accounts" | "pending">("accounts");
+  const [workspaceTab, setWorkspaceTab] = useState<"accounts" | "pending" | "renewals">("accounts");
 
   // Modals state
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -133,6 +141,8 @@ export function AccountsManager() {
       setSellers(res.sellers || []);
       setClients(res.clients || []);
       setBanks(res.banks || []);
+      setSubscriptions(res.subscriptions || []);
+      setFollowups(res.followups || []);
     } else {
       setToast({ type: "error", message: res.error || "Failed to load data" });
     }
@@ -143,17 +153,19 @@ export function AccountsManager() {
     setExpandedAccs(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleCopy = (text: string) => {
+  const handleCopy = () => {
     setToast({ type: "success", message: "Copied to clipboard!" });
   };
 
-  const activeCount = accounts.filter(a => a.status === 'active').length;
-  const expiringCount = accounts.filter(a => a.status === 'expiring_soon').length;
-  const expiredCount = accounts.filter(a => a.status === 'expired').length;
+  const accountsWithStatus = accounts.map(a => ({ ...a, display_status: accountStatus(a) }));
+  const activeCount = accountsWithStatus.filter(a => a.display_status === 'active').length;
+  const expiringCount = accountsWithStatus.filter(a => a.display_status === 'expiring_soon').length;
+  const expiredCount = accountsWithStatus.filter(a => a.display_status === 'expired').length;
+  const bannedCount = accountsWithStatus.filter(a => a.display_status === 'banned').length;
 
   // Filtered Accounts
-  const filteredAccounts = accounts.filter(a => {
-    if (statusFilter !== "All" && a.status !== statusFilter.toLowerCase()) return false;
+  const filteredAccounts = accountsWithStatus.filter(a => {
+    if (statusFilter !== "All" && a.display_status !== statusFilter) return false;
     if (toolFilter !== "All" && !a.tool_name.toLowerCase().includes(toolFilter.toLowerCase())) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -162,6 +174,10 @@ export function AccountsManager() {
              a.am_assignments?.some((as:any) => as.am_clients?.name.toLowerCase().includes(q) || as.am_clients?.phone?.includes(q));
     }
     return true;
+  }).sort((a, b) => {
+    const priority: Record<string, number> = { expired: 0, expiring_soon: 1, active: 2, banned: 3 };
+    return priority[a.display_status] - priority[b.display_status] ||
+      (a.end_date || "9999-12-31").localeCompare(b.end_date || "9999-12-31");
   });
 
   const pendingPayments = accounts.flatMap(account =>
@@ -169,155 +185,6 @@ export function AccountsManager() {
       .filter((assignment: any) => assignment.payment_status === "pending" || Number(assignment.pending_amount) > 0)
       .map((assignment: any) => ({ ...assignment, account }))
   );
-
-  if (!unlocked) {
-    const handleUnlock = () => {
-      if (password === "Abdullah123@") {
-        setUnlocked(true);
-        setUnlockError("");
-      } else {
-        setUnlockError("Incorrect password. Please try again.");
-        setPassword("");
-      }
-    };
-
-    return (
-      <div className="relative flex min-h-[80vh] items-center justify-center overflow-hidden p-4">
-        {/* Ambient background glows matching the navy/gold theme */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-[120px]"
-          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-primary) 22%, transparent), transparent 70%)" }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-32 right-0 h-[380px] w-[380px] rounded-full blur-[120px]"
-          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 18%, transparent), transparent 70%)" }}
-        />
-
-        <div className="relative w-full max-w-md">
-          {/* Card */}
-          <div className="wc-card overflow-hidden rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,33,110,0.28)]">
-            {/* Navy header band with gold accent line */}
-            <div className="relative overflow-hidden bg-primary px-8 pb-10 pt-9 text-on-primary">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl"
-              />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -bottom-24 -left-10 h-48 w-48 rounded-full blur-3xl"
-                style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 26%, transparent), transparent 70%)" }}
-              />
-
-              <div className="relative flex flex-col items-center text-center">
-                {/* Lock badge */}
-                <div className="relative mb-5 flex h-[70px] w-[70px] items-center justify-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur-md">
-                  <span className="absolute inset-0 rounded-2xl bg-secondary-container/20 blur-md" />
-                  <Icon name="lock" className="relative text-[34px] text-secondary-container" />
-                </div>
-
-                <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
-                  <Icon name="verified_user" className="text-[13px] text-secondary-container" />
-                  Restricted Module
-                </span>
-
-                <h2 className="text-2xl font-black leading-tight tracking-tight">
-                  Accounts Manager
-                </h2>
-                <p className="mt-2 max-w-xs text-sm leading-relaxed text-blue-100">
-                  This module is protected. Enter the authorised password to continue.
-                </p>
-              </div>
-
-              {/* Gold accent line */}
-              <div className="absolute inset-x-0 bottom-0 h-[3px] bg-gradient-to-r from-transparent via-secondary-container to-transparent" />
-            </div>
-
-            {/* Body */}
-            <div className="px-8 pb-8 pt-7">
-              <label htmlFor="module-unlock-password" className="wc-label mb-2 block">
-                Module Password
-              </label>
-
-              <div className="relative">
-                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]">
-                  <Icon name="key" className="text-[20px]" />
-                </span>
-                <input
-                  id="module-unlock-password"
-                  type="password"
-                  value={password}
-                  autoFocus
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (unlockError) setUnlockError("");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleUnlock();
-                  }}
-                  placeholder="Enter password"
-                  aria-invalid={Boolean(unlockError)}
-                  className="wc-input w-full pl-12 pr-12"
-                />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]">
-                  <Icon name={password ? "visibility" : "visibility_off"} className="text-[20px]" />
-                </span>
-              </div>
-
-              {/* Inline error */}
-              <div
-                role="alert"
-                aria-live="polite"
-                className={`overflow-hidden transition-all duration-300 ${
-                  unlockError ? "mt-3 max-h-20 opacity-100" : "mt-0 max-h-0 opacity-0"
-                }`}
-              >
-                <div className="flex items-start gap-2 rounded-xl border border-error/25 bg-error/10 px-3.5 py-2.5">
-                  <Icon name="error" className="mt-px text-[17px] text-error" />
-                  <p className="text-[13px] font-semibold leading-snug text-error">{unlockError}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleUnlock}
-                className="group mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-black text-on-primary shadow-[0_10px_24px_-6px_rgba(0,33,110,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_rgba(0,33,110,0.55)] active:translate-y-0"
-              >
-                <Icon name="lock_open" className="text-[18px]" />
-                Unlock Module
-                <Icon name="arrow_forward" className="text-[16px] transition-transform duration-200 group-hover:translate-x-1" />
-              </button>
-
-              {/* Security note */}
-              <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-outline-variant/60 pt-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">
-                <Icon name="shield" className="text-[14px] text-secondary" />
-                Authorized personnel only
-              </div>
-            </div>
-          </div>
-
-          {/* Decorative feature chips */}
-          <div className="mt-6 grid grid-cols-3 gap-2.5">
-            {[
-              { icon: "receipt_long", label: "Fees" },
-              { icon: "manage_accounts", label: "Accounts" },
-              { icon: "inventory_2", label: "Products" },
-            ].map((chip) => (
-              <div
-                key={chip.label}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-outline-variant/70 bg-surface-lowest px-2 py-3 text-center opacity-70"
-              >
-                <Icon name={chip.icon} className="text-[19px] text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">
-                  {chip.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">
@@ -355,7 +222,7 @@ export function AccountsManager() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="wc-card p-5">
           <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">ALL ACCOUNTS</p>
           <p className="text-3xl font-bold text-primary">{accounts.length}</p>
@@ -372,6 +239,10 @@ export function AccountsManager() {
           <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">EXPIRED</p>
           <p className="text-3xl font-bold text-red-500">{expiredCount}</p>
         </div>
+        <div className="wc-card p-5">
+          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">BANNED</p>
+          <p className="text-3xl font-bold text-gray-700">{bannedCount}</p>
+        </div>
       </div>
       
       {/* Search and Filters */}
@@ -382,9 +253,14 @@ export function AccountsManager() {
         <button onClick={() => setWorkspaceTab("pending")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold flex items-center gap-2 ${workspaceTab === "pending" ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-amber-50"}`}>
           <Icon name="pending_actions" className="text-[17px]" /> Pending Payments ({pendingPayments.length})
         </button>
+        <button onClick={() => setWorkspaceTab("renewals")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold ${workspaceTab === "renewals" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+          Renewals & Follow-ups
+        </button>
       </div>
 
-      {workspaceTab === "pending" ? (
+      {workspaceTab === "renewals" ? (
+        <RenewalWorkspace accounts={accountsWithStatus} clients={clients} subscriptions={subscriptions} followups={followups} onRefresh={loadData} onEditClient={(client) => { setClientToEdit(client); setIsAddClientModalOpen(true); }} />
+      ) : workspaceTab === "pending" ? (
         <div className="space-y-3">
           {pendingPayments.length === 0 ? (
             <div className="wc-card py-10 text-center text-gray-500">No pending member payments.</div>
@@ -424,10 +300,11 @@ export function AccountsManager() {
         <div className="w-full md:w-48">
           <label className="block mb-1 text-xs font-semibold text-gray-500">Status</label>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
-            <option>All</option>
-            <option>Active</option>
-            <option>Expiring Soon</option>
-            <option>Expired</option>
+            <option value="All">All</option>
+            <option value="active">Active</option>
+            <option value="expiring_soon">Expiring Soon</option>
+            <option value="expired">Expired</option>
+            <option value="banned">Banned</option>
           </select>
         </div>
         <div className="w-full md:w-48">
@@ -457,15 +334,15 @@ export function AccountsManager() {
                  <div className="flex flex-wrap items-center gap-3">
                     <h3 className="text-gray-900 font-bold text-sm">{acc.tool_name} • {acc.login_email}</h3>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                      acc.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      acc.status === 'expiring_soon' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      acc.display_status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      acc.display_status === 'expiring_soon' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                       'bg-red-50 text-red-700 border-red-200'
                     }`}>
-                      {acc.status.toUpperCase()}
+                      {acc.display_status.replaceAll("_", " ").toUpperCase()}
                     </span>
                     <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700 border border-blue-200">{acc.share_type}</span>
                     {acc.end_date && (
-                      <span className="text-xs text-gray-500 font-medium">Expires: {new Date(acc.end_date).toLocaleDateString()}</span>
+                      <span className="text-xs text-gray-500 font-medium">Expires: {expiryLabel(acc.end_date)}</span>
                     )}
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600 border border-gray-200">
                       {acc.am_assignments?.length || 0} client(s)
@@ -499,11 +376,11 @@ export function AccountsManager() {
                       <div className="space-y-3">
                         <div className="flex justify-between items-center rounded-lg border border-gray-200 bg-white p-2.5">
                           <span className="text-sm text-gray-700">{acc.login_email}</span>
-                          <CopyButton text={acc.login_email} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={() => handleCopy(acc.login_email)} />
+                          <CopyButton text={acc.login_email} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
                         </div>
                         <div className="flex justify-between items-center rounded-lg border border-gray-200 bg-white p-2.5">
                           <span className="text-sm text-gray-700">{acc.login_password}</span>
-                          <CopyButton text={acc.login_password} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={() => handleCopy(acc.login_password)} />
+                          <CopyButton text={acc.login_password} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
                         </div>
                       </div>
                     </div>
@@ -737,7 +614,7 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
 }
 
 function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: () => void, onSave: () => void }) {
-  const [form, setForm] = useState({ name: client?.name || "", phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "" });
+  const [form, setForm] = useState({ name: client?.name || "", phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "", marketing_opt_in: Boolean(client?.marketing_opt_in), marketing_opt_in_source: client?.marketing_opt_in_source || "" });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: any) => {
@@ -790,6 +667,11 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
               <label className="mb-1 block text-xs font-bold text-gray-600">Company / Notes</label>
               <input type="text" value={form.company} onChange={e=>setForm({...form, company: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 mb-2" placeholder="Agency / Client tag" />
               <textarea value={form.notes} onChange={e=>setForm({...form, notes: e.target.value})} rows={2} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Optional notes"></textarea>
+              <label className="mt-3 flex items-start gap-2 text-xs text-gray-700">
+                <input type="checkbox" checked={form.marketing_opt_in} onChange={e=>setForm({...form, marketing_opt_in: e.target.checked})} className="mt-0.5" />
+                Client agreed to receive renewal offers on WhatsApp. Uncheck if they opt out.
+              </label>
+              {form.marketing_opt_in && <input required value={form.marketing_opt_in_source} onChange={e=>setForm({...form, marketing_opt_in_source: e.target.value})} className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="Consent source, e.g. signup form or WhatsApp chat" />}
             </div>
           </form>
         </div>
@@ -814,7 +696,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
     login_email: account?.login_email || "", login_password: account?.login_password || "", 
     linked_mail: account?.linked_mail || "", linked_mail_password: account?.linked_mail_password || "",
     plan_type: account?.plan_type || "", extra_notes: account?.extra_notes || "", 
-    share_type: account?.share_type || "Shared", status: account?.status || "active", 
+    share_type: account?.share_type || "Shared", status: ["expired", "banned"].includes(account?.status) ? account.status : "active",
     total_slots: account?.total_slots || 1, start_date: account?.start_date || "", end_date: account?.end_date || ""
   });
   
@@ -822,7 +704,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
     account?.am_assignments ? account.am_assignments.map((a: any) => ({
       client_id: a.client_id,
       name: a.am_clients?.name || "Unknown",
-      payment_status: a.payment_status || "Pending",
+      payment_status: String(a.payment_status || "pending").toLowerCase(),
       pending_amount: a.pending_amount || 0,
       notes: a.notes || ""
     })) : []
@@ -855,12 +737,12 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setSaving(true);
-    const dataToSave = { ...form };
+    const dataToSave: any = { ...form };
     if (!dataToSave.id) delete (dataToSave as any).id;
-    if (!dataToSave.seller_id) delete (dataToSave as any).seller_id;
-    if (!dataToSave.buy_date) delete (dataToSave as any).buy_date;
-    if (!dataToSave.start_date) delete (dataToSave as any).start_date;
-    if (!dataToSave.end_date) delete (dataToSave as any).end_date;
+    if (!dataToSave.seller_id) dataToSave.seller_id = null;
+    if (!dataToSave.buy_date) dataToSave.buy_date = null;
+    if (!dataToSave.start_date) dataToSave.start_date = null;
+    if (!dataToSave.end_date) dataToSave.end_date = null;
 
     const res = await saveSharedAccountWithClients(dataToSave, selectedClients);
     if(res.success) onSave();
@@ -873,7 +755,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
       setSelectedClients([...selectedClients, {
         client_id: c.id,
         name: c.name,
-        payment_status: "Pending",
+        payment_status: "pending",
         pending_amount: 0,
         notes: ""
       }]);
@@ -935,6 +817,24 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                 </div>
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-gray-400">Seller / Provider</label>
+                  <select value={form.seller_id} onChange={e=>setForm({...form, seller_id: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white">
+                    <option value="">No seller linked</option>
+                    {sellers.map(seller => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-gray-400">Buy Price (PKR)</label>
+                  <input type="number" min="0" step="0.01" value={form.buy_price} onChange={e=>setForm({...form, buy_price: Number(e.target.value)})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-gray-400">Buy Date</label>
+                  <input type="date" value={form.buy_date} onChange={e=>setForm({...form, buy_date: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white" />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-xs font-bold text-gray-400">Tool Login / Email</label>
@@ -968,14 +868,14 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                 <div>
                   <label className="mb-1 block text-xs font-bold text-gray-400">Account Status</label>
                   <select value={form.status} onChange={e=>setForm({...form, status: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500">
-                    <option value="active">Active</option>
-                    <option value="expired">Expired</option>
+                    <option value="active">Use end date</option>
+                    <option value="expired">Force expired</option>
                     <option value="banned">Banned</option>
                   </select>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-bold text-gray-400">Total Slots</label>
-                  <input type="number" value={form.total_slots} onChange={e=>setForm({...form, total_slots: parseInt(e.target.value)})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" min="1" />
+                  <input required type="number" value={form.total_slots} onChange={e=>setForm({...form, total_slots: parseInt(e.target.value)})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" min="1" />
                 </div>
               </div>
 
@@ -1059,9 +959,9 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                             }}
                             className="w-1/3 rounded border border-[#2d3748] bg-[#1e2532] p-2 text-xs text-white outline-none focus:border-emerald-500"
                           >
-                            <option value="Pending">Pending</option>
-                            <option value="Cleared">Cleared</option>
-                            <option value="Advance">Advance</option>
+                            <option value="pending">Pending</option>
+                            <option value="cleared">Cleared</option>
+                            <option value="advance">Advance</option>
                           </select>
                           <input 
                             type="number" 
