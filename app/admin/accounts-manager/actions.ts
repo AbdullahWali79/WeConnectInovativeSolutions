@@ -131,7 +131,8 @@ export async function updateAssignmentPayment(assignmentId: string, paymentStatu
   }).eq("id", assignmentId).select("id, payment_status, pending_amount").maybeSingle();
   if (error) return { success: false, error: error.message };
   if (!data) return { success: false, error: "Payment record was not found." };
-  return { success: true, assignment: data };
+  const assignment = data as unknown as { id: string; payment_status: string; pending_amount: number };
+  return { success: true, assignment };
 }
 
 export async function removeAssignment(assignmentId: string) {

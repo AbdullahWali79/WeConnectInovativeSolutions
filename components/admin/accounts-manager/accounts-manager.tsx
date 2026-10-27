@@ -163,7 +163,7 @@ export function AccountsManager() {
         setToast({ type: "error", message: result.error || "Could not update payment." });
         return;
       }
-      const savedPayment = result.assignment as { payment_status: string; pending_amount: number };
+      const savedPayment = result.assignment;
       setAccounts(previous => previous.map(account => ({
         ...account,
         am_assignments: account.am_assignments?.map((assignment: any) =>
