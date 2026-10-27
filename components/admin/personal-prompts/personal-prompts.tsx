@@ -15,6 +15,7 @@ export function PersonalPrompts() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [favoriteFilter, setFavoriteFilter] = useState(false);
+  const [sortOrder, setSortOrder] = useState("recent");
 
   const [editData, setEditData] = useState<any>(null);
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
@@ -71,6 +72,11 @@ export function PersonalPrompts() {
 
   const favoriteCount = prompts.filter(p => p.is_favorite).length;
 
+  const recentlyUpdated = (p: any) => {
+    const date = Date.parse(p.updated_at || p.created_at || "");
+    return Number.isNaN(date) ? 0 : date;
+  };
+
   const filteredPrompts = prompts.filter(p => {
     if (favoriteFilter && !p.is_favorite) return false;
     if (categoryFilter !== "All" && (p.category || "").toLowerCase() !== categoryFilter.toLowerCase()) return false;
@@ -89,6 +95,14 @@ export function PersonalPrompts() {
       return titleMatch || subtitleMatch || promptLabelsMatch || promptTextMatch || categoryMatch || tagsMatch;
     }
     return true;
+  }).sort((a, b) => {
+    if (sortOrder === "title") {
+      return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }) || recentlyUpdated(b) - recentlyUpdated(a);
+    }
+    if (sortOrder === "favorites") {
+      return Number(Boolean(b.is_favorite)) - Number(Boolean(a.is_favorite)) || recentlyUpdated(b) - recentlyUpdated(a);
+    }
+    return recentlyUpdated(b) - recentlyUpdated(a);
   });
 
   const categories = Array.from(new Set(["Tricky", ...prompts.map(p => p.category).filter(Boolean)]));
@@ -158,7 +172,7 @@ export function PersonalPrompts() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
           <div className="relative min-w-[130px] flex-1 sm:flex-initial">
             <select 
               value={categoryFilter} 
@@ -169,6 +183,17 @@ export function PersonalPrompts() {
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+
+          <select
+            aria-label="Sort prompts"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="min-w-[130px] flex-1 sm:flex-initial bg-gray-50 hover:bg-gray-100/80 border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-medium text-gray-800 outline-none focus:border-primary transition-colors cursor-pointer"
+          >
+            <option value="recent">Recently updated</option>
+            <option value="title">A–Z</option>
+            <option value="favorites">Favorites first</option>
+          </select>
 
           <button
             type="button"
