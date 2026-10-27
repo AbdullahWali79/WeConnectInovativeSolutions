@@ -59,6 +59,7 @@ export function TeamMembersManager({
   const [sourceFilter, setSourceFilter] = useState("all");
   const [studentQuery, setStudentQuery] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -251,6 +252,40 @@ export function TeamMembersManager({
     await loadRows();
   }
 
+  async function toggleStatus(row: TeamMember) {
+    if (!canEdit) {
+      setToast({ type: "error", message: "You do not have permission to activate or deactivate team members." });
+      return;
+    }
+
+    const previousStatus = row.status;
+    const nextStatus = row.status === "active" ? "inactive" : "active";
+
+    setTogglingId(row.id);
+    setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: nextStatus } : item)));
+
+    const { error } = await supabase
+      .from("team_members")
+      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .eq("id", row.id);
+
+    setTogglingId(null);
+
+    if (error) {
+      setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: previousStatus } : item)));
+      setToast({ type: "error", message: error.message });
+      return;
+    }
+
+    setToast({
+      type: "success",
+      message:
+        nextStatus === "active"
+          ? `${row.name} activated — now visible on the public Team page.`
+          : `${row.name} deactivated — hidden from the public Team page.`,
+    });
+  }
+
   async function deleteRow(id: string) {
     if (!canDelete) {
       setToast({ type: "error", message: "You do not have permission to delete team members." });
@@ -285,7 +320,7 @@ export function TeamMembersManager({
       <PageHeader
         eyebrow="Team Members"
         title="Manage team members"
-        description="Add, edit, and manage team profile cards shown on the public Team page."
+        description="Add, edit, activate or deactivate team profile cards shown on the public Team page. Deactivated members are hidden from the public site."
         action={<Link href="/team" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Team Page</Link>}
       />
 
@@ -384,7 +419,47 @@ export function TeamMembersManager({
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.role}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.department ?? "-"}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.reports_to ? byId.get(row.reports_to)?.name ?? "-" : "-"}</td>
-                      <td className="px-4 py-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${row.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-700"}`}>{row.status}</span></td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const isActive = row.status === "active";
+                          const isBusy = togglingId === row.id;
+                          return (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={isActive}
+                                aria-label={`${isActive ? "Deactivate" : "Activate"} ${row.name}`}
+                                disabled={!canEdit || isBusy}
+                                onClick={() => void toggleStatus(row)}
+                                title={
+                                  canEdit
+                                    ? isActive
+                                      ? "Click to deactivate"
+                                      : "Click to activate"
+                                    : "You do not have permission to change status"
+                                }
+                                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                  isActive ? "bg-green-500" : "bg-slate-300"
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                                    isActive ? "translate-x-[19px]" : "translate-x-[3px]"
+                                  } ${isBusy ? "animate-pulse" : ""}`}
+                                />
+                              </button>
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                                  isActive ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-700"
+                                }`}
+                              >
+                                {isBusy ? "saving..." : row.status}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           <Link className="rounded-lg bg-surface-container p-2 text-primary" href="/team" title="View"><Icon name="visibility" /></Link>

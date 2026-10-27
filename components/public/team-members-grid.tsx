@@ -139,6 +139,7 @@ export function TeamMembersGrid({ initialMembers }: TeamMembersGridProps) {
       const { data, error } = await supabase
         .from("team_members")
         .select("*")
+        .eq("status", "active")
         .order("display_order", { ascending: true });
 
       if (!mounted || error || !data || data.length === 0) return;
