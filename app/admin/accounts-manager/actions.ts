@@ -61,16 +61,21 @@ export async function addSeller(data: any) {
 
 export async function addClient(data: any) {
   await requireAdminOnly();
+  const name = String(data.name || "").trim();
+  if (!name) return { success: false, error: "Enter the client name.", client: null };
   if (data.marketing_opt_in && !String(data.marketing_opt_in_source || "").trim()) {
-    return { success: false, error: "Record how the client agreed to WhatsApp renewal offers." };
+    return { success: false, error: "Record how the client agreed to WhatsApp renewal offers.", client: null };
   }
   const supabase = createSupabaseServiceClient();
-  const { error } = await supabase.from("am_clients" as any).insert({
+  const { data: inserted, error } = await supabase.from("am_clients" as any).insert({
     ...data,
+    name,
     marketing_opt_in_at: data.marketing_opt_in ? new Date().toISOString() : null,
     marketing_opt_in_source: data.marketing_opt_in ? String(data.marketing_opt_in_source).trim() : null,
-  });
-  return { success: !error, error: error?.message };
+  }).select("*").single();
+  if (error || !inserted) return { success: false, error: error?.message || "Client could not be created.", client: null };
+  const client = inserted as unknown as Record<string, unknown> & { id: string; name: string };
+  return { success: true, client };
 }
 
 export async function updateClient(id: string, data: any) {

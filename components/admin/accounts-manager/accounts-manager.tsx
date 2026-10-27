@@ -513,7 +513,7 @@ export function AccountsManager() {
 
       {/* Add Shared Account Modal */}
       {isAddAccountModalOpen && (
-        <AccountFormModal account={accountToEdit} accounts={accounts} clients={clients} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); loadData(); setToast({type:'success', message:'Account saved successfully'}); }} />
+        <AccountFormModal account={accountToEdit} accounts={accounts} clients={clients} sellers={sellers} onClientCreated={(client) => setClients(previous => [...previous, client].sort((a, b) => a.name.localeCompare(b.name)))} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); loadData(); setToast({type:'success', message:'Account saved successfully'}); }} />
       )}
       
       {/* Shared Bank Accounts Modal */}
@@ -648,15 +648,15 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
   );
 }
 
-function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: () => void, onSave: () => void }) {
-  const [form, setForm] = useState({ name: client?.name || "", phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "", marketing_opt_in: Boolean(client?.marketing_opt_in), marketing_opt_in_source: client?.marketing_opt_in_source || "" });
+function AddClientModal({ client, initialName = "", onClose, onSave }: { client?: any, initialName?: string, onClose: () => void, onSave: (savedClient?: any) => void }) {
+  const [form, setForm] = useState({ name: client?.name || initialName, phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "", marketing_opt_in: Boolean(client?.marketing_opt_in), marketing_opt_in_source: client?.marketing_opt_in_source || "" });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setSaving(true);
     const res = client ? await updateClient(client.id, form) : await addClient(form);
-    if(res.success) onSave();
+    if(res.success) onSave("client" in res ? res.client : undefined);
     else alert(res.error);
     setSaving(false);
   };
@@ -723,7 +723,7 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
   );
 }
 
-function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave }: { account?: any, accounts: any[], clients: any[], sellers: any[], onClose: () => void, onSave: () => void }) {
+function AccountFormModal({ account, accounts, clients, sellers, onClientCreated, onClose, onSave }: { account?: any, accounts: any[], clients: any[], sellers: any[], onClientCreated: (client: any) => void, onClose: () => void, onSave: () => void }) {
   const fieldClass = "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
   const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
   const [form, setForm] = useState({ 
@@ -749,6 +749,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
   
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Custom tool dropdown logic
@@ -929,10 +930,13 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
 
               {/* CLIENT LINKING SECTION */}
               <div className="border-t border-outline-variant pt-4">
-                <div className="flex justify-between items-center mb-2">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <label className="block text-xs font-bold text-on-surface">Link Clients</label>
-                  <span className="text-xs text-on-surface-variant">Google contacts import ke baad clients yahan milenge</span>
+                  <button type="button" onClick={() => { setShowClientDropdown(false); setIsAddClientModalOpen(true); }} className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-surface-container">
+                    <Icon name="person_add" className="text-base" /> Add New Client
+                  </button>
                 </div>
+                <p className="mb-2 text-xs text-on-surface-variant">Search existing clients, or add a new one here. Save the account to link a new client.</p>
                 
                 <div className="relative" ref={dropdownRef}>
                   <div 
@@ -1041,6 +1045,18 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
             Cancel
           </button>
         </div>
+        {isAddClientModalOpen && (
+          <AddClientModal
+            onClose={() => setIsAddClientModalOpen(false)}
+            onSave={(savedClient) => {
+              setIsAddClientModalOpen(false);
+              if (savedClient) {
+                onClientCreated(savedClient);
+                handleSelectClient(savedClient);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );
