@@ -724,6 +724,8 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
 }
 
 function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave }: { account?: any, accounts: any[], clients: any[], sellers: any[], onClose: () => void, onSave: () => void }) {
+  const fieldClass = "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
+  const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
   const [form, setForm] = useState({ 
     id: account?.id || "",
     tool_name: account?.tool_name || "", label: account?.label || "", link: account?.link || "", seller_id: account?.seller_id || "", 
@@ -806,18 +808,18 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-[#2d3748] bg-[#1e2532] shadow-2xl flex flex-col max-h-[95vh]">
-        <div className="flex justify-between items-center border-b border-[#2d3748] bg-[#161b22] p-4">
+      <div className="flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest shadow-2xl">
+        <div className="flex items-center justify-between border-b border-outline-variant bg-surface-low p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-900/30 text-emerald-500">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container text-primary">
               <Icon name="key" />
             </div>
             <div>
-              <h2 className="text-lg font-bold leading-tight text-white">{account ? "Edit Shared Account" : "Add Shared Account"}</h2>
-              <p className="text-xs text-gray-400">Tool, credentials, expiry dates, aur linked clients yahan se manage karein.</p>
+              <h2 className="text-lg font-bold leading-tight text-on-surface">{account ? "Edit Shared Account" : "Add Shared Account"}</h2>
+              <p className="text-xs text-on-surface-variant">Tool, credentials, expiry dates, aur linked clients yahan se manage karein.</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
+          <button onClick={onClose} className="rounded-lg p-1 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-primary">
             <Icon name="close" />
           </button>
         </div>
@@ -827,10 +829,10 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative" ref={toolDropdownRef}>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Tool Name</label>
-                  <input required type="text" value={form.tool_name} onFocus={() => setShowToolDropdown(true)} onChange={e => { setForm({...form, tool_name: e.target.value}); setShowToolDropdown(true); }} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="ChatGPT, Canva..." />
+                  <label className={labelClass}>Tool Name</label>
+                  <input required type="text" value={form.tool_name} onFocus={() => setShowToolDropdown(true)} onChange={e => { setForm({...form, tool_name: e.target.value}); setShowToolDropdown(true); }} className={fieldClass} placeholder="ChatGPT, Canva..." />
                   {showToolDropdown && uniqueTools.filter((t:any) => t.toLowerCase().includes(form.tool_name.toLowerCase()) && t !== form.tool_name).length > 0 && (
-                    <div className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-[#2d3748] bg-[#1e2532] shadow-xl custom-scrollbar">
+                    <div className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-outline-variant bg-surface-lowest shadow-xl custom-scrollbar">
                       {uniqueTools.filter((t:any) => t.toLowerCase().includes(form.tool_name.toLowerCase()) && t !== form.tool_name).map(t => (
                         <div 
                           key={t as string}
@@ -838,7 +840,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                             setForm({...form, tool_name: t as string});
                             setShowToolDropdown(false);
                           }}
-                          className="cursor-pointer p-2 px-3 text-sm text-white hover:bg-[#2d3748] border-b border-[#2d3748] last:border-0"
+                          className="cursor-pointer border-b border-outline-variant p-2 px-3 text-sm text-on-surface hover:bg-surface-low last:border-0"
                         >
                           {t as string}
                         </div>
@@ -847,103 +849,103 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Label (Optional)</label>
-                  <input type="text" value={form.label} onChange={e=>setForm({...form, label: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="e.g. Server 1" />
+                  <label className={labelClass}>Label (Optional)</label>
+                  <input type="text" value={form.label} onChange={e=>setForm({...form, label: e.target.value})} className={fieldClass} placeholder="e.g. Server 1" />
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Seller / Provider</label>
-                  <select value={form.seller_id} onChange={e=>setForm({...form, seller_id: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white">
+                  <label className={labelClass}>Seller / Provider</label>
+                  <select value={form.seller_id} onChange={e=>setForm({...form, seller_id: e.target.value})} className={fieldClass}>
                     <option value="">No seller linked</option>
                     {sellers.map(seller => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Buy Price (PKR)</label>
-                  <input type="number" min="0" step="0.01" value={form.buy_price} onChange={e=>setForm({...form, buy_price: Number(e.target.value)})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white" />
+                  <label className={labelClass}>Buy Price (PKR)</label>
+                  <input type="number" min="0" step="0.01" value={form.buy_price} onChange={e=>setForm({...form, buy_price: Number(e.target.value)})} className={fieldClass} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Buy Date</label>
-                  <input type="date" value={form.buy_date} onChange={e=>setForm({...form, buy_date: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Tool Login / Email</label>
-                  <input type="text" value={form.login_email} onChange={e=>setForm({...form, login_email: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Tool Login Password</label>
-                  <input type="text" value={form.login_password} onChange={e=>setForm({...form, login_password: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" />
+                  <label className={labelClass}>Buy Date</label>
+                  <input type="date" value={form.buy_date} onChange={e=>setForm({...form, buy_date: e.target.value})} className={fieldClass} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Linked Mail</label>
-                  <input type="text" value={form.linked_mail} onChange={e=>setForm({...form, linked_mail: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" />
+                  <label className={labelClass}>Tool Login / Email</label>
+                  <input type="text" value={form.login_email} onChange={e=>setForm({...form, login_email: e.target.value})} className={fieldClass} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Linked Mail Password</label>
-                  <input type="text" value={form.linked_mail_password} onChange={e=>setForm({...form, linked_mail_password: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" />
+                  <label className={labelClass}>Tool Login Password</label>
+                  <input type="text" value={form.login_password} onChange={e=>setForm({...form, login_password: e.target.value})} className={fieldClass} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Linked Mail</label>
+                  <input type="text" value={form.linked_mail} onChange={e=>setForm({...form, linked_mail: e.target.value})} className={fieldClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Linked Mail Password</label>
+                  <input type="text" value={form.linked_mail_password} onChange={e=>setForm({...form, linked_mail_password: e.target.value})} className={fieldClass} />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Share Type</label>
-                  <select value={form.share_type} onChange={e=>setForm({...form, share_type: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500">
+                  <label className={labelClass}>Share Type</label>
+                  <select value={form.share_type} onChange={e=>setForm({...form, share_type: e.target.value})} className={fieldClass}>
                     <option value="Shared">Shared</option>
                     <option value="Private">Private</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Account Status</label>
-                  <select value={form.status} onChange={e=>setForm({...form, status: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500">
+                  <label className={labelClass}>Account Status</label>
+                  <select value={form.status} onChange={e=>setForm({...form, status: e.target.value})} className={fieldClass}>
                     <option value="active">Use end date</option>
                     <option value="expired">Force expired</option>
                     <option value="banned">Banned</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Total Slots</label>
-                  <input required type="number" value={form.total_slots} onChange={e=>setForm({...form, total_slots: parseInt(e.target.value)})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" min="1" />
+                  <label className={labelClass}>Total Slots</label>
+                  <input required type="number" value={form.total_slots} onChange={e=>setForm({...form, total_slots: parseInt(e.target.value)})} className={fieldClass} min="1" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">Start Date</label>
-                  <input type="date" value={form.start_date} onChange={e=>setForm({...form, start_date: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" />
+                  <label className={labelClass}>Start Date</label>
+                  <input type="date" value={form.start_date} onChange={e=>setForm({...form, start_date: e.target.value})} className={fieldClass} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-gray-400">End Date</label>
-                  <input type="date" value={form.end_date} onChange={e=>setForm({...form, end_date: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" />
+                  <label className={labelClass}>End Date</label>
+                  <input type="date" value={form.end_date} onChange={e=>setForm({...form, end_date: e.target.value})} className={fieldClass} />
                 </div>
               </div>
 
               {/* CLIENT LINKING SECTION */}
-              <div className="pt-4 border-t border-[#2d3748]">
+              <div className="border-t border-outline-variant pt-4">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-xs font-bold text-white">Link Clients</label>
-                  <span className="text-xs text-gray-400">Google contacts import ke baad clients yahan milenge</span>
+                  <label className="block text-xs font-bold text-on-surface">Link Clients</label>
+                  <span className="text-xs text-on-surface-variant">Google contacts import ke baad clients yahan milenge</span>
                 </div>
                 
                 <div className="relative" ref={dropdownRef}>
                   <div 
                     onClick={() => setShowClientDropdown(true)}
-                    className="w-full min-h-[42px] rounded-lg border border-[#2d3748] bg-[#161b22] p-2 flex flex-wrap gap-2 items-center cursor-text"
+                    className="flex min-h-[42px] w-full cursor-text flex-wrap items-center gap-2 rounded-lg border border-outline-variant bg-surface-lowest p-2"
                   >
                     {selectedClients.length === 0 && !showClientDropdown && (
-                      <span className="text-sm text-gray-500 select-none">Search and select clients...</span>
+                      <span className="select-none text-sm text-on-surface-variant">Search and select clients...</span>
                     )}
                     {selectedClients.map((sc, i) => (
-                      <span key={i} className="flex items-center gap-1 rounded bg-emerald-900/30 text-emerald-500 px-2 py-1 text-xs font-medium">
+                      <span key={i} className="flex items-center gap-1 rounded bg-surface-container px-2 py-1 text-xs font-medium text-primary">
                         {sc.name}
-                        <span className="cursor-pointer hover:text-white inline-flex" onClick={(e:any) => { e.stopPropagation(); setSelectedClients(selectedClients.filter((_, idx) => idx !== i)); }}><Icon name="close" className="text-[14px]" /></span>
+                        <span className="inline-flex cursor-pointer hover:text-primary-container" onClick={(e:any) => { e.stopPropagation(); setSelectedClients(selectedClients.filter((_, idx) => idx !== i)); }}><Icon name="close" className="text-[14px]" /></span>
                       </span>
                     ))}
                     {showClientDropdown && (
@@ -952,25 +954,25 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                         type="text" 
                         value={clientSearch}
                         onChange={(e) => setClientSearch(e.target.value)}
-                        className="flex-1 min-w-[120px] bg-transparent text-sm text-white outline-none placeholder-gray-600"
+                        className="min-w-[120px] flex-1 bg-transparent text-sm text-on-surface outline-none placeholder:text-on-surface-variant"
                         placeholder="Type to search..."
                       />
                     )}
                   </div>
                   
                   {showClientDropdown && (
-                    <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-[#2d3748] bg-[#1e2532] shadow-xl custom-scrollbar">
+                    <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-outline-variant bg-surface-lowest shadow-xl custom-scrollbar">
                       {filteredClients.length === 0 ? (
-                        <div className="p-3 text-sm text-gray-400 text-center">No clients found</div>
+                        <div className="p-3 text-center text-sm text-on-surface-variant">No clients found</div>
                       ) : (
                         filteredClients.map(c => (
                           <div 
                             key={c.id} 
                             onClick={() => handleSelectClient(c)}
-                            className="cursor-pointer p-3 hover:bg-[#2d3748] border-b border-[#2d3748] last:border-0"
+                            className="cursor-pointer border-b border-outline-variant p-3 hover:bg-surface-low last:border-0"
                           >
-                            <div className="text-sm font-bold text-white">{c.name}</div>
-                            {c.phone && <div className="text-xs text-gray-400">{c.phone}</div>}
+                            <div className="text-sm font-bold text-on-surface">{c.name}</div>
+                            {c.phone && <div className="text-xs text-on-surface-variant">{c.phone}</div>}
                           </div>
                         ))
                       )}
@@ -979,12 +981,12 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                 </div>
 
                 {selectedClients.length > 0 && (
-                  <div className="mt-4 rounded-lg border border-[#2d3748] bg-[#161b22] p-4">
-                    <h3 className="text-xs font-bold text-white mb-3">Payment Status per Client</h3>
+                  <div className="mt-4 rounded-lg border border-outline-variant bg-surface-low p-4">
+                    <h3 className="mb-3 text-xs font-bold text-on-surface">Payment Status per Client</h3>
                     <div className="space-y-3">
                       {selectedClients.map((sc, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <div className="w-1/3 text-sm font-medium text-white truncate" title={sc.name}>{sc.name}</div>
+                          <div className="w-1/3 truncate text-sm font-medium text-on-surface" title={sc.name}>{sc.name}</div>
                           <select 
                             value={sc.payment_status} 
                             onChange={(e) => {
@@ -993,7 +995,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                               if (e.target.value !== "pending") newArr[i].pending_amount = 0;
                               setSelectedClients(newArr);
                             }}
-                            className="w-1/3 rounded border border-[#2d3748] bg-[#1e2532] p-2 text-xs text-white outline-none focus:border-emerald-500"
+                            className="w-1/3 rounded border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
                           >
                             <option value="pending">Pending</option>
                             <option value="cleared">Cleared</option>
@@ -1011,7 +1013,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                               if (newArr[i].pending_amount > 0) newArr[i].payment_status = "pending";
                               setSelectedClients(newArr);
                             }}
-                            className="w-1/3 rounded border border-[#2d3748] bg-[#1e2532] p-2 text-xs text-white outline-none focus:border-emerald-500"
+                            className="w-1/3 rounded border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
                             placeholder="Remaining balance"
                           />
                         </div>
@@ -1022,19 +1024,19 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-gray-400">Notes</label>
-                <textarea value={form.extra_notes} onChange={e=>setForm({...form, extra_notes: e.target.value})} className="w-full rounded-lg border border-[#2d3748] bg-[#161b22] p-2.5 text-sm text-white outline-none focus:border-emerald-500" rows={2} placeholder="Sharing details, special notes..." />
+                <label className={labelClass}>Notes</label>
+                <textarea value={form.extra_notes} onChange={e=>setForm({...form, extra_notes: e.target.value})} className={fieldClass} rows={2} placeholder="Sharing details, special notes..." />
               </div>
 
             </div>
           </form>
         </div>
-        <div className="flex justify-start gap-3 border-t border-[#2d3748] bg-[#161b22] p-4">
-          <button form="account-form" disabled={saving} type="submit" className="rounded-lg bg-emerald-600 px-6 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700 flex items-center gap-2">
+        <div className="flex justify-start gap-3 border-t border-outline-variant bg-surface-low p-4">
+          <button form="account-form" disabled={saving} type="submit" className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2 text-sm font-bold text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50">
             <Icon name={saving ? "sync" : "save"} className={`text-[18px] ${saving ? "animate-spin" : ""}`} />
             {saving ? "Saving..." : (account ? "Update Account" : "Save Account")}
           </button>
-          <button type="button" onClick={onClose} className="rounded-lg border border-[#2d3748] px-6 py-2 text-sm font-bold text-gray-300 transition-colors hover:bg-[#2d3748]">
+          <button type="button" onClick={onClose} className="rounded-lg border border-outline-variant bg-surface-lowest px-6 py-2 text-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container">
             <Icon name="close" className="text-[18px] inline-block mr-1" />
             Cancel
           </button>
