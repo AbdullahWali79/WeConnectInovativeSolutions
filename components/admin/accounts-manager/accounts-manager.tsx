@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Toast, type ToastState } from "@/components/toast";
 import { 
-  fetchAccountsWorkspace, fetchClients, getClientById, addSeller, addClient,
+  fetchAccountsWorkspace, fetchClients, getClientById, addSeller, addClient, searchClients,
   deleteSharedAccount, updateAssignmentPayment,
   removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients, updateClient
 } from "@/app/admin/accounts-manager/actions";
@@ -202,7 +202,8 @@ export function AccountsManager() {
   function openAccountModal(account?: any) {
     setAccountToEdit(account ?? null);
     setIsAddAccountModalOpen(true);
-    void ensureClientsLoaded();
+    // The "Link Clients" picker searches the server on demand, so opening this
+    // modal no longer drags the whole client book (~3.5k rows) across the wire.
   }
 
   function upsertClientRow(client: any) {
@@ -719,7 +720,7 @@ export function AccountsManager() {
 
       {/* Add Shared Account Modal */}
       {isAddAccountModalOpen && (
-        <AccountFormModal account={accountToEdit} accounts={accounts} clients={clients} clientsLoading={clientsLoading} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); void loadWorkspace({ silent: true }); setToast({type:'success', message:'Account saved successfully'}); }} />
+        <AccountFormModal account={accountToEdit} accounts={accounts} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); void loadWorkspace({ silent: true }); setToast({type:'success', message:'Account saved successfully'}); }} />
       )}
       
       {/* Shared Bank Accounts Modal */}
@@ -929,7 +930,7 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
   );
 }
 
-function AccountFormModal({ account, accounts, clients, clientsLoading, sellers, onClose, onSave }: { account?: any, accounts: any[], clients: any[], clientsLoading?: boolean, sellers: any[], onClose: () => void, onSave: () => void }) {
+function AccountFormModal({ account, accounts, sellers, onClose, onSave }: { account?: any, accounts: any[], sellers: any[], onClose: () => void, onSave: () => void }) {
   const fieldClass = "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
   const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
   const [form, setForm] = useState({ 
@@ -956,6 +957,14 @@ function AccountFormModal({ account, accounts, clients, clientsLoading, sellers,
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Client lookup happens on the server, so the picker works against the whole
+  // client book without loading it into the browser.
+  const [clientResults, setClientResults] = useState<any[]>([]);
+  const [clientSearching, setClientSearching] = useState(false);
+  const [pickerError, setPickerError] = useState("");
+  const [loadingClientId, setLoadingClientId] = useState<string | null>(null);
+  const [clientEditor, setClientEditor] = useState<{ client: any | null } | null>(null);
   
   // Custom tool dropdown logic
   const uniqueTools = Array.from(new Set(accounts.map((a: any) => a.tool_name).filter(Boolean)));
@@ -1007,9 +1016,79 @@ function AccountFormModal({ account, accounts, clients, clientsLoading, sellers,
     setShowClientDropdown(false);
   };
 
-  const filteredClients = clients.filter(c => 
-    c.name.toLowerCase().includes(clientSearch.toLowerCase()) || 
-    (c.phone && c.phone.includes(clientSearch))
+  // Debounced server search whenever the picker is open.
+  useEffect(() => {
+    if (!showClientDropdown) return;
+    let cancelled = false;
+    const run = async () => {
+      setClientSearching(true);
+      setPickerError("");
+      const res = await searchClients(clientSearch, 25);
+      if (cancelled) return;
+      if (res.success) setClientResults(res.clients || []);
+      else setPickerError(res.error || "Could not load clients.");
+      setClientSearching(false);
+    };
+    const timer = setTimeout(run, clientSearch ? 220 : 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [clientSearch, showClientDropdown]);
+
+  /** Opens the inline editor. Pass a client to edit, or nothing to create one. */
+  async function openClientEditor(client?: any) {
+    setShowClientDropdown(false);
+    if (!client?.id) {
+      setClientEditor({ client: client ?? null });
+      return;
+    }
+    setLoadingClientId(client.id);
+    const res = await getClientById(client.id);
+    setLoadingClientId(null);
+    if (!res.success || !res.client) {
+      setPickerError(res.error || "Could not load this client.");
+      return;
+    }
+    setClientEditor({ client: res.client });
+  }
+
+  function handleClientSaved(saved: any) {
+    const isNew = !clientEditor?.client?.id;
+    const merged = { ...(clientEditor?.client || {}), ...(saved || {}) };
+    if (!merged.id) {
+      setClientEditor(null);
+      setPickerError("Client was saved but the list could not refresh. Reopen the picker to see it.");
+      return;
+    }
+    setClientEditor(null);
+    setPickerError("");
+    // Reflect the new/edited record in the result list and any existing chip.
+    setClientResults(current => {
+      const exists = current.some((c: any) => c.id === merged.id);
+      const next = exists
+        ? current.map((c: any) => (c.id === merged.id ? { ...c, ...merged } : c))
+        : [merged, ...current];
+      return next.sort((a: any, b: any) => String(a.name ?? "").localeCompare(String(b.name ?? "")));
+    });
+    setSelectedClients(current => {
+      const already = current.some(sc => sc.client_id === merged.id);
+      if (already) {
+        return current.map(sc => (sc.client_id === merged.id ? { ...sc, name: merged.name } : sc));
+      }
+      // A brand-new client is linked straight away — no extra click needed.
+      if (!isNew) return current;
+      return [...current, {
+        client_id: merged.id,
+        name: merged.name,
+        payment_status: "pending",
+        pending_amount: 0,
+        notes: "",
+      }];
+    });
+    setClientSearch("");
+  }
+
+  // Hide people who are already linked — they are shown as chips instead.
+  const filteredClients = clientResults.filter(
+    (c: any) => !selectedClients.some(sc => sc.client_id === c.id)
   );
 
   return (
@@ -1135,11 +1214,23 @@ function AccountFormModal({ account, accounts, clients, clientsLoading, sellers,
 
               {/* CLIENT LINKING SECTION */}
               <div className="border-t border-outline-variant pt-4">
-                <div className="flex justify-between items-center mb-2">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <label className="block text-xs font-bold text-on-surface">Link Clients</label>
-                  <span className="text-xs text-on-surface-variant">Google contacts import ke baad clients yahan milenge</span>
+                  <button
+                    type="button"
+                    onClick={() => openClientEditor()}
+                    className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+                  >
+                    <Icon name="person_add" className="text-[15px]" /> New client
+                  </button>
                 </div>
-                
+
+                {pickerError && (
+                  <p role="alert" className="mb-2 rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error">
+                    {pickerError}
+                  </p>
+                )}
+
                 <div className="relative" ref={dropdownRef}>
                   <div 
                     onClick={() => setShowClientDropdown(true)}
@@ -1161,32 +1252,69 @@ function AccountFormModal({ account, accounts, clients, clientsLoading, sellers,
                         value={clientSearch}
                         onChange={(e) => setClientSearch(e.target.value)}
                         className="min-w-[120px] flex-1 bg-transparent text-sm text-on-surface outline-none placeholder:text-on-surface-variant"
-                        placeholder="Type to search..."
+                        placeholder="Type a name, phone or email..."
                       />
                     )}
                   </div>
                   
                   {showClientDropdown && (
-                    <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-outline-variant bg-surface-lowest shadow-xl custom-scrollbar">
-                      {filteredClients.length === 0 ? (
-                        <div className="p-3 text-center text-sm text-on-surface-variant">
-                          {clientsLoading ? "Loading clients…" : "No clients found"}
+                    <div className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-outline-variant bg-surface-lowest shadow-xl custom-scrollbar">
+                      {clientSearching && filteredClients.length === 0 ? (
+                        <div className="flex items-center justify-center gap-2 p-3 text-sm text-on-surface-variant">
+                          <Icon name="sync" className="animate-spin text-[16px]" /> Searching clients…
+                        </div>
+                      ) : filteredClients.length === 0 ? (
+                        <div className="p-3 text-center">
+                          <p className="text-sm text-on-surface-variant">
+                            {clientSearch.trim() ? `No client matches "${clientSearch.trim()}"` : "No clients found"}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowClientDropdown(false);
+                              setClientEditor({ client: clientSearch.trim() ? { name: clientSearch.trim() } : null });
+                            }}
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary transition-colors hover:bg-primary-container"
+                          >
+                            <Icon name="person_add" className="text-[15px]" />
+                            {clientSearch.trim() ? `Add "${clientSearch.trim()}"` : "Add a new client"}
+                          </button>
                         </div>
                       ) : (
                         filteredClients.map(c => (
                           <div 
                             key={c.id} 
                             onClick={() => handleSelectClient(c)}
-                            className="cursor-pointer border-b border-outline-variant p-3 hover:bg-surface-low last:border-0"
+                            className="group flex cursor-pointer items-center justify-between gap-2 border-b border-outline-variant p-3 hover:bg-surface-low last:border-0"
                           >
-                            <div className="text-sm font-bold text-on-surface">{c.name}</div>
-                            {c.phone && <div className="text-xs text-on-surface-variant">{c.phone}</div>}
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-bold text-on-surface">{c.name}</div>
+                              {c.phone && <div className="text-xs text-on-surface-variant">{c.phone}</div>}
+                            </div>
+                            <button
+                              type="button"
+                              title="Edit client details"
+                              aria-label={`Edit details for ${c.name}`}
+                              onClick={(e) => { e.stopPropagation(); void openClientEditor(c); }}
+                              className="shrink-0 rounded-lg border border-outline-variant p-1.5 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                            >
+                              <Icon name={loadingClientId === c.id ? "sync" : "edit"} className={`text-[15px] ${loadingClientId === c.id ? "animate-spin" : ""}`} />
+                            </button>
                           </div>
                         ))
                       )}
                     </div>
                   )}
                 </div>
+
+                {clientEditor && (
+                  <InlineClientEditor
+                    key={clientEditor.client?.id ?? "new"}
+                    client={clientEditor.client}
+                    onCancel={() => setClientEditor(null)}
+                    onSaved={handleClientSaved}
+                  />
+                )}
 
                 {selectedClients.length > 0 && (
                   <div className="mt-4 rounded-lg border border-outline-variant bg-surface-low p-4">
@@ -1255,6 +1383,134 @@ function AccountFormModal({ account, accounts, clients, clientsLoading, sellers,
 }
 
 
+
+/**
+ * Compact client form rendered inside the account modal. Creating a client here
+ * also links it to the account, so there is no need to close the modal, go back
+ * and use the separate "Add Client" flow.
+ *
+ * It deliberately is NOT a <form>: it lives inside #account-form and nested
+ * forms are invalid HTML.
+ */
+function InlineClientEditor({ client, onCancel, onSaved }: { client: any | null, onCancel: () => void, onSaved: (saved: any) => void }) {
+  const isEdit = Boolean(client?.id);
+  const [form, setForm] = useState({
+    name: client?.name || "",
+    phone: client?.phone || "",
+    whatsapp: client?.whatsapp || "",
+    email: client?.email || "",
+    company: client?.company || "",
+    notes: client?.notes || "",
+    marketing_opt_in: Boolean(client?.marketing_opt_in),
+    marketing_opt_in_source: client?.marketing_opt_in_source || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const field = "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
+  const label = "mb-1 block text-[11px] font-bold text-on-surface-variant";
+
+  const submit = async () => {
+    if (!form.name.trim()) { setError("Client name is required."); return; }
+    if (form.marketing_opt_in && !form.marketing_opt_in_source.trim()) {
+      setError("Record how the client agreed to WhatsApp renewal offers.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const payload = { ...form, name: form.name.trim() };
+    const res = isEdit ? await updateClient(client.id, payload) : await addClient(payload);
+    setSaving(false);
+    if (!res.success) { setError(res.error || "Could not save this client."); return; }
+    onSaved(res.client ?? payload);
+  };
+
+  return (
+    <div
+      className="mt-3 rounded-xl border border-primary/25 bg-surface-low p-3 sm:p-4"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement)) {
+          e.preventDefault();
+          e.stopPropagation();
+          void submit();
+        }
+      }}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-xs font-bold text-on-surface">
+          <Icon name={isEdit ? "edit" : "person_add"} className="text-[16px] text-primary" />
+          {isEdit ? "Edit client details" : "New client"}
+        </h3>
+        <button type="button" onClick={onCancel} className="rounded p-1 text-on-surface-variant transition-colors hover:text-error" aria-label="Close client form">
+          <Icon name="close" className="text-[16px]" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className={label}>Client Name *</label>
+          <input autoFocus type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={field} placeholder="Full name" />
+        </div>
+        <div>
+          <label className={label}>Phone</label>
+          <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={field} placeholder="03001234567" />
+        </div>
+        <div>
+          <label className={label}>WhatsApp</label>
+          <input type="text" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })} className={field} placeholder="03001234567" />
+        </div>
+        <div>
+          <label className={label}>Email</label>
+          <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={field} placeholder="client@example.com" />
+        </div>
+        <div>
+          <label className={label}>Company / Tag</label>
+          <input type="text" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} className={field} placeholder="Agency / client tag" />
+        </div>
+        <div>
+          <label className={label}>Notes</label>
+          <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className={field} placeholder="Optional notes" />
+        </div>
+      </div>
+
+      <label className="mt-3 flex items-start gap-2 text-[11px] text-on-surface-variant">
+        <input type="checkbox" checked={form.marketing_opt_in} onChange={e => setForm({ ...form, marketing_opt_in: e.target.checked })} className="mt-0.5" />
+        Client agreed to receive renewal offers on WhatsApp.
+      </label>
+      {form.marketing_opt_in && (
+        <input
+          type="text"
+          value={form.marketing_opt_in_source}
+          onChange={e => setForm({ ...form, marketing_opt_in_source: e.target.value })}
+          className={`${field} mt-2`}
+          placeholder="Consent source, e.g. signup form or WhatsApp chat"
+        />
+      )}
+
+      {error && (
+        <p role="alert" className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error">{error}</p>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
+        >
+          <Icon name={saving ? "sync" : isEdit ? "save" : "person_add"} className={`text-[16px] ${saving ? "animate-spin" : ""}`} />
+          {saving ? "Saving..." : isEdit ? "Update client" : "Save & link client"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-outline-variant bg-surface-lowest px-4 py-2 text-xs font-bold text-on-surface-variant transition-colors hover:bg-surface-container"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function BankAccountsModal({ banks, reload, onClose }: { banks: any[], reload: () => void, onClose: () => void }) {
   const [form, setForm] = useState({ bank_name: "", account_number: "", account_title: "", details: "" });

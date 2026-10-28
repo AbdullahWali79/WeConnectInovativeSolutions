@@ -10,6 +10,25 @@ import { requireAdminOnly } from "@/lib/admin-access";
 // demand through getClientById when a client is edited.
 const CLIENT_LIST_COLUMNS = "id, name, phone, whatsapp, marketing_opt_in";
 
+// PostgREST caps every response at the project's `db-max-rows` setting (1,000 on
+// Supabase) and truncates silently. `am_clients` holds ~3.5k rows, so an
+// unpaginated select only ever returned the first thousand names — which is why
+// freshly added clients never showed up in the account picker.
+const PAGE_SIZE = 1000;
+
+async function selectAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+): Promise<{ rows: T[]; error: any }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) return { rows, error };
+    const batch = data || [];
+    rows.push(...batch);
+    if (batch.length < PAGE_SIZE) return { rows, error: null };
+  }
+}
+
 /**
  * Workspace data only (no clients). This is what the accounts list renders, so it
  * can be refreshed on its own after account/seller/bank changes without pulling
@@ -60,14 +79,44 @@ export async function fetchAccountsWorkspace() {
   };
 }
 
-/** Slim client list for the assignment picker and renewal lookups. */
+/** Full client list (paginated) for the renewal workspace. */
 export async function fetchClients() {
   await requireAdminOnly();
   const supabase = createSupabaseServiceClient();
-  const { data, error } = await supabase
-    .from("am_clients" as any)
-    .select(CLIENT_LIST_COLUMNS)
-    .order("name");
+  const { rows, error } = await selectAllPages<any>((from, to) =>
+    supabase
+      .from("am_clients" as any)
+      .select(CLIENT_LIST_COLUMNS)
+      // A stable secondary sort keeps range pagination from skipping/repeating rows.
+      .order("name")
+      .order("id")
+      .range(from, to)
+  );
+  if (error) return { success: false, error: error.message };
+  return { success: true, clients: rows };
+}
+
+/**
+ * Server-side client lookup for the "Link Clients" picker. Searching on the
+ * server means the picker can find any of the ~3.5k clients immediately without
+ * shipping the whole book to the browser first.
+ */
+export async function searchClients(term: string, limit = 25) {
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
+  // Commas and parentheses are structural in PostgREST `or=` filters.
+  const safe = String(term || "").replace(/[%,()*]/g, " ").trim();
+  let query = supabase.from("am_clients" as any).select(CLIENT_LIST_COLUMNS);
+  if (safe) {
+    const pattern = `*${safe}*`;
+    query = query.or(
+      `name.ilike.${pattern},phone.ilike.${pattern},whatsapp.ilike.${pattern},email.ilike.${pattern}`
+    );
+  }
+  const { data, error } = await query
+    .order("name")
+    .order("id")
+    .limit(Math.min(Math.max(limit, 1), 50));
   if (error) return { success: false, error: error.message };
   return { success: true, clients: data || [] };
 }
@@ -196,11 +245,16 @@ export async function deleteBankAccount(id: string) {
 export async function importClients(clients: any[]) {
   await requireAdminOnly();
   const supabase = createSupabaseServiceClient();
-  const { data: existing } = await supabase.from("am_clients" as any).select("name, phone");
-  
+  // Paginated, otherwise the dedupe check only sees the first 1,000 names and
+  // the import happily re-inserts everyone beyond that.
+  const { rows: existing, error: readError } = await selectAllPages<any>((from, to) =>
+    supabase.from("am_clients" as any).select("name, phone").order("id").range(from, to)
+  );
+  if (readError) return { success: false, error: readError.message };
+
   const newClients = clients.filter(c => {
     if (!c.name) return false;
-    const isDup = existing?.some((e: any) => e.name === c.name || (e.phone && c.phone && e.phone === c.phone));
+    const isDup = existing.some((e: any) => e.name === c.name || (e.phone && c.phone && e.phone === c.phone));
     return !isDup;
   });
 
