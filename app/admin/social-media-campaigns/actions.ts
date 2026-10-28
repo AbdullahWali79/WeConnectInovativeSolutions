@@ -45,7 +45,22 @@ function cleanDate(value: any) {
 
 function revalidateCampaign(campaignId?: string) {
   revalidatePath("/admin/social-media-campaigns");
-  if (campaignId) revalidatePath(`/admin/social-media-campaigns/${campaignId}`);
+  revalidatePath("/student/campaigns");
+  if (campaignId) {
+    revalidatePath(`/admin/social-media-campaigns/${campaignId}`);
+    revalidatePath(`/student/campaigns/${campaignId}`);
+  }
+}
+
+const CAMPAIGN_MENU_KEYS = ["plan", "submit", "history"] as const;
+
+/** Keeps the jsonb payload to known keys so a bad client cannot inject junk. */
+function normalizeMenus(raw: any) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  return CAMPAIGN_MENU_KEYS.reduce<Record<string, boolean>>((acc, key) => {
+    acc[key] = Boolean(source[key]);
+    return acc;
+  }, {});
 }
 
 const DAY_CONTENT_FIELDS = [
@@ -175,34 +190,55 @@ export async function fetchCampaignDetail(campaignId: string) {
     await assertCampaignAccess(campaignId, profile);
     const supabase = createSupabaseServiceClient();
 
-    const [{ data: campaign, error: campaignError }, { data: days, error: dayError }, { data: members, error: memberError }] =
-      await Promise.all([
-        supabase
-          .from("sm_campaigns" as any)
-          .select("*, teacher:profiles!teacher_id ( id, full_name, email, phone )")
-          .eq("id", campaignId)
-          .maybeSingle(),
-        supabase
-          .from("sm_campaign_days" as any)
-          .select("*")
-          .eq("campaign_id", campaignId)
-          .order("day_number"),
-        supabase
-          .from("sm_campaign_members" as any)
-          .select("*, student:profiles!student_id ( id, full_name, email, phone )")
-          .eq("campaign_id", campaignId)
-          .order("created_at"),
-      ]);
+    const [
+      { data: campaign, error: campaignError },
+      { data: days, error: dayError },
+      { data: members, error: memberError },
+      { data: submissions, error: submissionError },
+    ] = await Promise.all([
+      supabase
+        .from("sm_campaigns" as any)
+        .select("*, teacher:profiles!teacher_id ( id, full_name, email, phone )")
+        .eq("id", campaignId)
+        .maybeSingle(),
+      supabase
+        .from("sm_campaign_days" as any)
+        .select("*")
+        .eq("campaign_id", campaignId)
+        .order("day_number"),
+      supabase
+        .from("sm_campaign_members" as any)
+        .select("*, student:profiles!student_id ( id, full_name, email, phone )")
+        .eq("campaign_id", campaignId)
+        .order("created_at"),
+      supabase
+        .from("sm_day_submissions" as any)
+        .select("*, student:profiles!student_id ( id, full_name )")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false }),
+    ]);
 
     const error = campaignError || dayError || memberError;
     if (error) return { success: false as const, error: error.message };
     if (!campaign) return { success: false as const, error: "This campaign no longer exists." };
+
+    // The student-portal migration adds the submissions table and the
+    // registration columns. Until it is applied the board must still open, just
+    // without the student half — so flag it instead of failing the whole page.
+    const setupMissing = Boolean(
+      submissionError &&
+        (submissionError.code === "PGRST205" ||
+          submissionError.code === "42P01" ||
+          submissionError.message?.includes("sm_day_submissions")),
+    );
 
     return {
       success: true as const,
       campaign,
       days: days ?? [],
       members: members ?? [],
+      submissions: setupMissing ? [] : submissions ?? [],
+      setupMissing,
       role: profile.role as string,
       canEdit: true,
     };
@@ -545,6 +581,19 @@ export async function updateCampaignMember(memberId: string, input: any) {
     const patch: any = {};
     if ("drive_url" in input) patch.drive_url = cleanText(input.drive_url);
     if ("status" in input && ["active", "paused", "removed"].includes(input.status)) patch.status = input.status;
+    if ("registration_status" in input && ["pending", "registered", "approved", "rejected"].includes(input.registration_status)) {
+      patch.registration_status = input.registration_status;
+      if (input.registration_status === "approved") {
+        patch.approved_at = new Date().toISOString();
+        patch.approved_by = profile.id;
+      }
+    }
+    if ("menu_permissions" in input && input.menu_permissions && typeof input.menu_permissions === "object") {
+      patch.menu_permissions = normalizeMenus(input.menu_permissions);
+    }
+    if ("social_handles" in input && input.social_handles && typeof input.social_handles === "object") {
+      patch.social_handles = input.social_handles;
+    }
     if (Object.keys(patch).length === 0) return { success: true as const };
 
     const { error } = await supabase.from("sm_campaign_members" as any).update(patch).eq("id", memberId);
@@ -578,5 +627,410 @@ export async function removeCampaignMember(memberId: string) {
     return { success: true as const };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not remove this student." };
+  }
+}
+
+// ---------------------------------------------------------
+// Student registration & per-student menus
+// ---------------------------------------------------------
+
+/**
+ * Students must clear this gate before the plan or the submit form opens for
+ * them. `registered` means they filled in their details; only `approved` opens
+ * access.
+ */
+export async function setMemberRegistration(memberId: string, status: "pending" | "registered" | "approved" | "rejected") {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    if (!["pending", "registered", "approved", "rejected"].includes(status)) {
+      return { success: false as const, error: "Unknown registration state." };
+    }
+    const supabase = createSupabaseServiceClient();
+
+    const { data: member, error: readError } = await supabase
+      .from("sm_campaign_members" as any)
+      .select("id, campaign_id")
+      .eq("id", memberId)
+      .maybeSingle();
+    if (readError) return { success: false as const, error: readError.message };
+    if (!member) return { success: false as const, error: "This assignment no longer exists." };
+    await assertCampaignAccess((member as any).campaign_id, profile);
+
+    const patch: any = { registration_status: status };
+    if (status === "approved") {
+      patch.approved_at = new Date().toISOString();
+      patch.approved_by = profile.id;
+    } else {
+      patch.approved_at = null;
+      patch.approved_by = null;
+    }
+
+    const { error } = await supabase.from("sm_campaign_members" as any).update(patch).eq("id", memberId);
+    if (error) return { success: false as const, error: error.message };
+
+    revalidateCampaign((member as any).campaign_id);
+    return { success: true as const, registration_status: status };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not update the registration." };
+  }
+}
+
+/** Which campaign sections this individual student is allowed to open. */
+export async function setMemberMenus(memberId: string, menus: Record<string, boolean>) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    const supabase = createSupabaseServiceClient();
+
+    const { data: member, error: readError } = await supabase
+      .from("sm_campaign_members" as any)
+      .select("id, campaign_id")
+      .eq("id", memberId)
+      .maybeSingle();
+    if (readError) return { success: false as const, error: readError.message };
+    if (!member) return { success: false as const, error: "This assignment no longer exists." };
+    await assertCampaignAccess((member as any).campaign_id, profile);
+
+    const normalized = normalizeMenus(menus);
+    const { error } = await supabase
+      .from("sm_campaign_members" as any)
+      .update({ menu_permissions: normalized })
+      .eq("id", memberId);
+    if (error) return { success: false as const, error: error.message };
+
+    revalidateCampaign((member as any).campaign_id);
+    return { success: true as const, menu_permissions: normalized };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not update this student's menus." };
+  }
+}
+
+// ---------------------------------------------------------
+// Day visibility — the teacher writes first, publishes after
+// ---------------------------------------------------------
+
+export async function setDayVisibility(dayId: string, visible: boolean) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    const supabase = createSupabaseServiceClient();
+
+    const { data: day, error: readError } = await supabase
+      .from("sm_campaign_days" as any)
+      .select("id, campaign_id")
+      .eq("id", dayId)
+      .maybeSingle();
+    if (readError) return { success: false as const, error: readError.message };
+    if (!day) return { success: false as const, error: "This day no longer exists." };
+    await assertCampaignAccess((day as any).campaign_id, profile);
+
+    const { error } = await supabase
+      .from("sm_campaign_days" as any)
+      .update({
+        visible_to_students: visible,
+        published_to_students_at: visible ? new Date().toISOString() : null,
+        published_to_students_by: visible ? profile.id : null,
+      })
+      .eq("id", dayId);
+    if (error) return { success: false as const, error: error.message };
+
+    revalidateCampaign((day as any).campaign_id);
+    return { success: true as const, visible_to_students: visible };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not change who can see this day." };
+  }
+}
+
+/**
+ * Publishes the next `count` unpublished days (by day number). This is the
+ * "show the student the next N days" control — the plan stays private until the
+ * teacher is happy with it.
+ */
+export async function publishUpcomingDays(campaignId: string, count: number) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    await assertCampaignAccess(campaignId, profile);
+    const supabase = createSupabaseServiceClient();
+
+    const limit = Math.min(Math.max(Math.trunc(Number(count) || 0), 1), 60);
+    const { data: hidden, error: readError } = await supabase
+      .from("sm_campaign_days" as any)
+      .select("id, day_number")
+      .eq("campaign_id", campaignId)
+      .eq("visible_to_students", false)
+      .order("day_number")
+      .limit(limit);
+    if (readError) return { success: false as const, error: readError.message };
+
+    const ids = ((hidden ?? []) as any[]).map((row) => row.id);
+    if (ids.length === 0) {
+      return { success: true as const, published: 0, message: "Every planned day is already visible to students." };
+    }
+
+    const { error } = await supabase
+      .from("sm_campaign_days" as any)
+      .update({
+        visible_to_students: true,
+        published_to_students_at: new Date().toISOString(),
+        published_to_students_by: profile.id,
+      })
+      .in("id", ids);
+    if (error) return { success: false as const, error: error.message };
+
+    revalidateCampaign(campaignId);
+    return { success: true as const, published: ids.length, dayIds: ids };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not publish these days." };
+  }
+}
+
+// ---------------------------------------------------------
+// Submission review — the teacher's pick
+// ---------------------------------------------------------
+
+export async function reviewSubmission(
+  submissionId: string,
+  input: { status: "approved" | "rejected" | "revision" | "selected"; feedback?: string; score?: number | null },
+) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.approve");
+    const supabase = createSupabaseServiceClient();
+
+    const { data: submission, error: readError } = await supabase
+      .from("sm_day_submissions" as any)
+      .select("id, campaign_id, day_id, member_id, post_url, video_url")
+      .eq("id", submissionId)
+      .maybeSingle();
+    if (readError) return { success: false as const, error: readError.message };
+    if (!submission) return { success: false as const, error: "This submission no longer exists." };
+    await assertCampaignAccess((submission as any).campaign_id, profile);
+
+    const status = ["approved", "rejected", "revision", "selected"].includes(input?.status) ? input.status : "approved";
+    const selected = status === "selected";
+
+    if (selected) {
+      // Only one winner per day.
+      const { error: clearError } = await supabase
+        .from("sm_day_submissions" as any)
+        .update({ is_selected: false })
+        .eq("day_id", (submission as any).day_id)
+        .eq("is_selected", true);
+      if (clearError) return { success: false as const, error: clearError.message };
+    }
+
+    const patch: any = {
+      status,
+      is_selected: selected,
+      feedback: cleanText(input?.feedback),
+      score: Number.isFinite(Number(input?.score)) && input?.score !== null ? Math.trunc(Number(input.score)) : null,
+      reviewed_by: profile.id,
+      reviewed_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from("sm_day_submissions" as any).update(patch).eq("id", submissionId);
+    if (error) return { success: false as const, error: error.message };
+
+    // Picking the winner promotes their post link onto the day itself, so the
+    // admin dashboard's "published" state and the plan stay in sync.
+    if (selected) {
+      const url = cleanText((submission as any).post_url) || cleanText((submission as any).video_url);
+      const { error: dayError } = await supabase
+        .from("sm_campaign_days" as any)
+        .update({
+          published_url: url,
+          status: url ? "published" : "approved",
+          teacher_status: "done",
+          teacher_action_by: profile.id,
+          teacher_action_at: new Date().toISOString(),
+        })
+        .eq("id", (submission as any).day_id);
+      if (dayError) return { success: false as const, error: dayError.message };
+    }
+
+    revalidateCampaign((submission as any).campaign_id);
+    return { success: true as const, status, is_selected: selected };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not review this submission." };
+  }
+}
+
+// ---------------------------------------------------------
+// Creating students directly from a campaign
+// ---------------------------------------------------------
+
+function normalizeEmail(value: any) {
+  const email = String(value ?? "").trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
+
+function normalizePhone(value: any) {
+  const digits = String(value ?? "").replace(/[^\d]/g, "");
+  return digits.length >= 7 ? digits : null;
+}
+
+/**
+ * Looks for an existing account before we create a new one. A match here means
+ * "assign the account they already have" — never silently create a second
+ * profile for the same person.
+ */
+export async function findStudentDuplicates(input: { email?: string; phone?: string }) {
+  try {
+    await requireCampaignAccess("social_campaigns.view");
+    const supabase = createSupabaseServiceClient();
+    const email = normalizeEmail(input?.email);
+    const phone = normalizePhone(input?.phone);
+    if (!email && !phone) return { success: true as const, matches: [] };
+
+    const filters: string[] = [];
+    if (email) filters.push(`email.ilike.${email}`);
+    if (phone) filters.push(`phone.ilike.*${phone}*`);
+
+    const { data, error } = await supabase
+      .from("profiles" as any)
+      .select("id, full_name, email, phone, role, status")
+      .or(filters.join(","))
+      .limit(10);
+    if (error) return { success: false as const, error: error.message };
+    return { success: true as const, matches: data ?? [] };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not check for duplicates." };
+  }
+}
+
+/**
+ * Creates a student account (login + password) and drops them straight into the
+ * campaign as an approved member — no separate registration step for them.
+ * Pass `use_existing_id` to attach an account that already exists instead.
+ */
+export async function createCampaignStudent(input: {
+  campaign_id: string;
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  drive_url?: string;
+  use_existing_id?: string;
+}) {
+  let createdAuthUserId: string | null = null;
+
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    if (profile.role !== "admin") {
+      return { success: false as const, error: "Only an admin can create student accounts." };
+    }
+
+    const campaignId = cleanText(input?.campaign_id);
+    if (!campaignId) return { success: false as const, error: "Pick a campaign first." };
+    await assertCampaignAccess(campaignId, profile);
+
+    const supabase = createSupabaseServiceClient();
+
+    // Path 1 — reuse an account that already exists.
+    if (input?.use_existing_id) {
+      const { data: existing, error: existingError } = await supabase
+        .from("profiles" as any)
+        .select("id, role, full_name")
+        .eq("id", input.use_existing_id)
+        .maybeSingle();
+      if (existingError) return { success: false as const, error: existingError.message };
+      if (!existing) return { success: false as const, error: "That account no longer exists." };
+      if ((existing as any).role !== "student") {
+        return { success: false as const, error: "That account is not a student account." };
+      }
+
+      const { data: member, error: memberError } = await supabase
+        .from("sm_campaign_members" as any)
+        .upsert(
+          {
+            campaign_id: campaignId,
+            student_id: (existing as any).id,
+            drive_url: cleanText(input.drive_url),
+            status: "active",
+            registration_status: "approved",
+            approved_at: new Date().toISOString(),
+            approved_by: profile.id,
+            assigned_by: profile.id,
+          },
+          { onConflict: "campaign_id,student_id" },
+        )
+        .select("*, student:profiles!student_id ( id, full_name, email, phone )")
+        .single();
+      if (memberError) return { success: false as const, error: memberError.message };
+
+      revalidateCampaign(campaignId);
+      return { success: true as const, reused: true, member };
+    }
+
+    // Path 2 — brand new account.
+    const fullName = cleanText(input?.full_name);
+    const email = normalizeEmail(input?.email);
+    const phone = normalizePhone(input?.phone);
+    const password = String(input?.password ?? "");
+
+    if (!fullName) return { success: false as const, error: "Student name is required." };
+    if (!email) return { success: false as const, error: "A valid email address is required — the student logs in with it." };
+    if (password.length < 8) return { success: false as const, error: "Password must be at least 8 characters." };
+
+    const { data: duplicates, error: duplicateError } = await supabase
+      .from("profiles" as any)
+      .select("id, full_name, email, phone, role, status")
+      .or(`email.ilike.${email}${phone ? `,phone.ilike.*${phone}*` : ""}`)
+      .limit(5);
+    if (duplicateError) return { success: false as const, error: duplicateError.message };
+
+    if ((duplicates ?? []).length > 0) {
+      return {
+        success: false as const,
+        duplicate: true,
+        error: "An account already exists with this email or phone. Assign the existing one instead of creating a duplicate.",
+        matches: duplicates,
+      };
+    }
+
+    const { data: createdAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName, phone, role: "student" },
+    });
+
+    const authUser = createdAuthUser?.user;
+    if (createAuthError || !authUser) {
+      return { success: false as const, error: createAuthError?.message || "Could not create the login for this student." };
+    }
+    createdAuthUserId = authUser.id;
+
+    const { error: profileError } = await supabase
+      .from("profiles" as any)
+      .upsert(
+        { id: authUser.id, email, full_name: fullName, phone, role: "student", status: "approved" },
+        { onConflict: "id" },
+      );
+    if (profileError) throw new Error(profileError.message);
+
+    const { data: member, error: memberError } = await supabase
+      .from("sm_campaign_members" as any)
+      .upsert(
+        {
+          campaign_id: campaignId,
+          student_id: authUser.id,
+          drive_url: cleanText(input.drive_url),
+          status: "active",
+          registration_status: "approved",
+          approved_at: new Date().toISOString(),
+          approved_by: profile.id,
+          assigned_by: profile.id,
+        },
+        { onConflict: "campaign_id,student_id" },
+      )
+      .select("*, student:profiles!student_id ( id, full_name, email, phone )")
+      .single();
+    if (memberError) throw new Error(memberError.message);
+
+    revalidateCampaign(campaignId);
+    return { success: true as const, reused: false, member, login_email: email };
+  } catch (error: any) {
+    if (createdAuthUserId) {
+      await createSupabaseServiceClient().auth.admin.deleteUser(createdAuthUserId).catch(() => null);
+    }
+    return { success: false as const, error: error?.message ?? "Could not create this student." };
   }
 }

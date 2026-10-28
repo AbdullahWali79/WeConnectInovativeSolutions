@@ -47,5 +47,15 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const { data: enrollment } = await supabase.from("enrollments").select("course_id").eq("student_id", user.id).eq("course_id", "501c4f6d-c3db-4ca4-985e-518d5fb6ff29").maybeSingle();
   const isFreelancer = !!enrollment;
 
-  return <StudentShell profile={profile} branding={branding.student} isFreelancer={isFreelancer}>{children}</StudentShell>;
+  // Campaign work gets its own sidebar entry, but only for students who are
+  // actually assigned to a client campaign.
+  const { data: campaignMemberships } = await supabase
+    .from("sm_campaign_members")
+    .select("id")
+    .eq("student_id", user.id)
+    .eq("status", "active")
+    .limit(1);
+  const hasCampaigns = (campaignMemberships ?? []).length > 0;
+
+  return <StudentShell profile={profile} branding={branding.student} isFreelancer={isFreelancer} hasCampaigns={hasCampaigns}>{children}</StudentShell>;
 }

@@ -6,13 +6,20 @@ import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import {
   addCampaignMember,
+  createCampaignStudent,
   deleteCampaign,
   fetchCampaignDetail,
+  findStudentDuplicates,
+  publishUpcomingDays,
   removeCampaignMember,
   replaceCampaignDays,
+  reviewSubmission,
   searchCampaignStudents,
   setDayApproval,
   setDayPublished,
+  setDayVisibility,
+  setMemberMenus,
+  setMemberRegistration,
   updateCampaign,
   updateCampaignDay,
   updateCampaignMember,
@@ -48,16 +55,30 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
-export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string; onBack: () => void; role: string }) {
+export function CampaignBoard({
+  campaignId,
+  onBack,
+  role,
+  teachers = [],
+}: {
+  campaignId: string;
+  onBack: () => void;
+  role: string;
+  teachers?: Row[];
+}) {
   const [toast, setToast] = useState<ToastState>(null);
   const [loading, setLoading] = useState(true);
   const [campaign, setCampaign] = useState<Row | null>(null);
   const [days, setDays] = useState<Row[]>([]);
   const [members, setMembers] = useState<Row[]>([]);
+  const [submissions, setSubmissions] = useState<Row[]>([]);
   const [tab, setTab] = useState<"plan" | "team">("plan");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editingDay, setEditingDay] = useState<Row | null>(null);
   const [busyDayId, setBusyDayId] = useState<string | null>(null);
+  const [publishCount, setPublishCount] = useState("7");
+  const [publishing, setPublishing] = useState(false);
+  const [setupMissing, setSetupMissing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +87,8 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
       setCampaign(res.campaign as Row);
       setDays(res.days as Row[]);
       setMembers(res.members as Row[]);
+      setSubmissions((res as any).submissions ?? []);
+      setSetupMissing(Boolean((res as any).setupMissing));
     } else {
       setToast({ type: "error", message: res.error || "Could not load this campaign." });
     }
@@ -79,8 +102,79 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
   const stats = useMemo(() => {
     const done = days.filter((day) => ["done", "published"].includes(dayState(day).key)).length;
     const missed = days.filter((day) => dayState(day).key === "missed").length;
-    return { total: days.length, done, missed, percent: days.length ? Math.round((done / days.length) * 100) : 0 };
+    const shared = days.filter((day) => day.visible_to_students).length;
+    return { total: days.length, done, missed, shared, percent: days.length ? Math.round((done / days.length) * 100) : 0 };
   }, [days]);
+
+  const submissionsByDay = useMemo(() => {
+    const map: Record<string, Row[]> = {};
+    for (const submission of submissions) {
+      map[submission.day_id] = map[submission.day_id] ?? [];
+      map[submission.day_id].push(submission);
+    }
+    return map;
+  }, [submissions]);
+
+  async function toggleVisibility(day: Row) {
+    setBusyDayId(day.id);
+    const res = await setDayVisibility(day.id, !day.visible_to_students);
+    setBusyDayId(null);
+    if (!res.success) {
+      setToast({ type: "error", message: res.error || "Could not change visibility." });
+      return;
+    }
+    setDays((current) =>
+      current.map((row) => (row.id === day.id ? { ...row, visible_to_students: res.visible_to_students } : row)),
+    );
+    setToast({
+      type: "success",
+      message: res.visible_to_students ? "Day shared with students" : "Day hidden from students",
+    });
+  }
+
+  async function publishDays() {
+    setPublishing(true);
+    const res = await publishUpcomingDays(campaignId, Number(publishCount));
+    setPublishing(false);
+    if (!res.success) {
+      setToast({ type: "error", message: res.error || "Could not publish days." });
+      return;
+    }
+    if (res.published === 0) {
+      setToast({ type: "info", message: res.message || "Nothing left to publish." });
+      return;
+    }
+    const ids = new Set(res.dayIds ?? []);
+    setDays((current) => current.map((row) => (ids.has(row.id) ? { ...row, visible_to_students: true } : row)));
+    setToast({ type: "success", message: `Shared ${res.published} day${res.published === 1 ? "" : "s"} with students` });
+  }
+
+  async function review(day: Row, submission: Row, status: "approved" | "rejected" | "revision" | "selected") {
+    const res = await reviewSubmission(submission.id, { status, feedback: submission.feedback ?? "" });
+    if (!res.success) {
+      setToast({ type: "error", message: res.error || "Could not review this submission." });
+      return;
+    }
+    setSubmissions((current) =>
+      current.map((row) =>
+        row.id === submission.id
+          ? { ...row, status: res.status, is_selected: res.is_selected }
+          : row.day_id === day.id && res.is_selected
+            ? { ...row, is_selected: false }
+            : row,
+      ),
+    );
+    if (res.is_selected) {
+      setDays((current) =>
+        current.map((row) =>
+          row.id === day.id
+            ? { ...row, teacher_status: "done", status: "published", published_url: submission.post_url || submission.video_url || row.published_url }
+            : row,
+        ),
+      );
+    }
+    setToast({ type: "success", message: res.is_selected ? "Picked as the final post for this day" : `Marked as ${res.status}` });
+  }
 
   async function toggleApproval(day: Row, actor: "teacher" | "admin", done: boolean) {
     setBusyDayId(day.id);
@@ -122,6 +216,25 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
     setToast({ type: "success", message: res.published_url ? "Marked as published" : "Published link cleared" });
   }
 
+  async function saveTeacher(teacherId: string) {
+    const res = await updateCampaign(campaignId, { teacher_id: teacherId });
+    if (!res.success) {
+      setToast({ type: "error", message: res.error || "Could not assign the teacher." });
+      return;
+    }
+    const teacher = teachers.find((row) => row.id === teacherId);
+    setCampaign((current) =>
+      current
+        ? {
+            ...current,
+            teacher_id: teacherId || null,
+            teacher: teacher ? { full_name: teacher.full_name, email: teacher.email } : null,
+          }
+        : current,
+    );
+    setToast({ type: "success", message: teacherId ? `${teacher?.full_name || "Teacher"} assigned` : "Teacher removed" });
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-16 text-on-surface-variant">
@@ -145,6 +258,17 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
     <div className="space-y-4">
       <Toast toast={toast} onClear={() => setToast(null)} />
 
+      {setupMissing && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+          <p className="font-black">Student portal is not set up yet</p>
+          <p className="mt-1">
+            Run <span className="font-mono font-bold">supabase/migrations/20261028000001_social_campaign_student_portal.sql</span> in
+            the Supabase SQL Editor. Until then, day sharing, student registration and submissions stay switched off — the plan and
+            approvals keep working.
+          </p>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-6">
         <button onClick={onBack} className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary">
           <Icon name="arrow_back" className="text-[16px]" /> All campaigns
@@ -156,8 +280,24 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
             <p className="mt-1 text-sm text-on-surface-variant">
               {campaign.campaign_name || "Social media campaign"} · {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
             </p>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              Teacher: <span className="font-bold text-on-surface">{campaign.teacher?.full_name || "Not assigned"}</span>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
+              <span>
+                Teacher: <span className="font-bold text-on-surface">{campaign.teacher?.full_name || "Not assigned"}</span>
+              </span>
+              {role === "admin" && (
+                <select
+                  value={campaign.teacher_id || ""}
+                  onChange={(event) => void saveTeacher(event.target.value)}
+                  className="rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                >
+                  <option value="">— assign teacher —</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.full_name || teacher.email}
+                    </option>
+                  ))}
+                </select>
+              )}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -193,8 +333,9 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Metric label="Days planned" value={String(stats.total)} />
+          <Metric label="Shared" value={String(stats.shared)} tone="text-primary" />
           <Metric label="Done" value={String(stats.done)} tone="text-emerald-700" />
           <Metric label="Missed" value={String(stats.missed)} tone="text-red-600" />
           <Metric label="Completion" value={`${stats.percent}%`} />
@@ -202,6 +343,33 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
 
         <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-surface-container">
           <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${stats.percent}%` }} />
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant bg-surface-low p-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-on-surface">Share the plan with students</p>
+            <p className="text-[11px] text-on-surface-variant">
+              Students only see the days you publish. Write and review first, share when ready.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={60}
+              value={publishCount}
+              onChange={(event) => setPublishCount(event.target.value)}
+              className="w-16 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1.5 text-sm text-on-surface outline-none focus:border-primary"
+            />
+            <button
+              onClick={() => void publishDays()}
+              disabled={publishing}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
+            >
+              <Icon name={publishing ? "sync" : "visibility"} className={`text-[16px] ${publishing ? "animate-spin" : ""}`} />
+              {publishing ? "Sharing…" : "Share next days"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -237,6 +405,7 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Date</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Theme</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Status</th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Students</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Teacher</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Admin</th>
                     <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide">Actions</th>
@@ -262,6 +431,28 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold ${state.tone}`}>{state.label}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              role="switch"
+                              aria-checked={Boolean(day.visible_to_students)}
+                              aria-label="Share this day with students"
+                              disabled={busyDayId === day.id}
+                              onClick={() => void toggleVisibility(day)}
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold transition-colors ${
+                                day.visible_to_students
+                                  ? "border-primary/30 bg-primary/10 text-primary"
+                                  : "border-outline-variant bg-surface-lowest text-on-surface-variant hover:border-primary/40"
+                              } ${busyDayId === day.id ? "opacity-50" : ""}`}
+                            >
+                              <Icon name={day.visible_to_students ? "visibility" : "visibility_off"} className="text-[14px]" />
+                              {day.visible_to_students ? "Shared" : "Hidden"}
+                              {(submissionsByDay[day.id]?.length ?? 0) > 0 && (
+                                <span className="rounded-full bg-surface-container px-1.5 text-[10px] font-black text-on-surface">
+                                  {submissionsByDay[day.id].length}
+                                </span>
+                              )}
+                            </button>
                           </td>
                           <td className="px-4 py-3">
                             <ApprovalToggle
@@ -303,8 +494,12 @@ export function CampaignBoard({ campaignId, onBack, role }: { campaignId: string
                         </tr>
                         {isOpen && (
                           <tr className="bg-surface-low/40">
-                            <td colSpan={7} className="px-4 py-4">
-                              <DayDetail day={day} />
+                            <td colSpan={8} className="px-4 py-4">
+                              <DayDetail
+                                day={day}
+                                submissions={submissionsByDay[day.id] ?? []}
+                                onReview={(submission, status) => void review(day, submission, status)}
+                              />
                             </td>
                           </tr>
                         )}
@@ -370,7 +565,15 @@ function ApprovalToggle({ done, disabled, onClick, label }: { done: boolean; dis
   );
 }
 
-function DayDetail({ day }: { day: Row }) {
+function DayDetail({
+  day,
+  submissions,
+  onReview,
+}: {
+  day: Row;
+  submissions: Row[];
+  onReview: (submission: Row, status: "approved" | "rejected" | "revision" | "selected") => void;
+}) {
   const blocks: { label: string; value?: string | null }[] = [
     { label: "Goal", value: day.goal },
     { label: "Research / verify", value: day.research_note },
@@ -408,6 +611,113 @@ function DayDetail({ day }: { day: Row }) {
             <Icon name="open_in_new" className="text-[14px]" /> Published post
           </a>
         )}
+      </div>
+
+      <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-bold text-on-surface">
+            Student submissions ({submissions.length})
+          </p>
+          <p className="text-[11px] text-on-surface-variant">
+            {day.visible_to_students ? "This day is shared with students." : "Hidden — students cannot submit yet."}
+          </p>
+        </div>
+
+        {submissions.length === 0 ? (
+          <p className="mt-2 text-xs text-on-surface-variant">
+            Nothing submitted yet. Students can submit once you share this day.
+          </p>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {submissions.map((submission) => (
+              <SubmissionCard key={submission.id} submission={submission} onReview={onReview} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const SUBMISSION_TONE: Record<string, string> = {
+  submitted: "bg-amber-50 text-amber-700 border-amber-200",
+  revision: "bg-orange-50 text-orange-700 border-orange-200",
+  rejected: "bg-red-50 text-red-700 border-red-200",
+  approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  selected: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+function SubmissionCard({
+  submission,
+  onReview,
+}: {
+  submission: Row;
+  onReview: (submission: Row, status: "approved" | "rejected" | "revision" | "selected") => void;
+}) {
+  const [feedback, setFeedback] = useState(submission.feedback || "");
+  const links: { label: string; url?: string | null }[] = [
+    { label: "Video", url: submission.video_url },
+    { label: "Post", url: submission.post_url },
+    { label: "Doc", url: submission.doc_url },
+    ...(Array.isArray(submission.image_urls) ? submission.image_urls.map((url: string, index: number) => ({ label: `Image ${index + 1}`, url })) : []),
+  ];
+
+  return (
+    <div className={`rounded-lg border p-3 ${submission.is_selected ? "border-emerald-300 bg-emerald-50/50" : "border-outline-variant bg-surface-low"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-on-surface">
+            {submission.student?.full_name || "Student"}
+            {submission.is_selected && <span className="ml-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black text-white">FINAL</span>}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {links
+              .filter((link) => link.url)
+              .map((link) => (
+                <a
+                  key={link.label}
+                  href={link.url as string}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
+                >
+                  <Icon name="open_in_new" className="text-[12px]" /> {link.label}
+                </a>
+              ))}
+          </div>
+          {submission.note && <p className="mt-1 text-[11px] text-on-surface-variant">Note: {submission.note}</p>}
+        </div>
+        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${SUBMISSION_TONE[submission.status] || SUBMISSION_TONE.submitted}`}>
+          {submission.is_selected ? "Winner" : submission.status}
+        </span>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <input
+          value={feedback}
+          onChange={(event) => setFeedback(event.target.value)}
+          placeholder="Feedback for the student…"
+          className="min-w-[160px] flex-1 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
+        />
+        <button
+          onClick={() => onReview({ ...submission, feedback }, "selected")}
+          className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700"
+          title="Use this as the final post for the day"
+        >
+          Pick final
+        </button>
+        <button
+          onClick={() => onReview({ ...submission, feedback }, "revision")}
+          className="rounded-lg border border-outline-variant px-2.5 py-1.5 text-[11px] font-bold text-on-surface-variant hover:border-orange-400 hover:text-orange-600"
+        >
+          Needs changes
+        </button>
+        <button
+          onClick={() => onReview({ ...submission, feedback }, "rejected")}
+          className="rounded-lg border border-outline-variant px-2.5 py-1.5 text-[11px] font-bold text-on-surface-variant hover:border-red-400 hover:text-red-600"
+        >
+          Reject
+        </button>
       </div>
     </div>
   );
@@ -560,6 +870,12 @@ function TeamPanel({
   const [newDrive, setNewDrive] = useState("");
   const [assigning, setAssigning] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [mode, setMode] = useState<"existing" | "new">("existing");
+  const [newStudent, setNewStudent] = useState({ full_name: "", email: "", phone: "", password: "", drive_url: "" });
+  const [creating, setCreating] = useState(false);
+  const [duplicates, setDuplicates] = useState<Row[]>([]);
+  const [createError, setCreateError] = useState("");
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
   useEffect(() => {
     if (!query) {
@@ -650,6 +966,82 @@ function TeamPanel({
     }
   }
 
+  async function setRegistration(member: Row, status: "pending" | "registered" | "approved" | "rejected") {
+    const res = await setMemberRegistration(member.id, status);
+    if (!res.success) {
+      setToast({ type: "error", message: res.error || "Could not update the registration." });
+      return;
+    }
+    await onReload();
+    setToast({
+      type: "success",
+      message:
+        status === "approved"
+          ? `${member.student?.full_name || "Student"} approved — they can now see shared days`
+          : `Registration marked ${status}`,
+    });
+  }
+
+  async function saveMenus(member: Row, menus: Record<string, boolean>) {
+    const res = await setMemberMenus(member.id, menus);
+    if (!res.success) {
+      setToast({ type: "error", message: res.error || "Could not update this student's menus." });
+      return;
+    }
+    await onReload();
+    setToast({ type: "success", message: "Student menus updated" });
+  }
+
+  /** Runs before we ever create an account, so the same person is never duplicated. */
+  async function checkDuplicates() {
+    if (!newStudent.email && !newStudent.phone) return;
+    setCheckingDuplicate(true);
+    const res = await findStudentDuplicates({ email: newStudent.email, phone: newStudent.phone });
+    setCheckingDuplicate(false);
+    if (!res.success) return;
+    const matches = (res.matches as Row[]).filter((match) => !assignedIds.has(match.id));
+    setDuplicates(matches);
+  }
+
+  async function createStudent() {
+    setCreating(true);
+    setCreateError("");
+    const res = await createCampaignStudent({ campaign_id: campaign.id, ...newStudent });
+    setCreating(false);
+    if (!res.success) {
+      if ((res as any).duplicate) setDuplicates(((res as any).matches ?? []) as Row[]);
+      setCreateError(res.error || "Could not create this student.");
+      return;
+    }
+    const created = newStudent;
+    setNewStudent({ full_name: "", email: "", phone: "", password: "", drive_url: "" });
+    setDuplicates([]);
+    await onReload();
+    setToast({
+      type: "success",
+      message: `${created.full_name} added — they can log in at /login with ${created.email}`,
+    });
+  }
+
+  async function attachExisting(student: Row) {
+    setCreating(true);
+    setCreateError("");
+    const res = await createCampaignStudent({
+      campaign_id: campaign.id,
+      use_existing_id: student.id,
+      drive_url: newStudent.drive_url || newDrive,
+    });
+    setCreating(false);
+    if (!res.success) {
+      setCreateError(res.error || "Could not assign this student.");
+      return;
+    }
+    setDuplicates([]);
+    setNewStudent({ full_name: "", email: "", phone: "", password: "", drive_url: "" });
+    await onReload();
+    setToast({ type: "success", message: `${student.full_name || "Student"} attached to this campaign` });
+  }
+
   const assignedIds = new Set(members.map((member) => member.student_id));
 
   return (
@@ -707,48 +1099,179 @@ function TeamPanel({
         <div className="mt-4 space-y-2">
           {members.length === 0 && <p className="text-sm text-on-surface-variant">No students assigned yet.</p>}
           {members.map((member) => (
-            <MemberRow key={member.id} member={member} onSaveDrive={saveMemberDrive} onRemove={remove} />
+            <MemberRow
+              key={member.id}
+              member={member}
+              onSaveDrive={saveMemberDrive}
+              onRemove={remove}
+              onRegistration={setRegistration}
+              onSaveMenus={saveMenus}
+            />
           ))}
         </div>
 
         <div className="mt-5 rounded-xl border border-dashed border-outline-variant bg-surface-low p-3">
-          <label className={LABEL_CLASS}>Assign a student</label>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className={FIELD_CLASS}
-              placeholder="Search by name, email or phone…"
-            />
-            <input
-              value={newDrive}
-              onChange={(e) => setNewDrive(e.target.value)}
-              className={FIELD_CLASS}
-              placeholder="Their Drive upload link (optional)"
-            />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-bold text-on-surface">Add a student</p>
+            <div className="flex gap-0.5 rounded-lg border border-outline-variant bg-surface-lowest p-0.5">
+              {[
+                { id: "existing" as const, label: "Existing account" },
+                { id: "new" as const, label: "New student" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setMode(item.id);
+                    setCreateError("");
+                    setDuplicates([]);
+                  }}
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition-colors ${
+                    mode === item.id ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-primary"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          {searching && <p className="mt-2 text-xs text-on-surface-variant">Searching…</p>}
-          {results.length > 0 && (
-            <div className="mt-2 max-h-56 overflow-auto rounded-lg border border-outline-variant bg-surface-lowest custom-scrollbar">
-              {results.map((student) => {
-                const already = assignedIds.has(student.id);
-                return (
-                  <button
-                    key={student.id}
-                    disabled={already || assigning === student.id}
-                    onClick={() => void assign(student)}
-                    className="flex w-full items-center justify-between gap-2 border-b border-outline-variant p-2.5 text-left last:border-0 hover:bg-surface-low disabled:opacity-50"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-bold text-on-surface">{student.full_name || "Unnamed student"}</span>
-                      <span className="block truncate text-xs text-on-surface-variant">{student.email || student.phone || "—"}</span>
-                    </span>
-                    <span className="shrink-0 text-xs font-bold text-primary">
-                      {already ? "Assigned" : assigning === student.id ? "Adding…" : "Assign"}
-                    </span>
-                  </button>
-                );
-              })}
+
+          {mode === "existing" ? (
+            <>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className={FIELD_CLASS}
+                  placeholder="Search by name, email or phone…"
+                />
+                <input
+                  value={newDrive}
+                  onChange={(e) => setNewDrive(e.target.value)}
+                  className={FIELD_CLASS}
+                  placeholder="Their own Drive folder link"
+                />
+              </div>
+              {searching && <p className="mt-2 text-xs text-on-surface-variant">Searching…</p>}
+              {results.length > 0 && (
+                <div className="mt-2 max-h-56 overflow-auto rounded-lg border border-outline-variant bg-surface-lowest custom-scrollbar">
+                  {results.map((student) => {
+                    const already = assignedIds.has(student.id);
+                    return (
+                      <button
+                        key={student.id}
+                        disabled={already || assigning === student.id}
+                        onClick={() => void assign(student)}
+                        className="flex w-full items-center justify-between gap-2 border-b border-outline-variant p-2.5 text-left last:border-0 hover:bg-surface-low disabled:opacity-50"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-bold text-on-surface">{student.full_name || "Unnamed student"}</span>
+                          <span className="block truncate text-xs text-on-surface-variant">{student.email || student.phone || "—"}</span>
+                        </span>
+                        <span className="shrink-0 text-xs font-bold text-primary">
+                          {already ? "Assigned" : assigning === student.id ? "Adding…" : "Assign"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="mt-2 space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL_CLASS}>Student name</label>
+                  <input
+                    value={newStudent.full_name}
+                    onChange={(e) => setNewStudent({ ...newStudent, full_name: e.target.value })}
+                    className={FIELD_CLASS}
+                    placeholder="Full name"
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Email (their login)</label>
+                  <input
+                    type="email"
+                    value={newStudent.email}
+                    onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                    onBlur={() => void checkDuplicates()}
+                    className={FIELD_CLASS}
+                    placeholder="student@email.com"
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Phone</label>
+                  <input
+                    value={newStudent.phone}
+                    onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                    onBlur={() => void checkDuplicates()}
+                    className={FIELD_CLASS}
+                    placeholder="03xx-xxxxxxx"
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Password</label>
+                  <input
+                    value={newStudent.password}
+                    onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
+                    className={FIELD_CLASS}
+                    placeholder="At least 8 characters"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={LABEL_CLASS}>Their own Drive folder link</label>
+                  <input
+                    value={newStudent.drive_url}
+                    onChange={(e) => setNewStudent({ ...newStudent, drive_url: e.target.value })}
+                    className={FIELD_CLASS}
+                    placeholder="https://drive.google.com/drive/folders/…"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[11px] text-on-surface-variant">
+                The student logs in at <span className="font-bold">/login</span> with this email and password — no separate
+                application or registration needed. {checkingDuplicate && "Checking for an existing account…"}
+              </p>
+
+              {duplicates.length > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5">
+                  <p className="text-[11px] font-bold text-amber-900">
+                    This person already has an account. Assign it instead of creating a duplicate:
+                  </p>
+                  <div className="mt-1.5 space-y-1">
+                    {duplicates.map((match) => (
+                      <div key={match.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-bold text-on-surface">{match.full_name || "Unnamed"}</span>
+                          <span className="block truncate text-[11px] text-on-surface-variant">
+                            {match.email || match.phone || "—"} · {match.role}
+                            {match.status ? ` · ${match.status}` : ""}
+                          </span>
+                        </span>
+                        <button
+                          onClick={() => void attachExisting(match)}
+                          disabled={creating || assignedIds.has(match.id)}
+                          className="shrink-0 rounded-md bg-primary px-2 py-1 text-[11px] font-bold text-on-primary disabled:opacity-50"
+                        >
+                          {assignedIds.has(match.id) ? "Already on campaign" : creating ? "Adding…" : "Use this account"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {createError && <p className="rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error">{createError}</p>}
+
+              <button
+                onClick={() => void createStudent()}
+                disabled={creating || duplicates.length > 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
+              >
+                <Icon name={creating ? "sync" : "person_add"} className={`text-[16px] ${creating ? "animate-spin" : ""}`} />
+                {creating ? "Creating…" : "Create student & add to campaign"}
+              </button>
             </div>
           )}
         </div>
@@ -757,23 +1280,83 @@ function TeamPanel({
   );
 }
 
-function MemberRow({ member, onSaveDrive, onRemove }: { member: Row; onSaveDrive: (member: Row, url: string) => Promise<void>; onRemove: (member: Row) => Promise<void> }) {
+const REGISTRATION_TONE: Record<string, { label: string; tone: string }> = {
+  pending: { label: "Not registered", tone: "bg-surface-container text-on-surface-variant border-outline-variant" },
+  registered: { label: "Awaiting approval", tone: "bg-amber-50 text-amber-700 border-amber-200" },
+  approved: { label: "Approved", tone: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  rejected: { label: "Rejected", tone: "bg-red-50 text-red-700 border-red-200" },
+};
+
+const MENU_LABELS: { key: "plan" | "submit" | "history"; label: string }[] = [
+  { key: "plan", label: "Plan" },
+  { key: "submit", label: "Submit" },
+  { key: "history", label: "History" },
+];
+
+function MemberRow({
+  member,
+  onSaveDrive,
+  onRemove,
+  onRegistration,
+  onSaveMenus,
+}: {
+  member: Row;
+  onSaveDrive: (member: Row, url: string) => Promise<void>;
+  onRemove: (member: Row) => Promise<void>;
+  onRegistration: (member: Row, status: "pending" | "registered" | "approved" | "rejected") => Promise<void>;
+  onSaveMenus: (member: Row, menus: Record<string, boolean>) => Promise<void>;
+}) {
   const [drive, setDrive] = useState(member.drive_url || "");
   const [saving, setSaving] = useState(false);
   const dirty = (member.drive_url || "") !== drive;
 
+  const registration = member.registration_status || "pending";
+  const tone = REGISTRATION_TONE[registration] ?? REGISTRATION_TONE.pending;
+  const menus = (member.menu_permissions && typeof member.menu_permissions === "object" ? member.menu_permissions : {}) as Record<string, boolean>;
+  const handleList = Object.keys(member.social_handles ?? {});
+
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface-low p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold text-on-surface">{member.student?.full_name || "Unnamed student"}</p>
-        <p className="truncate text-xs text-on-surface-variant">{member.student?.email || member.student?.phone || "—"}</p>
+    <div className="rounded-xl border border-outline-variant bg-surface-low p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-on-surface">{member.student?.full_name || "Unnamed student"}</p>
+          <p className="truncate text-xs text-on-surface-variant">{member.student?.email || member.student?.phone || "—"}</p>
+          {handleList.length > 0 && (
+            <p className="mt-1 truncate text-[11px] text-on-surface-variant">
+              Registered handles: {handleList.map((key) => `${key}${member.social_handles[key] ? ` (${member.social_handles[key]})` : ""}`).join(", ")}
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tone.tone}`}>{tone.label}</span>
+          {registration !== "approved" && (
+            <button
+              onClick={() => void onRegistration(member, "approved")}
+              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700"
+            >
+              Approve
+            </button>
+          )}
+          {registration === "approved" && (
+            <button
+              onClick={() => void onRegistration(member, "rejected")}
+              className="rounded-lg border border-outline-variant px-2.5 py-1 text-[11px] font-bold text-on-surface-variant hover:border-red-300 hover:text-red-600"
+            >
+              Revoke
+            </button>
+          )}
+          <button onClick={() => void onRemove(member)} className="rounded-lg p-1.5 text-red-500 hover:bg-red-50" title="Remove">
+            <Icon name="close" className="text-[16px]" />
+          </button>
+        </div>
       </div>
-      <div className="flex flex-1 items-center gap-2 sm:max-w-md">
+
+      <div className="mt-2 flex items-center gap-2">
         <input
           value={drive}
-          onChange={(e) => setDrive(e.target.value)}
+          onChange={(event) => setDrive(event.target.value)}
           className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
-          placeholder="Student Drive link"
+          placeholder="This student's own Drive folder link"
         />
         {member.drive_url && !dirty && (
           <a href={member.drive_url} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg border border-outline-variant p-1.5 text-on-surface-variant hover:border-primary hover:text-primary" title="Open drive">
@@ -793,9 +1376,29 @@ function MemberRow({ member, onSaveDrive, onRemove }: { member: Row; onSaveDrive
             {saving ? "…" : "Save"}
           </button>
         )}
-        <button onClick={() => void onRemove(member)} className="shrink-0 rounded-lg p-1.5 text-red-500 hover:bg-red-50" title="Remove">
-          <Icon name="close" className="text-[16px]" />
-        </button>
+      </div>
+      {!member.drive_url && (
+        <p className="mt-1 text-[11px] font-semibold text-amber-700">No Drive link yet — the student cannot submit until you add one.</p>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] font-bold text-on-surface-variant">Menus:</span>
+        {MENU_LABELS.map((item) => {
+          const on = menus[item.key] !== false;
+          return (
+            <button
+              key={item.key}
+              role="switch"
+              aria-checked={on}
+              onClick={() => void onSaveMenus(member, { ...menus, [item.key]: !on })}
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-bold transition-colors ${
+                on ? "border-primary/30 bg-primary/10 text-primary" : "border-outline-variant bg-surface-lowest text-on-surface-variant line-through"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -89,6 +89,7 @@ export function CampaignsManager({ role }: { role: string }) {
         <CampaignBoard
           campaignId={openId}
           role={role}
+          teachers={teachers}
           onBack={() => {
             setOpenId(null);
             void load();
