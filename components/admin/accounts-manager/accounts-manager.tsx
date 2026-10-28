@@ -21,6 +21,9 @@ function expiryLabel(date: string): string {
 
 export function AccountsManager() {
   const [toast, setToast] = useState<ToastState>(null);
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [unlockError, setUnlockError] = useState("");
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -51,8 +54,9 @@ export function AccountsManager() {
   const [expandedAccs, setExpandedAccs] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Do not fetch credentials until the module is unlocked.
+    if (unlocked) loadData();
+  }, [unlocked]);
 
   
   const handleImportCsv = async (e: any) => {
@@ -227,35 +231,150 @@ export function AccountsManager() {
       .map((assignment: any) => ({ ...assignment, account }))
   );
 
+  if (!unlocked) {
+    const handleUnlock = () => {
+      if (password === "Abdullah123@") {
+        setUnlocked(true);
+        setUnlockError("");
+        setPassword("");
+      } else {
+        setUnlockError("Incorrect password. Please try again.");
+        setPassword("");
+      }
+    };
+
+    return (
+      <div className="relative flex min-h-[70vh] items-center justify-center overflow-hidden px-4 py-10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full blur-[110px]"
+          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-primary) 20%, transparent), transparent 70%)" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-28 right-0 h-[320px] w-[320px] rounded-full blur-[110px]"
+          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 18%, transparent), transparent 70%)" }}
+        />
+
+        <div className="relative w-full max-w-md">
+          <div className="wc-card overflow-hidden rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,33,110,0.28)]">
+            {/* Navy header band matching the admin sidebar */}
+            <div className="relative overflow-hidden bg-primary px-6 pb-8 pt-7 text-on-primary sm:px-8 sm:pb-10 sm:pt-9">
+              <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-24 -left-10 h-44 w-44 rounded-full blur-3xl"
+                style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 26%, transparent), transparent 70%)" }}
+              />
+
+              <div className="relative flex flex-col items-center text-center">
+                <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur-md">
+                  <Icon name="lock" className="relative text-[30px] text-secondary-container" />
+                </div>
+
+                <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
+                  <Icon name="verified_user" className="text-[13px] text-secondary-container" />
+                  Restricted Module
+                </span>
+
+                <h2 className="text-xl font-black leading-tight tracking-tight sm:text-2xl">Accounts Manager</h2>
+                <p className="mt-2 max-w-xs text-sm leading-relaxed text-blue-100">
+                  This module holds client credentials. Enter the authorised password to continue.
+                </p>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 h-[3px] bg-gradient-to-r from-transparent via-secondary-container to-transparent" />
+            </div>
+
+            {/* Body */}
+            <div className="px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
+              <label htmlFor="module-unlock-password" className="wc-label mb-2 block">
+                Module Password
+              </label>
+
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]">
+                  <Icon name="key" className="text-[20px]" />
+                </span>
+                <input
+                  id="module-unlock-password"
+                  type="password"
+                  value={password}
+                  autoFocus
+                  autoComplete="current-password"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (unlockError) setUnlockError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleUnlock();
+                  }}
+                  placeholder="Enter password"
+                  aria-invalid={Boolean(unlockError)}
+                  className="wc-input w-full pl-12 pr-4"
+                />
+              </div>
+
+              <div
+                role="alert"
+                aria-live="polite"
+                className={`overflow-hidden transition-all duration-300 ${unlockError ? "mt-3 max-h-20 opacity-100" : "mt-0 max-h-0 opacity-0"}`}
+              >
+                <div className="flex items-start gap-2 rounded-xl border border-error/25 bg-error/10 px-3.5 py-2.5">
+                  <Icon name="error" className="mt-px text-[17px] text-error" />
+                  <p className="text-[13px] font-semibold leading-snug text-error">{unlockError}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleUnlock}
+                className="group mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-black text-on-primary shadow-[0_10px_24px_-6px_rgba(0,33,110,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_rgba(0,33,110,0.55)] active:translate-y-0"
+              >
+                <Icon name="lock_open" className="text-[18px]" />
+                Unlock Module
+                <Icon name="arrow_forward" className="text-[16px] transition-transform duration-200 group-hover:translate-x-1" />
+              </button>
+
+              <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-outline-variant/60 pt-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">
+                <Icon name="shield" className="text-[14px] text-secondary" />
+                Authorized personnel only
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 space-y-4 sm:p-6 sm:space-y-6">
       <Toast toast={toast} onClear={() => setToast(null)} />
       
       {/* Header section matching the screenshot */}
-      <div className="rounded-xl bg-primary p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="rounded-xl bg-primary p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:p-6">
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">Accounts Workspace</h1>
-          <p className="text-sm text-blue-100">Accounts aur clients popup me add karein. Neeche records clean layout me milenge.</p>
+          <h1 className="text-lg font-bold text-white mb-1 sm:text-xl">Accounts Workspace</h1>
+          <p className="text-xs text-blue-100 sm:text-sm">Accounts aur clients popup me add karein. Neeche records clean layout me milenge.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button onClick={() => { setAccountToEdit(null); setIsAddAccountModalOpen(true); }} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-blue-50 flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+          <button onClick={() => { setAccountToEdit(null); setIsAddAccountModalOpen(true); }} className="col-span-2 flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-blue-50 sm:col-span-1 sm:px-4 sm:text-sm">
             <Icon name="key" className="text-[18px]" />
             Add Shared Account
           </button>
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCsv} className="hidden" />
-            <button disabled={importing} onClick={() => fileInputRef.current?.click()} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+            <button disabled={importing} onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
               <Icon name={importing ? "sync" : "upload_file"} className={`text-[18px] ${importing ? "animate-spin" : ""}`} />
               {importing ? "Importing..." : "Import CSV"}
             </button>
-            <button onClick={() => { setClientToEdit(null); setIsAddClientModalOpen(true); }} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+            <button onClick={() => { setClientToEdit(null); setIsAddClientModalOpen(true); }} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
             <Icon name="person_add" className="text-[18px]" />
             Add Client
           </button>
-          <button onClick={() => setIsSharedAccountsModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+          <button onClick={() => setIsSharedAccountsModalOpen(true)} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
             <Icon name="account_balance" className="text-[18px]" />
             Bank Accounts
           </button>
-          <button onClick={() => setIsAddSellerModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+          <button onClick={() => setIsAddSellerModalOpen(true)} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
             <Icon name="sell" className="text-[18px]" />
             Add Seller
           </button>
@@ -263,39 +382,39 @@ export function AccountsManager() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">ALL ACCOUNTS</p>
-          <p className="text-3xl font-bold text-primary">{accounts.length}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">ALL ACCOUNTS</p>
+          <p className="text-2xl font-bold text-primary sm:text-3xl">{accounts.length}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">ACTIVE</p>
-          <p className="text-3xl font-bold text-emerald-600">{activeCount}</p>
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">ACTIVE</p>
+          <p className="text-2xl font-bold text-emerald-600 sm:text-3xl">{activeCount}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">EXPIRING SOON</p>
-          <p className="text-3xl font-bold text-amber-600">{expiringCount}</p>
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">EXPIRING SOON</p>
+          <p className="text-2xl font-bold text-amber-600 sm:text-3xl">{expiringCount}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">EXPIRED</p>
-          <p className="text-3xl font-bold text-red-500">{expiredCount}</p>
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">EXPIRED</p>
+          <p className="text-2xl font-bold text-red-500 sm:text-3xl">{expiredCount}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">BANNED</p>
-          <p className="text-3xl font-bold text-gray-700">{bannedCount}</p>
+        <div className="wc-card col-span-2 p-4 sm:col-span-1 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">BANNED</p>
+          <p className="text-2xl font-bold text-gray-700 sm:text-3xl">{bannedCount}</p>
         </div>
       </div>
       
       {/* Search and Filters */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-200">
-        <button onClick={() => setWorkspaceTab("accounts")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold ${workspaceTab === "accounts" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-          Accounts & Members ({accounts.length})
+      <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto border-b border-gray-200 px-1">
+        <button onClick={() => setWorkspaceTab("accounts")} className={`shrink-0 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-xs font-bold sm:px-4 sm:text-sm ${workspaceTab === "accounts" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+          Accounts &amp; Members ({accounts.length})
         </button>
-        <button onClick={() => setWorkspaceTab("pending")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold flex items-center gap-2 ${workspaceTab === "pending" ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-amber-50"}`}>
+        <button onClick={() => setWorkspaceTab("pending")} className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-xs font-bold sm:px-4 sm:text-sm ${workspaceTab === "pending" ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-amber-50"}`}>
           <Icon name="pending_actions" className="text-[17px]" /> Pending Payments ({pendingPayments.length})
         </button>
-        <button onClick={() => setWorkspaceTab("renewals")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold ${workspaceTab === "renewals" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-          Renewals & Follow-ups
+        <button onClick={() => setWorkspaceTab("renewals")} className={`shrink-0 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-xs font-bold sm:px-4 sm:text-sm ${workspaceTab === "renewals" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+          Renewals &amp; Follow-ups
         </button>
       </div>
 
@@ -373,8 +492,8 @@ export function AccountsManager() {
             <div key={acc.id} className="wc-card flex flex-col overflow-hidden">
               {/* Header row */}
               <div className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                 <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-gray-900 font-bold text-sm">{acc.tool_name} • {acc.login_email}</h3>
+                 <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                    <h3 className="min-w-0 break-words text-sm font-bold text-gray-900">{acc.tool_name} • {acc.login_email}</h3>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                       acc.display_status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                       acc.display_status === 'expiring_soon' ? 'bg-amber-50 text-amber-700 border-amber-200' :
@@ -390,9 +509,9 @@ export function AccountsManager() {
                       {acc.am_assignments?.length || 0} client(s)
                     </span>
                  </div>
-                 <div className="flex gap-2">
-                   <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Edit</button>
-                   <button onClick={() => toggleExpand(acc.id)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50 flex items-center gap-1">
+                 <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto">
+                   <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="flex-1 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 md:flex-none">Edit</button>
+                   <button onClick={() => toggleExpand(acc.id)} className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50 md:flex-none">
                      {expandedAccs[acc.id] ? "Collapse" : "Expand"} <Icon name={expandedAccs[acc.id] ? "expand_less" : "expand_more"} className="text-[16px]" />
                    </button>
                    <button 
@@ -411,18 +530,18 @@ export function AccountsManager() {
 
               {/* Expanded details */}
               {expandedAccs[acc.id] && (
-                <div className="flex flex-col gap-6 border-t border-gray-200 bg-gray-50 p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-5 border-t border-gray-200 bg-gray-50 p-4 sm:gap-6 sm:p-5">
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 md:gap-6">
                     <div>
                       <h4 className="text-[10px] font-bold text-gray-500 tracking-wider mb-3">ACCESS</h4>
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center rounded-lg border border-gray-200 bg-white p-2.5">
-                          <span className="text-sm text-gray-700">{acc.login_email}</span>
-                          <CopyButton text={acc.login_email} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
+                        <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white p-2.5">
+                          <span className="min-w-0 break-all text-sm text-gray-700">{acc.login_email}</span>
+                          <CopyButton text={acc.login_email} baseClassName="shrink-0 text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
                         </div>
-                        <div className="flex justify-between items-center rounded-lg border border-gray-200 bg-white p-2.5">
-                          <span className="text-sm text-gray-700">{acc.login_password}</span>
-                          <CopyButton text={acc.login_password} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
+                        <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white p-2.5">
+                          <span className="min-w-0 break-all text-sm text-gray-700">{acc.login_password}</span>
+                          <CopyButton text={acc.login_password} baseClassName="shrink-0 text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
                         </div>
                       </div>
                     </div>
@@ -452,9 +571,9 @@ export function AccountsManager() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {acc.am_assignments?.map((as:any) => (
-                        <div key={as.id} className="flex justify-between items-center rounded-xl border border-gray-200 bg-white p-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
+                        <div key={as.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
                               <h5 className="font-bold text-gray-900 text-sm">{as.am_clients?.name}</h5>
                               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${as.payment_status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
                                 {as.payment_status.toUpperCase()}
@@ -463,7 +582,7 @@ export function AccountsManager() {
                             <p className="text-xs text-gray-500">{as.am_clients?.phone || as.am_clients?.whatsapp || 'No Phone'}</p>
                             {as.pending_amount > 0 && <p className="mt-1 text-[10px] text-amber-600">Pending: {as.pending_amount}</p>}
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                             <button onClick={() => {
                                const msg = encodeURIComponent(`Hi ${as.am_clients?.name},\nHere is your access for ${acc.tool_name}:\nEmail: ${acc.login_email}\nPass: ${acc.login_password}\nExpires: ${acc.end_date}`);
                                const phone = (as.am_clients?.whatsapp || as.am_clients?.phone || "").replace(/[^0-9]/g, "");
@@ -589,7 +708,7 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center border-b border-gray-200 bg-blue-50 p-4">
           <div className="flex items-center gap-3">
@@ -605,7 +724,7 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
             <Icon name="close" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-4 overflow-y-auto sm:p-6">
           <form id="seller-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -662,7 +781,7 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center border-b border-gray-200 bg-blue-50 p-4">
           <div className="flex items-center gap-3">
@@ -678,7 +797,7 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
             <Icon name="close" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-4 overflow-y-auto sm:p-6">
           <form id="client-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -807,7 +926,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest shadow-2xl">
         <div className="flex items-center justify-between border-b border-outline-variant bg-surface-low p-4">
           <div className="flex items-center gap-3">
@@ -823,11 +942,11 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
             <Icon name="close" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        <div className="p-4 overflow-y-auto custom-scrollbar sm:p-6">
           <form id="account-form" onSubmit={handleSubmit} className="space-y-6">
             
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="relative" ref={toolDropdownRef}>
                   <label className={labelClass}>Tool Name</label>
                   <input required type="text" value={form.tool_name} onFocus={() => setShowToolDropdown(true)} onChange={e => { setForm({...form, tool_name: e.target.value}); setShowToolDropdown(true); }} className={fieldClass} placeholder="ChatGPT, Canva..." />
@@ -872,7 +991,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>Tool Login / Email</label>
                   <input type="text" value={form.login_email} onChange={e=>setForm({...form, login_email: e.target.value})} className={fieldClass} />
@@ -883,7 +1002,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>Linked Mail</label>
                   <input type="text" value={form.linked_mail} onChange={e=>setForm({...form, linked_mail: e.target.value})} className={fieldClass} />
@@ -894,7 +1013,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>Share Type</label>
                   <select value={form.share_type} onChange={e=>setForm({...form, share_type: e.target.value})} className={fieldClass}>
@@ -916,7 +1035,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>Start Date</label>
                   <input type="date" value={form.start_date} onChange={e=>setForm({...form, start_date: e.target.value})} className={fieldClass} />
@@ -1064,7 +1183,7 @@ function BankAccountsModal({ banks, reload, onClose }: { banks: any[], reload: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center border-b border-gray-200 bg-blue-50 p-4">
           <div className="flex items-center gap-3">
