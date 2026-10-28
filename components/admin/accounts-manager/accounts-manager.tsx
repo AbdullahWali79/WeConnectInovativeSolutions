@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Toast, type ToastState } from "@/components/toast";
 import { 
-  fetchAccountsData, addSeller, addClient,
+  fetchAccountsWorkspace, fetchClients, getClientById, addSeller, addClient,
   deleteSharedAccount, updateAssignmentPayment,
   removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients, updateClient
 } from "@/app/admin/accounts-manager/actions";
@@ -27,6 +27,9 @@ export function AccountsManager() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [clientsLoaded, setClientsLoaded] = useState(false);
+  const [clientsLoading, setClientsLoading] = useState(false);
   const [savingPaymentId, setSavingPaymentId] = useState<string | null>(null);
   
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -53,10 +56,35 @@ export function AccountsManager() {
   // Expanded Accounts
   const [expandedAccs, setExpandedAccs] = useState<Record<string, boolean>>({});
 
+  /**
+   * Loads the client book once, on demand. The accounts list never needs it, so
+   * keeping it out of the initial load removes the largest network payload.
+   */
+  const ensureClientsLoaded = useCallback(async () => {
+    if (clientsLoaded || clientsLoading) return;
+    setClientsLoading(true);
+    try {
+      const res = await fetchClients();
+      if (res.success) {
+        setClients(res.clients || []);
+        setClientsLoaded(true);
+      }
+    } finally {
+      setClientsLoading(false);
+    }
+  }, [clientsLoaded, clientsLoading]);
+
   useEffect(() => {
     // Do not fetch credentials until the module is unlocked.
-    if (unlocked) loadData();
+    // The client book (thousands of rows) loads lazily — see ensureClientsLoaded.
+    if (!unlocked) return;
+    void loadWorkspace();
   }, [unlocked]);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    if (workspaceTab === "renewals") void ensureClientsLoaded();
+  }, [unlocked, workspaceTab, ensureClientsLoaded]);
 
   
   const handleImportCsv = async (e: any) => {
@@ -125,7 +153,7 @@ export function AccountsManager() {
         const res = await importClients(importedClients);
         if (res.success) {
           setToast({ type: "success", message: `Successfully imported ${res.inserted} new contacts!` });
-          loadData();
+          void loadClients();
         } else {
           setToast({ type: "error", message: res.error || "Import failed" });
         }
@@ -138,20 +166,67 @@ export function AccountsManager() {
     reader.readAsText(file);
   };
 
-  async function loadData() {
-    setLoading(true);
-    const res = await fetchAccountsData();
-    if (res.success) {
-      setAccounts(res.accounts || []);
-      setSellers(res.sellers || []);
-      setClients(res.clients || []);
-      setBanks(res.banks || []);
-      setSubscriptions(res.subscriptions || []);
-      setFollowups(res.followups || []);
-    } else {
-      setToast({ type: "error", message: res.error || "Failed to load data" });
+  /**
+   * Refreshes the workspace (accounts, sellers, banks, subscriptions, followups).
+   * Pass `silent` for background refreshes after a save so the list stays on
+   * screen instead of flashing back to "Loading accounts...".
+   */
+  async function loadWorkspace(options: { silent?: boolean } = {}) {
+    if (options.silent) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const res = await fetchAccountsWorkspace();
+      if (res.success) {
+        setAccounts(res.accounts || []);
+        setSellers(res.sellers || []);
+        setBanks(res.banks || []);
+        setSubscriptions(res.subscriptions || []);
+        setFollowups(res.followups || []);
+      } else {
+        setToast({ type: "error", message: res.error || "Failed to load data" });
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    setLoading(false);
+  }
+
+  async function loadClients() {
+    const res = await fetchClients();
+    if (res.success) {
+      setClients(res.clients || []);
+      setClientsLoaded(true);
+    }
+  }
+
+  function openAccountModal(account?: any) {
+    setAccountToEdit(account ?? null);
+    setIsAddAccountModalOpen(true);
+    void ensureClientsLoaded();
+  }
+
+  function upsertClientRow(client: any) {
+    // Only patch the local list when it has actually been loaded; otherwise a
+    // later ensureClientsLoaded() fetch will pick the new client up anyway.
+    if (!client?.id || !clientsLoaded) return;
+    setClients((current) => {
+      const exists = current.some((item: any) => item.id === client.id);
+      const next = exists
+        ? current.map((item: any) => (item.id === client.id ? { ...item, ...client } : item))
+        : [...current, client];
+      return next.sort((a: any, b: any) => String(a.name ?? "").localeCompare(String(b.name ?? "")));
+    });
+  }
+
+  /** Opens the client editor with the full record (the list only carries display columns). */
+  async function editClientById(clientId: string) {
+    const res = await getClientById(clientId);
+    if (!res.success || !res.client) {
+      setToast({ type: "error", message: res.error || "Could not load this client." });
+      return;
+    }
+    setClientToEdit(res.client);
+    setIsAddClientModalOpen(true);
   }
 
   async function savePaymentBalance(assignmentId: string, remainingBalance: number) {
@@ -357,7 +432,7 @@ export function AccountsManager() {
           <p className="text-xs text-blue-100 sm:text-sm">Accounts aur clients popup me add karein. Neeche records clean layout me milenge.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-          <button onClick={() => { setAccountToEdit(null); setIsAddAccountModalOpen(true); }} className="col-span-2 flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-blue-50 sm:col-span-1 sm:px-4 sm:text-sm">
+          <button onClick={() => openAccountModal()} className="col-span-2 flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-blue-50 sm:col-span-1 sm:px-4 sm:text-sm">
             <Icon name="key" className="text-[18px]" />
             Add Shared Account
           </button>
@@ -419,7 +494,13 @@ export function AccountsManager() {
       </div>
 
       {workspaceTab === "renewals" ? (
-        <RenewalWorkspace accounts={accountsWithStatus} clients={clients} subscriptions={subscriptions} followups={followups} onRefresh={loadData} onEditClient={(client) => { setClientToEdit(client); setIsAddClientModalOpen(true); }} />
+        clientsLoaded ? (
+          <RenewalWorkspace accounts={accountsWithStatus} clients={clients} subscriptions={subscriptions} followups={followups} onRefresh={() => loadWorkspace({ silent: true })} onEditClient={(client) => { void editClientById(client.id); }} />
+        ) : (
+          <div className="wc-card flex items-center justify-center gap-2 py-10 text-sm text-gray-500">
+            <Icon name="sync" className="animate-spin text-[18px]" /> Loading renewals…
+          </div>
+        )
       ) : workspaceTab === "pending" ? (
         <div className="space-y-3">
           {pendingPayments.length === 0 ? (
@@ -478,6 +559,12 @@ export function AccountsManager() {
           </select>
         </div>
       </div>
+
+      {/* Background refresh indicator — keeps the list visible instead of blanking it */}
+      <div className={`flex items-center gap-2 text-xs font-semibold text-primary transition-opacity duration-200 ${refreshing ? "opacity-100" : "h-0 overflow-hidden opacity-0"}`} aria-live="polite">
+        <Icon name="sync" className="animate-spin text-[15px]" />
+        Updating…
+      </div>
       
       {/* Accounts List */}
       <div className="space-y-3">
@@ -510,7 +597,7 @@ export function AccountsManager() {
                     </span>
                  </div>
                  <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto">
-                   <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="flex-1 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 md:flex-none">Edit</button>
+                   <button onClick={() => openAccountModal(acc)} className="flex-1 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 md:flex-none">Edit</button>
                    <button onClick={() => toggleExpand(acc.id)} className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50 md:flex-none">
                      {expandedAccs[acc.id] ? "Collapse" : "Expand"} <Icon name={expandedAccs[acc.id] ? "expand_less" : "expand_more"} className="text-[16px]" />
                    </button>
@@ -518,7 +605,7 @@ export function AccountsManager() {
                     onClick={async () => {
                       if(confirm("Delete this account permanently?")) {
                         const res = await deleteSharedAccount(acc.id);
-                        if(res.success) { setToast({type:'success', message:'Deleted!'}); loadData(); }
+                        if(res.success) { setToast({type:'success', message:'Deleted!'}); void loadWorkspace({ silent: true }); }
                         else setToast({type:'error', message: res.error || 'Failed to delete'});
                       }
                     }} 
@@ -566,7 +653,7 @@ export function AccountsManager() {
                       <h4 className="text-sm font-bold text-blue-700 flex items-center gap-1">
                         <Icon name="link" className="text-[18px]" /> Linked Clients
                       </h4>
-                      <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Add / Manage Members</button>
+                      <button onClick={() => openAccountModal(acc)} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Add / Manage Members</button>
                       
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -598,7 +685,7 @@ export function AccountsManager() {
                             <button onClick={async () => {
                               if(confirm("Remove this client from this account?")) {
                                 const res = await removeAssignment(as.id);
-                                if(res.success) { setToast({type:'success', message:'Removed!'}); loadData(); }
+                                if(res.success) { setToast({type:'success', message:'Removed!'}); void loadWorkspace({ silent: true }); }
                               }
                             }} className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50">
                               <Icon name="close" className="text-[16px]" />
@@ -622,22 +709,22 @@ export function AccountsManager() {
 
       {/* Add Seller Modal */}
       {isAddSellerModalOpen && (
-        <AddSellerModal onClose={() => setIsAddSellerModalOpen(false)} onSave={() => { setIsAddSellerModalOpen(false); loadData(); setToast({type:'success', message:'Seller added'}); }} />
+        <AddSellerModal onClose={() => setIsAddSellerModalOpen(false)} onSave={() => { setIsAddSellerModalOpen(false); void loadWorkspace({ silent: true }); setToast({type:'success', message:'Seller added'}); }} />
       )}
 
       {/* Add Client Modal */}
       {isAddClientModalOpen && (
-        <AddClientModal client={clientToEdit} onClose={() => { setIsAddClientModalOpen(false); setClientToEdit(null); }} onSave={() => { setIsAddClientModalOpen(false); setClientToEdit(null); loadData(); setToast({type:'success', message: clientToEdit ? 'Member updated' : 'Client added'}); }} />
+        <AddClientModal client={clientToEdit} onClose={() => { setIsAddClientModalOpen(false); setClientToEdit(null); }} onSave={(savedClient) => { setIsAddClientModalOpen(false); setClientToEdit(null); upsertClientRow(savedClient); void loadWorkspace({ silent: true }); setToast({type:'success', message: clientToEdit ? 'Member updated' : 'Client added'}); }} />
       )}
 
       {/* Add Shared Account Modal */}
       {isAddAccountModalOpen && (
-        <AccountFormModal account={accountToEdit} accounts={accounts} clients={clients} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); loadData(); setToast({type:'success', message:'Account saved successfully'}); }} />
+        <AccountFormModal account={accountToEdit} accounts={accounts} clients={clients} clientsLoading={clientsLoading} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); void loadWorkspace({ silent: true }); setToast({type:'success', message:'Account saved successfully'}); }} />
       )}
       
       {/* Shared Bank Accounts Modal */}
       {isSharedAccountsModalOpen && (
-        <BankAccountsModal banks={banks} reload={loadData} onClose={() => setIsSharedAccountsModalOpen(false)} />
+        <BankAccountsModal banks={banks} reload={() => loadWorkspace({ silent: true })} onClose={() => setIsSharedAccountsModalOpen(false)} />
       )}
     </div>
   );
@@ -767,7 +854,7 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
   );
 }
 
-function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: () => void, onSave: () => void }) {
+function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: () => void, onSave: (saved?: any) => void }) {
   const [form, setForm] = useState({ name: client?.name || "", phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "", marketing_opt_in: Boolean(client?.marketing_opt_in), marketing_opt_in_source: client?.marketing_opt_in_source || "" });
   const [saving, setSaving] = useState(false);
 
@@ -775,7 +862,7 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
     e.preventDefault();
     setSaving(true);
     const res = client ? await updateClient(client.id, form) : await addClient(form);
-    if(res.success) onSave();
+    if(res.success) onSave(res.client);
     else alert(res.error);
     setSaving(false);
   };
@@ -842,7 +929,7 @@ function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: ()
   );
 }
 
-function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave }: { account?: any, accounts: any[], clients: any[], sellers: any[], onClose: () => void, onSave: () => void }) {
+function AccountFormModal({ account, accounts, clients, clientsLoading, sellers, onClose, onSave }: { account?: any, accounts: any[], clients: any[], clientsLoading?: boolean, sellers: any[], onClose: () => void, onSave: () => void }) {
   const fieldClass = "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
   const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
   const [form, setForm] = useState({ 
@@ -1082,7 +1169,9 @@ function AccountFormModal({ account, accounts, clients, sellers, onClose, onSave
                   {showClientDropdown && (
                     <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-outline-variant bg-surface-lowest shadow-xl custom-scrollbar">
                       {filteredClients.length === 0 ? (
-                        <div className="p-3 text-center text-sm text-on-surface-variant">No clients found</div>
+                        <div className="p-3 text-center text-sm text-on-surface-variant">
+                          {clientsLoading ? "Loading clients…" : "No clients found"}
+                        </div>
                       ) : (
                         filteredClients.map(c => (
                           <div 
