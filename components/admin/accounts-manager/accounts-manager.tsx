@@ -627,7 +627,18 @@ export function AccountsManager() {
                 <div className="flex flex-col gap-5 border-t border-gray-200 bg-gray-50 p-4 sm:gap-6 sm:p-5">
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 md:gap-6">
                     <div>
-                      <h4 className="text-[10px] font-bold text-gray-500 tracking-wider mb-3">ACCESS</h4>
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h4 className="text-[10px] font-bold text-gray-500 tracking-wider">ACCESS</h4>
+                        <CopyButton
+                          text={`${acc.login_email}\n${acc.login_password}`}
+                          title="Copy email and password together"
+                          showLabel
+                          label="Copy both"
+                          baseClassName="text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200"
+                          copiedClassName="bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          onCopied={handleCopy}
+                        />
+                      </div>
                       <div className="space-y-3">
                         <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white p-2.5">
                           <span className="min-w-0 break-all text-sm text-gray-700">{acc.login_email}</span>
@@ -741,12 +752,13 @@ export function AccountsManager() {
 // MODALS
 // ---------------------------------------------------------
 
-export function CopyButton({ text, baseClassName, copiedClassName, title, showLabel = false, onCopied }: {
+export function CopyButton({ text, baseClassName, copiedClassName, title, showLabel = false, label = "Copy", onCopied }: {
   text: string;
   baseClassName: string;
   copiedClassName: string;
   title?: string;
   showLabel?: boolean;
+  label?: string;
   onCopied?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -782,7 +794,7 @@ export function CopyButton({ text, baseClassName, copiedClassName, title, showLa
       className={`inline-flex items-center gap-1 rounded-lg p-1.5 text-sm font-semibold transition-all duration-200 ${copied ? copiedClassName : baseClassName}`}
     >
       <Icon name={copied ? "check" : "content_copy"} className={`text-sm transition-transform duration-200 ${copied ? "scale-110" : ""}`} />
-      {showLabel && <span className="text-xs">{copied ? "Copied!" : "Copy"}</span>}
+      {showLabel && <span className="text-xs">{copied ? "Copied!" : label}</span>}
       {!showLabel && copied && <span className="text-xs">Copied!</span>}
     </button>
   );
