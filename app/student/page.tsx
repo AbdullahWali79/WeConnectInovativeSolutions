@@ -12,6 +12,12 @@ export default async function StudentPage() {
   if (!controls?.some(row => row.menu_key === "dashboard")) {
     const first = controls?.find(row => row.menu_key !== "dashboard");
     if (first) redirect("/student/" + first.menu_key);
+    // Campaign-only students have no course enrollment, so there are no menu
+    // controls at all. Their hub is the campaign portal, not an error screen.
+    const { data: memberships } = user
+      ? await supabase.from("sm_campaign_members").select("id").eq("student_id", user.id).eq("status", "active").limit(1)
+      : { data: [] };
+    if ((memberships ?? []).length > 0) redirect("/student/campaigns");
     return <p className="wc-card p-5">No features are assigned to your course. Please contact your administrator.</p>;
   }
   const labels: Record<string, string> = { "ai-tools": "AI Tools", "seat-reservation": "Reserve a Seat", syllabus: "Syllabus", "talent-portfolio": "Talent Portfolio", "client-hunting": "Client Hunting", "social-media": "Social Media", "assigned-projects": "Assigned Projects", projects: "Projects", progress: "My Progress", profile: "My Profile", videos: "My Videos", "helping-videos": "Helping Videos", tasks: "Tasks / Add Task" };

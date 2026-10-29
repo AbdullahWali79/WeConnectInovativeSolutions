@@ -22,8 +22,30 @@ export async function middleware(request: NextRequest) {
         const { data: controls } = enrollment ? await supabase.from("course_student_menu_controls").select("menu_key,is_visible,sort_order").eq("course_id", enrollment.course_id).order("sort_order") : { data: [] };
         const key = request.nextUrl.pathname === "/student" ? "dashboard" : request.nextUrl.pathname.split("/")[2];
         const mappedKey = key === "courses" ? "syllabus" : key;
-        if (!controls?.some(row => row.menu_key === mappedKey && row.is_visible)) {
+        const courseAllows = Boolean(controls?.some(row => row.menu_key === mappedKey && row.is_visible));
+
+        // Campaign work is granted by campaign membership, not by course menus.
+        // Students the admin creates straight into a campaign have no course
+        // enrollment, so without this they were locked out of the portal with
+        // "No features are assigned to your course."
+        const campaignStudent = courseAllows
+          ? false
+          : ((await supabase.from("sm_campaign_members").select("id").eq("student_id", user.id).eq("status", "active").limit(1)).data ?? []).length > 0;
+        const campaignAllows = campaignStudent && ["dashboard", "campaigns", "profile"].includes(mappedKey);
+
+        if (!courseAllows && !campaignAllows) {
           if (request.method !== "GET") return new NextResponse("This feature is not assigned to your course.", { status: 403 });
+
+          if (campaignStudent) {
+            // Everything outside the campaign hub is out of scope for them.
+            const url = request.nextUrl.clone();
+            url.pathname = "/student/campaigns";
+            url.search = "";
+            const redirect = NextResponse.redirect(url);
+            response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+            return redirect;
+          }
+
           const first = controls?.find(row => row.is_visible);
           if (!first) return new NextResponse("No features are assigned to your course. Please contact your administrator.", { status: 403 });
           const url = request.nextUrl.clone();
