@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { firstAllowedAdminRoute } from "@/lib/admin-landing";
 import type { Profile } from "@/lib/supabase/types";
 
 export default function LoginPage() {
@@ -56,7 +57,27 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(next ?? (profile.role === "admin" || profile.role === "teacher" ? "/admin" : "/student"));
+    if (next) {
+      router.push(next);
+      router.refresh();
+      return;
+    }
+
+    if (profile.role === "teacher") {
+      // Teachers usually get a single module instead of the dashboard, so send
+      // them straight to the first page they can actually open.
+      const { data: permissions } = await supabase
+        .from("user_permissions")
+        .select("permission_key")
+        .eq("user_id", userId)
+        .eq("enabled", true);
+      const landing = firstAllowedAdminRoute((permissions ?? []).map((row) => row.permission_key));
+      router.push(landing ?? "/admin");
+      router.refresh();
+      return;
+    }
+
+    router.push(profile.role === "admin" ? "/admin" : "/student");
     router.refresh();
   }
 

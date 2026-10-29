@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AccessDenied } from "@/components/admin/access-denied";
 import { requirePermissionPage } from "@/lib/admin-access";
+import { firstAllowedAdminRoute } from "@/lib/admin-landing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDefaultWhatsAppSettings } from "@/lib/whatsapp/settings";
 
@@ -8,6 +10,11 @@ export default async function AdminPage() {
   const access = await requirePermissionPage("/admin", "dashboard.view");
 
   if (!access.granted) {
+    // Teachers are often granted a single module (e.g. Social Media Campaigns)
+    // and no dashboard. Send them to the first module they can open instead of
+    // an "Access denied" wall right after login.
+    const landing = firstAllowedAdminRoute(access.permissions);
+    if (landing && landing !== "/admin") redirect(landing);
     return <AccessDenied description="Dashboard access has not been enabled for this teacher account." />;
   }
 
