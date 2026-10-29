@@ -1,5 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+
+/**
+ * Reads the caller's campaign membership with the service role.
+ *
+ * It cannot go through RLS: the sm_campaigns / sm_campaign_members policies
+ * reference each other, so a student-scoped read dies with 42P17 "infinite
+ * recursion detected in policy". Fixed by
+ * supabase/migrations/20261029000000_fix_social_campaign_rls_recursion.sql —
+ * this helper keeps the portal working whether or not that migration has been
+ * applied yet.
+ */
+async function hasActiveCampaignMembership(userId: string) {
+  try {
+    const admin = createSupabaseServiceClient();
+    const { data, error } = await admin
+      .from("sm_campaign_members" as never)
+      .select("id")
+      .eq("student_id", userId)
+      .eq("status", "active")
+      .limit(1);
+    if (error) return false;
+    return ((data ?? []) as unknown[]).length > 0;
+  } catch {
+    return false;
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const headers = new Headers(request.headers);
@@ -28,9 +55,7 @@ export async function middleware(request: NextRequest) {
         // Students the admin creates straight into a campaign have no course
         // enrollment, so without this they were locked out of the portal with
         // "No features are assigned to your course."
-        const campaignStudent = courseAllows
-          ? false
-          : ((await supabase.from("sm_campaign_members").select("id").eq("student_id", user.id).eq("status", "active").limit(1)).data ?? []).length > 0;
+        const campaignStudent = courseAllows ? false : await hasActiveCampaignMembership(user.id);
         const campaignAllows = campaignStudent && ["dashboard", "campaigns", "profile"].includes(mappedKey);
 
         if (!courseAllows && !campaignAllows) {

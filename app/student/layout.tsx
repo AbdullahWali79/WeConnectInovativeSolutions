@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { StudentShell } from "@/components/student/student-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getDefaultBrandingSettingsMap, loadBrandingSettingsMap } from "@/lib/branding-settings";
 import type { Profile } from "@/lib/supabase/types";
 import type { Metadata } from "next";
@@ -48,14 +49,15 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const isFreelancer = !!enrollment;
 
   // Campaign work gets its own sidebar entry, but only for students who are
-  // actually assigned to a client campaign.
-  const { data: campaignMemberships } = await supabase
-    .from("sm_campaign_members")
+  // actually assigned to a client campaign. Read with the service role: the
+  // campaign RLS policies recurse (42P17) for student-scoped reads.
+  const { data: campaignMemberships } = await createSupabaseServiceClient()
+    .from("sm_campaign_members" as never)
     .select("id")
     .eq("student_id", user.id)
     .eq("status", "active")
     .limit(1);
-  const hasCampaigns = (campaignMemberships ?? []).length > 0;
+  const hasCampaigns = ((campaignMemberships ?? []) as unknown[]).length > 0;
 
   return <StudentShell profile={profile} branding={branding.student} isFreelancer={isFreelancer} hasCampaigns={hasCampaigns}>{children}</StudentShell>;
 }
