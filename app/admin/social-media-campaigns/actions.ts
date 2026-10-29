@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { requirePermission } from "@/lib/admin-access";
+import { loadCampaignWorkspace } from "@/lib/social-campaigns-data";
 
 /**
  * Every action here runs with the service-role client, which bypasses RLS, so
@@ -43,13 +44,14 @@ function cleanDate(value: any) {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }
 
-function revalidateCampaign(campaignId?: string) {
+/**
+ * Only the two list routes actually exist — the board is client state on
+ * `/admin/social-media-campaigns`, so revalidating a per-campaign URL used to be
+ * dead work on every single save.
+ */
+function revalidateCampaign(_campaignId?: string) {
   revalidatePath("/admin/social-media-campaigns");
   revalidatePath("/student/campaigns");
-  if (campaignId) {
-    revalidatePath(`/admin/social-media-campaigns/${campaignId}`);
-    revalidatePath(`/student/campaigns/${campaignId}`);
-  }
 }
 
 const CAMPAIGN_MENU_KEYS = ["plan", "submit", "history"] as const;
@@ -146,39 +148,33 @@ export async function searchCampaignStudents(term: string, limit = 25) {
 export async function fetchCampaigns() {
   try {
     const profile = await requireCampaignAccess("social_campaigns.view");
-    const supabase = createSupabaseServiceClient();
-
-    let query = supabase
-      .from("sm_campaigns" as any)
-      .select(`
-        id, client_name, campaign_name, period_start, period_end, goal, status,
-        teacher_id, teacher_drive_url, drive_folder_url, created_at,
-        teacher:profiles!teacher_id ( full_name, email ),
-        sm_campaign_days ( id, teacher_status, admin_status, post_date ),
-        sm_campaign_members ( id, status )
-      `)
-      .order("created_at", { ascending: false });
-
-    if (isTeacher(profile)) query = query.eq("teacher_id", profile.id);
-
-    const { data, error } = await query;
-    if (error) return { success: false as const, error: error.message };
-
-    const campaigns = ((data ?? []) as any[]).map((row) => {
-      const days: any[] = row.sm_campaign_days ?? [];
-      const members: any[] = row.sm_campaign_members ?? [];
-      const done = days.filter((day) => day.teacher_status === "done" || day.admin_status === "done").length;
-      return {
-        ...row,
-        day_count: days.length,
-        done_count: done,
-        member_count: members.filter((member) => member.status === "active").length,
-        sm_campaign_days: undefined,
-        sm_campaign_members: undefined,
-      };
+    const result = await loadCampaignWorkspace({
+      teacherId: isTeacher(profile) ? profile.id : null,
     });
+    if (!result.success) return { success: false as const, error: result.error };
+    return { success: true as const, campaigns: result.campaigns };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not load campaigns." };
+  }
+}
 
-    return { success: true as const, campaigns };
+/**
+ * Campaigns + the teacher picker in a single authenticated call.
+ * The list page used to fire two server actions in parallel, which doubled the
+ * auth round trips before anything could paint.
+ */
+export async function fetchCampaignWorkspace() {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.view");
+    const result = await loadCampaignWorkspace({
+      teacherId: isTeacher(profile) ? profile.id : null,
+    });
+    if (!result.success) return { success: false as const, error: result.error };
+    return {
+      success: true as const,
+      campaigns: result.campaigns,
+      teachers: result.teachers,
+    };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not load campaigns." };
   }

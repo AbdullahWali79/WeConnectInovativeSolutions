@@ -9,8 +9,7 @@ import { createTeacherAccount } from "@/app/admin/actions";
 import type { TeacherSelectablePermissionKey } from "@/lib/admin-permissions";
 import {
   createCampaign,
-  fetchCampaigns,
-  listCampaignTeachers,
+  fetchCampaignWorkspace,
 } from "@/app/admin/social-media-campaigns/actions";
 import { parseCampaignPlan, type ParsedPlan } from "@/lib/social-campaign-plan";
 import { CampaignBoard } from "./campaign-board";
@@ -33,38 +32,62 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function CampaignsManager({ role }: { role: string }) {
-  const [toast, setToast] = useState<ToastState>(null);
-  const [loading, setLoading] = useState(true);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
+export function CampaignsManager({
+  role,
+  initialCampaigns = [],
+  initialTeachers = [],
+  initialError = "",
+}: {
+  role: string;
+  initialCampaigns?: any[];
+  initialTeachers?: any[];
+  initialError?: string;
+}) {
+  const [toast, setToast] = useState<ToastState>(
+    initialError ? { type: "error", message: initialError } : null,
+  );
+  // The server already handed us the rows, so there is nothing to wait for.
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [campaigns, setCampaigns] = useState<any[]>(initialCampaigns);
+  const [teachers, setTeachers] = useState<any[]>(initialTeachers);
   const [openId, setOpenId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [setupIssue, setSetupIssue] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [campaignResult, teacherResult] = await Promise.all([fetchCampaigns(), listCampaignTeachers()]);
-    if (campaignResult.success) {
-      setCampaigns(campaignResult.campaigns);
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
+    const silent = options.silent === true;
+    if (silent) setRefreshing(true);
+    else setLoading(true);
+
+    const result = await fetchCampaignWorkspace();
+
+    if (result.success) {
+      setCampaigns(result.campaigns);
+      setTeachers(result.teachers);
       setSetupIssue("");
     } else {
-      const message = campaignResult.error || "Could not load campaigns.";
+      const message = result.error || "Could not load campaigns.";
       // Surface a clear hint when the migration has not been applied yet.
       if (/does not exist|schema cache|could not find the table|relation .*sm_/i.test(message)) {
         setSetupIssue("The campaigns tables are not in the database yet. Run supabase/migrations/20261028000000_social_media_campaigns.sql in the Supabase SQL Editor, then refresh.");
       }
       setToast({ type: "error", message });
     }
-    if (teacherResult.success) setTeachers(teacherResult.teachers);
+
     setLoading(false);
+    setRefreshing(false);
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (initialError) return;
+    // Data arrived with the HTML, so only correct it if the page was rendered
+    // before a change landed elsewhere. Silent = no spinner, no flicker.
+    void load({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -92,7 +115,9 @@ export function CampaignsManager({ role }: { role: string }) {
           teachers={teachers}
           onBack={() => {
             setOpenId(null);
-            void load();
+            // Silent: the rows are already on screen, so re-syncing in the
+            // background must not blank the list.
+            void load({ silent: true });
           }}
         />
       </>
@@ -154,12 +179,16 @@ export function CampaignsManager({ role }: { role: string }) {
             className={`${FIELD_CLASS} pl-9`}
           />
         </div>
-        <button onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2.5 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary">
-          <Icon name="refresh" className="text-[16px]" /> Refresh
+        <button
+          onClick={() => void load({ silent: true })}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2.5 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-60"
+        >
+          <Icon name="refresh" className={`text-[16px] ${refreshing ? "animate-spin" : ""}`} /> {refreshing ? "Updating…" : "Refresh"}
         </button>
       </div>
 
-      {loading ? (
+      {loading && campaigns.length === 0 ? (
         <div className="flex items-center justify-center gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-16 text-on-surface-variant">
           <Icon name="sync" className="animate-spin" /> Loading campaigns…
         </div>
@@ -238,7 +267,7 @@ export function CampaignsManager({ role }: { role: string }) {
           onClose={() => setIsCreateOpen(false)}
           onCreated={async (campaignId, dayCount) => {
             setIsCreateOpen(false);
-            await load();
+            await load({ silent: true });
             setToast({ type: "success", message: `Campaign created with ${dayCount} planned days` });
             setOpenId(campaignId);
           }}
@@ -251,7 +280,7 @@ export function CampaignsManager({ role }: { role: string }) {
           onClose={() => setIsTeacherOpen(false)}
           onCreated={async (name) => {
             setIsTeacherOpen(false);
-            await load();
+            await load({ silent: true });
             setToast({ type: "success", message: `Teacher ${name} created` });
           }}
           onError={(message) => setToast({ type: "error", message })}
