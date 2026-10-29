@@ -49,7 +49,7 @@ function cleanDate(value: any) {
  * `/admin/social-media-campaigns`, so revalidating a per-campaign URL used to be
  * dead work on every single save.
  */
-function revalidateCampaign(_campaignId?: string) {
+function revalidateCampaign() {
   revalidatePath("/admin/social-media-campaigns");
   revalidatePath("/student/campaigns");
 }
@@ -122,7 +122,11 @@ export async function listCampaignTeachers() {
 
 export async function searchCampaignStudents(term: string, limit = 25) {
   try {
-    await requireCampaignAccess("social_campaigns.view");
+    const profile = await requireCampaignAccess("social_campaigns.view");
+    // Only the admin's "Add a student" panel searches the student directory.
+    if (profile.role !== "admin") {
+      return { success: false as const, error: "Only an admin can search the student directory." };
+    }
     const supabase = createSupabaseServiceClient();
     const safe = String(term || "").replace(/[%,()*]/g, " ").trim();
     let query = supabase
@@ -305,7 +309,7 @@ export async function createCampaign(input: any) {
       }
     }
 
-    revalidateCampaign(campaignId);
+    revalidateCampaign();
     return { success: true as const, campaignId, dayCount: rawDays.length };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not create the campaign." };
@@ -343,7 +347,7 @@ export async function updateCampaign(campaignId: string, input: any) {
     const { error } = await supabase.from("sm_campaigns" as any).update(patch).eq("id", campaignId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign(campaignId);
+    revalidateCampaign();
     return { success: true as const };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not update the campaign." };
@@ -388,7 +392,7 @@ export async function replaceCampaignDays(campaignId: string, days: any[]) {
     const { error: insertError } = await supabase.from("sm_campaign_days" as any).insert(rows);
     if (insertError) return { success: false as const, error: insertError.message };
 
-    revalidateCampaign(campaignId);
+    revalidateCampaign();
     return { success: true as const, dayCount: rows.length };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not import the plan." };
@@ -421,7 +425,7 @@ export async function updateCampaignDay(dayId: string, input: any) {
     const { error } = await supabase.from("sm_campaign_days" as any).update(patch).eq("id", dayId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign((day as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not update this day." };
@@ -445,7 +449,7 @@ export async function setDayApproval(dayId: string, actor: "teacher" | "admin", 
     if (readError) return { success: false as const, error: readError.message };
     if (!day) return { success: false as const, error: "This day no longer exists." };
 
-    const campaign = await assertCampaignAccess((day as any).campaign_id, profile);
+    await assertCampaignAccess((day as any).campaign_id, profile);
     if (isTeacher(profile) && actor !== "teacher") {
       return { success: false as const, error: "Only an admin can give the admin approval." };
     }
@@ -471,7 +475,7 @@ export async function setDayApproval(dayId: string, actor: "teacher" | "admin", 
     const { error } = await supabase.from("sm_campaign_days" as any).update(patch).eq("id", dayId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign(campaign?.id);
+    revalidateCampaign();
     return {
       success: true as const,
       day: {
@@ -510,7 +514,7 @@ export async function setDayPublished(dayId: string, publishedUrl: string) {
       .eq("id", dayId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign((day as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const, published_url: url, status: url ? "published" : approved ? "approved" : "in_progress" };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not save the published link." };
@@ -521,9 +525,22 @@ export async function setDayPublished(dayId: string, publishedUrl: string) {
 // Members
 // ---------------------------------------------------------
 
+/**
+ * Student assignment is an admin decision: the admin owns the Drive folders and
+ * decides who works on which campaign. Teachers work the plan, they do not
+ * build the roster — so every membership mutation is gated here, not just in
+ * the UI.
+ */
+function assertCanManageMembers(profile: any) {
+  if (profile?.role !== "admin") {
+    throw new Error("Only an admin can add or remove students on a campaign.");
+  }
+}
+
 export async function addCampaignMember(campaignId: string, studentId: string, driveUrl: string) {
   try {
     const profile = await requireCampaignAccess("social_campaigns.edit");
+    assertCanManageMembers(profile);
     await assertCampaignAccess(campaignId, profile);
     if (!studentId) return { success: false as const, error: "Pick a student first." };
 
@@ -553,7 +570,7 @@ export async function addCampaignMember(campaignId: string, studentId: string, d
       .single();
 
     if (error) return { success: false as const, error: error.message };
-    revalidateCampaign(campaignId);
+    revalidateCampaign();
     return { success: true as const, member: data };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not assign this student." };
@@ -575,7 +592,14 @@ export async function updateCampaignMember(memberId: string, input: any) {
     await assertCampaignAccess((member as any).campaign_id, profile);
 
     const patch: any = {};
-    if ("drive_url" in input) patch.drive_url = cleanText(input.drive_url);
+    if ("drive_url" in input) {
+      // Each student's Drive folder is set by the admin so all campaign files
+      // stay inside the admin's Drive. Teachers keep the other fields.
+      if (profile.role !== "admin") {
+        return { success: false as const, error: "Only an admin can set a student's Drive link." };
+      }
+      patch.drive_url = cleanText(input.drive_url);
+    }
     if ("status" in input && ["active", "paused", "removed"].includes(input.status)) patch.status = input.status;
     if ("registration_status" in input && ["pending", "registered", "approved", "rejected"].includes(input.registration_status)) {
       patch.registration_status = input.registration_status;
@@ -595,7 +619,7 @@ export async function updateCampaignMember(memberId: string, input: any) {
     const { error } = await supabase.from("sm_campaign_members" as any).update(patch).eq("id", memberId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign((member as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not update this assignment." };
@@ -605,6 +629,7 @@ export async function updateCampaignMember(memberId: string, input: any) {
 export async function removeCampaignMember(memberId: string) {
   try {
     const profile = await requireCampaignAccess("social_campaigns.edit");
+    assertCanManageMembers(profile);
     const supabase = createSupabaseServiceClient();
 
     const { data: member, error: readError } = await supabase
@@ -619,7 +644,7 @@ export async function removeCampaignMember(memberId: string) {
     const { error } = await supabase.from("sm_campaign_members" as any).delete().eq("id", memberId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign((member as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not remove this student." };
@@ -664,7 +689,7 @@ export async function setMemberRegistration(memberId: string, status: "pending" 
     const { error } = await supabase.from("sm_campaign_members" as any).update(patch).eq("id", memberId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign((member as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const, registration_status: status };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not update the registration." };
@@ -693,7 +718,7 @@ export async function setMemberMenus(memberId: string, menus: Record<string, boo
       .eq("id", memberId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign((member as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const, menu_permissions: normalized };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not update this student's menus." };
@@ -728,7 +753,7 @@ export async function setDayVisibility(dayId: string, visible: boolean) {
       .eq("id", dayId);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign((day as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const, visible_to_students: visible };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not change who can see this day." };
@@ -771,7 +796,7 @@ export async function publishUpcomingDays(campaignId: string, count: number) {
       .in("id", ids);
     if (error) return { success: false as const, error: error.message };
 
-    revalidateCampaign(campaignId);
+    revalidateCampaign();
     return { success: true as const, published: ids.length, dayIds: ids };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not publish these days." };
@@ -841,7 +866,7 @@ export async function reviewSubmission(
       if (dayError) return { success: false as const, error: dayError.message };
     }
 
-    revalidateCampaign((submission as any).campaign_id);
+    revalidateCampaign();
     return { success: true as const, status, is_selected: selected };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not review this submission." };
@@ -951,7 +976,7 @@ export async function createCampaignStudent(input: {
         .single();
       if (memberError) return { success: false as const, error: memberError.message };
 
-      revalidateCampaign(campaignId);
+      revalidateCampaign();
       return { success: true as const, reused: true, member };
     }
 
@@ -1021,7 +1046,7 @@ export async function createCampaignStudent(input: {
       .single();
     if (memberError) throw new Error(memberError.message);
 
-    revalidateCampaign(campaignId);
+    revalidateCampaign();
     return { success: true as const, reused: false, member, login_email: email };
   } catch (error: any) {
     if (createdAuthUserId) {

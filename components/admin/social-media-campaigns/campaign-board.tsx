@@ -1054,21 +1054,39 @@ function TeamPanel({
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <label className={LABEL_CLASS}>Campaign folder (shared with students)</label>
-            <input value={folderDrive} onChange={(e) => setFolderDrive(e.target.value)} className={FIELD_CLASS} placeholder="https://drive.google.com/drive/folders/…" />
+            <input
+              value={folderDrive}
+              onChange={(e) => setFolderDrive(e.target.value)}
+              disabled={role !== "admin"}
+              className={`${FIELD_CLASS} disabled:cursor-not-allowed disabled:bg-surface-container disabled:text-on-surface-variant`}
+              placeholder="https://drive.google.com/drive/folders/…"
+            />
           </div>
           <div>
             <label className={LABEL_CLASS}>Teacher&apos;s upload folder</label>
-            <input value={teacherDrive} onChange={(e) => setTeacherDrive(e.target.value)} className={FIELD_CLASS} placeholder="https://drive.google.com/drive/folders/…" />
+            <input
+              value={teacherDrive}
+              onChange={(e) => setTeacherDrive(e.target.value)}
+              disabled={role !== "admin"}
+              className={`${FIELD_CLASS} disabled:cursor-not-allowed disabled:bg-surface-container disabled:text-on-surface-variant`}
+              placeholder="https://drive.google.com/drive/folders/…"
+            />
           </div>
         </div>
-        <button
-          onClick={() => void saveLinks()}
-          disabled={savingLinks}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
-        >
-          <Icon name={savingLinks ? "sync" : "save"} className={`text-[18px] ${savingLinks ? "animate-spin" : ""}`} />
-          {savingLinks ? "Saving…" : "Save Drive links"}
-        </button>
+        {role === "admin" ? (
+          <button
+            onClick={() => void saveLinks()}
+            disabled={savingLinks}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
+          >
+            <Icon name={savingLinks ? "sync" : "save"} className={`text-[18px] ${savingLinks ? "animate-spin" : ""}`} />
+            {savingLinks ? "Saving…" : "Save Drive links"}
+          </button>
+        ) : (
+          <p className="mt-3 text-[11px] font-semibold text-on-surface-variant">
+            Read-only — your admin sets the campaign folders.
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-6">
@@ -1102,6 +1120,7 @@ function TeamPanel({
             <MemberRow
               key={member.id}
               member={member}
+              canManage={role === "admin"}
               onSaveDrive={saveMemberDrive}
               onRemove={remove}
               onRegistration={setRegistration}
@@ -1110,6 +1129,7 @@ function TeamPanel({
           ))}
         </div>
 
+        {role === "admin" ? (
         <div className="mt-5 rounded-xl border border-dashed border-outline-variant bg-surface-low p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-bold text-on-surface">Add a student</p>
@@ -1275,6 +1295,14 @@ function TeamPanel({
             </div>
           )}
         </div>
+        ) : (
+          <div className="mt-5 flex items-start gap-2 rounded-xl border border-dashed border-outline-variant bg-surface-low p-3">
+            <Icon name="lock" className="mt-0.5 shrink-0 text-[15px] text-on-surface-variant" />
+            <p className="text-[11px] font-semibold text-on-surface-variant">
+              Only an admin can add or remove students on a campaign. Ask your admin to assign someone.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1295,12 +1323,15 @@ const MENU_LABELS: { key: "plan" | "submit" | "history"; label: string }[] = [
 
 function MemberRow({
   member,
+  canManage,
   onSaveDrive,
   onRemove,
   onRegistration,
   onSaveMenus,
 }: {
   member: Row;
+  /** Adding/removing students and setting their Drive folder is admin-only. */
+  canManage: boolean;
   onSaveDrive: (member: Row, url: string) => Promise<void>;
   onRemove: (member: Row) => Promise<void>;
   onRegistration: (member: Row, status: "pending" | "registered" | "approved" | "rejected") => Promise<void>;
@@ -1345,25 +1376,33 @@ function MemberRow({
               Revoke
             </button>
           )}
-          <button onClick={() => void onRemove(member)} className="rounded-lg p-1.5 text-red-500 hover:bg-red-50" title="Remove">
-            <Icon name="close" className="text-[16px]" />
-          </button>
+          {canManage && (
+            <button onClick={() => void onRemove(member)} className="rounded-lg p-1.5 text-red-500 hover:bg-red-50" title="Remove">
+              <Icon name="close" className="text-[16px]" />
+            </button>
+          )}
         </div>
       </div>
 
       <div className="mt-2 flex items-center gap-2">
-        <input
-          value={drive}
-          onChange={(event) => setDrive(event.target.value)}
-          className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
-          placeholder="This student's own Drive folder link"
-        />
+        {canManage ? (
+          <input
+            value={drive}
+            onChange={(event) => setDrive(event.target.value)}
+            className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
+            placeholder="This student's own Drive folder link"
+          />
+        ) : (
+          <p className="w-full truncate rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface-variant">
+            {member.drive_url || "No Drive folder assigned by the admin yet"}
+          </p>
+        )}
         {member.drive_url && !dirty && (
           <a href={member.drive_url} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg border border-outline-variant p-1.5 text-on-surface-variant hover:border-primary hover:text-primary" title="Open drive">
             <Icon name="open_in_new" className="text-[15px]" />
           </a>
         )}
-        {dirty && (
+        {canManage && dirty && (
           <button
             onClick={async () => {
               setSaving(true);
@@ -1378,7 +1417,9 @@ function MemberRow({
         )}
       </div>
       {!member.drive_url && (
-        <p className="mt-1 text-[11px] font-semibold text-amber-700">No Drive link yet — the student cannot submit until you add one.</p>
+        <p className="mt-1 text-[11px] font-semibold text-amber-700">
+          No Drive link yet — the student cannot submit until {canManage ? "you add" : "the admin adds"} one.
+        </p>
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
