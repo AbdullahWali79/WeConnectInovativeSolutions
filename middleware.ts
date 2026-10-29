@@ -58,6 +58,18 @@ export async function middleware(request: NextRequest) {
         const campaignStudent = courseAllows ? false : await hasActiveCampaignMembership(user.id);
         const campaignAllows = campaignStudent && ["dashboard", "campaigns", "profile"].includes(mappedKey);
 
+        // A pure campaign student has no course menus at all, so send them
+        // straight to the campaign hub instead of rendering a dashboard that
+        // would only bounce them there on the client.
+        if (campaignStudent && mappedKey === "dashboard" && !controls?.length && request.method === "GET") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/student/campaigns";
+          url.search = "";
+          const redirect = NextResponse.redirect(url);
+          response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+          return redirect;
+        }
+
         if (!courseAllows && !campaignAllows) {
           if (request.method !== "GET") return new NextResponse("This feature is not assigned to your course.", { status: 403 });
 
