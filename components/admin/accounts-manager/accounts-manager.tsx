@@ -291,6 +291,7 @@ export function AccountsManager() {
     if (search) {
       const q = search.toLowerCase();
       return a.tool_name.toLowerCase().includes(q) || 
+             (a.label && a.label.toLowerCase().includes(q)) ||
              (a.login_email && a.login_email.toLowerCase().includes(q)) ||
              a.am_assignments?.some((as:any) => as.am_clients?.name.toLowerCase().includes(q) || as.am_clients?.phone?.includes(q));
     }
@@ -581,7 +582,12 @@ export function AccountsManager() {
               {/* Header row */}
               <div className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                  <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-                    <h3 className="min-w-0 break-words text-sm font-bold text-gray-900">{acc.tool_name} • {acc.login_email}</h3>
+                    <h3 className="min-w-0 break-words text-sm text-gray-900">
+                      <span className="font-bold">{acc.tool_name}</span>
+                      {(acc.label || acc.login_email) && (
+                        <span className="font-normal text-gray-500"> • {acc.label || acc.login_email}</span>
+                      )}
+                    </h3>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                       acc.display_status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                       acc.display_status === 'expiring_soon' ? 'bg-amber-50 text-amber-700 border-amber-200' :
