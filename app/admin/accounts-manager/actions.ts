@@ -14,7 +14,8 @@ export async function fetchAccountsData() {
     { data: clients, error: errClt },
     { data: banks, error: errBnk },
     { data: subscriptions, error: errSub },
-    { data: followups, error: errFollowup }
+    { data: followups, error: errFollowup },
+    { data: debts, error: errDebts }
   ] = await Promise.all([
     supabase.from("am_accounts" as any).select(`
       *,
@@ -33,12 +34,13 @@ export async function fetchAccountsData() {
     supabase.from("am_clients" as any).select("*").order("name"),
     supabase.from("am_bank_accounts" as any).select("*").order("bank_name"),
     supabase.from("am_client_subscriptions" as any).select("*").order("end_date", { ascending: false }),
-    supabase.from("am_renewal_followups" as any).select("*").order("contacted_at", { ascending: false })
+    supabase.from("am_renewal_followups" as any).select("*").order("contacted_at", { ascending: false }),
+    supabase.from("am_personal_debts" as any).select("*").order("created_at", { ascending: false })
   ]);
 
-  if (errAcct || errSel || errClt || errBnk || errSub || errFollowup) {
-    console.error("Error fetching accounts data", { errAcct, errSel, errClt, errBnk, errSub, errFollowup });
-    return { success: false, error: errSub || errFollowup ? "Apply the accounts renewal migration, then reload." : "Failed to load data" };
+  if (errAcct || errSel || errClt || errBnk || errSub || errFollowup || errDebts) {
+    console.error("Error fetching accounts data", { errAcct, errSel, errClt, errBnk, errSub, errFollowup, errDebts });
+    return { success: false, error: errDebts ? "Apply the personal debts migration, then reload." : errSub || errFollowup ? "Apply the accounts renewal migration, then reload." : "Failed to load data" };
   }
 
   return { 
@@ -48,7 +50,8 @@ export async function fetchAccountsData() {
     clients: clients || [],
     banks: banks || [],
     subscriptions: subscriptions || [],
-    followups: followups || []
+    followups: followups || [],
+    debts: debts || []
   };
 }
 
@@ -145,6 +148,46 @@ export async function removeAssignment(assignmentId: string) {
   const supabase = createSupabaseServiceClient();
   const { error } = await supabase.from("am_assignments" as any).delete().eq("id", assignmentId);
   return { success: !error, error: error?.message };
+}
+
+export async function addPersonalDebt(data: { person_name: string; phone?: string; amount: number; notes?: string; debt_date?: string }) {
+  await requireAdminOnly();
+  const personName = String(data.person_name || "").trim();
+  const amount = Number(data.amount);
+  if (!personName) return { success: false, error: "Enter the person's name.", debt: null };
+  if (!Number.isFinite(amount) || amount <= 0) return { success: false, error: "Enter a valid udhaar amount.", debt: null };
+  const supabase = createSupabaseServiceClient();
+  const { data: inserted, error } = await supabase.from("am_personal_debts" as any).insert({
+    person_name: personName,
+    phone: String(data.phone || "").trim() || null,
+    amount,
+    pending_amount: amount,
+    payment_status: "pending",
+    notes: String(data.notes || "").trim() || null,
+    debt_date: data.debt_date || new Date().toISOString().slice(0, 10)
+  }).select("*").single();
+  if (error || !inserted) return { success: false, error: error?.message || "Udhaar could not be saved.", debt: null };
+  const debt = inserted as unknown as Record<string, unknown> & { id: string };
+  return { success: true, debt };
+}
+
+export async function updatePersonalDebtPayment(debtId: string, paymentStatus: string, pendingAmount: number) {
+  await requireAdminOnly();
+  if (!debtId || !["pending", "cleared"].includes(paymentStatus) ||
+      !Number.isFinite(pendingAmount) || pendingAmount < 0 ||
+      (paymentStatus === "cleared" && pendingAmount !== 0) ||
+      (paymentStatus === "pending" && pendingAmount === 0)) {
+    return { success: false, error: "Enter a valid remaining balance, or mark the udhaar paid." };
+  }
+  const supabase = createSupabaseServiceClient();
+  const { data, error } = await supabase.from("am_personal_debts" as any).update({
+    payment_status: paymentStatus,
+    pending_amount: pendingAmount
+  }).eq("id", debtId).select("id, payment_status, pending_amount").maybeSingle();
+  if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "Udhaar record was not found." };
+  const debt = data as unknown as { id: string; payment_status: string; pending_amount: number };
+  return { success: true, debt };
 }
 
 export async function addBankAccount(data: any) {

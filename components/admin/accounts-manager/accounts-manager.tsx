@@ -6,7 +6,8 @@ import { Toast, type ToastState } from "@/components/toast";
 import { 
   fetchAccountsData, addSeller, addClient,
   deleteSharedAccount, updateAssignmentPayment,
-  removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients, updateClient
+  removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients, updateClient,
+  addPersonalDebt, updatePersonalDebtPayment
 } from "@/app/admin/accounts-manager/actions";
 import { Icon } from "@/components/icon";
 import { accountStatus, daysUntil } from "@/lib/accounts-renewal";
@@ -32,6 +33,8 @@ export function AccountsManager() {
   const [banks, setBanks] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [followups, setFollowups] = useState<any[]>([]);
+  const [debts, setDebts] = useState<any[]>([]);
+  const [isAddDebtModalOpen, setIsAddDebtModalOpen] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -144,6 +147,7 @@ export function AccountsManager() {
       setBanks(res.banks || []);
       setSubscriptions(res.subscriptions || []);
       setFollowups(res.followups || []);
+      setDebts(res.debts || []);
     } else {
       setToast({ type: "error", message: res.error || "Failed to load data" });
     }
@@ -190,6 +194,43 @@ export function AccountsManager() {
     void savePaymentBalance(assignmentId, Number(input));
   }
 
+  async function saveDebtBalance(debtId: string, remainingBalance: number) {
+    if (!Number.isFinite(remainingBalance) || remainingBalance < 0) {
+      setToast({ type: "error", message: "Enter a valid remaining balance of 0 or more." });
+      return;
+    }
+    setSavingPaymentId(debtId);
+    try {
+      const status = remainingBalance > 0 ? "pending" : "cleared";
+      const result = await updatePersonalDebtPayment(debtId, status, remainingBalance);
+      if (!result.success) {
+        setToast({ type: "error", message: result.error || "Could not update udhaar." });
+        return;
+      }
+      const savedDebt = result.debt;
+      setDebts(previous => previous.map(debt =>
+        debt.id === debtId
+          ? { ...debt, payment_status: savedDebt.payment_status, pending_amount: savedDebt.pending_amount }
+          : debt
+      ));
+      setToast({ type: "success", message: Number(savedDebt.pending_amount) === 0 ? "Udhaar marked paid" : "Remaining udhaar updated" });
+    } catch {
+      setToast({ type: "error", message: "Could not update udhaar. Please try again." });
+    } finally {
+      setSavingPaymentId(null);
+    }
+  }
+
+  function editDebtBalance(debtId: string, currentBalance: number) {
+    const input = prompt("Remaining udhaar balance (enter 0 if fully paid):", String(currentBalance));
+    if (input === null) return;
+    if (!input.trim()) {
+      setToast({ type: "error", message: "Enter the remaining udhaar balance." });
+      return;
+    }
+    void saveDebtBalance(debtId, Number(input));
+  }
+
   const toggleExpand = (id: string) => {
     setExpandedAccs(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -226,6 +267,8 @@ export function AccountsManager() {
       .filter((assignment: any) => assignment.payment_status === "pending" || Number(assignment.pending_amount) > 0)
       .map((assignment: any) => ({ ...assignment, account }))
   );
+  const pendingDebts = debts.filter(debt => debt.payment_status === "pending" || Number(debt.pending_amount) > 0);
+  const pendingCount = pendingPayments.length + pendingDebts.length;
 
   return (
     <div className="p-6 space-y-6">
@@ -254,6 +297,10 @@ export function AccountsManager() {
           <button onClick={() => setIsSharedAccountsModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
             <Icon name="account_balance" className="text-[18px]" />
             Bank Accounts
+          </button>
+          <button onClick={() => setIsAddDebtModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+            <Icon name="payments" className="text-[18px]" />
+            Add Personal Udhaar
           </button>
           <button onClick={() => setIsAddSellerModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
             <Icon name="sell" className="text-[18px]" />
@@ -292,7 +339,7 @@ export function AccountsManager() {
           Accounts & Members ({accounts.length})
         </button>
         <button onClick={() => setWorkspaceTab("pending")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold flex items-center gap-2 ${workspaceTab === "pending" ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-amber-50"}`}>
-          <Icon name="pending_actions" className="text-[17px]" /> Pending Payments ({pendingPayments.length})
+          <Icon name="pending_actions" className="text-[17px]" /> Pending Payments ({pendingCount})
         </button>
         <button onClick={() => setWorkspaceTab("renewals")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold ${workspaceTab === "renewals" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
           Renewals & Follow-ups
@@ -303,9 +350,11 @@ export function AccountsManager() {
         <RenewalWorkspace accounts={accountsWithStatus} clients={clients} subscriptions={subscriptions} followups={followups} onRefresh={loadData} onEditClient={(client) => { setClientToEdit(client); setIsAddClientModalOpen(true); }} />
       ) : workspaceTab === "pending" ? (
         <div className="space-y-3">
-          {pendingPayments.length === 0 ? (
-            <div className="wc-card py-10 text-center text-gray-500">No pending member payments.</div>
-          ) : pendingPayments.map((item: any) => (
+          {pendingCount === 0 ? (
+            <div className="wc-card py-10 text-center text-gray-500">No pending member payments or personal udhaar.</div>
+          ) : (
+            <>
+              {pendingPayments.map((item: any) => (
             <div key={item.id} className="wc-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -322,6 +371,25 @@ export function AccountsManager() {
               </div>
             </div>
           ))}
+              {pendingDebts.map((debt: any) => (
+                <div key={debt.id} className="wc-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-bold text-gray-900">{debt.person_name}</h3>
+                      <span className="rounded bg-purple-50 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-700 border border-purple-200">PERSONAL UDHAAR</span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">No account — personal udhaar{debt.phone ? ` · ${debt.phone}` : ""}{debt.debt_date ? ` · ${debt.debt_date}` : ""}</p>
+                    {debt.notes && <p className="text-xs text-gray-500">Notes: {debt.notes}</p>}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    <div className="text-right"><p className="text-[10px] font-bold uppercase text-gray-500">Pending amount</p><p className="text-lg font-black text-amber-600">{debt.pending_amount || 0}</p></div>
+                    <button disabled={savingPaymentId === debt.id} onClick={() => editDebtBalance(debt.id, Number(debt.pending_amount) || 0)} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">Edit Balance</button>
+                    <button disabled={savingPaymentId === debt.id} onClick={() => void saveDebtBalance(debt.id, 0)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Mark Paid</button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       ) : (
       <>
@@ -519,6 +587,15 @@ export function AccountsManager() {
       {/* Shared Bank Accounts Modal */}
       {isSharedAccountsModalOpen && (
         <BankAccountsModal banks={banks} reload={loadData} onClose={() => setIsSharedAccountsModalOpen(false)} />
+      )}
+
+      {/* Add Personal Udhaar Modal */}
+      {isAddDebtModalOpen && (
+        <PersonalDebtModal onClose={() => setIsAddDebtModalOpen(false)} onSave={(savedDebt) => {
+          setIsAddDebtModalOpen(false);
+          if (savedDebt) setDebts(previous => [savedDebt, ...previous]);
+          setToast({ type: "success", message: "Personal udhaar added" });
+        }} />
       )}
     </div>
   );
@@ -1157,6 +1234,70 @@ function BankAccountsModal({ banks, reload, onClose }: { banks: any[], reload: (
                {banks.length === 0 && <p className="text-center text-gray-500 text-sm py-10">No bank accounts added.</p>}
              </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PersonalDebtModal({ onClose, onSave }: { onClose: () => void, onSave: (savedDebt?: any) => void }) {
+  const [form, setForm] = useState({ person_name: "", phone: "", amount: "", debt_date: new Date().toISOString().slice(0, 10), notes: "" });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setSaving(true);
+    const res = await addPersonalDebt({ ...form, amount: Number(form.amount) });
+    if (res.success) onSave(res.debt);
+    else alert(res.error);
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-blue-50 p-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Add Personal Udhaar</h2>
+            <p className="text-xs text-gray-500">Kisi shakhs ko di gayi payment record karein — bina kisi shared account ke.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900">
+            <Icon name="close" />
+          </button>
+        </div>
+        <form id="personal-debt-form" onSubmit={handleSubmit} className="space-y-4 p-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-bold text-gray-600">Person Name *</label>
+              <input required type="text" value={form.person_name} onChange={e=>setForm({...form, person_name: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Name..." />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-gray-600">Phone (Optional)</label>
+              <input type="text" value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="03xx..." />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-gray-600">Udhaar Amount (PKR) *</label>
+              <input required type="number" min="0" step="0.01" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="0" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-gray-600">Date</label>
+              <input type="date" value={form.debt_date} onChange={e=>setForm({...form, debt_date: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-bold text-gray-600">Notes (Optional)</label>
+            <textarea rows={2} value={form.notes} onChange={e=>setForm({...form, notes: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Kis cheez ke liye..." />
+          </div>
+        </form>
+        <div className="flex justify-start gap-3 border-t border-gray-200 bg-gray-50 p-4">
+          <button form="personal-debt-form" disabled={saving} type="submit" className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
+            <Icon name={saving ? "sync" : "save"} className={`text-[18px] ${saving ? "animate-spin" : ""}`} />
+            {saving ? "Saving..." : "Save Udhaar"}
+          </button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-6 py-2 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-100">
+            <Icon name="close" className="text-[18px] inline-block mr-1" />
+            Cancel
+          </button>
         </div>
       </div>
     </div>
