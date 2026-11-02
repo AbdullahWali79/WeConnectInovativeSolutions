@@ -1709,6 +1709,34 @@ function BankAccountsModal({ banks, reload, onClose }: { banks: any[], reload: (
 function PersonalDebtModal({ onClose, onSave }: { onClose: () => void, onSave: (savedDebt?: any) => void }) {
   const [form, setForm] = useState({ person_name: "", phone: "", amount: "", debt_date: new Date().toISOString().slice(0, 10), notes: "" });
   const [saving, setSaving] = useState(false);
+  const [clientResults, setClientResults] = useState<any[]>([]);
+  const [clientSearching, setClientSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Search imported clients as the user types, so an existing contact is picked
+  // instead of creating a duplicate name.
+  useEffect(() => {
+    if (!showSuggestions) return;
+    let cancelled = false;
+    const run = async () => {
+      setClientSearching(true);
+      const res = await searchClients(form.person_name, 20);
+      if (cancelled) return;
+      if (res.success) setClientResults(res.clients || []);
+      setClientSearching(false);
+    };
+    const timer = setTimeout(run, 220);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [form.person_name, showSuggestions]);
+
+  const pickClient = (client: any) => {
+    setForm(previous => ({
+      ...previous,
+      person_name: client.name || previous.person_name,
+      phone: client.phone || client.whatsapp || previous.phone
+    }));
+    setShowSuggestions(false);
+  };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -1733,9 +1761,41 @@ function PersonalDebtModal({ onClose, onSave }: { onClose: () => void, onSave: (
         </div>
         <form id="personal-debt-form" onSubmit={handleSubmit} className="space-y-4 p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
+            <div className="relative">
               <label className="mb-1 block text-xs font-bold text-gray-600">Person Name *</label>
-              <input required type="text" value={form.person_name} onChange={e=>setForm({...form, person_name: e.target.value})} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Name..." />
+              <input
+                required
+                type="text"
+                value={form.person_name}
+                onChange={e=>{ setForm({...form, person_name: e.target.value}); setShowSuggestions(true); }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                placeholder="Name likhein — imported contacts search honge..."
+                autoComplete="off"
+              />
+              {showSuggestions && (
+                <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-xl">
+                  {clientSearching ? (
+                    <div className="p-2.5 text-xs text-gray-500">Searching contacts…</div>
+                  ) : clientResults.length === 0 ? (
+                    <div className="p-2.5 text-xs text-gray-500">
+                      {form.person_name.trim() ? "Koi existing client match nahi hua — naya naam save hoga." : "Type to search imported contacts…"}
+                    </div>
+                  ) : (
+                    clientResults.map(c => (
+                      <div
+                        key={c.id}
+                        onMouseDown={(e) => { e.preventDefault(); pickClient(c); }}
+                        className="cursor-pointer border-b border-gray-100 p-2.5 hover:bg-gray-50 last:border-0"
+                      >
+                        <div className="text-sm font-semibold text-gray-900">{c.name}</div>
+                        {c.phone && <div className="text-xs text-gray-500">{c.phone}</div>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold text-gray-600">Phone (Optional)</label>
