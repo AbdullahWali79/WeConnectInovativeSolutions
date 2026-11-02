@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Toast, type ToastState } from "@/components/toast";
 import { 
-  fetchAccountsData, addSeller, addClient,
+  fetchAccountsWorkspace, fetchClients, getClientById, addSeller, addClient, searchClients,
   deleteSharedAccount, updateAssignmentPayment,
   removeAssignment, addBankAccount, deleteBankAccount, importClients, saveSharedAccountWithClients, updateClient,
   addPersonalDebt, updatePersonalDebtPayment
@@ -22,9 +22,15 @@ function expiryLabel(date: string): string {
 
 export function AccountsManager() {
   const [toast, setToast] = useState<ToastState>(null);
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [unlockError, setUnlockError] = useState("");
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [clientsLoaded, setClientsLoaded] = useState(false);
+  const [clientsLoading, setClientsLoading] = useState(false);
   const [savingPaymentId, setSavingPaymentId] = useState<string | null>(null);
   
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -53,9 +59,35 @@ export function AccountsManager() {
   // Expanded Accounts
   const [expandedAccs, setExpandedAccs] = useState<Record<string, boolean>>({});
 
+  /**
+   * Loads the client book once, on demand. The accounts list never needs it, so
+   * keeping it out of the initial load removes the largest network payload.
+   */
+  const ensureClientsLoaded = useCallback(async () => {
+    if (clientsLoaded || clientsLoading) return;
+    setClientsLoading(true);
+    try {
+      const res = await fetchClients();
+      if (res.success) {
+        setClients(res.clients || []);
+        setClientsLoaded(true);
+      }
+    } finally {
+      setClientsLoading(false);
+    }
+  }, [clientsLoaded, clientsLoading]);
+
   useEffect(() => {
-    loadData();
-  }, []);
+    // Do not fetch credentials until the module is unlocked.
+    // The client book (thousands of rows) loads lazily — see ensureClientsLoaded.
+    if (!unlocked) return;
+    void loadWorkspace();
+  }, [unlocked]);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    if (workspaceTab === "renewals") void ensureClientsLoaded();
+  }, [unlocked, workspaceTab, ensureClientsLoaded]);
 
   
   const handleImportCsv = async (e: any) => {
@@ -124,7 +156,7 @@ export function AccountsManager() {
         const res = await importClients(importedClients);
         if (res.success) {
           setToast({ type: "success", message: `Successfully imported ${res.inserted} new contacts!` });
-          loadData();
+          void loadClients();
         } else {
           setToast({ type: "error", message: res.error || "Import failed" });
         }
@@ -137,21 +169,69 @@ export function AccountsManager() {
     reader.readAsText(file);
   };
 
-  async function loadData() {
-    setLoading(true);
-    const res = await fetchAccountsData();
-    if (res.success) {
-      setAccounts(res.accounts || []);
-      setSellers(res.sellers || []);
-      setClients(res.clients || []);
-      setBanks(res.banks || []);
-      setSubscriptions(res.subscriptions || []);
-      setFollowups(res.followups || []);
-      setDebts(res.debts || []);
-    } else {
-      setToast({ type: "error", message: res.error || "Failed to load data" });
+  /**
+   * Refreshes the workspace (accounts, sellers, banks, subscriptions, followups).
+   * Pass `silent` for background refreshes after a save so the list stays on
+   * screen instead of flashing back to "Loading accounts...".
+   */
+  async function loadWorkspace(options: { silent?: boolean } = {}) {
+    if (options.silent) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const res = await fetchAccountsWorkspace();
+      if (res.success) {
+        setAccounts(res.accounts || []);
+        setSellers(res.sellers || []);
+        setBanks(res.banks || []);
+        setSubscriptions(res.subscriptions || []);
+        setFollowups(res.followups || []);
+        setDebts(res.debts || []);
+      } else {
+        setToast({ type: "error", message: res.error || "Failed to load data" });
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    setLoading(false);
+  }
+
+  async function loadClients() {
+    const res = await fetchClients();
+    if (res.success) {
+      setClients(res.clients || []);
+      setClientsLoaded(true);
+    }
+  }
+
+  function openAccountModal(account?: any) {
+    setAccountToEdit(account ?? null);
+    setIsAddAccountModalOpen(true);
+    // The "Link Clients" picker searches the server on demand, so opening this
+    // modal no longer drags the whole client book (~3.5k rows) across the wire.
+  }
+
+  function upsertClientRow(client: any) {
+    // Only patch the local list when it has actually been loaded; otherwise a
+    // later ensureClientsLoaded() fetch will pick the new client up anyway.
+    if (!client?.id || !clientsLoaded) return;
+    setClients((current) => {
+      const exists = current.some((item: any) => item.id === client.id);
+      const next = exists
+        ? current.map((item: any) => (item.id === client.id ? { ...item, ...client } : item))
+        : [...current, client];
+      return next.sort((a: any, b: any) => String(a.name ?? "").localeCompare(String(b.name ?? "")));
+    });
+  }
+
+  /** Opens the client editor with the full record (the list only carries display columns). */
+  async function editClientById(clientId: string) {
+    const res = await getClientById(clientId);
+    if (!res.success || !res.client) {
+      setToast({ type: "error", message: res.error || "Could not load this client." });
+      return;
+    }
+    setClientToEdit(res.client);
+    setIsAddClientModalOpen(true);
   }
 
   async function savePaymentBalance(assignmentId: string, remainingBalance: number) {
@@ -252,6 +332,7 @@ export function AccountsManager() {
     if (search) {
       const q = search.toLowerCase();
       return a.tool_name.toLowerCase().includes(q) || 
+             (a.label && a.label.toLowerCase().includes(q)) ||
              (a.login_email && a.login_email.toLowerCase().includes(q)) ||
              a.am_assignments?.some((as:any) => as.am_clients?.name.toLowerCase().includes(q) || as.am_clients?.phone?.includes(q));
     }
@@ -270,31 +351,146 @@ export function AccountsManager() {
   const pendingDebts = debts.filter(debt => debt.payment_status === "pending" || Number(debt.pending_amount) > 0);
   const pendingCount = pendingPayments.length + pendingDebts.length;
 
+  if (!unlocked) {
+    const handleUnlock = () => {
+      if (password === "Abdullah123@") {
+        setUnlocked(true);
+        setUnlockError("");
+        setPassword("");
+      } else {
+        setUnlockError("Incorrect password. Please try again.");
+        setPassword("");
+      }
+    };
+
+    return (
+      <div className="relative flex min-h-[70vh] items-center justify-center overflow-hidden px-4 py-10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full blur-[110px]"
+          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-primary) 20%, transparent), transparent 70%)" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-28 right-0 h-[320px] w-[320px] rounded-full blur-[110px]"
+          style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 18%, transparent), transparent 70%)" }}
+        />
+
+        <div className="relative w-full max-w-md">
+          <div className="wc-card overflow-hidden rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,33,110,0.28)]">
+            {/* Navy header band matching the admin sidebar */}
+            <div className="relative overflow-hidden bg-primary px-6 pb-8 pt-7 text-on-primary sm:px-8 sm:pb-10 sm:pt-9">
+              <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-24 -left-10 h-44 w-44 rounded-full blur-3xl"
+                style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--wc-secondary-container) 26%, transparent), transparent 70%)" }}
+              />
+
+              <div className="relative flex flex-col items-center text-center">
+                <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur-md">
+                  <Icon name="lock" className="relative text-[30px] text-secondary-container" />
+                </div>
+
+                <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
+                  <Icon name="verified_user" className="text-[13px] text-secondary-container" />
+                  Restricted Module
+                </span>
+
+                <h2 className="text-xl font-black leading-tight tracking-tight sm:text-2xl">Accounts Manager</h2>
+                <p className="mt-2 max-w-xs text-sm leading-relaxed text-blue-100">
+                  This module holds client credentials. Enter the authorised password to continue.
+                </p>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 h-[3px] bg-gradient-to-r from-transparent via-secondary-container to-transparent" />
+            </div>
+
+            {/* Body */}
+            <div className="px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
+              <label htmlFor="module-unlock-password" className="wc-label mb-2 block">
+                Module Password
+              </label>
+
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--wc-on-surface-variant)]">
+                  <Icon name="key" className="text-[20px]" />
+                </span>
+                <input
+                  id="module-unlock-password"
+                  type="password"
+                  value={password}
+                  autoFocus
+                  autoComplete="current-password"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (unlockError) setUnlockError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleUnlock();
+                  }}
+                  placeholder="Enter password"
+                  aria-invalid={Boolean(unlockError)}
+                  className="wc-input w-full pl-12 pr-4"
+                />
+              </div>
+
+              <div
+                role="alert"
+                aria-live="polite"
+                className={`overflow-hidden transition-all duration-300 ${unlockError ? "mt-3 max-h-20 opacity-100" : "mt-0 max-h-0 opacity-0"}`}
+              >
+                <div className="flex items-start gap-2 rounded-xl border border-error/25 bg-error/10 px-3.5 py-2.5">
+                  <Icon name="error" className="mt-px text-[17px] text-error" />
+                  <p className="text-[13px] font-semibold leading-snug text-error">{unlockError}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleUnlock}
+                className="group mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-black text-on-primary shadow-[0_10px_24px_-6px_rgba(0,33,110,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_rgba(0,33,110,0.55)] active:translate-y-0"
+              >
+                <Icon name="lock_open" className="text-[18px]" />
+                Unlock Module
+                <Icon name="arrow_forward" className="text-[16px] transition-transform duration-200 group-hover:translate-x-1" />
+              </button>
+
+              <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-outline-variant/60 pt-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--wc-on-surface-variant)]">
+                <Icon name="shield" className="text-[14px] text-secondary" />
+                Authorized personnel only
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 space-y-4 sm:p-6 sm:space-y-6">
       <Toast toast={toast} onClear={() => setToast(null)} />
       
       {/* Header section matching the screenshot */}
-      <div className="rounded-xl bg-primary p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="rounded-xl bg-primary p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:p-6">
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">Accounts Workspace</h1>
-          <p className="text-sm text-blue-100">Accounts aur clients popup me add karein. Neeche records clean layout me milenge.</p>
+          <h1 className="text-lg font-bold text-white mb-1 sm:text-xl">Accounts Workspace</h1>
+          <p className="text-xs text-blue-100 sm:text-sm">Accounts aur clients popup me add karein. Neeche records clean layout me milenge.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button onClick={() => { setAccountToEdit(null); setIsAddAccountModalOpen(true); }} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-blue-50 flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+          <button onClick={() => openAccountModal()} className="col-span-2 flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-blue-50 sm:col-span-1 sm:px-4 sm:text-sm">
             <Icon name="key" className="text-[18px]" />
             Add Shared Account
           </button>
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCsv} className="hidden" />
-            <button disabled={importing} onClick={() => fileInputRef.current?.click()} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+            <button disabled={importing} onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
               <Icon name={importing ? "sync" : "upload_file"} className={`text-[18px] ${importing ? "animate-spin" : ""}`} />
               {importing ? "Importing..." : "Import CSV"}
             </button>
-            <button onClick={() => { setClientToEdit(null); setIsAddClientModalOpen(true); }} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+            <button onClick={() => { setClientToEdit(null); setIsAddClientModalOpen(true); }} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
             <Icon name="person_add" className="text-[18px]" />
             Add Client
           </button>
-          <button onClick={() => setIsSharedAccountsModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+          <button onClick={() => setIsSharedAccountsModalOpen(true)} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
             <Icon name="account_balance" className="text-[18px]" />
             Bank Accounts
           </button>
@@ -302,7 +498,7 @@ export function AccountsManager() {
             <Icon name="payments" className="text-[18px]" />
             Add Personal Udhaar
           </button>
-          <button onClick={() => setIsAddSellerModalOpen(true)} className="rounded-lg border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 flex items-center gap-2">
+          <button onClick={() => setIsAddSellerModalOpen(true)} className="flex items-center justify-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/10 sm:px-4 sm:text-sm">
             <Icon name="sell" className="text-[18px]" />
             Add Seller
           </button>
@@ -310,51 +506,57 @@ export function AccountsManager() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">ALL ACCOUNTS</p>
-          <p className="text-3xl font-bold text-primary">{accounts.length}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">ALL ACCOUNTS</p>
+          <p className="text-2xl font-bold text-primary sm:text-3xl">{accounts.length}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">ACTIVE</p>
-          <p className="text-3xl font-bold text-emerald-600">{activeCount}</p>
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">ACTIVE</p>
+          <p className="text-2xl font-bold text-emerald-600 sm:text-3xl">{activeCount}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">EXPIRING SOON</p>
-          <p className="text-3xl font-bold text-amber-600">{expiringCount}</p>
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">EXPIRING SOON</p>
+          <p className="text-2xl font-bold text-amber-600 sm:text-3xl">{expiringCount}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">EXPIRED</p>
-          <p className="text-3xl font-bold text-red-500">{expiredCount}</p>
+        <div className="wc-card p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">EXPIRED</p>
+          <p className="text-2xl font-bold text-red-500 sm:text-3xl">{expiredCount}</p>
         </div>
-        <div className="wc-card p-5">
-          <p className="text-xs font-bold text-gray-500 tracking-wider mb-2">BANNED</p>
-          <p className="text-3xl font-bold text-gray-700">{bannedCount}</p>
+        <div className="wc-card col-span-2 p-4 sm:col-span-1 sm:p-5">
+          <p className="text-[10px] font-bold text-gray-500 tracking-wider mb-2 sm:text-xs">BANNED</p>
+          <p className="text-2xl font-bold text-gray-700 sm:text-3xl">{bannedCount}</p>
         </div>
       </div>
       
       {/* Search and Filters */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-200">
-        <button onClick={() => setWorkspaceTab("accounts")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold ${workspaceTab === "accounts" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-          Accounts & Members ({accounts.length})
+      <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto border-b border-gray-200 px-1">
+        <button onClick={() => setWorkspaceTab("accounts")} className={`shrink-0 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-xs font-bold sm:px-4 sm:text-sm ${workspaceTab === "accounts" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+          Accounts &amp; Members ({accounts.length})
         </button>
-        <button onClick={() => setWorkspaceTab("pending")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold flex items-center gap-2 ${workspaceTab === "pending" ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-amber-50"}`}>
+        <button onClick={() => setWorkspaceTab("pending")} className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-xs font-bold sm:px-4 sm:text-sm ${workspaceTab === "pending" ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-amber-50"}`}>
           <Icon name="pending_actions" className="text-[17px]" /> Pending Payments ({pendingCount})
         </button>
-        <button onClick={() => setWorkspaceTab("renewals")} className={`rounded-t-lg px-4 py-2.5 text-sm font-bold ${workspaceTab === "renewals" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-          Renewals & Follow-ups
+        <button onClick={() => setWorkspaceTab("renewals")} className={`shrink-0 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-xs font-bold sm:px-4 sm:text-sm ${workspaceTab === "renewals" ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+          Renewals &amp; Follow-ups
         </button>
       </div>
 
       {workspaceTab === "renewals" ? (
-        <RenewalWorkspace accounts={accountsWithStatus} clients={clients} subscriptions={subscriptions} followups={followups} onRefresh={loadData} onEditClient={(client) => { setClientToEdit(client); setIsAddClientModalOpen(true); }} />
+        clientsLoaded ? (
+          <RenewalWorkspace accounts={accountsWithStatus} clients={clients} subscriptions={subscriptions} followups={followups} onRefresh={() => loadWorkspace({ silent: true })} onEditClient={(client) => { void editClientById(client.id); }} />
+        ) : (
+          <div className="wc-card flex items-center justify-center gap-2 py-10 text-sm text-gray-500">
+            <Icon name="sync" className="animate-spin text-[18px]" /> Loading renewals…
+          </div>
+        )
       ) : workspaceTab === "pending" ? (
         <div className="space-y-3">
           {pendingCount === 0 ? (
             <div className="wc-card py-10 text-center text-gray-500">No pending member payments or personal udhaar.</div>
           ) : (
             <>
-              {pendingPayments.map((item: any) => (
+          {pendingPayments.map((item: any) => (
             <div key={item.id} className="wc-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -371,23 +573,23 @@ export function AccountsManager() {
               </div>
             </div>
           ))}
-              {pendingDebts.map((debt: any) => (
-                <div key={debt.id} className="wc-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-gray-900">{debt.person_name}</h3>
-                      <span className="rounded bg-purple-50 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-700 border border-purple-200">PERSONAL UDHAAR</span>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">No account — personal udhaar{debt.phone ? ` · ${debt.phone}` : ""}{debt.debt_date ? ` · ${debt.debt_date}` : ""}</p>
-                    {debt.notes && <p className="text-xs text-gray-500">Notes: {debt.notes}</p>}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-3">
-                    <div className="text-right"><p className="text-[10px] font-bold uppercase text-gray-500">Pending amount</p><p className="text-lg font-black text-amber-600">{debt.pending_amount || 0}</p></div>
-                    <button disabled={savingPaymentId === debt.id} onClick={() => editDebtBalance(debt.id, Number(debt.pending_amount) || 0)} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">Edit Balance</button>
-                    <button disabled={savingPaymentId === debt.id} onClick={() => void saveDebtBalance(debt.id, 0)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Mark Paid</button>
-                  </div>
+          {pendingDebts.map((debt: any) => (
+            <div key={debt.id} className="wc-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-bold text-gray-900">{debt.person_name}</h3>
+                  <span className="rounded bg-purple-50 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-700 border border-purple-200">PERSONAL UDHAAR</span>
                 </div>
-              ))}
+                <p className="mt-1 text-xs text-gray-500">No account — personal udhaar{debt.phone ? ` · ${debt.phone}` : ""}{debt.debt_date ? ` · ${debt.debt_date}` : ""}</p>
+                {debt.notes && <p className="text-xs text-gray-500">Notes: {debt.notes}</p>}
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <div className="text-right"><p className="text-[10px] font-bold uppercase text-gray-500">Pending amount</p><p className="text-lg font-black text-amber-600">{debt.pending_amount || 0}</p></div>
+                <button disabled={savingPaymentId === debt.id} onClick={() => editDebtBalance(debt.id, Number(debt.pending_amount) || 0)} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">Edit Balance</button>
+                <button disabled={savingPaymentId === debt.id} onClick={() => void saveDebtBalance(debt.id, 0)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Mark Paid</button>
+              </div>
+            </div>
+          ))}
             </>
           )}
         </div>
@@ -427,6 +629,12 @@ export function AccountsManager() {
           </select>
         </div>
       </div>
+
+      {/* Background refresh indicator — keeps the list visible instead of blanking it */}
+      <div className={`flex items-center gap-2 text-xs font-semibold text-primary transition-opacity duration-200 ${refreshing ? "opacity-100" : "h-0 overflow-hidden opacity-0"}`} aria-live="polite">
+        <Icon name="sync" className="animate-spin text-[15px]" />
+        Updating…
+      </div>
       
       {/* Accounts List */}
       <div className="space-y-3">
@@ -441,8 +649,13 @@ export function AccountsManager() {
             <div key={acc.id} className="wc-card flex flex-col overflow-hidden">
               {/* Header row */}
               <div className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                 <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-gray-900 font-bold text-sm">{acc.tool_name} • {acc.login_email}</h3>
+                 <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                    <h3 className="min-w-0 break-words text-sm text-gray-900">
+                      <span className="font-bold">{acc.tool_name}</span>
+                      {(acc.label || acc.login_email) && (
+                        <span className="font-normal text-gray-500"> • {acc.label || acc.login_email}</span>
+                      )}
+                    </h3>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                       acc.display_status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                       acc.display_status === 'expiring_soon' ? 'bg-amber-50 text-amber-700 border-amber-200' :
@@ -458,16 +671,16 @@ export function AccountsManager() {
                       {acc.am_assignments?.length || 0} client(s)
                     </span>
                  </div>
-                 <div className="flex gap-2">
-                   <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Edit</button>
-                   <button onClick={() => toggleExpand(acc.id)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50 flex items-center gap-1">
+                 <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto">
+                   <button onClick={() => openAccountModal(acc)} className="flex-1 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 md:flex-none">Edit</button>
+                   <button onClick={() => toggleExpand(acc.id)} className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50 md:flex-none">
                      {expandedAccs[acc.id] ? "Collapse" : "Expand"} <Icon name={expandedAccs[acc.id] ? "expand_less" : "expand_more"} className="text-[16px]" />
                    </button>
                    <button 
                     onClick={async () => {
                       if(confirm("Delete this account permanently?")) {
                         const res = await deleteSharedAccount(acc.id);
-                        if(res.success) { setToast({type:'success', message:'Deleted!'}); loadData(); }
+                        if(res.success) { setToast({type:'success', message:'Deleted!'}); void loadWorkspace({ silent: true }); }
                         else setToast({type:'error', message: res.error || 'Failed to delete'});
                       }
                     }} 
@@ -479,18 +692,29 @@ export function AccountsManager() {
 
               {/* Expanded details */}
               {expandedAccs[acc.id] && (
-                <div className="flex flex-col gap-6 border-t border-gray-200 bg-gray-50 p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-5 border-t border-gray-200 bg-gray-50 p-4 sm:gap-6 sm:p-5">
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 md:gap-6">
                     <div>
-                      <h4 className="text-[10px] font-bold text-gray-500 tracking-wider mb-3">ACCESS</h4>
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h4 className="text-[10px] font-bold text-gray-500 tracking-wider">ACCESS</h4>
+                        <CopyButton
+                          text={`${acc.login_email}\n${acc.login_password}`}
+                          title="Copy email and password together"
+                          showLabel
+                          label="Copy both"
+                          baseClassName="text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200"
+                          copiedClassName="bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          onCopied={handleCopy}
+                        />
+                      </div>
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center rounded-lg border border-gray-200 bg-white p-2.5">
-                          <span className="text-sm text-gray-700">{acc.login_email}</span>
-                          <CopyButton text={acc.login_email} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
+                        <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white p-2.5">
+                          <span className="min-w-0 break-all text-sm text-gray-700">{acc.login_email}</span>
+                          <CopyButton text={acc.login_email} baseClassName="shrink-0 text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
                         </div>
-                        <div className="flex justify-between items-center rounded-lg border border-gray-200 bg-white p-2.5">
-                          <span className="text-sm text-gray-700">{acc.login_password}</span>
-                          <CopyButton text={acc.login_password} baseClassName="text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
+                        <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white p-2.5">
+                          <span className="min-w-0 break-all text-sm text-gray-700">{acc.login_password}</span>
+                          <CopyButton text={acc.login_password} baseClassName="shrink-0 text-gray-400 hover:bg-blue-50 hover:text-blue-600" copiedClassName="bg-emerald-50 text-emerald-600" onCopied={handleCopy} />
                         </div>
                       </div>
                     </div>
@@ -515,14 +739,14 @@ export function AccountsManager() {
                       <h4 className="text-sm font-bold text-blue-700 flex items-center gap-1">
                         <Icon name="link" className="text-[18px]" /> Linked Clients
                       </h4>
-                      <button onClick={() => { setAccountToEdit(acc); setIsAddAccountModalOpen(true); }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Add / Manage Members</button>
+                      <button onClick={() => openAccountModal(acc)} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">Add / Manage Members</button>
                       
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {acc.am_assignments?.map((as:any) => (
-                        <div key={as.id} className="flex justify-between items-center rounded-xl border border-gray-200 bg-white p-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
+                        <div key={as.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
                               <h5 className="font-bold text-gray-900 text-sm">{as.am_clients?.name}</h5>
                               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${as.payment_status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
                                 {as.payment_status.toUpperCase()}
@@ -531,7 +755,7 @@ export function AccountsManager() {
                             <p className="text-xs text-gray-500">{as.am_clients?.phone || as.am_clients?.whatsapp || 'No Phone'}</p>
                             {as.pending_amount > 0 && <p className="mt-1 text-[10px] text-amber-600">Pending: {as.pending_amount}</p>}
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                             <button onClick={() => {
                                const msg = encodeURIComponent(`Hi ${as.am_clients?.name},\nHere is your access for ${acc.tool_name}:\nEmail: ${acc.login_email}\nPass: ${acc.login_password}\nExpires: ${acc.end_date}`);
                                const phone = (as.am_clients?.whatsapp || as.am_clients?.phone || "").replace(/[^0-9]/g, "");
@@ -547,7 +771,7 @@ export function AccountsManager() {
                             <button onClick={async () => {
                               if(confirm("Remove this client from this account?")) {
                                 const res = await removeAssignment(as.id);
-                                if(res.success) { setToast({type:'success', message:'Removed!'}); loadData(); }
+                                if(res.success) { setToast({type:'success', message:'Removed!'}); void loadWorkspace({ silent: true }); }
                               }
                             }} className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50">
                               <Icon name="close" className="text-[16px]" />
@@ -571,22 +795,22 @@ export function AccountsManager() {
 
       {/* Add Seller Modal */}
       {isAddSellerModalOpen && (
-        <AddSellerModal onClose={() => setIsAddSellerModalOpen(false)} onSave={() => { setIsAddSellerModalOpen(false); loadData(); setToast({type:'success', message:'Seller added'}); }} />
+        <AddSellerModal onClose={() => setIsAddSellerModalOpen(false)} onSave={() => { setIsAddSellerModalOpen(false); void loadWorkspace({ silent: true }); setToast({type:'success', message:'Seller added'}); }} />
       )}
 
       {/* Add Client Modal */}
       {isAddClientModalOpen && (
-        <AddClientModal client={clientToEdit} onClose={() => { setIsAddClientModalOpen(false); setClientToEdit(null); }} onSave={() => { setIsAddClientModalOpen(false); setClientToEdit(null); loadData(); setToast({type:'success', message: clientToEdit ? 'Member updated' : 'Client added'}); }} />
+        <AddClientModal client={clientToEdit} onClose={() => { setIsAddClientModalOpen(false); setClientToEdit(null); }} onSave={(savedClient) => { setIsAddClientModalOpen(false); setClientToEdit(null); upsertClientRow(savedClient); void loadWorkspace({ silent: true }); setToast({type:'success', message: clientToEdit ? 'Member updated' : 'Client added'}); }} />
       )}
 
       {/* Add Shared Account Modal */}
       {isAddAccountModalOpen && (
-        <AccountFormModal account={accountToEdit} accounts={accounts} clients={clients} sellers={sellers} onClientCreated={(client) => setClients(previous => [...previous, client].sort((a, b) => a.name.localeCompare(b.name)))} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); loadData(); setToast({type:'success', message:'Account saved successfully'}); }} />
+        <AccountFormModal account={accountToEdit} accounts={accounts} sellers={sellers} onClose={() => setIsAddAccountModalOpen(false)} onSave={() => { setIsAddAccountModalOpen(false); void loadWorkspace({ silent: true }); setToast({type:'success', message:'Account saved successfully'}); }} />
       )}
       
       {/* Shared Bank Accounts Modal */}
       {isSharedAccountsModalOpen && (
-        <BankAccountsModal banks={banks} reload={loadData} onClose={() => setIsSharedAccountsModalOpen(false)} />
+        <BankAccountsModal banks={banks} reload={() => loadWorkspace({ silent: true })} onClose={() => setIsSharedAccountsModalOpen(false)} />
       )}
 
       {/* Add Personal Udhaar Modal */}
@@ -605,12 +829,13 @@ export function AccountsManager() {
 // MODALS
 // ---------------------------------------------------------
 
-export function CopyButton({ text, baseClassName, copiedClassName, title, showLabel = false, onCopied }: {
+export function CopyButton({ text, baseClassName, copiedClassName, title, showLabel = false, label = "Copy", onCopied }: {
   text: string;
   baseClassName: string;
   copiedClassName: string;
   title?: string;
   showLabel?: boolean;
+  label?: string;
   onCopied?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -646,7 +871,7 @@ export function CopyButton({ text, baseClassName, copiedClassName, title, showLa
       className={`inline-flex items-center gap-1 rounded-lg p-1.5 text-sm font-semibold transition-all duration-200 ${copied ? copiedClassName : baseClassName}`}
     >
       <Icon name={copied ? "check" : "content_copy"} className={`text-sm transition-transform duration-200 ${copied ? "scale-110" : ""}`} />
-      {showLabel && <span className="text-xs">{copied ? "Copied!" : "Copy"}</span>}
+      {showLabel && <span className="text-xs">{copied ? "Copied!" : label}</span>}
       {!showLabel && copied && <span className="text-xs">Copied!</span>}
     </button>
   );
@@ -666,7 +891,7 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center border-b border-gray-200 bg-blue-50 p-4">
           <div className="flex items-center gap-3">
@@ -682,7 +907,7 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
             <Icon name="close" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-4 overflow-y-auto sm:p-6">
           <form id="seller-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -725,21 +950,21 @@ function AddSellerModal({ onClose, onSave }: { onClose: () => void, onSave: () =
   );
 }
 
-function AddClientModal({ client, initialName = "", onClose, onSave }: { client?: any, initialName?: string, onClose: () => void, onSave: (savedClient?: any) => void }) {
-  const [form, setForm] = useState({ name: client?.name || initialName, phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "", marketing_opt_in: Boolean(client?.marketing_opt_in), marketing_opt_in_source: client?.marketing_opt_in_source || "" });
+function AddClientModal({ client, onClose, onSave }: { client?: any, onClose: () => void, onSave: (saved?: any) => void }) {
+  const [form, setForm] = useState({ name: client?.name || "", phone: client?.phone || "", whatsapp: client?.whatsapp || "", email: client?.email || "", company: client?.company || "", notes: client?.notes || "", marketing_opt_in: Boolean(client?.marketing_opt_in), marketing_opt_in_source: client?.marketing_opt_in_source || "" });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setSaving(true);
     const res = client ? await updateClient(client.id, form) : await addClient(form);
-    if(res.success) onSave("client" in res ? res.client : undefined);
+    if(res.success) onSave(res.client);
     else alert(res.error);
     setSaving(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center border-b border-gray-200 bg-blue-50 p-4">
           <div className="flex items-center gap-3">
@@ -755,7 +980,7 @@ function AddClientModal({ client, initialName = "", onClose, onSave }: { client?
             <Icon name="close" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-4 overflow-y-auto sm:p-6">
           <form id="client-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -800,7 +1025,7 @@ function AddClientModal({ client, initialName = "", onClose, onSave }: { client?
   );
 }
 
-function AccountFormModal({ account, accounts, clients, sellers, onClientCreated, onClose, onSave }: { account?: any, accounts: any[], clients: any[], sellers: any[], onClientCreated: (client: any) => void, onClose: () => void, onSave: () => void }) {
+function AccountFormModal({ account, accounts, sellers, onClose, onSave }: { account?: any, accounts: any[], sellers: any[], onClose: () => void, onSave: () => void }) {
   const fieldClass = "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
   const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
   const [form, setForm] = useState({ 
@@ -826,8 +1051,15 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
   
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
-  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Client lookup happens on the server, so the picker works against the whole
+  // client book without loading it into the browser.
+  const [clientResults, setClientResults] = useState<any[]>([]);
+  const [clientSearching, setClientSearching] = useState(false);
+  const [pickerError, setPickerError] = useState("");
+  const [loadingClientId, setLoadingClientId] = useState<string | null>(null);
+  const [clientEditor, setClientEditor] = useState<{ client: any | null } | null>(null);
   
   // Custom tool dropdown logic
   const uniqueTools = Array.from(new Set(accounts.map((a: any) => a.tool_name).filter(Boolean)));
@@ -879,13 +1111,83 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
     setShowClientDropdown(false);
   };
 
-  const filteredClients = clients.filter(c => 
-    c.name.toLowerCase().includes(clientSearch.toLowerCase()) || 
-    (c.phone && c.phone.includes(clientSearch))
+  // Debounced server search whenever the picker is open.
+  useEffect(() => {
+    if (!showClientDropdown) return;
+    let cancelled = false;
+    const run = async () => {
+      setClientSearching(true);
+      setPickerError("");
+      const res = await searchClients(clientSearch, 25);
+      if (cancelled) return;
+      if (res.success) setClientResults(res.clients || []);
+      else setPickerError(res.error || "Could not load clients.");
+      setClientSearching(false);
+    };
+    const timer = setTimeout(run, clientSearch ? 220 : 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [clientSearch, showClientDropdown]);
+
+  /** Opens the inline editor. Pass a client to edit, or nothing to create one. */
+  async function openClientEditor(client?: any) {
+    setShowClientDropdown(false);
+    if (!client?.id) {
+      setClientEditor({ client: client ?? null });
+      return;
+    }
+    setLoadingClientId(client.id);
+    const res = await getClientById(client.id);
+    setLoadingClientId(null);
+    if (!res.success || !res.client) {
+      setPickerError(res.error || "Could not load this client.");
+      return;
+    }
+    setClientEditor({ client: res.client });
+  }
+
+  function handleClientSaved(saved: any) {
+    const isNew = !clientEditor?.client?.id;
+    const merged = { ...(clientEditor?.client || {}), ...(saved || {}) };
+    if (!merged.id) {
+      setClientEditor(null);
+      setPickerError("Client was saved but the list could not refresh. Reopen the picker to see it.");
+      return;
+    }
+    setClientEditor(null);
+    setPickerError("");
+    // Reflect the new/edited record in the result list and any existing chip.
+    setClientResults(current => {
+      const exists = current.some((c: any) => c.id === merged.id);
+      const next = exists
+        ? current.map((c: any) => (c.id === merged.id ? { ...c, ...merged } : c))
+        : [merged, ...current];
+      return next.sort((a: any, b: any) => String(a.name ?? "").localeCompare(String(b.name ?? "")));
+    });
+    setSelectedClients(current => {
+      const already = current.some(sc => sc.client_id === merged.id);
+      if (already) {
+        return current.map(sc => (sc.client_id === merged.id ? { ...sc, name: merged.name } : sc));
+      }
+      // A brand-new client is linked straight away — no extra click needed.
+      if (!isNew) return current;
+      return [...current, {
+        client_id: merged.id,
+        name: merged.name,
+        payment_status: "pending",
+        pending_amount: 0,
+        notes: "",
+      }];
+    });
+    setClientSearch("");
+  }
+
+  // Hide people who are already linked — they are shown as chips instead.
+  const filteredClients = clientResults.filter(
+    (c: any) => !selectedClients.some(sc => sc.client_id === c.id)
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest shadow-2xl">
         <div className="flex items-center justify-between border-b border-outline-variant bg-surface-low p-4">
           <div className="flex items-center gap-3">
@@ -901,11 +1203,11 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
             <Icon name="close" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        <div className="p-4 overflow-y-auto custom-scrollbar sm:p-6">
           <form id="account-form" onSubmit={handleSubmit} className="space-y-6">
             
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="relative" ref={toolDropdownRef}>
                   <label className={labelClass}>Tool Name</label>
                   <input required type="text" value={form.tool_name} onFocus={() => setShowToolDropdown(true)} onChange={e => { setForm({...form, tool_name: e.target.value}); setShowToolDropdown(true); }} className={fieldClass} placeholder="ChatGPT, Canva..." />
@@ -950,7 +1252,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>Tool Login / Email</label>
                   <input type="text" value={form.login_email} onChange={e=>setForm({...form, login_email: e.target.value})} className={fieldClass} />
@@ -961,7 +1263,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>Linked Mail</label>
                   <input type="text" value={form.linked_mail} onChange={e=>setForm({...form, linked_mail: e.target.value})} className={fieldClass} />
@@ -972,7 +1274,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>Share Type</label>
                   <select value={form.share_type} onChange={e=>setForm({...form, share_type: e.target.value})} className={fieldClass}>
@@ -994,7 +1296,7 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>Start Date</label>
                   <input type="date" value={form.start_date} onChange={e=>setForm({...form, start_date: e.target.value})} className={fieldClass} />
@@ -1009,12 +1311,21 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
               <div className="border-t border-outline-variant pt-4">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <label className="block text-xs font-bold text-on-surface">Link Clients</label>
-                  <button type="button" onClick={() => { setShowClientDropdown(false); setIsAddClientModalOpen(true); }} className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-surface-container">
-                    <Icon name="person_add" className="text-base" /> Add New Client
+                  <button
+                    type="button"
+                    onClick={() => openClientEditor()}
+                    className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+                  >
+                    <Icon name="person_add" className="text-[15px]" /> New client
                   </button>
                 </div>
-                <p className="mb-2 text-xs text-on-surface-variant">Search existing clients, or add a new one here. Save the account to link a new client.</p>
-                
+
+                {pickerError && (
+                  <p role="alert" className="mb-2 rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error">
+                    {pickerError}
+                  </p>
+                )}
+
                 <div className="relative" ref={dropdownRef}>
                   <div 
                     onClick={() => setShowClientDropdown(true)}
@@ -1036,30 +1347,69 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
                         value={clientSearch}
                         onChange={(e) => setClientSearch(e.target.value)}
                         className="min-w-[120px] flex-1 bg-transparent text-sm text-on-surface outline-none placeholder:text-on-surface-variant"
-                        placeholder="Type to search..."
+                        placeholder="Type a name, phone or email..."
                       />
                     )}
                   </div>
                   
                   {showClientDropdown && (
-                    <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-outline-variant bg-surface-lowest shadow-xl custom-scrollbar">
-                      {filteredClients.length === 0 ? (
-                        <div className="p-3 text-center text-sm text-on-surface-variant">No clients found</div>
+                    <div className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-outline-variant bg-surface-lowest shadow-xl custom-scrollbar">
+                      {clientSearching && filteredClients.length === 0 ? (
+                        <div className="flex items-center justify-center gap-2 p-3 text-sm text-on-surface-variant">
+                          <Icon name="sync" className="animate-spin text-[16px]" /> Searching clients…
+                        </div>
+                      ) : filteredClients.length === 0 ? (
+                        <div className="p-3 text-center">
+                          <p className="text-sm text-on-surface-variant">
+                            {clientSearch.trim() ? `No client matches "${clientSearch.trim()}"` : "No clients found"}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowClientDropdown(false);
+                              setClientEditor({ client: clientSearch.trim() ? { name: clientSearch.trim() } : null });
+                            }}
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary transition-colors hover:bg-primary-container"
+                          >
+                            <Icon name="person_add" className="text-[15px]" />
+                            {clientSearch.trim() ? `Add "${clientSearch.trim()}"` : "Add a new client"}
+                          </button>
+                        </div>
                       ) : (
                         filteredClients.map(c => (
                           <div 
                             key={c.id} 
                             onClick={() => handleSelectClient(c)}
-                            className="cursor-pointer border-b border-outline-variant p-3 hover:bg-surface-low last:border-0"
+                            className="group flex cursor-pointer items-center justify-between gap-2 border-b border-outline-variant p-3 hover:bg-surface-low last:border-0"
                           >
-                            <div className="text-sm font-bold text-on-surface">{c.name}</div>
-                            {c.phone && <div className="text-xs text-on-surface-variant">{c.phone}</div>}
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-bold text-on-surface">{c.name}</div>
+                              {c.phone && <div className="text-xs text-on-surface-variant">{c.phone}</div>}
+                            </div>
+                            <button
+                              type="button"
+                              title="Edit client details"
+                              aria-label={`Edit details for ${c.name}`}
+                              onClick={(e) => { e.stopPropagation(); void openClientEditor(c); }}
+                              className="shrink-0 rounded-lg border border-outline-variant p-1.5 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                            >
+                              <Icon name={loadingClientId === c.id ? "sync" : "edit"} className={`text-[15px] ${loadingClientId === c.id ? "animate-spin" : ""}`} />
+                            </button>
                           </div>
                         ))
                       )}
                     </div>
                   )}
                 </div>
+
+                {clientEditor && (
+                  <InlineClientEditor
+                    key={clientEditor.client?.id ?? "new"}
+                    client={clientEditor.client}
+                    onCancel={() => setClientEditor(null)}
+                    onSaved={handleClientSaved}
+                  />
+                )}
 
                 {selectedClients.length > 0 && (
                   <div className="mt-4 rounded-lg border border-outline-variant bg-surface-low p-4">
@@ -1122,24 +1472,140 @@ function AccountFormModal({ account, accounts, clients, sellers, onClientCreated
             Cancel
           </button>
         </div>
-        {isAddClientModalOpen && (
-          <AddClientModal
-            onClose={() => setIsAddClientModalOpen(false)}
-            onSave={(savedClient) => {
-              setIsAddClientModalOpen(false);
-              if (savedClient) {
-                onClientCreated(savedClient);
-                handleSelectClient(savedClient);
-              }
-            }}
-          />
-        )}
       </div>
     </div>
   );
 }
 
 
+
+/**
+ * Compact client form rendered inside the account modal. Creating a client here
+ * also links it to the account, so there is no need to close the modal, go back
+ * and use the separate "Add Client" flow.
+ *
+ * It deliberately is NOT a <form>: it lives inside #account-form and nested
+ * forms are invalid HTML.
+ */
+function InlineClientEditor({ client, onCancel, onSaved }: { client: any | null, onCancel: () => void, onSaved: (saved: any) => void }) {
+  const isEdit = Boolean(client?.id);
+  const [form, setForm] = useState({
+    name: client?.name || "",
+    phone: client?.phone || "",
+    whatsapp: client?.whatsapp || "",
+    email: client?.email || "",
+    company: client?.company || "",
+    notes: client?.notes || "",
+    marketing_opt_in: Boolean(client?.marketing_opt_in),
+    marketing_opt_in_source: client?.marketing_opt_in_source || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const field = "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
+  const label = "mb-1 block text-[11px] font-bold text-on-surface-variant";
+
+  const submit = async () => {
+    if (!form.name.trim()) { setError("Client name is required."); return; }
+    if (form.marketing_opt_in && !form.marketing_opt_in_source.trim()) {
+      setError("Record how the client agreed to WhatsApp renewal offers.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const payload = { ...form, name: form.name.trim() };
+    const res = isEdit ? await updateClient(client.id, payload) : await addClient(payload);
+    setSaving(false);
+    if (!res.success) { setError(res.error || "Could not save this client."); return; }
+    onSaved(res.client ?? payload);
+  };
+
+  return (
+    <div
+      className="mt-3 rounded-xl border border-primary/25 bg-surface-low p-3 sm:p-4"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement)) {
+          e.preventDefault();
+          e.stopPropagation();
+          void submit();
+        }
+      }}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-xs font-bold text-on-surface">
+          <Icon name={isEdit ? "edit" : "person_add"} className="text-[16px] text-primary" />
+          {isEdit ? "Edit client details" : "New client"}
+        </h3>
+        <button type="button" onClick={onCancel} className="rounded p-1 text-on-surface-variant transition-colors hover:text-error" aria-label="Close client form">
+          <Icon name="close" className="text-[16px]" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className={label}>Client Name *</label>
+          <input autoFocus type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={field} placeholder="Full name" />
+        </div>
+        <div>
+          <label className={label}>Phone</label>
+          <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={field} placeholder="03001234567" />
+        </div>
+        <div>
+          <label className={label}>WhatsApp</label>
+          <input type="text" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })} className={field} placeholder="03001234567" />
+        </div>
+        <div>
+          <label className={label}>Email</label>
+          <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={field} placeholder="client@example.com" />
+        </div>
+        <div>
+          <label className={label}>Company / Tag</label>
+          <input type="text" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} className={field} placeholder="Agency / client tag" />
+        </div>
+        <div>
+          <label className={label}>Notes</label>
+          <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className={field} placeholder="Optional notes" />
+        </div>
+      </div>
+
+      <label className="mt-3 flex items-start gap-2 text-[11px] text-on-surface-variant">
+        <input type="checkbox" checked={form.marketing_opt_in} onChange={e => setForm({ ...form, marketing_opt_in: e.target.checked })} className="mt-0.5" />
+        Client agreed to receive renewal offers on WhatsApp.
+      </label>
+      {form.marketing_opt_in && (
+        <input
+          type="text"
+          value={form.marketing_opt_in_source}
+          onChange={e => setForm({ ...form, marketing_opt_in_source: e.target.value })}
+          className={`${field} mt-2`}
+          placeholder="Consent source, e.g. signup form or WhatsApp chat"
+        />
+      )}
+
+      {error && (
+        <p role="alert" className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error">{error}</p>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
+        >
+          <Icon name={saving ? "sync" : isEdit ? "save" : "person_add"} className={`text-[16px] ${saving ? "animate-spin" : ""}`} />
+          {saving ? "Saving..." : isEdit ? "Update client" : "Save & link client"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-outline-variant bg-surface-lowest px-4 py-2 text-xs font-bold text-on-surface-variant transition-colors hover:bg-surface-container"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function BankAccountsModal({ banks, reload, onClose }: { banks: any[], reload: () => void, onClose: () => void }) {
   const [form, setForm] = useState({ bank_name: "", account_number: "", account_title: "", details: "" });
@@ -1157,7 +1623,7 @@ function BankAccountsModal({ banks, reload, onClose }: { banks: any[], reload: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
       <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center border-b border-gray-200 bg-blue-50 p-4">
           <div className="flex items-center gap-3">

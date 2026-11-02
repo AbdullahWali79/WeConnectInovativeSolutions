@@ -23,6 +23,9 @@ const defaultForm = {
   image_github_url: "",
   image_cdn_url: "",
   portfolio_url: "",
+  github_url: "",
+  linkedin_url: "",
+  is_leadership: false,
   email: "",
   phone: "",
   skills: "",
@@ -59,6 +62,8 @@ export function TeamMembersManager({
   const [sourceFilter, setSourceFilter] = useState("all");
   const [studentQuery, setStudentQuery] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [socialColumnsMissing, setSocialColumnsMissing] = useState(false);
 
   const clearToast = useCallback(() => setToast(null), []);
 
@@ -67,6 +72,11 @@ export function TeamMembersManager({
     const { data, error } = await supabase.from("team_members").select("*").order("display_order", { ascending: true });
     if (error) setToast({ type: "error", message: error.message });
     setRows(data ?? []);
+
+    // Detect whether migration 20261027000001 has been applied yet.
+    const probe = await supabase.from("team_members").select("github_url").limit(1);
+    setSocialColumnsMissing(Boolean(probe.error && /github_url|linkedin_url|column/i.test(probe.error.message)));
+
     setLoading(false);
   }, [supabase]);
 
@@ -137,6 +147,9 @@ export function TeamMembersManager({
       image_github_url: row.image_github_url ?? "",
       image_cdn_url: row.image_cdn_url ?? "",
       portfolio_url: row.portfolio_url ?? "",
+      github_url: row.github_url ?? "",
+      linkedin_url: row.linkedin_url ?? "",
+      is_leadership: row.is_leadership ?? false,
       email: row.email ?? "",
       phone: row.phone ?? "",
       skills: (row.skills ?? []).join(", "),
@@ -227,6 +240,9 @@ export function TeamMembersManager({
       image_github_url: form.image_github_url || null,
       image_cdn_url: form.image_cdn_url || null,
       portfolio_url: form.portfolio_url.trim() || null,
+      github_url: form.github_url.trim() || null,
+      linkedin_url: form.linkedin_url.trim() || null,
+      is_leadership: form.is_leadership,
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
       skills: form.skills.trim() ? form.skills.split(",").map((item) => item.trim()).filter(Boolean) : [],
@@ -237,8 +253,34 @@ export function TeamMembersManager({
       updated_at: new Date().toISOString(),
     };
 
-    const request = editingId ? supabase.from("team_members").update(payload).eq("id", editingId) : supabase.from("team_members").insert(payload);
-    const { error } = await request;
+    const runSave = (body: Record<string, unknown>) =>
+      editingId
+        ? supabase.from("team_members").update(body as never).eq("id", editingId)
+        : supabase.from("team_members").insert(body as never);
+
+    let { error } = await runSave(payload);
+
+    // The social-link columns arrive with migration 20261027000001. If it has not
+    // been applied yet, save the rest of the member instead of failing outright.
+    if (error && /github_url|linkedin_url|is_leadership|column/i.test(error.message)) {
+      const socialKeys = ["github_url", "linkedin_url", "is_leadership"];
+      const legacyPayload = Object.fromEntries(
+        Object.entries(payload).filter(([key]) => !socialKeys.includes(key)),
+      );
+      const retry = await runSave(legacyPayload);
+      if (!retry.error) {
+        setSaving(false);
+        setToast({
+          type: "error",
+          message: "Member saved, but GitHub/LinkedIn/leadership fields were skipped. Run migration 20261027000001_team_member_social_links.sql to enable them.",
+        });
+        resetForm();
+        await loadRows();
+        return;
+      }
+      error = retry.error;
+    }
+
     setSaving(false);
 
     if (error) {
@@ -249,6 +291,40 @@ export function TeamMembersManager({
     setToast({ type: "success", message: editingId ? "Member updated." : "Member created." });
     resetForm();
     await loadRows();
+  }
+
+  async function toggleStatus(row: TeamMember) {
+    if (!canEdit) {
+      setToast({ type: "error", message: "You do not have permission to activate or deactivate team members." });
+      return;
+    }
+
+    const previousStatus = row.status;
+    const nextStatus = row.status === "active" ? "inactive" : "active";
+
+    setTogglingId(row.id);
+    setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: nextStatus } : item)));
+
+    const { error } = await supabase
+      .from("team_members")
+      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .eq("id", row.id);
+
+    setTogglingId(null);
+
+    if (error) {
+      setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: previousStatus } : item)));
+      setToast({ type: "error", message: error.message });
+      return;
+    }
+
+    setToast({
+      type: "success",
+      message:
+        nextStatus === "active"
+          ? `${row.name} is now visible on the public Team page.`
+          : `${row.name} is now hidden from the public Team page.`,
+    });
   }
 
   async function deleteRow(id: string) {
@@ -285,11 +361,24 @@ export function TeamMembersManager({
       <PageHeader
         eyebrow="Team Members"
         title="Manage team members"
-        description="Add, edit, and manage team profile cards shown on the public Team page."
+        description="Add, edit, show or hide team profile cards on the public Team page. Hidden members disappear from the public site without being deleted."
         action={<Link href="/team" className="wc-secondary-btn text-sm"><Icon name="preview" /> View Team Page</Link>}
       />
 
       <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+        {socialColumnsMissing ? (
+          <section className="xl:col-span-2 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <Icon name="warning" className="mt-0.5 text-[20px] text-amber-600" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">Database migration pending</p>
+              <p className="mt-1 text-sm leading-6 text-amber-800">
+                GitHub, LinkedIn and leadership-card fields need a database update. Run{" "}
+                <code className="rounded bg-amber-100 px-1.5 py-0.5 text-[12px] font-bold">supabase/migrations/20261027000001_team_member_social_links.sql</code>{" "}
+                in the Supabase SQL editor, then reload this page. Until then, those fields are saved as blank and the public Team page keeps showing the default leadership cards.
+              </p>
+            </div>
+          </section>
+        ) : null}
         {(canCreate || editingId) ? <form onSubmit={saveRow} className="wc-card space-y-3 p-4">
           <h2 className="text-base font-bold text-on-surface">{editingId ? "Edit Member" : "Add Member"}</h2>
           {!editingId ? <div className="rounded-xl border border-outline-variant bg-surface-container-low p-3">
@@ -318,8 +407,39 @@ export function TeamMembersManager({
             <input className="wc-input" placeholder="Phone (optional)" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
           </div>
           <input className="wc-input" placeholder="Image URL" value={form.image_url} onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))} />
-          <input className="wc-input" placeholder="Portfolio URL" value={form.portfolio_url} onChange={(event) => setForm((current) => ({ ...current, portfolio_url: event.target.value }))} />
           <input className="wc-input" type="file" accept="image/*" onChange={onPickImage} />
+
+          <div className="rounded-xl border border-outline-variant bg-surface-container-low p-3">
+            <p className="text-sm font-bold text-on-surface">Social &amp; portfolio links</p>
+            <p className="mt-1 text-xs text-on-surface-variant">These buttons appear on the public Team card. Leave a field empty to hide it.</p>
+            <div className="mt-3 space-y-2">
+              <div className="relative">
+                <Icon name="link" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+                <input className="wc-input pl-10" placeholder="LinkedIn URL (e.g. linkedin.com/in/username)" value={form.linkedin_url} onChange={(event) => setForm((current) => ({ ...current, linkedin_url: event.target.value }))} />
+              </div>
+              <div className="relative">
+                <Icon name="code" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+                <input className="wc-input pl-10" placeholder="GitHub URL (e.g. github.com/username)" value={form.github_url} onChange={(event) => setForm((current) => ({ ...current, github_url: event.target.value }))} />
+              </div>
+              <div className="relative">
+                <Icon name="work" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+                <input className="wc-input pl-10" placeholder="Portfolio URL" value={form.portfolio_url} onChange={(event) => setForm((current) => ({ ...current, portfolio_url: event.target.value }))} />
+              </div>
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant bg-surface-container-low p-3">
+            <input
+              type="checkbox"
+              checked={form.is_leadership}
+              onChange={(event) => setForm((current) => ({ ...current, is_leadership: event.target.checked }))}
+              className="mt-0.5 h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+            />
+            <span>
+              <span className="block text-sm font-bold text-on-surface">Show as a leadership card</span>
+              <span className="mt-0.5 block text-xs text-on-surface-variant">Leadership members get a large card at the top of the public Team page instead of the carousel.</span>
+            </span>
+          </label>
           <input className="wc-input" placeholder="Skills (comma separated)" value={form.skills} onChange={(event) => setForm((current) => ({ ...current, skills: event.target.value }))} />
           <textarea className="wc-input min-h-24" placeholder="Short bio" value={form.bio} onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} />
 
@@ -353,7 +473,7 @@ export function TeamMembersManager({
             <select className="wc-input" value={deptFilter} onChange={(event) => setDeptFilter(event.target.value)}><option value="all">All Departments</option>{departments.map((item) => <option key={item}>{item}</option>)}</select>
             <select className="wc-input" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="all">All Sources</option><option value="student">Student Profiles</option><option value="manual">Manual Members</option></select>
             <div className="grid grid-cols-2 gap-2">
-              <select className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+              <select className="wc-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All Visibility</option><option value="active">Visible</option><option value="inactive">Hidden</option></select>
               <select className="wc-input" value={leadFilter} onChange={(event) => setLeadFilter(event.target.value)}><option value="all">All Leads</option>{leads.map((item) => <option key={item}>{item}</option>)}</select>
             </div>
           </div>
@@ -368,7 +488,7 @@ export function TeamMembersManager({
                     <th className="px-4 py-3">Role</th>
                     <th className="px-4 py-3">Department</th>
                     <th className="px-4 py-3">Lead</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Visibility</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -380,14 +500,55 @@ export function TeamMembersManager({
                           {(row.image_cdn_url ?? row.image_url) ? <Image src={row.image_cdn_url ?? row.image_url ?? ""} alt={row.name} width={40} height={40} unoptimized className="h-full w-full object-cover" /> : null}
                         </div>
                       </td>
-                      <td className="px-4 py-3"><p className="text-sm font-bold text-on-surface">{row.name}</p><p className="text-xs text-on-surface-variant">{row.email ?? "-"}</p>{row.profile_id ? <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Student profile</span> : null}</td>
+                      <td className="px-4 py-3"><p className="text-sm font-bold text-on-surface">{row.name}</p><p className="text-xs text-on-surface-variant">{row.email ?? "-"}</p><div className="mt-1 flex flex-wrap gap-1">{row.profile_id ? <span className="inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Student profile</span> : null}{row.is_leadership ? <span className="inline-block rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-bold text-secondary">Leadership card</span> : null}</div></td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.role}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.department ?? "-"}</td>
                       <td className="px-4 py-3 text-sm text-on-surface-variant">{row.reports_to ? byId.get(row.reports_to)?.name ?? "-" : "-"}</td>
-                      <td className="px-4 py-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${row.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-700"}`}>{row.status}</span></td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const isActive = row.status === "active";
+                          const isBusy = togglingId === row.id;
+                          return (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={isActive}
+                                aria-label={`${isActive ? "Hide" : "Show"} ${row.name} on the public Team page`}
+                                disabled={!canEdit || isBusy}
+                                onClick={() => void toggleStatus(row)}
+                                title={
+                                  canEdit
+                                    ? isActive
+                                      ? "Hide from the public Team page"
+                                      : "Show on the public Team page"
+                                    : "You do not have permission to change status"
+                                }
+                                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                  isActive ? "bg-green-500" : "bg-slate-300"
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                                    isActive ? "translate-x-[19px]" : "translate-x-[3px]"
+                                  } ${isBusy ? "animate-pulse" : ""}`}
+                                />
+                              </button>
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                                  isActive ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-700"
+                                }`}
+                              >
+                                {isBusy ? "saving..." : isActive ? "Visible" : "Hidden"}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <Link className="rounded-lg bg-surface-container p-2 text-primary" href="/team" title="View"><Icon name="visibility" /></Link>
+                          <Link className="rounded-lg bg-surface-container p-2 text-primary" href="/team" title="Open public Team page"><Icon name="preview" /></Link>
+                          {canEdit ? <button className={`rounded-lg p-2 transition-colors ${row.status === "active" ? "bg-surface-container text-primary hover:bg-surface-container-high" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} disabled={togglingId === row.id} onClick={() => void toggleStatus(row)} title={row.status === "active" ? "Hide from public Team page" : "Show on public Team page"} aria-label={row.status === "active" ? `Hide ${row.name}` : `Show ${row.name}`}><Icon name={row.status === "active" ? "visibility_off" : "visibility"} /></button> : null}
                           {canEdit ? <button className="rounded-lg bg-surface-container p-2 text-primary" onClick={() => startEdit(row)} title="Edit"><Icon name="edit" /></button> : null}
                           {canDelete ? <button className="rounded-lg bg-error-container p-2 text-error" onClick={() => deleteRow(row.id)} title="Delete"><Icon name="delete" /></button> : null}
                         </div>

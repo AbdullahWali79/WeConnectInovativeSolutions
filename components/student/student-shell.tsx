@@ -14,7 +14,9 @@ import type { BrandingSettingsSnapshot } from "@/lib/supabase/types";
 import { useBranding } from "@/components/branding-provider";
 import { StudentActivityTracker } from "@/components/student/student-activity-tracker";
 
-const defaultNav = [
+type StudentNavItem = { href: string; label: string; icon: string; campaignOnly?: boolean };
+
+const defaultNav: StudentNavItem[] = [
   { href: "/student", label: "My Dashboard", icon: "dashboard" },
   { href: "/student/tasks", label: "Tasks", icon: "assignment" },
   { href: "/student/ai-tools", label: "AI Tools", icon: "smart_toy" },
@@ -23,6 +25,7 @@ const defaultNav = [
   { href: "/student/talent-portfolio", label: "Talent Portfolio", icon: "badge" },
   { href: "/student/client-hunting", label: "Client Hunting", icon: "manage_search" },
   { href: "/student/social-media", label: "Social Media", icon: "share" },
+  { href: "/student/campaigns", label: "Campaigns", icon: "rocket_launch", campaignOnly: true },
   { href: "/student/assigned-projects", label: "Assigned Projects", icon: "assignment_turned_in" },
   { href: "/student/projects", label: "Projects", icon: "folder_special" },
   { href: "/student/progress", label: "My Progress", icon: "monitoring" },
@@ -31,7 +34,7 @@ const defaultNav = [
   { href: "/student/helping-videos", label: "Helping Videos", icon: "smart_display" },
 ];
 
-export function StudentShell({ profile, branding, isFreelancer, children }: { profile: Profile | null; branding?: BrandingSettingsSnapshot; isFreelancer?: boolean; children: React.ReactNode }) {
+export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, children }: { profile: Profile | null; branding?: BrandingSettingsSnapshot; isFreelancer?: boolean; hasCampaigns?: boolean; children: React.ReactNode }) {
   const nav = defaultNav;
   const pathname = usePathname();
   const router = useRouter();
@@ -47,12 +50,27 @@ export function StudentShell({ profile, branding, isFreelancer, children }: { pr
   useEffect(() => {
     if (!profile?.id) return;
     void (async () => {
-      const { data: enrollment } = await supabase.from("enrollments").select("course_id").eq("student_id", profile.id).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (!enrollment?.course_id) return;
-      const { data: controls } = await supabase.from("course_student_menu_controls").select("*").eq("course_id", enrollment.course_id);
-      if (!controls?.length) { setMenuVisibility({}); return; }
-      setMenuVisibility(Object.fromEntries(controls.map((control) => [control.menu_key, control.is_visible])));
-      setMenuOrder(Object.fromEntries(controls.map((control) => [control.menu_key, control.sort_order ?? 0])));
+      const [{ data: enrollment }, { data: overrides }] = await Promise.all([
+        supabase.from("enrollments").select("course_id").eq("student_id", profile.id).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("student_menu_overrides").select("menu_key,is_visible").eq("student_id", profile.id),
+      ]);
+
+      // Per-student overrides win over the course-level defaults, so an admin can
+      // give one campaign student a stripped-down hub without touching the course.
+      const overrideMap: Record<string, boolean> = Object.fromEntries(
+        (overrides ?? []).map((row: { menu_key: string; is_visible: boolean }) => [row.menu_key, row.is_visible]),
+      );
+
+      let base: Record<string, boolean> = {};
+      if (enrollment?.course_id) {
+        const { data: controls } = await supabase.from("course_student_menu_controls").select("*").eq("course_id", enrollment.course_id);
+        if (controls?.length) {
+          base = Object.fromEntries(controls.map((control) => [control.menu_key, control.is_visible]));
+          setMenuOrder(Object.fromEntries(controls.map((control) => [control.menu_key, control.sort_order ?? 0])));
+        }
+      }
+
+      setMenuVisibility({ ...base, ...overrideMap });
     })();
   }, [isFreelancer, profile?.id, supabase]);
 
@@ -165,7 +183,10 @@ export function StudentShell({ profile, branding, isFreelancer, children }: { pr
           </div>
 
           <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-color:rgba(255,255,255,0.35)_transparent] [scrollbar-width:thin]">
-            {nav.filter((item) => menuVisibility?.[item.href === "/student" ? "dashboard" : item.href.replace("/student/", "")] === true).sort((a, b) => {
+            {nav.filter((item) => {
+              if (item.campaignOnly) return Boolean(hasCampaigns);
+              return menuVisibility?.[item.href === "/student" ? "dashboard" : item.href.replace("/student/", "")] === true;
+            }).sort((a, b) => {
               if (a.href === "/student") return -1;
               if (b.href === "/student") return 1;
               return (menuOrder[a.href.replace("/student/", "")] ?? 0) - (menuOrder[b.href.replace("/student/", "")] ?? 0);

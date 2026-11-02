@@ -378,6 +378,9 @@ export type TeamMember = {
   image_github_url?: string | null;
   image_cdn_url?: string | null;
   portfolio_url: string | null;
+  github_url?: string | null;
+  linkedin_url?: string | null;
+  is_leadership?: boolean;
   email: string | null;
   phone: string | null;
   skills: string[] | null;

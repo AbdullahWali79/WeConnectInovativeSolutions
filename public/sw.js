@@ -1,4 +1,7 @@
-const CACHE_VERSION = "weconnect-v1";
+// Bump this on every release that changes app code. It renames both caches, so
+// `activate` deletes the previous ones and an installed app cannot keep serving
+// a stale bundle.
+const CACHE_VERSION = "weconnect-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const OFFLINE_URL = "/offline";
@@ -41,15 +44,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Network first, cache as the offline fallback. Cache-first here meant a
+  // freshly deployed build could stay invisible on an installed app until the
+  // background revalidation happened to land on the next reload.
   if (["style", "script", "image", "font"].includes(request.destination)) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const network = fetch(request).then((response) => {
+      fetch(request)
+        .then((response) => {
           if (response.ok) caches.open(STATIC_CACHE).then((cache) => cache.put(request, response.clone()));
           return response;
-        });
-        return cached || network;
-      }),
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached ?? new Response("", { status: 504, statusText: "Offline" });
+        }),
     );
   }
 });

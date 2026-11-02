@@ -134,6 +134,18 @@ export const TEACHER_PERMISSION_GROUPS = [
     ],
   },
   {
+    id: "social_campaigns",
+    title: "Social Media Campaigns",
+    description: "Client campaign plans, the day-wise posting board, and teacher approvals.",
+    permissions: [
+      { key: "social_campaigns.view", label: "View Campaigns" },
+      { key: "social_campaigns.create", label: "Create Campaigns" },
+      { key: "social_campaigns.edit", label: "Edit Campaigns" },
+      { key: "social_campaigns.delete", label: "Delete Campaigns" },
+      { key: "social_campaigns.approve", label: "Approve Daily Posts" },
+    ],
+  },
+  {
     id: "other",
     title: "Other",
     description: "Auxiliary admin modules and product management controls.",

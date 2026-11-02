@@ -4,14 +4,43 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdminOnly } from "@/lib/admin-access";
 
-export async function fetchAccountsData() {
+// Columns the pickers and renewal list actually render. `am_clients` has
+// thousands of rows and the previous `select("*")` shipped ~320KB on every
+// refresh; these five fields are all the UI reads. Full records are loaded on
+// demand through getClientById when a client is edited.
+const CLIENT_LIST_COLUMNS = "id, name, phone, whatsapp, marketing_opt_in";
+
+// PostgREST caps every response at the project's `db-max-rows` setting (1,000 on
+// Supabase) and truncates silently. `am_clients` holds ~3.5k rows, so an
+// unpaginated select only ever returned the first thousand names — which is why
+// freshly added clients never showed up in the account picker.
+const PAGE_SIZE = 1000;
+
+async function selectAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+): Promise<{ rows: T[]; error: any }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) return { rows, error };
+    const batch = data || [];
+    rows.push(...batch);
+    if (batch.length < PAGE_SIZE) return { rows, error: null };
+  }
+}
+
+/**
+ * Workspace data only (no clients). This is what the accounts list renders, so it
+ * can be refreshed on its own after account/seller/bank changes without pulling
+ * the whole client book across the wire again.
+ */
+export async function fetchAccountsWorkspace() {
   await requireAdminOnly();
   const supabase = createSupabaseServiceClient();
 
   const [
     { data: accounts, error: errAcct },
     { data: sellers, error: errSel },
-    { data: clients, error: errClt },
     { data: banks, error: errBnk },
     { data: subscriptions, error: errSub },
     { data: followups, error: errFollowup },
@@ -31,28 +60,84 @@ export async function fetchAccountsData() {
       )
     `).order("created_at", { ascending: false }),
     supabase.from("am_sellers" as any).select("*").order("name"),
-    supabase.from("am_clients" as any).select("*").order("name"),
     supabase.from("am_bank_accounts" as any).select("*").order("bank_name"),
     supabase.from("am_client_subscriptions" as any).select("*").order("end_date", { ascending: false }),
     supabase.from("am_renewal_followups" as any).select("*").order("contacted_at", { ascending: false }),
     supabase.from("am_personal_debts" as any).select("*").order("created_at", { ascending: false })
   ]);
 
-  if (errAcct || errSel || errClt || errBnk || errSub || errFollowup || errDebts) {
-    console.error("Error fetching accounts data", { errAcct, errSel, errClt, errBnk, errSub, errFollowup, errDebts });
+  if (errAcct || errSel || errBnk || errSub || errFollowup || errDebts) {
+    console.error("Error fetching accounts data", { errAcct, errSel, errBnk, errSub, errFollowup, errDebts });
     return { success: false, error: errDebts ? "Apply the personal debts migration, then reload." : errSub || errFollowup ? "Apply the accounts renewal migration, then reload." : "Failed to load data" };
   }
 
-  return { 
-    success: true, 
-    accounts: accounts || [], 
-    sellers: sellers || [], 
-    clients: clients || [],
+  return {
+    success: true,
+    accounts: accounts || [],
+    sellers: sellers || [],
     banks: banks || [],
     subscriptions: subscriptions || [],
     followups: followups || [],
     debts: debts || []
   };
+}
+
+/** Full client list (paginated) for the renewal workspace. */
+export async function fetchClients() {
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
+  const { rows, error } = await selectAllPages<any>((from, to) =>
+    supabase
+      .from("am_clients" as any)
+      .select(CLIENT_LIST_COLUMNS)
+      // A stable secondary sort keeps range pagination from skipping/repeating rows.
+      .order("name")
+      .order("id")
+      .range(from, to)
+  );
+  if (error) return { success: false, error: error.message };
+  return { success: true, clients: rows };
+}
+
+/**
+ * Server-side client lookup for the "Link Clients" picker. Searching on the
+ * server means the picker can find any of the ~3.5k clients immediately without
+ * shipping the whole book to the browser first.
+ */
+export async function searchClients(term: string, limit = 25) {
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
+  // Commas and parentheses are structural in PostgREST `or=` filters.
+  const safe = String(term || "").replace(/[%,()*]/g, " ").trim();
+  let query = supabase.from("am_clients" as any).select(CLIENT_LIST_COLUMNS);
+  if (safe) {
+    const pattern = `*${safe}*`;
+    query = query.or(
+      `name.ilike.${pattern},phone.ilike.${pattern},whatsapp.ilike.${pattern},email.ilike.${pattern}`
+    );
+  }
+  const { data, error } = await query
+    .order("name")
+    .order("id")
+    .limit(Math.min(Math.max(limit, 1), 50));
+  if (error) return { success: false, error: error.message };
+  return { success: true, clients: data || [] };
+}
+
+/** Full client record, loaded on demand when opening the edit form. */
+export async function getClientById(id: string) {
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
+  const { data, error } = await supabase.from("am_clients" as any).select("*").eq("id", id).single();
+  if (error) return { success: false, error: error.message };
+  return { success: true, client: data };
+}
+
+export async function fetchAccountsData() {
+  const [workspace, clientResult] = await Promise.all([fetchAccountsWorkspace(), fetchClients()]);
+  if (!workspace.success) return workspace;
+  if (!clientResult.success) return { success: false, error: clientResult.error };
+  return { ...workspace, clients: clientResult.clients || [] };
 }
 
 export async function addSeller(data: any) {
@@ -64,21 +149,16 @@ export async function addSeller(data: any) {
 
 export async function addClient(data: any) {
   await requireAdminOnly();
-  const name = String(data.name || "").trim();
-  if (!name) return { success: false, error: "Enter the client name.", client: null };
   if (data.marketing_opt_in && !String(data.marketing_opt_in_source || "").trim()) {
-    return { success: false, error: "Record how the client agreed to WhatsApp renewal offers.", client: null };
+    return { success: false, error: "Record how the client agreed to WhatsApp renewal offers." };
   }
   const supabase = createSupabaseServiceClient();
-  const { data: inserted, error } = await supabase.from("am_clients" as any).insert({
+  const { data: created, error } = await supabase.from("am_clients" as any).insert({
     ...data,
-    name,
     marketing_opt_in_at: data.marketing_opt_in ? new Date().toISOString() : null,
     marketing_opt_in_source: data.marketing_opt_in ? String(data.marketing_opt_in_source).trim() : null,
-  }).select("*").single();
-  if (error || !inserted) return { success: false, error: error?.message || "Client could not be created.", client: null };
-  const client = inserted as unknown as Record<string, unknown> & { id: string; name: string };
-  return { success: true, client };
+  }).select(CLIENT_LIST_COLUMNS).single();
+  return { success: !error, error: error?.message, client: created ?? null };
 }
 
 export async function updateClient(id: string, data: any) {
@@ -94,8 +174,8 @@ export async function updateClient(id: string, data: any) {
   if (Boolean(data.marketing_opt_in) !== Boolean((prior as any).marketing_opt_in)) {
     next.marketing_opt_in_at = data.marketing_opt_in ? new Date().toISOString() : null;
   }
-  const { error } = await supabase.from("am_clients" as any).update(next).eq("id", id);
-  return { success: !error, error: error?.message };
+  const { data: updated, error } = await supabase.from("am_clients" as any).update(next).eq("id", id).select(CLIENT_LIST_COLUMNS).single();
+  return { success: !error, error: error?.message, client: updated ?? null };
 }
 
 export async function addSharedAccount(data: any) {
@@ -143,13 +223,6 @@ export async function updateAssignmentPayment(assignmentId: string, paymentStatu
   return { success: true, assignment };
 }
 
-export async function removeAssignment(assignmentId: string) {
-  await requireAdminOnly();
-  const supabase = createSupabaseServiceClient();
-  const { error } = await supabase.from("am_assignments" as any).delete().eq("id", assignmentId);
-  return { success: !error, error: error?.message };
-}
-
 export async function addPersonalDebt(data: { person_name: string; phone?: string; amount: number; notes?: string; debt_date?: string }) {
   await requireAdminOnly();
   const personName = String(data.person_name || "").trim();
@@ -190,6 +263,13 @@ export async function updatePersonalDebtPayment(debtId: string, paymentStatus: s
   return { success: true, debt };
 }
 
+export async function removeAssignment(assignmentId: string) {
+  await requireAdminOnly();
+  const supabase = createSupabaseServiceClient();
+  const { error } = await supabase.from("am_assignments" as any).delete().eq("id", assignmentId);
+  return { success: !error, error: error?.message };
+}
+
 export async function addBankAccount(data: any) {
   await requireAdminOnly();
   const supabase = createSupabaseServiceClient();
@@ -208,11 +288,16 @@ export async function deleteBankAccount(id: string) {
 export async function importClients(clients: any[]) {
   await requireAdminOnly();
   const supabase = createSupabaseServiceClient();
-  const { data: existing } = await supabase.from("am_clients" as any).select("name, phone");
-  
+  // Paginated, otherwise the dedupe check only sees the first 1,000 names and
+  // the import happily re-inserts everyone beyond that.
+  const { rows: existing, error: readError } = await selectAllPages<any>((from, to) =>
+    supabase.from("am_clients" as any).select("name, phone").order("id").range(from, to)
+  );
+  if (readError) return { success: false, error: readError.message };
+
   const newClients = clients.filter(c => {
     if (!c.name) return false;
-    const isDup = existing?.some((e: any) => e.name === c.name || (e.phone && c.phone && e.phone === c.phone));
+    const isDup = existing.some((e: any) => e.name === c.name || (e.phone && c.phone && e.phone === c.phone));
     return !isDup;
   });
 
