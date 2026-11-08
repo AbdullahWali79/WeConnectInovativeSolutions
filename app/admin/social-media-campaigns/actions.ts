@@ -432,6 +432,170 @@ export async function updateCampaignDay(dayId: string, input: any) {
   }
 }
 
+/** Adds a single day to the campaign plan (e.g. Next Day). */
+export async function addCampaignDay(campaignId: string, day: any) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    const campaign = await assertCampaignAccess(campaignId, profile);
+    const supabase = createSupabaseServiceClient();
+
+    const { data: existingDays } = await supabase
+      .from("sm_campaign_days" as any)
+      .select("day_number, post_date")
+      .eq("campaign_id", campaignId)
+      .order("day_number", { ascending: false })
+      .limit(1);
+
+    const maxDay = existingDays && existingDays.length > 0 ? Number((existingDays[0] as any).day_number) : 0;
+    const lastDate = existingDays && existingDays.length > 0 ? (existingDays[0] as any).post_date : null;
+
+    const dayNumber = Number(day?.day_number) > 0 ? Math.trunc(Number(day.day_number)) : maxDay + 1;
+
+    let postDate = cleanDate(day?.post_date);
+    if (!postDate && lastDate) {
+      const d = new Date(`${lastDate}T00:00:00Z`);
+      if (!Number.isNaN(d.getTime())) {
+        d.setUTCDate(d.getUTCDate() + 1);
+        postDate = d.toISOString().slice(0, 10);
+      }
+    } else if (!postDate && campaign?.period_start) {
+      const d = new Date(`${campaign.period_start}T00:00:00Z`);
+      if (!Number.isNaN(d.getTime())) {
+        d.setUTCDate(d.getUTCDate() + dayNumber - 1);
+        postDate = d.toISOString().slice(0, 10);
+      }
+    }
+
+    const payload: any = {
+      campaign_id: campaignId,
+      day_number: dayNumber,
+      post_date: postDate,
+      theme: cleanText(day?.theme),
+      goal: cleanText(day?.goal),
+      research_note: cleanText(day?.research_note),
+      platform_plan: cleanText(day?.platform_plan),
+      caption: cleanText(day?.caption),
+      image_headline: cleanText(day?.image_headline || day?.prompt),
+      x_draft: cleanText(day?.x_draft),
+      source_link: cleanText(day?.source_link || day?.doc_url),
+      reel_script: cleanText(day?.reel_script || day?.script),
+      hashtags: cleanText(day?.hashtags),
+      engagement_action: cleanText(day?.engagement_action || day?.hook),
+      cta: cleanText(day?.cta),
+      metrics_to_record: cleanText(day?.metrics_to_record),
+      status: "pending",
+      teacher_status: "pending",
+      admin_status: "pending",
+      visible_to_students: Boolean(day?.visible_to_students ?? true),
+      published_to_students_at: day?.visible_to_students !== false ? new Date().toISOString() : null,
+      published_to_students_by: day?.visible_to_students !== false ? profile.id : null,
+    };
+
+    const { data, error } = await supabase.from("sm_campaign_days" as any).insert(payload).select().single();
+    if (error) return { success: false as const, error: error.message };
+
+    revalidateCampaign();
+    return { success: true as const, day: data };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not add day." };
+  }
+}
+
+/** Appends multiple days from an uploaded sheet without deleting existing days. */
+export async function appendCampaignDays(campaignId: string, days: any[]) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    const campaign = await assertCampaignAccess(campaignId, profile);
+    const supabase = createSupabaseServiceClient();
+
+    const { data: existingDays } = await supabase
+      .from("sm_campaign_days" as any)
+      .select("day_number, post_date")
+      .eq("campaign_id", campaignId)
+      .order("day_number", { ascending: false })
+      .limit(1);
+
+    const maxDay = existingDays && existingDays.length > 0 ? Number((existingDays[0] as any).day_number) : 0;
+    const lastDate = existingDays && existingDays.length > 0 ? (existingDays[0] as any).post_date : null;
+
+    const rawList = (Array.isArray(days) ? days : []).slice(0, 366);
+    if (rawList.length === 0) {
+      return { success: false as const, error: "The uploaded sheet has no day rows." };
+    }
+
+    const rows = rawList.map((raw, index) => {
+      const dayNum = maxDay + index + 1;
+      let postDate = cleanDate(raw?.post_date);
+      if (!postDate && lastDate) {
+        const d = new Date(`${lastDate}T00:00:00Z`);
+        if (!Number.isNaN(d.getTime())) {
+          d.setUTCDate(d.getUTCDate() + index + 1);
+          postDate = d.toISOString().slice(0, 10);
+        }
+      } else if (!postDate && campaign?.period_start) {
+        const d = new Date(`${campaign.period_start}T00:00:00Z`);
+        if (!Number.isNaN(d.getTime())) {
+          d.setUTCDate(d.getUTCDate() + dayNum - 1);
+          postDate = d.toISOString().slice(0, 10);
+        }
+      }
+
+      const payload: any = {
+        campaign_id: campaignId,
+        day_number: dayNum,
+        post_date: postDate,
+        visible_to_students: true,
+        status: "pending",
+        teacher_status: "pending",
+        admin_status: "pending",
+      };
+
+      for (const field of DAY_CONTENT_FIELDS) {
+        payload[field] = cleanText(raw?.[field]);
+      }
+      if (!payload.engagement_action && raw?.hook) payload.engagement_action = cleanText(raw.hook);
+      if (!payload.image_headline && raw?.prompt) payload.image_headline = cleanText(raw.prompt);
+      if (!payload.reel_script && raw?.script) payload.reel_script = cleanText(raw.script);
+      if (!payload.source_link && raw?.doc_url) payload.source_link = cleanText(raw.doc_url);
+
+      return payload;
+    });
+
+    const { error: insertError } = await supabase.from("sm_campaign_days" as any).insert(rows);
+    if (insertError) return { success: false as const, error: insertError.message };
+
+    revalidateCampaign();
+    return { success: true as const, addedCount: rows.length };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not append days to the plan." };
+  }
+}
+
+/** Deletes a single day from the campaign plan. */
+export async function deleteCampaignDay(dayId: string) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    const supabase = createSupabaseServiceClient();
+
+    const { data: day, error: readError } = await supabase
+      .from("sm_campaign_days" as any)
+      .select("id, campaign_id")
+      .eq("id", dayId)
+      .maybeSingle();
+    if (readError) return { success: false as const, error: readError.message };
+    if (!day) return { success: false as const, error: "This day no longer exists." };
+    await assertCampaignAccess((day as any).campaign_id, profile);
+
+    const { error } = await supabase.from("sm_campaign_days" as any).delete().eq("id", dayId);
+    if (error) return { success: false as const, error: error.message };
+
+    revalidateCampaign();
+    return { success: true as const };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not delete this day." };
+  }
+}
+
 /**
  * The dual approval. `teacher` and `admin` are independent flags — either one
  * marks the day Done, and whoever acted is recorded on the row.

@@ -5,9 +5,12 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import {
+  addCampaignDay,
   addCampaignMember,
+  appendCampaignDays,
   createCampaignStudent,
   deleteCampaign,
+  deleteCampaignDay,
   fetchCampaignDetail,
   findStudentDuplicates,
   publishUpcomingDays,
@@ -75,6 +78,9 @@ export function CampaignBoard({
   const [tab, setTab] = useState<"plan" | "team">("plan");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editingDay, setEditingDay] = useState<Row | null>(null);
+  const [addingDay, setAddingDay] = useState(false);
+  const [uploadingDays, setUploadingDays] = useState(false);
+  const [uploadChoice, setUploadChoice] = useState<{ parsed: any; file: File } | null>(null);
   const [busyDayId, setBusyDayId] = useState<string | null>(null);
   const [publishCount, setPublishCount] = useState("7");
   const [publishing, setPublishing] = useState(false);
@@ -147,6 +153,49 @@ export function CampaignBoard({
     const ids = new Set(res.dayIds ?? []);
     setDays((current) => current.map((row) => (ids.has(row.id) ? { ...row, visible_to_students: true } : row)));
     setToast({ type: "success", message: `Shared ${res.published} day${res.published === 1 ? "" : "s"} with students` });
+  }
+
+  async function removeDay(day: Row) {
+    if (!confirm(`Delete Day #${day.day_number} ("${day.theme || "Untitled"}")? This cannot be undone.`)) return;
+    setBusyDayId(day.id);
+    const res = await deleteCampaignDay(day.id);
+    setBusyDayId(null);
+    if (!res.success) {
+      setToast({ type: "error", message: res.error || "Could not delete this day." });
+      return;
+    }
+    await load();
+    setToast({ type: "success", message: `Day #${day.day_number} deleted` });
+  }
+
+  async function handlePlanUpload(file: File) {
+    setUploadingDays(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const parsed = parseCampaignPlan(buffer);
+      if (parsed.days.length === 0) {
+        setToast({ type: "error", message: parsed.warnings[0] || "No day rows found in this file." });
+        return;
+      }
+
+      if (days.length > 0) {
+        setUploadChoice({ parsed, file });
+        return;
+      }
+
+      if (!campaign) return;
+      const res = await replaceCampaignDays(campaign.id, parsed.days);
+      if (!res.success) {
+        setToast({ type: "error", message: res.error || "Could not import the plan." });
+        return;
+      }
+      await load();
+      setToast({ type: "success", message: `Imported ${res.dayCount} days successfully` });
+    } catch {
+      setToast({ type: "error", message: "Failed to parse the uploaded file." });
+    } finally {
+      setUploadingDays(false);
+    }
   }
 
   async function review(day: Row, submission: Row, status: "approved" | "rejected" | "revision" | "selected") {
@@ -390,9 +439,87 @@ export function CampaignBoard({
 
       {tab === "plan" && (
         <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant bg-surface-low/70 p-3.5 sm:p-4">
+            <div>
+              <h3 className="text-sm font-bold text-on-surface">Campaign Day Plan</h3>
+              <p className="text-xs text-on-surface-variant">
+                Total {days.length} planned days · Add single days, upload bulk plans, or download template
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={downloadCampaignTemplate}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-xs font-bold text-on-surface hover:border-primary hover:text-primary transition-colors"
+                title="Download standard plan template (.xlsx) with all columns"
+              >
+                <Icon name="download" className="text-[15px] text-primary" />
+                <span>Download template (.xlsx)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAddingDay(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+              >
+                <Icon name="add" className="text-[16px]" />
+                <span>+ Add next day</span>
+              </button>
+
+              <label className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary-container transition-colors cursor-pointer">
+                <Icon name={uploadingDays ? "sync" : "upload_file"} className={`text-[15px] ${uploadingDays ? "animate-spin" : ""}`} />
+                <span>{uploadingDays ? "Reading…" : "Upload plan (.xlsx)"}</span>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="hidden"
+                  disabled={uploadingDays}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handlePlanUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+
           {days.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="text-sm text-on-surface-variant">No day plan has been uploaded for this campaign yet.</p>
+            <div className="p-10 text-center space-y-3">
+              <Icon name="calendar_month" className="text-4xl text-on-surface-variant/40" />
+              <p className="text-sm font-semibold text-on-surface">No day plan uploaded for this campaign yet.</p>
+              <p className="text-xs text-on-surface-variant max-w-md mx-auto">
+                You can upload a multi-day plan in Excel (.xlsx / .csv) or start by adding Day #1 manually.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAddingDay(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary-container"
+                >
+                  <Icon name="add" className="text-[16px]" /> Add Day #1
+                </button>
+                <label className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-lowest px-4 py-2 text-xs font-bold text-on-surface hover:border-primary hover:text-primary cursor-pointer">
+                  <Icon name="upload_file" className="text-[16px] text-primary" /> Upload Excel Plan
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handlePlanUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={downloadCampaignTemplate}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-lowest px-4 py-2 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary"
+                >
+                  <Icon name="download" className="text-[16px]" /> Download template (.xlsx)
+                </button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -487,6 +614,13 @@ export function CampaignBoard({
                               >
                                 <Icon name="link" className="text-[16px]" />
                               </button>
+                              <button
+                                onClick={() => void removeDay(day)}
+                                title="Delete this day"
+                                className="rounded-lg border border-outline-variant p-1.5 text-on-surface-variant hover:border-red-400 hover:text-red-600"
+                              >
+                                <Icon name="delete" className="text-[16px]" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -529,6 +663,52 @@ export function CampaignBoard({
             setDays((current) => current.map((row) => (row.id === editingDay.id ? { ...row, ...patch } : row)));
             setEditingDay(null);
             setToast({ type: "success", message: "Day updated" });
+          }}
+        />
+      )}
+
+      {addingDay && campaign && (
+        <DayAddModal
+          campaign={campaign}
+          days={days}
+          onClose={() => setAddingDay(false)}
+          onAdded={async () => {
+            await load();
+            setToast({ type: "success", message: "New day added to plan" });
+          }}
+        />
+      )}
+
+      {uploadChoice && campaign && (
+        <UploadChoiceModal
+          choice={uploadChoice}
+          daysCount={days.length}
+          onClose={() => setUploadChoice(null)}
+          onAppend={async () => {
+            const parsed = uploadChoice.parsed;
+            setUploadChoice(null);
+            setUploadingDays(true);
+            const res = await appendCampaignDays(campaign.id, parsed.days);
+            setUploadingDays(false);
+            if (!res.success) {
+              setToast({ type: "error", message: res.error || "Append failed." });
+              return;
+            }
+            await load();
+            setToast({ type: "success", message: `Appended ${res.addedCount} new days (Total: ${days.length + res.addedCount} days)` });
+          }}
+          onReplace={async () => {
+            const parsed = uploadChoice.parsed;
+            setUploadChoice(null);
+            setUploadingDays(true);
+            const res = await replaceCampaignDays(campaign.id, parsed.days);
+            setUploadingDays(false);
+            if (!res.success) {
+              setToast({ type: "error", message: res.error || "Replace failed." });
+              return;
+            }
+            await load();
+            setToast({ type: "success", message: `Replaced plan with ${res.dayCount} days` });
           }}
         />
       )}
@@ -834,56 +1014,56 @@ function DayEditModal({ day, onClose, onSaved }: { day: Row; onClose: () => void
               <input type="date" value={form.post_date} onChange={(e) => setForm({ ...form, post_date: e.target.value })} className={FIELD_CLASS} />
             </div>
             <div>
-              <label className={LABEL_CLASS}>Theme</label>
+              <label className={LABEL_CLASS}>Topic / Theme *</label>
               <input value={form.theme} onChange={(e) => setForm({ ...form, theme: e.target.value })} className={FIELD_CLASS} />
             </div>
             <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Goal</label>
-              <input value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} className={FIELD_CLASS} />
+              <label className={LABEL_CLASS}>Hook Text (First 3-5 Seconds)</label>
+              <textarea rows={2} value={form.engagement_action} onChange={(e) => setForm({ ...form, engagement_action: e.target.value })} className={FIELD_CLASS} placeholder="Attention-grabbing opening hook..." />
             </div>
             <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Research / verify before posting</label>
-              <textarea rows={2} value={form.research_note} onChange={(e) => setForm({ ...form, research_note: e.target.value })} className={FIELD_CLASS} />
+              <label className={LABEL_CLASS}>Video Prompt / Visual Guidance</label>
+              <textarea rows={2} value={form.image_headline} onChange={(e) => setForm({ ...form, image_headline: e.target.value })} className={FIELD_CLASS} placeholder="Visual styling, b-roll ideas, screen recordings..." />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Reel Script / Scene-by-Scene Script</label>
+              <textarea rows={4} value={form.reel_script} onChange={(e) => setForm({ ...form, reel_script: e.target.value })} className={FIELD_CLASS} placeholder="Scene 1: Hook... Scene 2: Problem... Scene 3: Solution..." />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Google Doc Brief Link (Optional)</label>
+              <input value={form.source_link} onChange={(e) => setForm({ ...form, source_link: e.target.value })} className={FIELD_CLASS} placeholder="https://docs.google.com/document/d/..." />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Caption / Talking Points</label>
+              <textarea rows={3} value={form.caption} onChange={(e) => setForm({ ...form, caption: e.target.value })} className={FIELD_CLASS} />
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>Hashtags</label>
+              <input value={form.hashtags} onChange={(e) => setForm({ ...form, hashtags: e.target.value })} className={FIELD_CLASS} placeholder="#AI #Automation #Growth" />
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>Call To Action (CTA)</label>
+              <input value={form.cta} onChange={(e) => setForm({ ...form, cta: e.target.value })} className={FIELD_CLASS} placeholder="Comment GUIDE for info" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Goal / Objective</label>
+              <input value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} className={FIELD_CLASS} />
             </div>
             <div className="sm:col-span-2">
               <label className={LABEL_CLASS}>Platform plan</label>
               <textarea rows={2} value={form.platform_plan} onChange={(e) => setForm({ ...form, platform_plan: e.target.value })} className={FIELD_CLASS} />
             </div>
             <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Caption / talking points</label>
-              <textarea rows={3} value={form.caption} onChange={(e) => setForm({ ...form, caption: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>Image headline</label>
-              <input value={form.image_headline} onChange={(e) => setForm({ ...form, image_headline: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>Hashtags</label>
-              <input value={form.hashtags} onChange={(e) => setForm({ ...form, hashtags: e.target.value })} className={FIELD_CLASS} />
+              <label className={LABEL_CLASS}>Research / verify before posting</label>
+              <textarea rows={2} value={form.research_note} onChange={(e) => setForm({ ...form, research_note: e.target.value })} className={FIELD_CLASS} />
             </div>
             <div className="sm:col-span-2">
               <label className={LABEL_CLASS}>X post draft</label>
               <textarea rows={2} value={form.x_draft} onChange={(e) => setForm({ ...form, x_draft: e.target.value })} className={FIELD_CLASS} />
             </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Reel script / shot guidance</label>
-              <textarea rows={4} value={form.reel_script} onChange={(e) => setForm({ ...form, reel_script: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Official source / link</label>
-              <input value={form.source_link} onChange={(e) => setForm({ ...form, source_link: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>CTA</label>
-              <input value={form.cta} onChange={(e) => setForm({ ...form, cta: e.target.value })} className={FIELD_CLASS} />
-            </div>
             <div>
               <label className={LABEL_CLASS}>Metrics to record</label>
               <input value={form.metrics_to_record} onChange={(e) => setForm({ ...form, metrics_to_record: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Engagement action</label>
-              <textarea rows={2} value={form.engagement_action} onChange={(e) => setForm({ ...form, engagement_action: e.target.value })} className={FIELD_CLASS} />
             </div>
           </div>
           {error && <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error">{error}</p>}
@@ -899,6 +1079,333 @@ function DayEditModal({ day, onClose, onSaved }: { day: Row; onClose: () => void
             {saving ? "Saving…" : "Save day"}
           </button>
           <button onClick={onClose} className="rounded-lg border border-outline-variant px-5 py-2 text-sm font-bold text-on-surface-variant hover:bg-surface-container">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DayAddModal({
+  campaign,
+  days,
+  onClose,
+  onAdded,
+}: {
+  campaign: Row;
+  days: Row[];
+  onClose: () => void;
+  onAdded: () => Promise<void>;
+}) {
+  const lastDay = days.length > 0 ? days[days.length - 1] : null;
+  const nextDayNumber = Math.max(0, ...days.map((d) => Number(d.day_number) || 0)) + 1;
+
+  const defaultDate = (() => {
+    if (lastDay?.post_date) {
+      const d = new Date(`${lastDay.post_date}T00:00:00Z`);
+      if (!Number.isNaN(d.getTime())) {
+        d.setUTCDate(d.getUTCDate() + 1);
+        return d.toISOString().slice(0, 10);
+      }
+    }
+    if (campaign?.period_start) {
+      const d = new Date(`${campaign.period_start}T00:00:00Z`);
+      if (!Number.isNaN(d.getTime())) {
+        d.setUTCDate(d.getUTCDate() + nextDayNumber - 1);
+        return d.toISOString().slice(0, 10);
+      }
+    }
+    return new Date().toISOString().slice(0, 10);
+  })();
+
+  const [form, setForm] = useState({
+    day_number: String(nextDayNumber),
+    post_date: defaultDate,
+    theme: "",
+    hook: "",
+    prompt: "",
+    script: "",
+    doc_url: "",
+    caption: "",
+    hashtags: "",
+    cta: "",
+    goal: "",
+    platform_plan: "",
+    visible_to_students: true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit() {
+    if (!form.theme.trim()) {
+      setError("Topic / Theme is required.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const res = await addCampaignDay(campaign.id, {
+      day_number: Number(form.day_number) || nextDayNumber,
+      post_date: form.post_date,
+      theme: form.theme,
+      engagement_action: form.hook,
+      image_headline: form.prompt,
+      reel_script: form.script,
+      source_link: form.doc_url,
+      caption: form.caption,
+      hashtags: form.hashtags,
+      cta: form.cta,
+      goal: form.goal,
+      platform_plan: form.platform_plan,
+      visible_to_students: form.visible_to_students,
+    });
+    setSaving(false);
+    if (!res.success) {
+      setError(res.error || "Could not add this day.");
+      return;
+    }
+    await onAdded();
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
+      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest shadow-2xl">
+        <div className="flex items-center justify-between border-b border-outline-variant bg-surface-low p-4">
+          <div>
+            <h3 className="text-base font-bold text-on-surface">Add Day #{form.day_number} Plan</h3>
+            <p className="text-xs text-on-surface-variant">Add the daily topic, hook, script, video prompt, and doc link.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1 text-on-surface-variant hover:bg-surface-container">
+            <Icon name="close" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar sm:p-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className={LABEL_CLASS}>Day Number *</label>
+              <input
+                type="number"
+                min="1"
+                value={form.day_number}
+                onChange={(e) => setForm({ ...form, day_number: e.target.value })}
+                className={FIELD_CLASS}
+              />
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>Post Date</label>
+              <input
+                type="date"
+                value={form.post_date}
+                onChange={(e) => setForm({ ...form, post_date: e.target.value })}
+                className={FIELD_CLASS}
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Topic / Theme *</label>
+              <input
+                value={form.theme}
+                onChange={(e) => setForm({ ...form, theme: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="e.g. 3 Free AI Tools You Didn't Know Existed"
+                required
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Hook Text (First 3-5 Seconds)</label>
+              <textarea
+                rows={2}
+                value={form.hook}
+                onChange={(e) => setForm({ ...form, hook: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="e.g. If you're still creating content manually, you need to see this..."
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Video Prompt / Visual Guidance</label>
+              <textarea
+                rows={2}
+                value={form.prompt}
+                onChange={(e) => setForm({ ...form, prompt: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="e.g. Screen recording of tool demo with fast transitions and zoomed text overlays..."
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Reel Script / Scene-by-Scene Script</label>
+              <textarea
+                rows={4}
+                value={form.script}
+                onChange={(e) => setForm({ ...form, script: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="Scene 1: Hook (0-3s)...&#10;Scene 2: Problem (3-15s)...&#10;Scene 3: Solution & Demo (15-45s)...&#10;Scene 4: Call to Action (45-60s)..."
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Google Doc Brief Link (Optional)</label>
+              <input
+                value={form.doc_url}
+                onChange={(e) => setForm({ ...form, doc_url: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="https://docs.google.com/document/d/... (Full brief shared with students)"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Caption / Talking Points</label>
+              <textarea
+                rows={3}
+                value={form.caption}
+                onChange={(e) => setForm({ ...form, caption: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="Write the accompanying caption for social media..."
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>Hashtags</label>
+              <input
+                value={form.hashtags}
+                onChange={(e) => setForm({ ...form, hashtags: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="#AI #Automation #Marketing"
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>Call To Action (CTA)</label>
+              <input
+                value={form.cta}
+                onChange={(e) => setForm({ ...form, cta: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="Comment TOOLS to get the direct links"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Goal / Objective</label>
+              <input
+                value={form.goal}
+                onChange={(e) => setForm({ ...form, goal: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="e.g. Drive 500+ saves and 100+ comments"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Platform plan</label>
+              <textarea
+                rows={2}
+                value={form.platform_plan}
+                onChange={(e) => setForm({ ...form, platform_plan: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="e.g. Facebook Reel at 6 PM, cross-post to IG"
+              />
+            </div>
+
+            <div className="sm:col-span-2 flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="visible_students"
+                checked={form.visible_to_students}
+                onChange={(e) => setForm({ ...form, visible_to_students: e.target.checked })}
+                className="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+              />
+              <label htmlFor="visible_students" className="text-xs font-bold text-on-surface cursor-pointer">
+                Share with students immediately (they can view this day on their portal)
+              </label>
+            </div>
+          </div>
+
+          {error && <p className="mt-3 rounded-lg bg-red-100 p-2.5 text-xs font-semibold text-red-700">{error}</p>}
+        </div>
+
+        <div className="flex gap-3 border-t border-outline-variant bg-surface-low p-4">
+          <button
+            onClick={() => void submit()}
+            disabled={saving || !form.theme.trim()}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
+          >
+            <Icon name={saving ? "sync" : "add"} className={`text-[18px] ${saving ? "animate-spin" : ""}`} />
+            {saving ? "Adding…" : "Add day"}
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-outline-variant px-5 py-2 text-sm font-bold text-on-surface-variant hover:bg-surface-container"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UploadChoiceModal({
+  choice,
+  daysCount,
+  onClose,
+  onAppend,
+  onReplace,
+}: {
+  choice: { parsed: any; file: File };
+  daysCount: number;
+  onClose: () => void;
+  onAppend: () => Promise<void>;
+  onReplace: () => Promise<void>;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-outline-variant bg-surface-lowest p-6 shadow-2xl">
+        <div className="flex items-center gap-2 text-primary font-bold text-base">
+          <Icon name="playlist_add" className="text-xl" />
+          <span>Import {choice.parsed.days.length} Days</span>
+        </div>
+        <p className="mt-2 text-xs text-on-surface-variant leading-relaxed">
+          This campaign currently has <strong>{daysCount} planned days</strong>. How would you like to import the new sheet (&quot;{choice.parsed.sheetName}&quot;)?
+        </p>
+
+        <div className="mt-5 space-y-3">
+          <button
+            type="button"
+            onClick={() => void onAppend()}
+            className="w-full text-left rounded-xl border border-primary/30 bg-primary/5 p-3.5 hover:bg-primary/10 transition-colors"
+          >
+            <div className="flex items-center justify-between font-bold text-xs text-primary">
+              <span>➕ Append to existing days (Recommended)</span>
+              <span className="text-[10px] uppercase bg-primary/20 px-2 py-0.5 rounded-full font-bold">Safe</span>
+            </div>
+            <p className="mt-1 text-[11px] text-on-surface-variant">
+              Keeps existing Day #1 - #{daysCount} and student submissions intact. Adds new days starting at Day #{daysCount + 1}.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void onReplace()}
+            className="w-full text-left rounded-xl border border-red-200 bg-red-50/50 p-3.5 hover:bg-red-100/60 transition-colors dark:border-red-900/60 dark:bg-red-950/20"
+          >
+            <div className="font-bold text-xs text-red-700 dark:text-red-400">
+              ⚠️ Replace entire plan
+            </div>
+            <p className="mt-1 text-[11px] text-on-surface-variant">
+              Deletes current days and replaces them completely with the uploaded sheet.
+            </p>
+          </button>
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-outline-variant px-4 py-1.5 text-xs font-bold text-on-surface-variant hover:bg-surface-container"
+          >
             Cancel
           </button>
         </div>
