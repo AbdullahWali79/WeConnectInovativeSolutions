@@ -1,7 +1,8 @@
 "use client";
 import { CmsElement, CmsInstance } from "@/components/cms/cms-element";
 import { useMemo, useState, useEffect } from "react";
-import { driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
+import { Icon } from "@/components/icon";
+import { driveId, driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
 
 function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; initialIndex: number; onClose: () => void; title: string }) {
   const [index, setIndex] = useState(initialIndex);
@@ -126,17 +127,54 @@ function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; init
 }
 
 function PromptThumbnail({ url, title }: { url: string; title: string }) {
+  const [failed, setFailed] = useState(false);
+  const [cdnAttempt, setCdnAttempt] = useState(0);
+  const id = driveId(url);
   const thumbnail = driveThumbnail(url, 800);
-  if (!thumbnail) return null;
+
+  if (!url) return null;
+
+  const imgSrc = (() => {
+    if (!id) return url;
+    if (cdnAttempt === 1) return `https://lh3.googleusercontent.com/d/${id}=s800`;
+    if (cdnAttempt === 2) return `https://drive.google.com/uc?export=view&id=${id}`;
+    return thumbnail || url;
+  })();
+
+  if (failed) {
+    return (
+      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-surface-container-low p-4 text-center">
+        <Icon name="image_not_supported" className="text-3xl text-on-surface-variant/40" />
+        <span className="line-clamp-1 text-xs font-semibold text-on-surface-variant">{title}</span>
+        {id && (
+          <a
+            href={`https://drive.google.com/file/d/${id}/view`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2.5 py-1 text-[11px] font-bold text-primary shadow-sm hover:border-primary"
+          >
+            <Icon name="open_in_new" className="text-[12px]" /> Open in Drive
+          </a>
+        )}
+      </div>
+    );
+  }
 
   return (
     <CmsElement cmsId="d80dc3cb-9" as="div" className="overflow-hidden bg-surface-container-low">
       <CmsElement cmsId="d80dc3cb-10" as="img"
-        src={thumbnail}
+        src={imgSrc}
         alt={`${title} - output preview`}
         className="aspect-video w-full object-cover"
         loading="lazy"
         referrerPolicy="no-referrer"
+        onError={() => {
+          if (id && cdnAttempt < 2) {
+            setCdnAttempt((prev) => prev + 1);
+          } else {
+            setFailed(true);
+          }
+        }}
       />
     </CmsElement>
   );
