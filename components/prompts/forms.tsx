@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { contributorAuth, contributorLogout, saveContributorPrompt, type PromptActionResult } from "@/app/prompts/actions";
 import { managePrompt } from "@/app/admin/prompts/actions";
 import { type Contributor, type Prompt } from "@/lib/prompts";
-import { PromptMedia, PromptLibrary } from "./library";
+import { PromptLibrary } from "./library";
 import { PromptExcelTools } from "./excel-tools";
 
 const fieldClass = "mt-2 w-full rounded-xl border border-outline-variant bg-background p-3 text-on-background";

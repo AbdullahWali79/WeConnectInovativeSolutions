@@ -34,21 +34,21 @@ export async function managePrompt(form: FormData): Promise<PromptActionResult> 
     if (operation === "contributor") {
       if (!id) throw new Error("Missing contributor.");
       const status = z.enum(["pending", "approved", "rejected"]).parse(form.get("status"));
-      const updateData: Record<string, any> = { status, auto_publish: status === "approved" && form.get("auto_publish") === "on" };
+      const updateData: Record<string, unknown> = { status, auto_publish: status === "approved" && form.get("auto_publish") === "on" };
       if (note !== undefined) updateData.admin_note = note;
       const { error } = await db.from("prompt_contributors").update(updateData).eq("id", id).select("id").single();
       if (error) throw new Error("Could not update contributor.");
     } else if (operation === "review") {
       if (!id) throw new Error("Missing prompt.");
       const status = z.enum(["pending", "approved", "rejected"]).parse(form.get("status"));
-      const updateData: Record<string, any> = { status };
+      const updateData: Record<string, unknown> = { status };
       if (note !== undefined) updateData.admin_note = note;
       const { error } = await db.from("prompt_library").update(updateData).eq("id", id).select("id").single();
       if (error) throw new Error("Could not review prompt.");
     } else if (operation === "save") {
       const input = promptInput(form);
       const status = z.enum(["pending", "approved", "rejected"]).parse(form.get("publish_status") ?? form.get("status") ?? "approved");
-      const payload: Record<string, any> = { ...input, status };
+      const payload: Record<string, unknown> = { ...input, status };
       if (note !== undefined) payload.admin_note = note;
       const query = id ? db.from("prompt_library").update(payload).eq("id", id) : db.from("prompt_library").insert({ ...payload, admin_note: note ?? "" });
       const { error } = await query.select("id").single();
