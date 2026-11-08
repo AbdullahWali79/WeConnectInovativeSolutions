@@ -70,8 +70,8 @@ export async function uploadPromptImage(formData: FormData) {
     return { success: false, error: "No image file provided." };
   }
 
-  if (file.size > 10 * 1024 * 1024) {
-    return { success: false, error: "Image size must be under 10MB." };
+  if (file.size > 15 * 1024 * 1024) {
+    return { success: false, error: "Image size must be under 15MB." };
   }
 
   const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"];
@@ -79,6 +79,36 @@ export async function uploadPromptImage(formData: FormData) {
     return { success: false, error: "Only PNG, JPG, WebP, or GIF images are allowed." };
   }
 
+  const webhookUrl = process.env.GOOGLE_DRIVE_UPLOAD_WEBHOOK_URL?.trim();
+
+  // 1. Primary: Direct Google Drive Webhook Upload (0% Supabase space used)
+  if (webhookUrl) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64Data = Buffer.from(arrayBuffer).toString("base64");
+
+      const gDriveRes = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          filename: file.name,
+          mimeType: file.type,
+          base64Data,
+          folderId: "1grsUVz0LtpTNmfjsyaBbMyE6xfjHdqJR",
+        }),
+      });
+
+      const gDriveData = await gDriveRes.json();
+      if (gDriveData?.success && gDriveData?.url) {
+        return { success: true, url: gDriveData.url };
+      }
+      console.warn("Google Drive upload webhook returned non-success, falling back to Supabase:", gDriveData);
+    } catch (gDriveErr) {
+      console.warn("Google Drive upload webhook failed, falling back to Supabase:", gDriveErr);
+    }
+  }
+
+  // 2. Secondary Fallback: Supabase Storage
   const db = promptDb();
   const ext = file.name.split(".").pop()?.toLowerCase() || "png";
   const filePath = `prompts/${Date.now()}-${randomUUID()}.${ext}`;
