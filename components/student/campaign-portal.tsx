@@ -601,7 +601,6 @@ function SubmitPanel({
   const [error, setError] = useState("");
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadedVideoName, setUploadedVideoName] = useState<string | null>(null);
-  const [showManualVideoUrl, setShowManualVideoUrl] = useState(false);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   async function handleVideoUpload(file: File) {
@@ -695,16 +694,15 @@ function SubmitPanel({
             </p>
             <h3 className="mt-1 truncate text-base font-black text-on-surface">{activeDay.theme || "Untitled day"}</h3>
           </div>
-          {driveUrl && (
-            <a
-              href={driveUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1.5 text-xs font-bold text-primary hover:bg-primary/10"
-            >
-              <Icon name="folder" className="text-[14px]" /> Upload to my Drive
-            </a>
-          )}
+          <a
+            href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 shadow-sm transition"
+            title="Open Google Drive folder"
+          >
+            <Icon name="folder" className="text-[15px]" /> Upload to Drive Folder ↗
+          </a>
         </div>
 
         {existing && (
@@ -805,23 +803,21 @@ function SubmitPanel({
             )}
 
             {!locked && (
-              <button
-                type="button"
-                onClick={() => setShowManualVideoUrl(!showManualVideoUrl)}
-                className="text-xs text-primary hover:underline font-semibold cursor-pointer block"
-              >
-                {showManualVideoUrl ? "Hide manual URL input" : "Or enter YouTube / Drive link manually"}
-              </button>
-            )}
-
-            {showManualVideoUrl && (
-              <input
-                value={form.video_url}
-                onChange={(event) => setForm({ ...form, video_url: event.target.value })}
-                className={FIELD_CLASS}
-                placeholder="https://drive.google.com/… or https://youtube.com/…"
-                disabled={locked}
-              />
+              <div className="pt-1">
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-xs font-semibold text-on-surface-variant">
+                    Or paste Google Drive / YouTube video link:
+                  </label>
+                  <span className="text-[11px] text-on-surface-variant/70">e.g. drive.google.com/file/d/…</span>
+                </div>
+                <input
+                  value={form.video_url}
+                  onChange={(event) => setForm({ ...form, video_url: event.target.value })}
+                  className={FIELD_CLASS}
+                  placeholder="https://drive.google.com/file/d/… or https://youtube.com/…"
+                  disabled={locked}
+                />
+              </div>
             )}
           </div>
           <div className="sm:col-span-2">
