@@ -2,7 +2,7 @@
 import { CmsElement, CmsInstance } from "@/components/cms/cms-element";
 import { useMemo, useState, useEffect } from "react";
 import { Icon } from "@/components/icon";
-import { driveId, driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
+import { driveId, drivePreview, driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
 
 function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; initialIndex: number; onClose: () => void; title: string }) {
   const [index, setIndex] = useState(initialIndex);
@@ -128,11 +128,27 @@ function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; init
 
 function PromptThumbnail({ url, title }: { url: string; title: string }) {
   const [failed, setFailed] = useState(false);
+  const [useIframe, setUseIframe] = useState(false);
   const [cdnAttempt, setCdnAttempt] = useState(0);
   const id = driveId(url);
   const thumbnail = driveThumbnail(url, 800);
+  const preview = drivePreview(url);
 
   if (!url) return null;
+
+  if (useIframe && preview) {
+    return (
+      <div className="relative aspect-video w-full overflow-hidden bg-black">
+        <iframe
+          src={preview}
+          title={`${title} - output preview`}
+          loading="lazy"
+          allow="autoplay; encrypted-media"
+          className="h-full w-full border-0"
+        />
+      </div>
+    );
+  }
 
   const imgSrc = (() => {
     if (!id) return url;
@@ -147,14 +163,25 @@ function PromptThumbnail({ url, title }: { url: string; title: string }) {
         <Icon name="image_not_supported" className="text-3xl text-on-surface-variant/40" />
         <span className="line-clamp-1 text-xs font-semibold text-on-surface-variant">{title}</span>
         {id && (
-          <a
-            href={`https://drive.google.com/file/d/${id}/view`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2.5 py-1 text-[11px] font-bold text-primary shadow-sm hover:border-primary"
-          >
-            <Icon name="open_in_new" className="text-[12px]" /> Open in Drive
-          </a>
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+            {preview && (
+              <button
+                type="button"
+                onClick={() => setUseIframe(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary hover:bg-primary/20"
+              >
+                <Icon name="visibility" className="text-[12px]" /> Preview player
+              </button>
+            )}
+            <a
+              href={`https://drive.google.com/file/d/${id}/view`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2.5 py-1 text-[11px] font-bold text-on-surface-variant shadow-sm hover:border-primary hover:text-primary"
+            >
+              <Icon name="open_in_new" className="text-[12px]" /> Drive
+            </a>
+          </div>
         )}
       </div>
     );
