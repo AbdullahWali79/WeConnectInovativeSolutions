@@ -75,7 +75,7 @@ export function CampaignBoard({
   const [days, setDays] = useState<Row[]>([]);
   const [members, setMembers] = useState<Row[]>([]);
   const [submissions, setSubmissions] = useState<Row[]>([]);
-  const [tab, setTab] = useState<"plan" | "team">("plan");
+  const [tab, setTab] = useState<"plan" | "review" | "team">("plan");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editingDay, setEditingDay] = useState<Row | null>(null);
   const [addingDay, setAddingDay] = useState(false);
