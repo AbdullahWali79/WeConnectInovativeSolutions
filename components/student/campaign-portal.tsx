@@ -18,6 +18,8 @@ const FIELD_CLASS =
   "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
 const LABEL_CLASS = "mb-1 block text-xs font-bold text-on-surface-variant";
 
+const DEFAULT_CAMPAIGN_DRIVE_FOLDER = "https://drive.google.com/drive/folders/1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP";
+
 const STATUS_TONE: Record<string, string> = {
   submitted: "bg-amber-50 text-amber-700 border-amber-200",
   revision: "bg-orange-50 text-orange-700 border-orange-200",
