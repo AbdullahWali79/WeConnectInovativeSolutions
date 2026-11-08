@@ -307,7 +307,7 @@ function CampaignDetail({
               byDay={byDay}
               activeDay={activeDay}
               onPick={setActiveDayId}
-              driveUrl={member.drive_url}
+              driveUrl={member.drive_url || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
               onSubmitted={(submission) => {
                 setSubmissions((current) => {
                   const rest = current.filter((row) => row.day_id !== submission.day_id);
