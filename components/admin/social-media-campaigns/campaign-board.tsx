@@ -22,7 +22,6 @@ import {
   setMemberRegistration,
   updateCampaign,
   updateCampaignDay,
-  updateCampaignMember,
 } from "@/app/admin/social-media-campaigns/actions";
 import { parseCampaignPlan, downloadCampaignTemplate } from "@/lib/social-campaign-plan";
 import { getGoogleDrivePreviewUrl, getYouTubeEmbedUrl } from "@/lib/promo-media";
@@ -305,16 +304,14 @@ export function CampaignBoard({
             <span className="rounded-full border border-outline-variant px-3 py-1 text-xs font-bold uppercase tracking-wide text-on-surface-variant">
               {campaign.status}
             </span>
-            {campaign.drive_folder_url && (
-              <a
-                href={campaign.drive_folder_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/10"
-              >
-                <Icon name="folder" className="text-[15px]" /> Campaign Drive
-              </a>
-            )}
+            <a
+              href={campaign.drive_folder_url || "https://drive.google.com/drive/folders/1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP"}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/10"
+            >
+              <Icon name="folder_open" className="text-[15px]" /> Synced Drive
+            </a>
             {role === "admin" && (
               <button
                 onClick={async () => {
@@ -377,7 +374,7 @@ export function CampaignBoard({
       <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
         {[
           { id: "plan" as const, label: "Day plan", icon: "calendar_month" },
-          { id: "team" as const, label: "Team & Drive links", icon: "group" },
+          { id: "team" as const, label: "Team & Students", icon: "group" },
         ].map((item) => (
           <button
             key={item.id}
@@ -923,17 +920,13 @@ function TeamPanel({
   onReload: () => Promise<void>;
   setToast: (state: ToastState) => void;
 }) {
-  const [teacherDrive, setTeacherDrive] = useState(campaign.teacher_drive_url || "");
-  const [folderDrive, setFolderDrive] = useState(campaign.drive_folder_url || "");
-  const [savingLinks, setSavingLinks] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Row[]>([]);
   const [searching, setSearching] = useState(false);
-  const [newDrive, setNewDrive] = useState("");
   const [assigning, setAssigning] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [mode, setMode] = useState<"existing" | "new">("existing");
-  const [newStudent, setNewStudent] = useState({ full_name: "", email: "", phone: "", password: "", drive_url: "" });
+  const [newStudent, setNewStudent] = useState({ full_name: "", email: "", phone: "", password: "" });
   const [creating, setCreating] = useState(false);
   const [duplicates, setDuplicates] = useState<Row[]>([]);
   const [createError, setCreateError] = useState("");
@@ -958,19 +951,9 @@ function TeamPanel({
     };
   }, [query]);
 
-  async function saveLinks() {
-    setSavingLinks(true);
-    const res = await updateCampaign(campaign.id, {
-      teacher_drive_url: teacherDrive,
-      drive_folder_url: folderDrive,
-    });
-    setSavingLinks(false);
-    setToast({ type: res.success ? "success" : "error", message: res.success ? "Drive links saved" : res.error || "Could not save links." });
-  }
-
   async function assign(student: Row) {
     setAssigning(student.id);
-    const res = await addCampaignMember(campaign.id, student.id, newDrive);
+    const res = await addCampaignMember(campaign.id, student.id, "");
     setAssigning(null);
     if (!res.success) {
       setToast({ type: "error", message: res.error || "Could not assign this student." });
@@ -978,19 +961,8 @@ function TeamPanel({
     }
     setQuery("");
     setResults([]);
-    setNewDrive("");
     await onReload();
     setToast({ type: "success", message: `${student.full_name || "Student"} assigned` });
-  }
-
-  async function saveMemberDrive(member: Row, url: string) {
-    const res = await updateCampaignMember(member.id, { drive_url: url });
-    if (!res.success) {
-      setToast({ type: "error", message: res.error || "Could not save the drive link." });
-      return;
-    }
-    await onReload();
-    setToast({ type: "success", message: "Drive link updated" });
   }
 
   async function remove(member: Row) {
@@ -1076,7 +1048,7 @@ function TeamPanel({
       return;
     }
     const created = newStudent;
-    setNewStudent({ full_name: "", email: "", phone: "", password: "", drive_url: "" });
+    setNewStudent({ full_name: "", email: "", phone: "", password: "" });
     setDuplicates([]);
     await onReload();
     setToast({
@@ -1091,7 +1063,6 @@ function TeamPanel({
     const res = await createCampaignStudent({
       campaign_id: campaign.id,
       use_existing_id: student.id,
-      drive_url: newStudent.drive_url || newDrive,
     });
     setCreating(false);
     if (!res.success) {
@@ -1099,7 +1070,7 @@ function TeamPanel({
       return;
     }
     setDuplicates([]);
-    setNewStudent({ full_name: "", email: "", phone: "", password: "", drive_url: "" });
+    setNewStudent({ full_name: "", email: "", phone: "", password: "" });
     await onReload();
     setToast({ type: "success", message: `${student.full_name || "Student"} attached to this campaign` });
   }
@@ -1108,47 +1079,30 @@ function TeamPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-6">
-        <h3 className="text-sm font-bold text-on-surface">Google Drive links</h3>
-        <p className="mt-1 text-xs text-on-surface-variant">
-          Admin assigns every link, so all campaign files stay in the admin&apos;s Drive.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={LABEL_CLASS}>Campaign folder (shared with students)</label>
-            <input
-              value={folderDrive}
-              onChange={(e) => setFolderDrive(e.target.value)}
-              disabled={role !== "admin"}
-              className={`${FIELD_CLASS} disabled:cursor-not-allowed disabled:bg-surface-container disabled:text-on-surface-variant`}
-              placeholder="https://drive.google.com/drive/folders/…"
-            />
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 sm:p-5 dark:border-emerald-800 dark:bg-emerald-950/30">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+              <Icon name="cloud_done" className="text-xl" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
+                Google Drive Video Sync Active
+              </h3>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                All campaign videos are automatically uploaded directly to your central Google Drive folder with 0% Supabase storage usage.
+              </p>
+            </div>
           </div>
-          <div>
-            <label className={LABEL_CLASS}>Teacher&apos;s upload folder</label>
-            <input
-              value={teacherDrive}
-              onChange={(e) => setTeacherDrive(e.target.value)}
-              disabled={role !== "admin"}
-              className={`${FIELD_CLASS} disabled:cursor-not-allowed disabled:bg-surface-container disabled:text-on-surface-variant`}
-              placeholder="https://drive.google.com/drive/folders/…"
-            />
-          </div>
-        </div>
-        {role === "admin" ? (
-          <button
-            onClick={() => void saveLinks()}
-            disabled={savingLinks}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
+          <a
+            href="https://drive.google.com/drive/folders/1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-bold text-emerald-800 shadow-sm hover:bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900 dark:text-emerald-200"
           >
-            <Icon name={savingLinks ? "sync" : "save"} className={`text-[18px] ${savingLinks ? "animate-spin" : ""}`} />
-            {savingLinks ? "Saving…" : "Save Drive links"}
-          </button>
-        ) : (
-          <p className="mt-3 text-[11px] font-semibold text-on-surface-variant">
-            Read-only — your admin sets the campaign folders.
-          </p>
-        )}
+            <Icon name="folder_open" className="text-[14px]" /> Open Synced Drive Folder
+          </a>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-6">
@@ -1194,7 +1148,6 @@ function TeamPanel({
               key={member.id}
               member={member}
               canManage={role === "admin"}
-              onSaveDrive={saveMemberDrive}
               onRemove={remove}
               onRegistration={setRegistration}
               onSaveMenus={saveMenus}
@@ -1230,18 +1183,12 @@ function TeamPanel({
 
           {mode === "existing" ? (
             <>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div className="mt-2">
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className={FIELD_CLASS}
-                  placeholder="Search by name, email or phone…"
-                />
-                <input
-                  value={newDrive}
-                  onChange={(e) => setNewDrive(e.target.value)}
-                  className={FIELD_CLASS}
-                  placeholder="Their own Drive folder link"
+                  placeholder="Search student by name, email or phone…"
                 />
               </div>
               {searching && <p className="mt-2 text-xs text-on-surface-variant">Searching…</p>}
@@ -1309,15 +1256,6 @@ function TeamPanel({
                     onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
                     className={FIELD_CLASS}
                     placeholder="At least 8 characters"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className={LABEL_CLASS}>Their own Drive folder link</label>
-                  <input
-                    value={newStudent.drive_url}
-                    onChange={(e) => setNewStudent({ ...newStudent, drive_url: e.target.value })}
-                    className={FIELD_CLASS}
-                    placeholder="https://drive.google.com/drive/folders/…"
                   />
                 </div>
               </div>
@@ -1397,23 +1335,16 @@ const MENU_LABELS: { key: "plan" | "submit" | "history"; label: string }[] = [
 function MemberRow({
   member,
   canManage,
-  onSaveDrive,
   onRemove,
   onRegistration,
   onSaveMenus,
 }: {
   member: Row;
-  /** Adding/removing students and setting their Drive folder is admin-only. */
   canManage: boolean;
-  onSaveDrive: (member: Row, url: string) => Promise<void>;
   onRemove: (member: Row) => Promise<void>;
   onRegistration: (member: Row, status: "pending" | "registered" | "approved" | "rejected") => Promise<void>;
   onSaveMenus: (member: Row, menus: Record<string, boolean>) => Promise<void>;
 }) {
-  const [drive, setDrive] = useState(member.drive_url || "");
-  const [saving, setSaving] = useState(false);
-  const dirty = (member.drive_url || "") !== drive;
-
   const registration = member.registration_status || "pending";
   const tone = REGISTRATION_TONE[registration] ?? REGISTRATION_TONE.pending;
   const menus = (member.menu_permissions && typeof member.menu_permissions === "object" ? member.menu_permissions : {}) as Record<string, boolean>;
@@ -1457,45 +1388,7 @@ function MemberRow({
         </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-2">
-        {canManage ? (
-          <input
-            value={drive}
-            onChange={(event) => setDrive(event.target.value)}
-            className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
-            placeholder="This student's own Drive folder link"
-          />
-        ) : (
-          <p className="w-full truncate rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface-variant">
-            {member.drive_url || "No Drive folder assigned by the admin yet"}
-          </p>
-        )}
-        {member.drive_url && !dirty && (
-          <a href={member.drive_url} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg border border-outline-variant p-1.5 text-on-surface-variant hover:border-primary hover:text-primary" title="Open drive">
-            <Icon name="open_in_new" className="text-[15px]" />
-          </a>
-        )}
-        {canManage && dirty && (
-          <button
-            onClick={async () => {
-              setSaving(true);
-              await onSaveDrive(member, drive);
-              setSaving(false);
-            }}
-            disabled={saving}
-            className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-bold text-on-primary disabled:opacity-50"
-          >
-            {saving ? "…" : "Save"}
-          </button>
-        )}
-      </div>
-      {!member.drive_url && (
-        <p className="mt-1 text-[11px] font-semibold text-amber-700">
-          No Drive link yet — the student cannot submit until {canManage ? "you add" : "the admin adds"} one.
-        </p>
-      )}
-
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-outline-variant/50 pt-2">
         <span className="text-[11px] font-bold text-on-surface-variant">Menus:</span>
         {MENU_LABELS.map((item) => {
           const on = menus[item.key] !== false;

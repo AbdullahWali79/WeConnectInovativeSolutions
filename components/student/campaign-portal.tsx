@@ -381,21 +381,23 @@ function RegistrationGate({
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-outline-variant bg-surface-low p-3">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">Your Drive folder</p>
-        {member.drive_url ? (
+      <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 dark:border-emerald-800 dark:bg-emerald-950/30">
+        <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+          <Icon name="cloud_done" className="text-base text-emerald-600" />
+          <span>Direct Google Drive Video Upload Active</span>
+        </div>
+        <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+          You don&apos;t need to configure a Drive folder manually. You can drag and drop your daily reel or video directly on the <strong>Submit post</strong> tab.
+        </p>
+        {member.drive_url && (
           <a
             href={member.drive_url}
             target="_blank"
             rel="noreferrer"
-            className="mt-1 inline-flex items-center gap-1 break-all text-sm font-bold text-primary hover:underline"
+            className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:underline dark:text-emerald-300"
           >
-            <Icon name="folder" className="text-[16px]" /> Open your upload folder
+            <Icon name="folder_open" className="text-[14px]" /> Open assigned Drive folder
           </a>
-        ) : (
-          <p className="mt-1 text-sm text-on-surface-variant">
-            The admin has not added your Drive link yet. You can still register — but ask them for the link before you start uploading.
-          </p>
         )}
       </div>
 
