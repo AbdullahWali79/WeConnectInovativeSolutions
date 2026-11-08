@@ -121,6 +121,10 @@ export function CampaignBoard({
     return map;
   }, [submissions]);
 
+  const pendingSubmissionsCount = useMemo(() => {
+    return submissions.filter((s) => s.status === "pending" || s.status === "submitted").length;
+  }, [submissions]);
+
   async function toggleVisibility(day: Row) {
     setBusyDayId(day.id);
     const res = await setDayVisibility(day.id, !day.visible_to_students);
@@ -380,9 +384,15 @@ export function CampaignBoard({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-6">
           <Metric label="Days planned" value={String(stats.total)} />
           <Metric label="Shared" value={String(stats.shared)} tone="text-primary" />
+          <Metric
+            label="Videos submitted"
+            value={String(submissions.length)}
+            tone={pendingSubmissionsCount > 0 ? "text-amber-600" : "text-primary"}
+            hint={pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} pending review` : undefined}
+          />
           <Metric label="Done" value={String(stats.done)} tone="text-emerald-700" />
           <Metric label="Missed" value={String(stats.missed)} tone="text-red-600" />
           <Metric label="Completion" value={`${stats.percent}%`} />
@@ -530,7 +540,8 @@ export function CampaignBoard({
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Date</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Theme</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Status</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Students</th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Student Submissions</th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Student View</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Teacher</th>
                     <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide">Admin</th>
                     <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide">Actions</th>
@@ -540,6 +551,9 @@ export function CampaignBoard({
                   {days.map((day) => {
                     const state = dayState(day);
                     const isOpen = Boolean(expanded[day.id]);
+                    const daySubmissions = submissionsByDay[day.id] ?? [];
+                    const pendingCount = daySubmissions.filter((s) => s.status === "pending" || s.status === "submitted").length;
+                    const hasSelected = daySubmissions.some((s) => s.status === "selected" || s.is_selected);
                     return (
                       <Fragment key={day.id}>
                         <tr className="align-top hover:bg-surface-low/60">
@@ -557,7 +571,43 @@ export function CampaignBoard({
                           <td className="px-4 py-3">
                             <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold ${state.tone}`}>{state.label}</span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {daySubmissions.length === 0 ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-on-surface-variant/50">
+                                <Icon name="hourglass_empty" className="text-[14px]" />
+                                <span>No videos yet</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setExpanded((current) => ({ ...current, [day.id]: !current[day.id] }))}
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold transition-all shadow-sm cursor-pointer ${
+                                  pendingCount > 0
+                                    ? "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                                    : hasSelected
+                                    ? "border-emerald-300 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
+                                    : "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+                                }`}
+                                title="Click to view & review student videos"
+                              >
+                                <Icon name="movie" className="text-[14px]" />
+                                <span>
+                                  {daySubmissions.length} {daySubmissions.length === 1 ? "Video" : "Videos"}
+                                </span>
+                                {pendingCount > 0 ? (
+                                  <span className="rounded-full bg-amber-600 px-1.5 py-0.2 text-[10px] font-black text-white animate-pulse">
+                                    Review ({pendingCount})
+                                  </span>
+                                ) : hasSelected ? (
+                                  <span className="rounded-full bg-emerald-600 px-1.5 py-0.2 text-[10px] font-black text-white">
+                                    ✓ Final Picked
+                                  </span>
+                                ) : null}
+                                <Icon name={isOpen ? "expand_less" : "expand_more"} className="text-[14px]" />
+                              </button>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <button
                               role="switch"
                               aria-checked={Boolean(day.visible_to_students)}
@@ -572,11 +622,6 @@ export function CampaignBoard({
                             >
                               <Icon name={day.visible_to_students ? "visibility" : "visibility_off"} className="text-[14px]" />
                               {day.visible_to_students ? "Shared" : "Hidden"}
-                              {(submissionsByDay[day.id]?.length ?? 0) > 0 && (
-                                <span className="rounded-full bg-surface-container px-1.5 text-[10px] font-black text-on-surface">
-                                  {submissionsByDay[day.id].length}
-                                </span>
-                              )}
                             </button>
                           </td>
                           <td className="px-4 py-3">
@@ -626,7 +671,7 @@ export function CampaignBoard({
                         </tr>
                         {isOpen && (
                           <tr className="bg-surface-low/40">
-                            <td colSpan={8} className="px-4 py-4">
+                            <td colSpan={9} className="px-4 py-4">
                               <DayDetail
                                 day={day}
                                 submissions={submissionsByDay[day.id] ?? []}
@@ -716,11 +761,12 @@ export function CampaignBoard({
   );
 }
 
-function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Metric({ label, value, tone, hint }: { label: string; value: string; tone?: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-outline-variant bg-surface-low p-3">
       <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</p>
       <p className={`mt-1 text-xl font-black ${tone ?? "text-on-surface"}`}>{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">{hint}</p>}
     </div>
   );
 }
