@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { Toast, type ToastState } from "@/components/toast";
 import {
@@ -9,6 +9,7 @@ import {
   fetchMyCampaign,
   fetchMyCampaigns,
   submitDayWork,
+  uploadCampaignVideo,
 } from "@/app/student/campaigns/actions";
 
 type Row = any;
@@ -593,6 +594,37 @@ function SubmitPanel({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadedVideoName, setUploadedVideoName] = useState<string | null>(null);
+  const [showManualVideoUrl, setShowManualVideoUrl] = useState(false);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function handleVideoUpload(file: File) {
+    if (!file) return;
+    if (!file.type.startsWith("video/") && !/\.(mp4|mov|webm|m4v|avi|mkv)$/i.test(file.name)) {
+      setError("Please select a video file (MP4, MOV, WEBM).");
+      return;
+    }
+    if (file.size > 80 * 1024 * 1024) {
+      setError("Video file must be under 80MB. For larger videos, compress or paste a Drive link.");
+      return;
+    }
+
+    setUploadingVideo(true);
+    setError("");
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await uploadCampaignVideo(formData);
+    setUploadingVideo(false);
+
+    if (res.success && res.url) {
+      setForm((prev) => ({ ...prev, video_url: res.url }));
+      setUploadedVideoName(file.name);
+    } else {
+      setError(res.error || "Failed to upload video to Google Drive. Please try again or paste a link.");
+    }
+  }
 
   useEffect(() => {
     setForm({
@@ -692,15 +724,100 @@ function SubmitPanel({
         )}
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className={LABEL_CLASS}>Video link (Drive / YouTube)</label>
-            <input
-              value={form.video_url}
-              onChange={(event) => setForm({ ...form, video_url: event.target.value })}
-              className={FIELD_CLASS}
-              placeholder="https://drive.google.com/…"
-              disabled={locked}
-            />
+          <div className="sm:col-span-2 space-y-2">
+            <label className={LABEL_CLASS}>Campaign Video (MP4 / MOV)</label>
+            {form.video_url ? (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 p-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                    <Icon name="movie" className="text-xl" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                      {uploadedVideoName || "Video attached"}
+                    </p>
+                    <a
+                      href={form.video_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 underline dark:text-emerald-300"
+                    >
+                      <Icon name="open_in_new" className="text-[12px]" /> View in Google Drive
+                    </a>
+                  </div>
+                </div>
+                {!locked && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm((prev) => ({ ...prev, video_url: "" }));
+                      setUploadedVideoName(null);
+                    }}
+                    className="shrink-0 rounded-lg p-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                    title="Remove video"
+                  >
+                    <Icon name="close" className="text-sm" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div
+                onClick={() => !locked && !uploadingVideo && videoInputRef.current?.click()}
+                className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition cursor-pointer ${
+                  uploadingVideo
+                    ? "border-primary bg-primary/5 cursor-wait"
+                    : "border-outline-variant bg-surface-low hover:border-primary hover:bg-primary/5"
+                }`}
+              >
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*,.mp4,.mov,.webm"
+                  className="hidden"
+                  disabled={locked || uploadingVideo}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleVideoUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+                {uploadingVideo ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <Icon name="sync" className="animate-spin text-3xl text-primary" />
+                    <p className="text-sm font-bold text-primary">Uploading video to Google Drive…</p>
+                    <p className="text-xs text-on-surface-variant">Please wait a few moments while your video is processed.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1.5 py-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:scale-105 transition-transform">
+                      <Icon name="video_call" className="text-2xl" />
+                    </div>
+                    <p className="text-sm font-bold text-on-surface">Click or drag video here to upload</p>
+                    <p className="text-xs text-on-surface-variant">MP4, MOV, or WebM (up to 80MB). Automatically saved to Drive.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!locked && (
+              <button
+                type="button"
+                onClick={() => setShowManualVideoUrl(!showManualVideoUrl)}
+                className="text-xs text-primary hover:underline font-semibold cursor-pointer block"
+              >
+                {showManualVideoUrl ? "Hide manual URL input" : "Or enter YouTube / Drive link manually"}
+              </button>
+            )}
+
+            {showManualVideoUrl && (
+              <input
+                value={form.video_url}
+                onChange={(event) => setForm({ ...form, video_url: event.target.value })}
+                className={FIELD_CLASS}
+                placeholder="https://drive.google.com/… or https://youtube.com/…"
+                disabled={locked}
+              />
+            )}
           </div>
           <div>
             <label className={LABEL_CLASS}>Published post URL</label>

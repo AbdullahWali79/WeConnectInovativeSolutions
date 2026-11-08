@@ -6,6 +6,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getProofLinkError } from "@/lib/proof-links";
 
+const DEFAULT_CAMPAIGN_DRIVE_FOLDER = "https://drive.google.com/drive/folders/1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP";
+const DEFAULT_CAMPAIGN_FOLDER_ID = "1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP";
+
 /**
  * Student-facing campaign actions. Everything runs through the service client
  * so the scoping is explicit in code: a student only ever reaches campaigns
@@ -107,7 +110,7 @@ export async function fetchMyCampaigns() {
 
     const campaigns = rows.map((row) => ({
       member_id: row.id,
-      drive_url: row.drive_url,
+      drive_url: row.drive_url || DEFAULT_CAMPAIGN_DRIVE_FOLDER,
       registration_status: row.registration_status,
       menu_permissions: row.menu_permissions,
       ...row.campaign,
@@ -161,7 +164,10 @@ export async function fetchMyCampaign(campaignId: string) {
     return {
       success: true as const,
       campaign,
-      member,
+      member: {
+        ...member,
+        drive_url: member.drive_url || DEFAULT_CAMPAIGN_DRIVE_FOLDER,
+      },
       days: days ?? [],
       submissions,
       menus: {
@@ -190,9 +196,6 @@ export async function completeCampaignRegistration(
     if (member.registration_status === "approved") {
       return { success: true as const, registration_status: "approved" as const };
     }
-    if (!member.drive_url) {
-      return { success: false as const, error: "The admin has not given you a Drive folder link yet. Please ask them to add it first." };
-    }
 
     const handles: Record<string, string> = {};
     for (const key of ["instagram", "facebook", "tiktok", "youtube", "linkedin", "x"]) {
@@ -204,6 +207,7 @@ export async function completeCampaignRegistration(
     const { error } = await admin
       .from("sm_campaign_members" as any)
       .update({
+        drive_url: member.drive_url || DEFAULT_CAMPAIGN_DRIVE_FOLDER,
         registration_status: "registered",
         registered_at: new Date().toISOString(),
         social_handles: handles,
@@ -216,6 +220,52 @@ export async function completeCampaignRegistration(
     return { success: true as const, registration_status: "registered" as const };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not save your registration." };
+  }
+}
+
+/**
+ * Direct video upload for social media campaign days straight into Google Drive!
+ */
+export async function uploadCampaignVideo(formData: FormData) {
+  try {
+    await currentStudent();
+    const file = formData.get("file");
+    if (!file || !(file instanceof File)) {
+      return { success: false as const, error: "No video file provided." };
+    }
+
+    if (file.size > 80 * 1024 * 1024) {
+      return { success: false as const, error: "Video must be under 80MB. For larger videos, compress or paste a Drive link." };
+    }
+
+    const webhookUrl = process.env.GOOGLE_DRIVE_UPLOAD_WEBHOOK_URL?.trim();
+    if (!webhookUrl) {
+      return { success: false as const, error: "Google Drive upload webhook is not configured." };
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const base64Data = Buffer.from(arrayBuffer).toString("base64");
+
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        filename: file.name,
+        mimeType: file.type || "video/mp4",
+        base64Data,
+        folderId: DEFAULT_CAMPAIGN_FOLDER_ID,
+      }),
+    });
+
+    const data = await res.json();
+    if (data?.success && data?.url) {
+      return { success: true as const, url: data.url as string, name: file.name };
+    }
+
+    return { success: false as const, error: data?.error || "Google Drive video upload failed. Please try again." };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Video upload failed";
+    return { success: false as const, error: message };
   }
 }
 
@@ -261,7 +311,7 @@ export async function submitDayWork(
       .slice(0, 10);
 
     if (!videoUrl && !postUrl && !docUrl && images.length === 0) {
-      return { success: false as const, error: "Add at least a video link, the post URL, or an image link." };
+      return { success: false as const, error: "Add at least a video, the post URL, or an image link." };
     }
 
     const linksToCheck: [string, string][] = [

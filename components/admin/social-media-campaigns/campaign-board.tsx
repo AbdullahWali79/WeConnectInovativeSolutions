@@ -25,6 +25,7 @@ import {
   updateCampaignMember,
 } from "@/app/admin/social-media-campaigns/actions";
 import { parseCampaignPlan } from "@/lib/social-campaign-plan";
+import { getGoogleDrivePreviewUrl, getYouTubeEmbedUrl } from "@/lib/promo-media";
 
 type Row = any;
 
@@ -655,12 +656,16 @@ function SubmissionCard({
   onReview: (submission: Row, status: "approved" | "rejected" | "revision" | "selected") => void;
 }) {
   const [feedback, setFeedback] = useState(submission.feedback || "");
+  const [showVideo, setShowVideo] = useState(true);
   const links: { label: string; url?: string | null }[] = [
     { label: "Video", url: submission.video_url },
     { label: "Post", url: submission.post_url },
     { label: "Doc", url: submission.doc_url },
     ...(Array.isArray(submission.image_urls) ? submission.image_urls.map((url: string, index: number) => ({ label: `Image ${index + 1}`, url })) : []),
   ];
+
+  const drivePreviewUrl = submission.video_url ? getGoogleDrivePreviewUrl(submission.video_url) : null;
+  const youtubeEmbedUrl = submission.video_url ? getYouTubeEmbedUrl(submission.video_url) : null;
 
   return (
     <div className={`rounded-lg border p-3 ${submission.is_selected ? "border-emerald-300 bg-emerald-50/50" : "border-outline-variant bg-surface-low"}`}>
@@ -692,7 +697,52 @@ function SubmissionCard({
         </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {submission.video_url && (
+        <div className="mt-3">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+              <Icon name="movie" className="text-[14px] text-primary" /> Submitted Video Preview
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowVideo(!showVideo)}
+              className="text-[11px] font-medium text-primary hover:underline"
+            >
+              {showVideo ? "Hide player" : "Show player"}
+            </button>
+          </div>
+          {showVideo && (
+            <div className="relative aspect-video w-full max-w-xl overflow-hidden rounded-xl border border-outline-variant bg-black shadow-inner">
+              {drivePreviewUrl ? (
+                <iframe
+                  src={drivePreviewUrl}
+                  className="h-full w-full border-0"
+                  allow="autoplay; encrypted-media"
+                  allowFullScreen
+                  title="Google Drive submission video"
+                />
+              ) : youtubeEmbedUrl ? (
+                <iframe
+                  src={youtubeEmbedUrl}
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title="YouTube submission video"
+                />
+              ) : (
+                <video
+                  controls
+                  src={submission.video_url}
+                  className="h-full w-full object-contain"
+                  preload="metadata"
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <input
           value={feedback}
           onChange={(event) => setFeedback(event.target.value)}
