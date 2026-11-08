@@ -178,6 +178,7 @@ export function PromptMedia({ urls, title }: { urls: string[]; title: string }) 
     </>
   );
 }
+
 function PromptDetail({ prompt }: { prompt: Prompt }) {
   const variables = promptVariables(prompt.template);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -191,12 +192,94 @@ function PromptDetail({ prompt }: { prompt: Prompt }) {
     <CmsElement cmsId="d80dc3cb-27" as="section"><CmsElement cmsId="d80dc3cb-28" as="h3" className="mb-3 text-lg font-bold">{generated ? "Your personalized prompt" : "Prompt template"}</CmsElement><CmsElement cmsId="d80dc3cb-29" as="div" className="rounded-2xl border border-outline-variant bg-background p-5"><pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7">{generated || prompt.template}</pre><CmsElement cmsId="d80dc3cb-30" as="button" type="button" onClick={async () => { try { await navigator.clipboard.writeText(generated || prompt.template); setMessage("Prompt copied!"); } catch { setMessage("Copy unavailable. Select the prompt text above and copy it manually."); } }} className="mt-5 rounded-full bg-primary px-6 py-3 font-bold text-on-primary">Copy {generated ? "prompt" : "template"}</CmsElement><CmsElement cmsId="d80dc3cb-31" as="p" role="status" className="mt-2 text-sm">{message}</CmsElement></CmsElement></CmsElement></>}
   </CmsElement>;
 }
+
 export function PromptLibrary({ prompts, renderAdminControls }: { prompts: Prompt[]; renderAdminControls?: (prompt: Prompt) => React.ReactNode }) {
-  const [search, setSearch] = useState(""); const [category, setCategory] = useState(""); const [pricing, setPricing] = useState(""); const [sort, setSort] = useState("newest"); const [selected, setSelected] = useState<string | null>(null);
-  const categories = [...new Set(prompts.map((p) => p.category))].sort();
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [pricing, setPricing] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const categories = useMemo(() => [...new Set(prompts.map((p) => p.category))].filter(Boolean).sort(), [prompts]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of prompts) {
+      if (p.category) {
+        counts[p.category] = (counts[p.category] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [prompts]);
+
   const filtered = useMemo(() => prompts.filter((p) => `${p.title} ${p.description} ${p.category} ${p.model}`.toLowerCase().includes(search.toLowerCase()) && (!category || p.category === category) && (!pricing || (pricing === "free" ? Number(p.price) === 0 : Number(p.price) > 0))).sort((a, b) => sort === "title" ? a.title.localeCompare(b.title) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()), [prompts, search, category, pricing, sort]);
   const field = "rounded-xl border border-outline-variant bg-surface p-3";
-  return <><CmsElement cmsId="d80dc3cb-32" as="div" className="grid gap-3 rounded-2xl bg-surface p-4 shadow-sm md:grid-cols-[2fr_1fr_1fr_1fr]"><input aria-label="Search prompts" placeholder="Search prompts, ideas, or AI models…" value={search} onChange={(e) => setSearch(e.target.value)} className={field} /><select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value)} className={field}><option value="">All categories</option>{categories.map((c) => <option key={c}>{c}</option>)}</select><select aria-label="Pricing" value={pricing} onChange={(e) => setPricing(e.target.value)} className={field}><option value="">Free & premium</option><option value="free">Free</option><option value="paid">Premium</option></select><select aria-label="Sort prompts" value={sort} onChange={(e) => setSort(e.target.value)} className={field}><option value="newest">Newest first</option><option value="title">Title A–Z</option></select></CmsElement><CmsElement cmsId="d80dc3cb-33" as="p" className="my-6 text-sm text-on-surface-variant">{filtered.length} {filtered.length === 1 ? "prompt" : "prompts"} to explore</CmsElement>
+
+  return <>
+    <CmsElement cmsId="d80dc3cb-32" as="div" className="space-y-4">
+      <div className="grid gap-3 rounded-2xl bg-surface p-4 shadow-sm md:grid-cols-[2fr_1fr_1fr_1fr]">
+        <input aria-label="Search prompts" placeholder="Search prompts, ideas, or AI models…" value={search} onChange={(e) => setSearch(e.target.value)} className={field} />
+        <select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value)} className={field}>
+          <option value="">All categories ({prompts.length})</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c} ({categoryCounts[c] ?? 0})
+            </option>
+          ))}
+        </select>
+        <select aria-label="Pricing" value={pricing} onChange={(e) => setPricing(e.target.value)} className={field}>
+          <option value="">Free &amp; premium</option>
+          <option value="free">Free</option>
+          <option value="paid">Premium</option>
+        </select>
+        <select aria-label="Sort prompts" value={sort} onChange={(e) => setSort(e.target.value)} className={field}>
+          <option value="newest">Newest first</option>
+          <option value="title">Title A–Z</option>
+        </select>
+      </div>
+
+      {categories.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-sm no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setCategory("")}
+            className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
+              !category
+                ? "bg-primary text-on-primary shadow-sm"
+                : "border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"
+            }`}
+          >
+            All ({prompts.length})
+          </button>
+          {categories.map((c) => {
+            const isSelected = category === c;
+            const count = categoryCounts[c] ?? 0;
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(isSelected ? "" : c)}
+                className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
+                  isSelected
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"
+                }`}
+              >
+                {c} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </CmsElement>
+
+    <CmsElement cmsId="d80dc3cb-33" as="p" className="my-5 text-sm text-on-surface-variant">
+      Showing <span className="font-bold text-on-background">{filtered.length}</span> {filtered.length === 1 ? "prompt" : "prompts"}
+      {category && (
+        <> in <span className="font-bold text-primary">{category}</span></>
+      )}
+    </CmsElement>
+
     {!filtered.length && <CmsElement cmsId="d80dc3cb-34" as="div" className="rounded-2xl border border-dashed border-outline-variant p-12 text-center"><CmsElement cmsId="d80dc3cb-35" as="h2" className="text-xl font-bold">{prompts.length ? "No matching prompts" : "Fresh ideas are on their way"}</CmsElement><CmsElement cmsId="d80dc3cb-36" as="p" className="mt-2 text-on-surface-variant">{prompts.length ? "Try a different search or clear your filters." : "Approved community prompts will appear here."}</CmsElement>{prompts.length > 0 && <CmsElement cmsId="d80dc3cb-37" as="button" onClick={() => { setSearch(""); setCategory(""); setPricing(""); }} className="mt-4 text-primary">Clear filters</CmsElement>}</CmsElement>}
     <CmsElement cmsId="d80dc3cb-38" as="div" className="grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">{filtered.map((prompt) => { const coverUrl = prompt.media_urls[0]; return <CmsElement cmsId="d80dc3cb-39" as="div" instance={String(prompt.id)} key={prompt.id} className={`flex flex-col overflow-hidden rounded-3xl border border-outline-variant bg-surface shadow-sm ${selected === prompt.id ? "md:col-span-2 lg:col-span-3" : ""}`}>{selected !== prompt.id && coverUrl && <CmsInstance key={coverUrl} instance={String(coverUrl)}><PromptThumbnail key={coverUrl} url={coverUrl} title={prompt.title} /></CmsInstance>}<CmsElement cmsId="d80dc3cb-40" as="div" className="flex flex-1 flex-col p-6">{selected === prompt.id && <CmsElement cmsId="d80dc3cb-41" as="div" className="flex items-center justify-between gap-3 text-xs font-bold"><CmsElement cmsId="d80dc3cb-42" as="span" className="rounded-full bg-secondary-container px-3 py-1 text-on-secondary-container">{prompt.category}</CmsElement><CmsElement cmsId="d80dc3cb-43" as="span" className="text-primary">{Number(prompt.price) === 0 ? "FREE" : `PKR ${Number(prompt.price).toLocaleString()}`}</CmsElement></CmsElement>}<CmsElement cmsId="d80dc3cb-44" as="h2" className={`font-bold ${selected === prompt.id ? "mb-2 mt-5 text-2xl md:text-3xl" : "flex-1 text-lg md:text-xl"}`}>{prompt.title}</CmsElement>{selected === prompt.id && <CmsElement cmsId="d80dc3cb-45" as="p" className="text-sm text-on-surface-variant">{prompt.model}</CmsElement>}<CmsElement cmsId="d80dc3cb-46" as="button" aria-expanded={selected === prompt.id} onClick={() => setSelected(selected === prompt.id ? null : prompt.id)} className={`flex w-full items-center justify-between text-left font-bold text-primary ${selected === prompt.id ? "mt-6" : "mt-4"}`}>{selected === prompt.id ? "Close prompt ↑" : "Use prompt ↓"}</CmsElement>{selected === prompt.id && <PromptDetail prompt={prompt} />}{renderAdminControls?.(prompt)}</CmsElement></CmsElement>; })}</CmsElement></>;
 }
