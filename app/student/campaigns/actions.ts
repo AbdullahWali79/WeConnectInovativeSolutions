@@ -8,6 +8,7 @@ import { getProofLinkError } from "@/lib/proof-links";
 
 const DEFAULT_CAMPAIGN_DRIVE_FOLDER = "https://drive.google.com/drive/folders/1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP";
 const DEFAULT_CAMPAIGN_FOLDER_ID = "1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP";
+const DEFAULT_GOOGLE_DRIVE_WEBHOOK = "https://script.google.com/macros/s/AKfycbz6dX4HSLNQWPgGsAt62po9YcvpRVOr20OlltDz6aAPQFbgeowUUv6QVzL4wOR6KgyvMA/exec";
 
 /**
  * Student-facing campaign actions. Everything runs through the service client
@@ -238,7 +239,7 @@ export async function uploadCampaignVideo(formData: FormData) {
       return { success: false as const, error: "Video must be under 80MB. For larger videos, compress or paste a Drive link." };
     }
 
-    const webhookUrl = process.env.GOOGLE_DRIVE_UPLOAD_WEBHOOK_URL?.trim();
+    const webhookUrl = process.env.GOOGLE_DRIVE_UPLOAD_WEBHOOK_URL?.trim() || DEFAULT_GOOGLE_DRIVE_WEBHOOK;
     if (!webhookUrl) {
       return { success: false as const, error: "Google Drive upload webhook is not configured." };
     }

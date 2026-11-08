@@ -2,7 +2,7 @@
 import { CmsElement, CmsInstance } from "@/components/cms/cms-element";
 import { useMemo, useState, useEffect } from "react";
 import { Icon } from "@/components/icon";
-import { driveId, drivePreview, driveThumbnail, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
+import { driveId, drivePreview, fillPrompt, promptVariables, type Prompt } from "@/lib/prompts";
 
 function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; initialIndex: number; onClose: () => void; title: string }) {
   const [index, setIndex] = useState(initialIndex);
@@ -28,9 +28,8 @@ function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; init
   }, [urls.length, onClose]);
 
   const currentUrl = urls[index];
-  const src = driveThumbnail(currentUrl, 2000);
-
-  if (!src) return null;
+  const id = driveId(currentUrl);
+  const preview = drivePreview(currentUrl);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (scale > 1) {
@@ -93,24 +92,43 @@ function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; init
       )}
 
       <CmsElement cmsId="d80dc3cb-5" as="div" className="relative flex h-full w-full items-center justify-center overflow-hidden p-4 md:p-12" onClick={(e) => e.stopPropagation()}>
-        <CmsElement cmsId="d80dc3cb-6" as="img"
-          src={src}
-          alt={`${title} - view ${index + 1}`}
-          className="max-h-full max-w-full object-contain transition-transform"
-          style={{ 
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, 
-            cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
-            transitionDuration: isDragging ? "0ms" : "300ms",
-            touchAction: "none"
-          }}
-          onClick={handleClick}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          draggable={false}
-          loading="lazy"
-        />
+        {id && preview ? (
+          <div className="h-[80vh] w-full max-w-4xl rounded-2xl overflow-hidden bg-white shadow-2xl relative">
+            <iframe
+              src={preview}
+              title={`${title} - view ${index + 1}`}
+              className="h-full w-full border-0"
+              allow="autoplay"
+            />
+            <a
+              href={`https://drive.google.com/file/d/${id}/view`}
+              target="_blank"
+              rel="noreferrer"
+              className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/80 px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm hover:bg-black"
+            >
+              <Icon name="open_in_new" className="text-sm" /> Open in Drive ↗
+            </a>
+          </div>
+        ) : (
+          <CmsElement cmsId="d80dc3cb-6" as="img"
+            src={currentUrl}
+            alt={`${title} - view ${index + 1}`}
+            className="max-h-full max-w-full object-contain transition-transform"
+            style={{ 
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, 
+              cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
+              transitionDuration: isDragging ? "0ms" : "300ms",
+              touchAction: "none"
+            }}
+            onClick={handleClick}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            draggable={false}
+            loading="lazy"
+          />
+        )}
       </CmsElement>
 
       {urls.length > 1 && (
@@ -127,83 +145,56 @@ function Lightbox({ urls, initialIndex, onClose, title }: { urls: string[]; init
 }
 
 function PromptThumbnail({ url, title }: { url: string; title: string }) {
-  const [failed, setFailed] = useState(false);
-  const [useIframe, setUseIframe] = useState(false);
-  const [cdnAttempt, setCdnAttempt] = useState(0);
+  const [loadError, setLoadError] = useState(false);
   const id = driveId(url);
-  const thumbnail = driveThumbnail(url, 800);
   const preview = drivePreview(url);
 
   if (!url) return null;
 
-  if (useIframe && preview) {
+  if (id && preview) {
     return (
-      <div className="relative aspect-video w-full overflow-hidden bg-black">
+      <div className="group relative aspect-video w-full overflow-hidden bg-slate-900">
         <iframe
           src={preview}
           title={`${title} - output preview`}
           loading="lazy"
-          allow="autoplay; encrypted-media"
-          className="h-full w-full border-0"
+          className="pointer-events-none h-full w-full border-0 bg-white"
+          allow="autoplay"
         />
+        <a
+          href={`https://drive.google.com/file/d/${id}/view`}
+          target="_blank"
+          rel="noreferrer"
+          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100"
+          title={`Open ${title} in Google Drive`}
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-black/80 px-3.5 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm hover:bg-black">
+            <Icon name="open_in_new" className="text-sm" /> Open in Drive ↗
+          </span>
+        </a>
       </div>
     );
   }
 
-  const imgSrc = (() => {
-    if (!id) return url;
-    if (cdnAttempt === 1) return `https://lh3.googleusercontent.com/d/${id}=s800`;
-    if (cdnAttempt === 2) return `https://drive.google.com/uc?export=view&id=${id}`;
-    return thumbnail || url;
-  })();
-
-  if (failed) {
+  if (loadError) {
     return (
       <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-surface-container-low p-4 text-center">
         <Icon name="image_not_supported" className="text-3xl text-on-surface-variant/40" />
         <span className="line-clamp-1 text-xs font-semibold text-on-surface-variant">{title}</span>
-        {id && (
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-            {preview && (
-              <button
-                type="button"
-                onClick={() => setUseIframe(true)}
-                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary hover:bg-primary/20"
-              >
-                <Icon name="visibility" className="text-[12px]" /> Preview player
-              </button>
-            )}
-            <a
-              href={`https://drive.google.com/file/d/${id}/view`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2.5 py-1 text-[11px] font-bold text-on-surface-variant shadow-sm hover:border-primary hover:text-primary"
-            >
-              <Icon name="open_in_new" className="text-[12px]" /> Drive
-            </a>
-          </div>
-        )}
       </div>
     );
   }
 
   return (
-    <CmsElement cmsId="d80dc3cb-9" as="div" className="overflow-hidden bg-surface-container-low">
-      <CmsElement cmsId="d80dc3cb-10" as="img"
-        src={imgSrc}
+    <div className="overflow-hidden bg-surface-container-low">
+      <img
+        src={url}
         alt={`${title} - output preview`}
         className="aspect-video w-full object-cover"
         loading="lazy"
-        referrerPolicy="no-referrer"
-        onError={() => {
-          if (id && cdnAttempt < 2) {
-            setCdnAttempt((prev) => prev + 1);
-          } else {
-            setFailed(true);
-          }
-        }}
+        onError={() => setLoadError(true)}
       />
-    </CmsElement>
+    </div>
   );
 }
 
@@ -212,31 +203,57 @@ export function PromptMedia({ urls, title }: { urls: string[]; title: string }) 
 
   return (
     <>
-      <CmsElement cmsId="d80dc3cb-11" as="div" className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {urls.map((url, index) => {
-          const thumbnail = driveThumbnail(url, 800);
-          return thumbnail ? (
-            <CmsElement cmsId="d80dc3cb-12" as="div" instance={String(`${url}-${index}`)}
+          const id = driveId(url);
+          const preview = drivePreview(url);
+
+          if (id && preview) {
+            return (
+              <div
+                key={`${url}-${index}`}
+                className="group relative aspect-video overflow-hidden rounded-2xl border border-outline-variant bg-slate-900"
+              >
+                <iframe
+                  src={preview}
+                  title={`${title} - preview ${index + 1}`}
+                  loading="lazy"
+                  className="h-full w-full border-0 bg-white"
+                  allow="autoplay"
+                />
+                <a
+                  href={`https://drive.google.com/file/d/${id}/view`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/75 px-2.5 py-1 text-[11px] font-bold text-white shadow-md hover:bg-black"
+                >
+                  <Icon name="open_in_new" className="text-xs" /> Drive ↗
+                </a>
+              </div>
+            );
+          }
+
+          return (
+            <div
               key={`${url}-${index}`}
               className="group relative overflow-hidden rounded-2xl border border-outline-variant bg-black cursor-zoom-in"
               onClick={() => setLightboxIndex(index)}
             >
-              <CmsElement cmsId="d80dc3cb-13" as="img"
-                src={thumbnail}
+              <img
+                src={url}
                 alt={`${title} — preview ${index + 1}`}
                 loading="lazy"
-                referrerPolicy="no-referrer"
                 className="aspect-video w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
               />
-              <CmsElement cmsId="d80dc3cb-14" as="div" className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                <CmsElement cmsId="d80dc3cb-15" as="span" className="rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                <span className="rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100">
                   Expand
-                </CmsElement>
-              </CmsElement>
-            </CmsElement>
-          ) : null;
+                </span>
+              </div>
+            </div>
+          );
         })}
-      </CmsElement>
+      </div>
       {lightboxIndex !== null && (
         <Lightbox urls={urls} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} title={title} />
       )}

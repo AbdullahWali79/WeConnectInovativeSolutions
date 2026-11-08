@@ -79,7 +79,8 @@ export async function uploadPromptImage(formData: FormData) {
     return { success: false, error: "Only PNG, JPG, WebP, or GIF images are allowed." };
   }
 
-  const webhookUrl = process.env.GOOGLE_DRIVE_UPLOAD_WEBHOOK_URL?.trim();
+  const DEFAULT_GOOGLE_DRIVE_WEBHOOK = "https://script.google.com/macros/s/AKfycbz6dX4HSLNQWPgGsAt62po9YcvpRVOr20OlltDz6aAPQFbgeowUUv6QVzL4wOR6KgyvMA/exec";
+  const webhookUrl = process.env.GOOGLE_DRIVE_UPLOAD_WEBHOOK_URL?.trim() || DEFAULT_GOOGLE_DRIVE_WEBHOOK;
 
   // 1. Primary: Direct Google Drive Webhook Upload (0% Supabase space used)
   if (webhookUrl) {

@@ -822,43 +822,13 @@ function SubmitPanel({
               />
             )}
           </div>
-          <div>
-            <label className={LABEL_CLASS}>Published post URL</label>
-            <input
-              value={form.post_url}
-              onChange={(event) => setForm({ ...form, post_url: event.target.value })}
-              className={FIELD_CLASS}
-              placeholder="https://instagram.com/p/…"
-              disabled={locked}
-            />
-          </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className={LABEL_CLASS}>Script / design doc (optional)</label>
             <input
               value={form.doc_url}
               onChange={(event) => setForm({ ...form, doc_url: event.target.value })}
               className={FIELD_CLASS}
-              placeholder="https://docs.google.com/…"
-              disabled={locked}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={LABEL_CLASS}>Image links — one per line (optional)</label>
-            <textarea
-              rows={2}
-              value={form.images}
-              onChange={(event) => setForm({ ...form, images: event.target.value })}
-              className={FIELD_CLASS}
-              disabled={locked}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={LABEL_CLASS}>Caption you used (optional)</label>
-            <textarea
-              rows={2}
-              value={form.caption}
-              onChange={(event) => setForm({ ...form, caption: event.target.value })}
-              className={FIELD_CLASS}
+              placeholder="https://docs.google.com/… or notes link"
               disabled={locked}
             />
           </div>
@@ -868,6 +838,7 @@ function SubmitPanel({
               value={form.note}
               onChange={(event) => setForm({ ...form, note: event.target.value })}
               className={FIELD_CLASS}
+              placeholder="Any question or context for your teacher…"
               disabled={locked}
             />
           </div>
