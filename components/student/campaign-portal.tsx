@@ -473,13 +473,14 @@ function PlanPanel({
   const blocks: { label: string; value?: string | null }[] = active
     ? [
         { label: "Goal", value: active.goal },
+        { label: "Hook text", value: active.x_draft },
+        { label: "Video prompt / AI prompt", value: active.image_headline },
+        { label: "Reel script / Scene-by-scene script", value: active.reel_script },
+        { label: "Post caption", value: active.caption },
         { label: "Platform plan", value: active.platform_plan },
-        { label: "Caption / talking points", value: active.caption },
-        { label: "Image headline", value: active.image_headline },
-        { label: "Reel script", value: active.reel_script },
         { label: "Hashtags", value: active.hashtags },
+        { label: "Call to Action (CTA)", value: active.cta },
         { label: "Engagement action", value: active.engagement_action },
-        { label: "CTA", value: active.cta },
         { label: "Metrics to record", value: active.metrics_to_record },
       ]
     : [];
@@ -532,9 +533,9 @@ function PlanPanel({
                 href={active.source_link}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2.5 py-1.5 text-xs font-bold text-primary hover:border-primary"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary/90 shadow-sm"
               >
-                <Icon name="open_in_new" className="text-[14px]" /> Reference
+                <Icon name="description" className="text-[14px]" /> Open Google Doc Brief
               </a>
             )}
           </div>

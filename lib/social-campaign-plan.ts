@@ -199,15 +199,15 @@ export function parseCampaignPlan(data: ArrayBuffer): ParsedPlan {
   const igCol = column((value) => /instagram|\big\b/.test(value));
   const xCol = column((value) => /^x plan|^x$|twitter/.test(value));
   const captionCol = column((value) => /caption|talking point/.test(value));
-  const imageCol = column((value) => /image|visual|headline/.test(value));
-  const xDraftCol = column((value) => /x post|post draft|tweet/.test(value));
-  const sourceCol = column((value) => /source|link/.test(value));
+  const imageCol = column((value) => /image|visual|headline|prompt/.test(value));
+  const xDraftCol = column((value) => /x post|post draft|tweet|hook/.test(value));
+  const sourceCol = column((value) => /source|link|doc/.test(value));
   // "Caption / Reel talking points" also contains "reel", so match the script
   // column by its more specific words first and only then fall back to "reel".
   const reelCol =
     column((value) => /script|shot guidance|shot list/.test(value)) >= 0
       ? column((value) => /script|shot guidance|shot list/.test(value))
-      : column((value) => /^reel/.test(value));
+      : column((value) => /^reel|reel script/.test(value));
   const hashtagCol = column((value) => /hashtag/.test(value));
   const engagementCol = column((value) => /engagement/.test(value));
   const ctaCol = column((value) => /^cta$|call to action/.test(value));
@@ -304,4 +304,60 @@ export function emptyPlanDay(dayNumber: number): PlanDay {
     cta: null,
     metrics_to_record: null,
   };
+}
+
+/**
+ * Downloads a ready-to-fill Excel template for social media campaigns with all
+ * the standard columns (Topic, Hook, Scene-by-scene script, Video prompt, Doc link, etc.).
+ */
+export function downloadCampaignTemplate() {
+  const sampleData = [
+    {
+      "Day": 1,
+      "Date": new Date().toISOString().slice(0, 10),
+      "Topic / Theme": "How AI Automations Save 20 Hours a Week",
+      "Goal": "Educate business owners on AI workflow automation",
+      "Hook Text": "Stop doing this manually in 2026!",
+      "Reel Script": "Scene 1 (0-3s): Frustrated entrepreneur buried in spreadsheets.\nScene 2 (4-15s): Screen recording of our automated AI bot processing 100 leads.\nScene 3 (16-30s): Call to action to click link in bio.",
+      "Video Prompt": "Cinematic 4K shot, modern sleek office, glowing AI network nodes, photorealistic.",
+      "Post Caption": "Most entrepreneurs waste 20+ hours a week on repetitive tasks. Here is the exact system we use to automate workflows with AI.",
+      "Hashtags": "#automation #ai #businessgrowth #productivity #tech",
+      "CTA": "Drop a comment 'AI' and we will DM you the free cheat sheet!",
+      "Google Doc Link": "https://docs.google.com/document/d/YOUR_BRIEF_LINK",
+      "Platform Plan": "Facebook Reel, Instagram Reel, TikTok"
+    },
+    {
+      "Day": 2,
+      "Date": new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+      "Topic / Theme": "3 Free AI Tools You Didn't Know Existed",
+      "Goal": "High viral reach, saves and comments",
+      "Hook Text": "Nobody is talking about tool #3...",
+      "Reel Script": "Scene 1: Hook speaker pointing to screen.\nScene 2: Tool 1 & 2 quick overview.\nScene 3: Tool 3 deep dive and value bomb.",
+      "Video Prompt": "Close up split-screen of laptop and mobile demonstrating software UI.",
+      "Post Caption": "Save this post before you lose it! 3 game-changing tools to boost your efficiency today.",
+      "Hashtags": "#freetools #aitools #software #marketingtips",
+      "CTA": "Save this reel and share it with your business partner!",
+      "Google Doc Link": "https://docs.google.com/document/d/YOUR_BRIEF_LINK",
+      "Platform Plan": "Instagram Reel, Facebook Post"
+    }
+  ];
+
+  const worksheet = xlsx.utils.json_to_sheet(sampleData);
+  worksheet["!cols"] = [
+    { wch: 6 },  // Day
+    { wch: 14 }, // Date
+    { wch: 38 }, // Topic
+    { wch: 38 }, // Goal
+    { wch: 35 }, // Hook
+    { wch: 50 }, // Reel Script
+    { wch: 45 }, // Video Prompt
+    { wch: 50 }, // Post Caption
+    { wch: 35 }, // Hashtags
+    { wch: 40 }, // CTA
+    { wch: 40 }, // Google Doc
+    { wch: 30 }, // Platform Plan
+  ];
+  const workbook = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(workbook, worksheet, "30-Day Calendar");
+  xlsx.writeFile(workbook, "social_media_campaign_template.xlsx");
 }

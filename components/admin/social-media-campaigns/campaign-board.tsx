@@ -24,7 +24,7 @@ import {
   updateCampaignDay,
   updateCampaignMember,
 } from "@/app/admin/social-media-campaigns/actions";
-import { parseCampaignPlan } from "@/lib/social-campaign-plan";
+import { parseCampaignPlan, downloadCampaignTemplate } from "@/lib/social-campaign-plan";
 import { getGoogleDrivePreviewUrl, getYouTubeEmbedUrl } from "@/lib/promo-media";
 
 type Row = any;
@@ -577,20 +577,37 @@ function DayDetail({
 }) {
   const blocks: { label: string; value?: string | null }[] = [
     { label: "Goal", value: day.goal },
-    { label: "Research / verify", value: day.research_note },
+    { label: "Hook text", value: day.x_draft },
+    { label: "Video prompt / Visual guidance", value: day.image_headline },
+    { label: "Reel script / Scene-by-scene script", value: day.reel_script },
+    { label: "Post caption", value: day.caption },
     { label: "Platform plan", value: day.platform_plan },
-    { label: "Caption / talking points", value: day.caption },
-    { label: "Image headline", value: day.image_headline },
-    { label: "X post draft", value: day.x_draft },
-    { label: "Reel script", value: day.reel_script },
     { label: "Hashtags", value: day.hashtags },
+    { label: "Call to Action (CTA)", value: day.cta },
+    { label: "Research / verify", value: day.research_note },
     { label: "Engagement action", value: day.engagement_action },
-    { label: "CTA", value: day.cta },
     { label: "Metrics to record", value: day.metrics_to_record },
   ];
 
   return (
     <div className="space-y-3">
+      {day.source_link && (
+        <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary">
+            <Icon name="description" className="text-base" />
+            <span>Official Google Doc Brief Attached</span>
+          </div>
+          <a
+            href={day.source_link}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary/90"
+          >
+            <Icon name="open_in_new" className="text-[14px]" /> Open Google Doc
+          </a>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
         {blocks
           .filter((block) => block.value)
@@ -602,11 +619,6 @@ function DayDetail({
           ))}
       </div>
       <div className="flex flex-wrap gap-3 text-xs">
-        {day.source_link && (
-          <a href={day.source_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold text-primary hover:underline">
-            <Icon name="open_in_new" className="text-[14px]" /> Source / reference
-          </a>
-        )}
         {day.published_url && (
           <a href={day.published_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:underline">
             <Icon name="open_in_new" className="text-[14px]" /> Published post
@@ -1145,23 +1157,34 @@ function TeamPanel({
             <h3 className="text-sm font-bold text-on-surface">Assigned students</h3>
             <p className="text-xs text-on-surface-variant">{members.length} student{members.length === 1 ? "" : "s"} · a student can be on several campaigns.</p>
           </div>
-          {role === "admin" && (
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary">
-              <Icon name={uploading ? "sync" : "upload_file"} className={`text-[16px] ${uploading ? "animate-spin" : ""}`} />
-              {uploading ? "Importing…" : "Re-import plan"}
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void reimportPlan(file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={downloadCampaignTemplate}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/10"
+              title="Download pre-formatted Excel template"
+            >
+              <Icon name="download" className="text-[16px]" />
+              Download template
+            </button>
+            {role === "admin" && (
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary">
+                <Icon name={uploading ? "sync" : "upload_file"} className={`text-[16px] ${uploading ? "animate-spin" : ""}`} />
+                {uploading ? "Importing…" : "Re-import plan"}
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void reimportPlan(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 space-y-2">

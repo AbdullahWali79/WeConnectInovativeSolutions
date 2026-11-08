@@ -11,7 +11,7 @@ import {
   createCampaign,
   fetchCampaignWorkspace,
 } from "@/app/admin/social-media-campaigns/actions";
-import { parseCampaignPlan, type ParsedPlan } from "@/lib/social-campaign-plan";
+import { parseCampaignPlan, downloadCampaignTemplate, type ParsedPlan } from "@/lib/social-campaign-plan";
 import { CampaignBoard } from "./campaign-board";
 
 const FIELD_CLASS =
@@ -378,6 +378,18 @@ function CampaignFormModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar sm:p-6">
+          <div className="mb-2.5 flex items-center justify-between">
+            <span className="text-xs font-bold text-on-surface-variant">Day-wise Plan (.xlsx, .csv)</span>
+            <button
+              type="button"
+              onClick={downloadCampaignTemplate}
+              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+              title="Download pre-formatted Excel plan template with sample rows"
+            >
+              <Icon name="download" className="text-[14px]" /> Download plan template (.xlsx)
+            </button>
+          </div>
+
           <label className="block cursor-pointer rounded-xl border border-dashed border-outline-variant bg-surface-low p-5 text-center hover:border-primary/50">
             <input
               type="file"
@@ -475,13 +487,15 @@ function CampaignFormModal({
                 <option value="draft">Draft</option>
               </select>
             </div>
-            <div>
-              <label className={LABEL_CLASS}>Campaign Drive folder (for students)</label>
-              <input value={form.drive_folder_url} onChange={(e) => setForm({ ...form, drive_folder_url: e.target.value })} className={FIELD_CLASS} placeholder="https://drive.google.com/drive/folders/…" />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>Teacher Drive folder</label>
-              <input value={form.teacher_drive_url} onChange={(e) => setForm({ ...form, teacher_drive_url: e.target.value })} className={FIELD_CLASS} placeholder="https://drive.google.com/drive/folders/…" />
+
+            <div className="sm:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 dark:border-emerald-800 dark:bg-emerald-950/30">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                <Icon name="cloud_done" className="text-base text-emerald-600" />
+                <span>Zero-Friction Google Drive Upload Active</span>
+              </div>
+              <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                Students and teachers submit campaign videos directly from the browser into your central Google Drive folder. Manual Drive links are no longer required to create a campaign.
+              </p>
             </div>
           </div>
         </div>
