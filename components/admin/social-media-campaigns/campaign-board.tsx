@@ -433,6 +433,13 @@ export function CampaignBoard({
       <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
         {[
           { id: "plan" as const, label: "Day plan", icon: "calendar_month" },
+          {
+            id: "review" as const,
+            label: "Review Videos",
+            icon: "movie",
+            count: submissions.length,
+            badge: pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} new` : undefined,
+          },
           { id: "team" as const, label: "Team & Students", icon: "group" },
         ].map((item) => (
           <button
@@ -442,7 +449,17 @@ export function CampaignBoard({
               tab === item.id ? "bg-primary text-on-primary" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary"
             }`}
           >
-            <Icon name={item.icon} className="text-[18px]" /> {item.label}
+            <Icon name={item.icon} className="text-[18px]" />
+            <span>{item.label}</span>
+            {item.badge ? (
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white animate-pulse">
+                {item.badge}
+              </span>
+            ) : item.count !== undefined && item.count > 0 ? (
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${tab === item.id ? "bg-white/20 text-white" : "bg-surface-container text-on-surface"}`}>
+                {item.count}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -690,6 +707,14 @@ export function CampaignBoard({
         </div>
       )}
 
+      {tab === "review" && (
+        <SubmissionsReviewPanel
+          submissions={submissions}
+          days={days}
+          onReview={review}
+        />
+      )}
+
       {tab === "team" && (
         <TeamPanel
           campaign={campaign}
@@ -813,7 +838,38 @@ function DayDetail({
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Student Submissions Section (Prominently placed at the top) */}
+      <div className={`rounded-xl border p-4 shadow-sm ${
+        submissions.length > 0
+          ? "border-primary/40 bg-surface-lowest ring-1 ring-primary/20"
+          : "border-outline-variant bg-surface-lowest"
+      }`}>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Icon name="movie" className="text-base text-primary" />
+            <h4 className="text-xs font-black uppercase tracking-wider text-on-surface">
+              Student Video Submissions ({submissions.length})
+            </h4>
+          </div>
+          <p className="text-[11px] text-on-surface-variant">
+            {day.visible_to_students ? "Shared with students" : "Hidden — students cannot submit yet."}
+          </p>
+        </div>
+
+        {submissions.length === 0 ? (
+          <p className="mt-3 text-xs text-on-surface-variant/70 italic">
+            No videos submitted for this day yet. Once assigned students submit their reels, you can preview and approve them here.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {submissions.map((submission) => (
+              <SubmissionCard key={submission.id} submission={submission} onReview={onReview} />
+            ))}
+          </div>
+        )}
+      </div>
+
       {day.source_link && (
         <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3">
           <div className="flex items-center gap-2 text-xs font-bold text-primary">
@@ -841,36 +897,13 @@ function DayDetail({
             </div>
           ))}
       </div>
-      <div className="flex flex-wrap gap-3 text-xs">
-        {day.published_url && (
+      {day.published_url && (
+        <div className="flex flex-wrap gap-3 text-xs">
           <a href={day.published_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:underline">
             <Icon name="open_in_new" className="text-[14px]" /> Published post
           </a>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-bold text-on-surface">
-            Student submissions ({submissions.length})
-          </p>
-          <p className="text-[11px] text-on-surface-variant">
-            {day.visible_to_students ? "This day is shared with students." : "Hidden — students cannot submit yet."}
-          </p>
         </div>
-
-        {submissions.length === 0 ? (
-          <p className="mt-2 text-xs text-on-surface-variant">
-            Nothing submitted yet. Students can submit once you share this day.
-          </p>
-        ) : (
-          <div className="mt-2 space-y-2">
-            {submissions.map((submission) => (
-              <SubmissionCard key={submission.id} submission={submission} onReview={onReview} />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -1004,6 +1037,154 @@ function SubmissionCard({
           Reject
         </button>
       </div>
+    </div>
+  );
+}
+
+function SubmissionsReviewPanel({
+  submissions,
+  days,
+  onReview,
+}: {
+  submissions: Row[];
+  days: Row[];
+  onReview: (day: Row, submission: Row, status: "approved" | "rejected" | "revision" | "selected") => Promise<void> | void;
+}) {
+  const [filter, setFilter] = useState<"all" | "pending" | "selected" | "revision">("all");
+  const [search, setSearch] = useState("");
+
+  const daysById = useMemo(() => {
+    const map: Record<string, Row> = {};
+    for (const d of days) map[d.id] = d;
+    return map;
+  }, [days]);
+
+  const filtered = useMemo(() => {
+    return submissions.filter((s) => {
+      const day = daysById[s.day_id];
+      if (filter === "pending" && s.status !== "pending" && s.status !== "submitted") return false;
+      if (filter === "selected" && !s.is_selected && s.status !== "selected") return false;
+      if (filter === "revision" && s.status !== "revision") return false;
+
+      if (search) {
+        const query = search.toLowerCase();
+        const studentName = String(s.student?.full_name || "").toLowerCase();
+        const theme = String(day?.theme || "").toLowerCase();
+        const dayNumber = String(day?.day_number || "");
+        if (!studentName.includes(query) && !theme.includes(query) && !dayNumber.includes(query)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [submissions, daysById, filter, search]);
+
+  const counts = useMemo(() => {
+    const pending = submissions.filter((s) => s.status === "pending" || s.status === "submitted").length;
+    const selected = submissions.filter((s) => s.is_selected || s.status === "selected").length;
+    const revision = submissions.filter((s) => s.status === "revision").length;
+    return { all: submissions.length, pending, selected, revision };
+  }, [submissions]);
+
+  return (
+    <div className="space-y-4">
+      {/* Header and Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setFilter("all")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+              filter === "all" ? "bg-primary text-on-primary" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:bg-surface-container"
+            }`}
+          >
+            All Submissions ({counts.all})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("pending")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+              filter === "pending"
+                ? "bg-amber-600 text-white"
+                : "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+            }`}
+          >
+            Pending Review ({counts.pending})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("selected")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+              filter === "selected"
+                ? "bg-emerald-600 text-white"
+                : "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+            }`}
+          >
+            Final Winners ({counts.selected})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("revision")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+              filter === "revision" ? "bg-orange-600 text-white" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:bg-surface-container"
+            }`}
+          >
+            Needs Changes ({counts.revision})
+          </button>
+        </div>
+
+        <div className="w-full sm:w-64">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search student or day…"
+            className={FIELD_CLASS}
+          />
+        </div>
+      </div>
+
+      {/* Submissions List */}
+      {submissions.length === 0 ? (
+        <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-12 text-center space-y-3">
+          <Icon name="movie" className="text-4xl text-on-surface-variant/40" />
+          <p className="text-base font-bold text-on-surface">No student video submissions yet</p>
+          <p className="text-xs text-on-surface-variant max-w-md mx-auto">
+            When assigned students upload their reels or videos on their portal, they will appear here automatically for you to watch, give feedback, and pick the winning post.
+          </p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-8 text-center text-sm text-on-surface-variant">
+          No submissions match the selected filter.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((submission) => {
+            const day = daysById[submission.day_id];
+            return (
+              <div key={submission.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-5 shadow-sm space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-black text-primary">
+                      Day #{day?.day_number ?? "—"}
+                    </span>
+                    <span className="font-bold text-sm text-on-surface">{day?.theme ?? "Campaign Day"}</span>
+                  </div>
+                  <div className="text-xs text-on-surface-variant">
+                    {submission.created_at ? new Date(submission.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                  </div>
+                </div>
+
+                <SubmissionCard
+                  submission={submission}
+                  onReview={(sub, status) => {
+                    if (day) void onReview(day, sub, status);
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
