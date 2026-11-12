@@ -4,7 +4,7 @@ import { Icon } from "@/components/icon";
 import { ProductVideoPreview } from "@/components/product-video-preview";
 import { FadeIn } from "@/components/public/animations";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { getWhatsAppSettingsOrDefaults } from "@/lib/whatsapp/settings";
 import { normalizeImageUrl } from "@/lib/image-url";
@@ -74,7 +74,10 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
 
     if (slugMatch) return slugMatch as Product;
 
-    // Fallback: fetch all active products and match by auto-generated slug
+    // Fallback: fetch all active products and match by canonical slug OR by the
+    // legacy auto-generated slug. Keeping the legacy map means URLs that were
+    // shared/indexed before the SEO migration still resolve — the page then
+    // 308-redirects them to the canonical admin slug (see ProductDetailPage).
     const { data, error } = await supabase
       .from("products")
       .select(PRODUCT_COLUMNS)
@@ -85,19 +88,24 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
 
     const products = data as Product[];
 
-    // Build a slug map and find the match
-    const slugMap = new Map<string, Product>();
-    const existingSlugs = new Map<string, string>();
+    const canonicalMap = new Map<string, Product>();
+    const legacyMap = new Map<string, Product>();
+    const canonicalSeen = new Map<string, string>();
+    const legacySeen = new Map<string, string>();
+
     for (const product of products) {
-      const productSlug = resolveSlug(product, existingSlugs);
-      existingSlugs.set(productSlug, product.id);
-      // First product with this slug wins (display_order is sorted ascending)
-      if (!slugMap.has(productSlug)) {
-        slugMap.set(productSlug, product);
-      }
+      // Admin-set (or auto-generated) canonical slug
+      const canonicalSlug = resolveSlug(product, canonicalSeen);
+      canonicalSeen.set(canonicalSlug, product.id);
+      if (!canonicalMap.has(canonicalSlug)) canonicalMap.set(canonicalSlug, product);
+
+      // Legacy slug derived straight from the product name
+      const legacySlug = buildProductSlug(product.name, product.id, legacySeen);
+      legacySeen.set(legacySlug, product.id);
+      if (!legacyMap.has(legacySlug)) legacyMap.set(legacySlug, product);
     }
 
-    return slugMap.get(slug) ?? null;
+    return canonicalMap.get(slug) ?? legacyMap.get(slug) ?? null;
   } catch {
     return null;
   }
@@ -267,6 +275,14 @@ export default async function ProductDetailPage({ params }: ProductDetailProps) 
 
   if (!product) notFound();
 
+  // Consolidate legacy / UUID / auto-generated URLs onto the canonical SEO slug.
+  // A permanent redirect preserves link equity for URLs shared before the
+  // migration and prevents duplicate-content penalties in search engines.
+  const canonicalSlug = resolveSlug(product);
+  if (canonicalSlug !== slug) {
+    permanentRedirect(`/products/${canonicalSlug}`);
+  }
+
   const related = await getRelatedProducts(product.category, product.id).catch(() => []);
   const imageUrl = normalizeImageUrl(product.image_cdn_url ?? product.image_url);
   const galleryImages = (product.gallery_urls?.length
@@ -281,8 +297,7 @@ export default async function ProductDetailPage({ params }: ProductDetailProps) 
   );
 
   const whatsappNumber = whatsappSettings.whatsapp_number.replace(/\D/g, "");
-  const productSlug = resolveSlug(product);
-  const canonicalUrl = absoluteUrl(`/products/${productSlug}`);
+  const canonicalUrl = absoluteUrl(`/products/${canonicalSlug}`);
 
   /* JSON-LD structured data for SEO */
   const jsonLd = {
