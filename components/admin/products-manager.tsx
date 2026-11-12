@@ -459,7 +459,7 @@ export function ProductsManager({
                     onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
                   />
                 </div>
-                <span className="mt-2 block text-xs leading-5 text-on-surface-variant">Customize the URL. Auto-generated from product name if empty. Example: "ai-resume-builder" → /products/ai-resume-builder</span>
+                <span className="mt-2 block text-xs leading-5 text-on-surface-variant">Customize the URL. Auto-generated from product name if empty. Example: &quot;ai-resume-builder&quot; → /products/ai-resume-builder</span>
               </label>
 
               {/* Meta Title */}
