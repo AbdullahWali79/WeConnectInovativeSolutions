@@ -15,6 +15,7 @@ import type { PermissionKey } from "@/lib/admin-permissions";
 import type { Product, Profile } from "@/lib/supabase/types";
 import { normalizeImageUrl } from "@/lib/image-url";
 import { formatDate } from "@/lib/utils";
+import { slugify } from "@/lib/slug";
 
 
 const defaultForm = {
@@ -36,6 +37,11 @@ const defaultForm = {
   features: "",
   status: "active",
   display_order: "0",
+  // SEO fields
+  slug: "",
+  seo_title: "",
+  seo_description: "",
+  seo_keywords: "",
 };
 
 function excelText(value: string | null | undefined) {
@@ -119,6 +125,11 @@ export function ProductsManager({
       features: (row.features ?? []).join(", "),
       status: row.status,
       display_order: String(row.display_order ?? 0),
+      // SEO fields
+      slug: row.slug ?? "",
+      seo_title: row.seo_title ?? "",
+      seo_description: row.seo_description ?? "",
+      seo_keywords: (row.seo_keywords ?? []).join(", "),
     });
   }
 
@@ -169,13 +180,20 @@ export function ProductsManager({
       features: form.features.trim() ? form.features.split(",").map((item) => item.trim()).filter(Boolean) : [],
       status: form.status,
       display_order: Number(form.display_order || 0),
+      // SEO fields — null when empty so the app auto-generates fallback values
+      slug: form.slug.trim() ? slugify(form.slug) : null,
+      seo_title: form.seo_title.trim() || null,
+      seo_description: form.seo_description.trim() || null,
+      seo_keywords: form.seo_keywords.trim()
+        ? form.seo_keywords.split(",").map((item) => item.trim()).filter(Boolean)
+        : [],
       updated_at: new Date().toISOString(),
     };
 
     const request = editingId ? supabase.from("products").update(payload).eq("id", editingId) : supabase.from("products").insert(payload);
     let { error } = await request;
 
-    if (error && /image_github_path|image_github_url|image_cdn_url|related_links|column/i.test(error.message)) {
+    if (error && /image_github_path|image_github_url|image_cdn_url|related_links|seo_|slug|column/i.test(error.message)) {
       const fallbackPayload = { ...payload };
       delete fallbackPayload.image_github_path;
       delete fallbackPayload.image_github_url;
@@ -183,6 +201,10 @@ export function ProductsManager({
       delete fallbackPayload.related_links;
       delete fallbackPayload.video_url;
       delete fallbackPayload.show_in_branding;
+      delete fallbackPayload.slug;
+      delete fallbackPayload.seo_title;
+      delete fallbackPayload.seo_description;
+      delete fallbackPayload.seo_keywords;
       const fallbackRequest = editingId ? supabase.from("products").update(fallbackPayload).eq("id", editingId) : supabase.from("products").insert(fallbackPayload);
       const fallback = await fallbackRequest;
       error = fallback.error;
@@ -237,6 +259,10 @@ export function ProductsManager({
       "Student Name": excelText(row.student_name),
       "Source Project ID": row.source_project_id ?? "",
       "Display Order": row.display_order,
+      "SEO Slug": excelText(row.slug),
+      "SEO Title": excelText(row.seo_title),
+      "SEO Description": excelText(row.seo_description),
+      "SEO Keywords": (row.seo_keywords ?? []).map(excelText).join(", "),
       "Created At": formatDate(row.created_at),
       "Updated At": formatDate(row.updated_at),
     })));
@@ -336,7 +362,7 @@ export function ProductsManager({
                       <td className="px-4 py-3 text-sm font-bold text-primary">{row.badge}</td>
                       <td className="px-4 py-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${row.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-700"}`}>{row.status}</span></td>
                       <td className="px-4 py-3 text-xs text-on-surface-variant">{formatDate(row.created_at)}</td>
-                      <td className="px-4 py-3"><div className="flex justify-end gap-2"><Link className="rounded-lg bg-surface-container p-2 text-primary" href="/products" title="View"><Icon name="visibility" /></Link>{canEdit ? <button className="rounded-lg bg-surface-container p-2 text-primary" onClick={() => startEdit(row)} title="Edit"><Icon name="edit" /></button> : null}{canDelete ? <button className="rounded-lg bg-error-container p-2 text-error" onClick={() => deleteRow(row.id)} title="Delete"><Icon name="delete" /></button> : null}</div></td>
+                      <td className="px-4 py-3"><div className="flex justify-end gap-2"><Link className="rounded-lg bg-surface-container p-2 text-primary" href={`/products/${row.slug?.trim() ? slugify(row.slug) : row.id}`} title="View" target="_blank"><Icon name="visibility" /></Link>{canEdit ? <button className="rounded-lg bg-surface-container p-2 text-primary" onClick={() => startEdit(row)} title="Edit"><Icon name="edit" /></button> : null}{canDelete ? <button className="rounded-lg bg-error-container p-2 text-error" onClick={() => deleteRow(row.id)} title="Delete"><Icon name="delete" /></button> : null}</div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -411,6 +437,101 @@ export function ProductsManager({
               <button type="button" className="wc-secondary-btn mt-2 text-sm" onClick={() => setForm((current) => ({ ...current, related_links: [...current.related_links, ""] }))}><Icon name="add" /> Add Private Link</button>
             </div>
             <label className="sm:col-span-2"><span className="wc-label">Features</span><input className="wc-input mt-2" placeholder="Features (comma separated)" value={form.features} onChange={(event) => setForm((current) => ({ ...current, features: event.target.value }))} /></label>
+
+            {/* ── SEO Section ──────────────────────────────────────────── */}
+            <div className="sm:col-span-2 rounded-xl border-2 border-blue-200 bg-blue-50/40 p-5 dark:border-blue-900 dark:bg-blue-950/20">
+              <div className="mb-4 flex items-center gap-2">
+                <Icon name="travel_explore" className="text-xl text-blue-600" />
+                <h3 className="text-base font-black text-on-surface">SEO Settings</h3>
+                <span className="ml-auto rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-900 dark:text-blue-300">Search Engine Optimization</span>
+              </div>
+              <p className="mb-4 text-xs leading-5 text-on-surface-variant">Control how this product appears in Google search results and on social media. Leave any field empty to use the auto-generated value.</p>
+
+              {/* URL Slug */}
+              <label className="block">
+                <span className="wc-label">URL Slug (optional)</span>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="shrink-0 rounded-lg bg-surface-container px-3 py-2.5 text-xs font-bold text-on-surface-variant">/products/</span>
+                  <input
+                    className="wc-input flex-1"
+                    placeholder={form.name ? slugify(form.name) : "auto-generated-from-name"}
+                    value={form.slug}
+                    onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
+                  />
+                </div>
+                <span className="mt-2 block text-xs leading-5 text-on-surface-variant">Customize the URL. Auto-generated from product name if empty. Example: "ai-resume-builder" → /products/ai-resume-builder</span>
+              </label>
+
+              {/* Meta Title */}
+              <label className="mt-4 block">
+                <span className="wc-label">SEO Meta Title (optional)</span>
+                <input
+                  className="wc-input mt-2"
+                  placeholder={form.name ? `${form.name} – ${form.category || "Software"} | We Connect Innovative Solutions`.slice(0, 60) : "Auto-generated from product name"}
+                  value={form.seo_title}
+                  onChange={(event) => setForm((current) => ({ ...current, seo_title: event.target.value }))}
+                  maxLength={70}
+                />
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-xs leading-5 text-on-surface-variant">Shown as the clickable title in Google search. Recommended: 50-60 characters.</span>
+                  <span className={`text-xs font-bold ${form.seo_title.length > 60 ? "text-orange-600" : "text-on-surface-variant"}`}>{form.seo_title.length}/70</span>
+                </div>
+              </label>
+
+              {/* Meta Description */}
+              <label className="mt-4 block">
+                <span className="wc-label">SEO Meta Description (optional)</span>
+                <textarea
+                  className="wc-input mt-2 min-h-20"
+                  placeholder={form.short_description ? form.short_description.slice(0, 160) : "Auto-generated from short description"}
+                  value={form.seo_description}
+                  onChange={(event) => setForm((current) => ({ ...current, seo_description: event.target.value }))}
+                  maxLength={170}
+                />
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-xs leading-5 text-on-surface-variant">Shown as the snippet in Google search. Recommended: 150-160 characters.</span>
+                  <span className={`text-xs font-bold ${form.seo_description.length > 160 ? "text-orange-600" : "text-on-surface-variant"}`}>{form.seo_description.length}/170</span>
+                </div>
+              </label>
+
+              {/* SEO Keywords */}
+              <label className="mt-4 block">
+                <span className="wc-label">SEO Keywords (optional)</span>
+                <input
+                  className="wc-input mt-2"
+                  placeholder="e.g. AI resume builder, ATS optimizer, job application tool"
+                  value={form.seo_keywords}
+                  onChange={(event) => setForm((current) => ({ ...current, seo_keywords: event.target.value }))}
+                />
+                <span className="mt-2 block text-xs leading-5 text-on-surface-variant">Comma-separated keywords for search ranking. Auto-generated from name, category, and features if empty.</span>
+              </label>
+
+              {/* Google Search Preview */}
+              <div className="mt-5 rounded-lg border border-outline-variant bg-white p-4 dark:bg-surface-lowest">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Google Search Preview</p>
+                <div className="space-y-1">
+                  {/* URL breadcrumb */}
+                  <div className="flex items-center gap-1 text-xs text-green-700">
+                    <span className="truncate">weconnectinnovativesolutions.com</span>
+                    <span className="text-on-surface-variant">›</span>
+                    <span className="truncate">products</span>
+                    <span className="text-on-surface-variant">›</span>
+                    <span className="truncate">{form.slug.trim() ? slugify(form.slug) : (form.name ? slugify(form.name) : "product-slug")}</span>
+                  </div>
+                  {/* Title */}
+                  <p className="text-lg font-medium leading-snug text-blue-700 hover:underline cursor-pointer">
+                    {(form.seo_title.trim() || form.name.trim() || "Product Title").slice(0, 60)}
+                    {(form.seo_title.trim() || form.name.trim() || "Product Title").length > 60 ? "..." : ""}
+                  </p>
+                  {/* Description */}
+                  <p className="text-sm leading-5 text-on-surface-variant">
+                    {(form.seo_description.trim() || form.short_description.trim() || "Product description will appear here. Add a short description or SEO meta description to customize this text.").slice(0, 160)}
+                    {(form.seo_description.trim() || form.short_description.trim() || "Product description will appear here. Add a short description or SEO meta description to customize this text.").length > 160 ? "..." : ""}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <label><span className="wc-label">Badge</span><select className="wc-input mt-2" value={form.badge} onChange={(event) => setForm((current) => ({ ...current, badge: event.target.value }))}><option value="premium">Premium</option><option value="hot">Hot</option><option value="new">New</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
             <label><span className="wc-label">Status</span><select className="wc-input mt-2" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
             <label><span className="wc-label">Display order</span><input className="wc-input mt-2" type="number" placeholder="Display order" value={form.display_order} onChange={(event) => setForm((current) => ({ ...current, display_order: event.target.value }))} /></label>

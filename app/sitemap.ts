@@ -3,20 +3,20 @@ import { automationServices } from "@/lib/automation-services";
 import { absoluteUrl } from "@/lib/seo";
 import { getBlogs } from "@/lib/blogs";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
-import { buildProductSlug } from "@/lib/slug";
+import { buildProductSlug, slugify } from "@/lib/slug";
 import type { Product } from "@/lib/supabase/types";
 
-async function getActiveProducts(): Promise<{ id: string; name: string; updated_at: string }[]> {
+async function getActiveProducts(): Promise<{ id: string; name: string; slug: string | null; updated_at: string }[]> {
   try {
     const supabase = createSupabasePublicClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id,name,updated_at")
+      .select("id,name,slug,updated_at")
       .eq("status", "active")
       .order("display_order", { ascending: true });
 
     if (error || !data) return [];
-    return data.map((p) => ({ id: String(p.id), name: String(p.name), updated_at: String(p.updated_at) }));
+    return data.map((p) => ({ id: String(p.id), name: String(p.name), slug: p.slug ? String(p.slug) : null, updated_at: String(p.updated_at) }));
   } catch {
     return [];
   }
@@ -62,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: blog.featured ? 0.8 : 0.7,
     })),
     ...products.map((product) => {
-      const slug = buildProductSlug(product.name, product.id, existingSlugs);
+      const slug = product.slug?.trim() ? slugify(product.slug) : buildProductSlug(product.name, product.id, existingSlugs);
       existingSlugs.set(slug, product.id);
       return {
         url: absoluteUrl(`/products/${slug}`),

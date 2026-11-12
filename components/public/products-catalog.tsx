@@ -3,7 +3,7 @@ import { CmsElement, CmsImage, CmsInstance } from "@/components/cms/cms-element"
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { normalizeImageUrl } from "@/lib/image-url";
-import { buildProductSlug } from "@/lib/slug";
+import { buildProductSlug, slugify } from "@/lib/slug";
 import type { Product } from "@/lib/supabase/types";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/public/animations";
 import Link from "next/link";
@@ -53,6 +53,7 @@ export const fallbackProducts: Product[] = [
 
 /**
  * Pre-compute slug map so all products get consistent, collision-free slugs.
+ * Uses admin-set slug if available, otherwise auto-generates from name.
  */
 function useProductSlugs(products: Product[]): Map<string, string> {
   return useMemo(() => {
@@ -60,7 +61,10 @@ function useProductSlugs(products: Product[]): Map<string, string> {
     const slugToId = new Map<string, string>();
 
     for (const product of products) {
-      const slug = buildProductSlug(product.name, product.id, existingSlugs);
+      // Use admin-set slug if available, otherwise auto-generate
+      const slug = product.slug?.trim()
+        ? slugify(product.slug)
+        : buildProductSlug(product.name, product.id, existingSlugs);
       existingSlugs.set(slug, product.id);
       slugToId.set(product.id, slug);
     }

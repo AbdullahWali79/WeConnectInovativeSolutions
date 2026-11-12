@@ -25,15 +25,27 @@ type ProductDetailProps = {
 /* ------------------------------------------------------------------ */
 
 const PRODUCT_COLUMNS =
-  "id,name,category,image_url,image_github_path,image_github_url,image_cdn_url,short_description,full_description,price_or_access_type,badge,product_link,features,gallery_urls,related_links,video_url,show_in_branding,source_project_id,student_name,status,display_order,created_at,updated_at";
+  "id,name,category,image_url,image_github_path,image_github_url,image_cdn_url,short_description,full_description,price_or_access_type,badge,product_link,features,gallery_urls,related_links,video_url,show_in_branding,source_project_id,student_name,slug,seo_title,seo_description,seo_keywords,status,display_order,created_at,updated_at";
+
+/**
+ * Resolve the effective slug for a product.
+ *
+ * Priority: admin-set slug → auto-generated slug from name.
+ */
+function resolveSlug(product: Product, existingSlugs?: Map<string, string>): string {
+  if (product.slug && product.slug.trim()) {
+    return product.slug.trim();
+  }
+  return buildProductSlug(product.name, product.id, existingSlugs);
+}
 
 /**
  * Fetch a product by slug or UUID.
  *
  * The `slug` param can be either:
  *  - a UUID (old-style URL, e.g. /products/abc-123-...) → direct lookup by id
- *  - a slug (new-style URL, e.g. /products/ai-resume-builder) → fetch all
- *    active products and match by slugified name
+ *  - a DB slug (admin-set, e.g. /products/ai-resume-builder) → lookup by slug column
+ *  - an auto-generated slug (from product name) → fetch all and match
  */
 async function getProductBySlug(slug: string): Promise<Product | null> {
   try {
@@ -52,7 +64,17 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
       return data as Product;
     }
 
-    // Otherwise, fetch all active products and match by slugified name
+    // Try direct lookup by slug column first (admin-set slug)
+    const { data: slugMatch } = await supabase
+      .from("products")
+      .select(PRODUCT_COLUMNS)
+      .eq("slug", slug)
+      .eq("status", "active")
+      .single();
+
+    if (slugMatch) return slugMatch as Product;
+
+    // Fallback: fetch all active products and match by auto-generated slug
     const { data, error } = await supabase
       .from("products")
       .select(PRODUCT_COLUMNS)
@@ -65,8 +87,10 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
 
     // Build a slug map and find the match
     const slugMap = new Map<string, Product>();
+    const existingSlugs = new Map<string, string>();
     for (const product of products) {
-      const productSlug = buildProductSlug(product.name, product.id);
+      const productSlug = resolveSlug(product, existingSlugs);
+      existingSlugs.set(productSlug, product.id);
       // First product with this slug wins (display_order is sorted ascending)
       if (!slugMap.has(productSlug)) {
         slugMap.set(productSlug, product);
@@ -129,7 +153,7 @@ export async function generateStaticParams() {
   const params: { slug: string }[] = [];
 
   for (const product of products) {
-    const slug = buildProductSlug(product.name, product.id, existingSlugs);
+    const slug = resolveSlug(product, existingSlugs);
     existingSlugs.set(slug, product.id);
     params.push({ slug });
   }
@@ -154,31 +178,37 @@ export async function generateMetadata({ params }: ProductDetailProps): Promise<
   }
 
   const imageUrl = normalizeImageUrl(product.image_cdn_url ?? product.image_url);
-  const productSlug = buildProductSlug(product.name, product.id);
+  const productSlug = resolveSlug(product);
   const canonicalUrl = absoluteUrl(`/products/${productSlug}`);
 
-  // SEO-optimized title: product name + category + brand
-  const seoTitle = `${product.name} – ${product.category} Software | ${SITE_NAME}`;
+  // Use admin-provided SEO title, or fall back to auto-generated
+  const seoTitle =
+    product.seo_title?.trim() ||
+    `${product.name} – ${product.category} Software | ${SITE_NAME}`;
 
-  // Rich description for search engines
+  // Use admin-provided SEO description, or fall back to auto-generated
   const seoDescription =
+    product.seo_description?.trim().slice(0, 160) ||
     product.short_description?.slice(0, 160) ||
     product.full_description?.replace(/[#*`>]/g, "").slice(0, 160) ||
     `Discover ${product.name}, a ${product.badge} ${product.category.toLowerCase()} solution by ${SITE_NAME}. ${product.features?.slice(0, 3).join(", ") || ""}`.slice(0, 160);
 
-  // Keywords for search ranking
-  const keywords = [
-    product.name,
-    product.category,
-    `${product.category} software`,
-    `${product.category} tool`,
-    product.badge === "free" ? "free software" : product.badge === "paid" ? "paid software" : `${product.badge} product`,
-    "software product",
-    "digital tool",
-    SITE_NAME,
-    ...(product.features ?? []).slice(0, 8),
-    ...(product.student_name ? [product.student_name] : []),
-  ];
+  // Use admin-provided keywords, or fall back to auto-generated
+  const keywords =
+    product.seo_keywords?.length && product.seo_keywords.length > 0
+      ? product.seo_keywords
+      : [
+          product.name,
+          product.category,
+          `${product.category} software`,
+          `${product.category} tool`,
+          product.badge === "free" ? "free software" : product.badge === "paid" ? "paid software" : `${product.badge} product`,
+          "software product",
+          "digital tool",
+          SITE_NAME,
+          ...(product.features ?? []).slice(0, 8),
+          ...(product.student_name ? [product.student_name] : []),
+        ];
 
   return {
     title: seoTitle,
@@ -251,7 +281,7 @@ export default async function ProductDetailPage({ params }: ProductDetailProps) 
   );
 
   const whatsappNumber = whatsappSettings.whatsapp_number.replace(/\D/g, "");
-  const productSlug = buildProductSlug(product.name, product.id);
+  const productSlug = resolveSlug(product);
   const canonicalUrl = absoluteUrl(`/products/${productSlug}`);
 
   /* JSON-LD structured data for SEO */
@@ -487,7 +517,7 @@ export default async function ProductDetailPage({ params }: ProductDetailProps) 
             <CmsElement cmsId="prod-slug-53" as="div" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((rel) => {
                 const relImg = normalizeImageUrl(rel.image_cdn_url ?? rel.image_url);
-                const relSlug = buildProductSlug(rel.name, rel.id);
+                const relSlug = resolveSlug(rel);
                 return (
                   <CmsLink cmsId="prod-slug-54" instance={String(rel.id)} key={rel.id} href={`/products/${relSlug}`}
                     className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--wc-outline-variant)] bg-[var(--wc-surface-low)] transition-all duration-300 hover:-translate-y-1 hover:border-[var(--wc-secondary)]/35 hover:shadow-[0_16px_36px_rgba(0,0,0,0.18)]"

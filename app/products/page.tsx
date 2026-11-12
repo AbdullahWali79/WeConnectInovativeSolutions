@@ -4,7 +4,7 @@ import { PublicHeader } from "@/components/public/public-header";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { getWhatsAppSettingsOrDefaults } from "@/lib/whatsapp/settings";
 import { createPageMetadata, absoluteUrl, SITE_NAME } from "@/lib/seo";
-import { buildProductSlug } from "@/lib/slug";
+import { buildProductSlug, slugify } from "@/lib/slug";
 import type { Product } from "@/lib/supabase/types";
 
 export const metadata = createPageMetadata({
@@ -35,7 +35,7 @@ async function getProducts(): Promise<Product[]> {
       const supabase = createSupabasePublicClient();
       const { data, error } = await supabase
         .from("products")
-        .select("id,name,category,image_url,image_github_path,image_github_url,image_cdn_url,short_description,full_description,price_or_access_type,badge,product_link,features,gallery_urls,video_url,show_in_branding,source_project_id,student_name,status,display_order,created_at,updated_at")
+        .select("id,name,category,image_url,image_github_path,image_github_url,image_cdn_url,short_description,full_description,price_or_access_type,badge,product_link,features,gallery_urls,video_url,show_in_branding,source_project_id,student_name,slug,seo_title,seo_description,seo_keywords,status,display_order,created_at,updated_at")
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .order("display_order", { ascending: true });
@@ -67,7 +67,7 @@ export default async function ProductsPage() {
     url: absoluteUrl("/products"),
     numberOfItems: products.length,
     itemListElement: products.slice(0, 20).map((product, index) => {
-      const slug = buildProductSlug(product.name, product.id, existingSlugs);
+      const slug = product.slug?.trim() ? slugify(product.slug) : buildProductSlug(product.name, product.id, existingSlugs);
       existingSlugs.set(slug, product.id);
       return {
         "@type": "ListItem",

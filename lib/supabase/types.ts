@@ -454,6 +454,11 @@ export type Product = {
   show_in_branding?: boolean;
   source_project_id?: string | null;
   student_name?: string | null;
+  /** Admin-controlled SEO fields — optional, auto-generated when null */
+  slug?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_keywords?: string[] | null;
   status: GenericStatus;
   display_order: number;
   created_at: string;
