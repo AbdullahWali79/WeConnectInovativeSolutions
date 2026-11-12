@@ -40,6 +40,20 @@ function resolveSlug(product: Product, existingSlugs?: Map<string, string>): str
 }
 
 /**
+ * Trim a meta description to Google's ~160 char display limit without
+ * cutting a word in half. Falls back to a hard cut when there is no sensible
+ * word boundary.
+ */
+function trimDescription(text: string, max = 160): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  const safe = lastSpace > max * 0.75 ? cut.slice(0, lastSpace) : cut;
+  return safe.replace(/[\s,;:.–—-]+$/g, "") + "…";
+}
+
+/**
  * Fetch a product by slug or UUID.
  *
  * The `slug` param can be either:
@@ -194,12 +208,15 @@ export async function generateMetadata({ params }: ProductDetailProps): Promise<
     product.seo_title?.trim() ||
     `${product.name} – ${product.category} Software | ${SITE_NAME}`;
 
-  // Use admin-provided SEO description, or fall back to auto-generated
-  const seoDescription =
-    product.seo_description?.trim().slice(0, 160) ||
-    product.short_description?.slice(0, 160) ||
-    product.full_description?.replace(/[#*`>]/g, "").slice(0, 160) ||
-    `Discover ${product.name}, a ${product.badge} ${product.category.toLowerCase()} solution by ${SITE_NAME}. ${product.features?.slice(0, 3).join(", ") || ""}`.slice(0, 160);
+  // Use admin-provided SEO description, or fall back to auto-generated.
+  // trimDescription keeps the snippet inside Google's display limit and
+  // avoids cutting a word in half.
+  const seoDescription = trimDescription(
+    product.seo_description?.trim() ||
+      product.short_description ||
+      product.full_description?.replace(/[#*`>]/g, "") ||
+      `Discover ${product.name}, a ${product.badge} ${product.category.toLowerCase()} solution by ${SITE_NAME}. ${product.features?.slice(0, 3).join(", ") || ""}`
+  );
 
   // Use admin-provided keywords, or fall back to auto-generated
   const keywords =
