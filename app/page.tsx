@@ -9,6 +9,8 @@ import { FadeIn, ScrollProgress } from "@/components/public/animations";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
 import { automationServices } from "@/lib/automation-services";
 import { absoluteUrl, createPageMetadata, SITE_NAME } from "@/lib/seo";
+import { getLandingVideoSettings } from "@/lib/landing-video";
+import { LandingIntroVideo } from "@/components/public/landing-intro-video";
 
 export const metadata = createPageMetadata({
   title: "Custom Software Development & AI Automation Company",
@@ -21,7 +23,8 @@ export const revalidate = 300;
 
 export default async function LandingPage() {
   const supabase = createSupabasePublicClient();
-  const [{ data: featuredProducts }, { count: totalProductsCount }] = await Promise.all([
+  const [videoSettings, { data: featuredProducts }, { count: totalProductsCount }] = await Promise.all([
+    getLandingVideoSettings(),
     supabase
       .from("products")
       .select("*")
@@ -128,6 +131,20 @@ export default async function LandingPage() {
               <CmsLink cmsId="6f76c4f4-18" href="/services" className="landing-hero-secondary inline-flex items-center justify-center rounded-xl border px-8 py-4 text-base font-bold backdrop-blur-sm transition-colors">
                 Explore Our Solutions
               </CmsLink>
+              {videoSettings.is_enabled && videoSettings.video_url && (
+                <a
+                  href="#intro-video"
+                  className="landing-hero-secondary inline-flex items-center justify-center gap-2 rounded-xl border px-7 py-4 text-base font-bold backdrop-blur-sm transition-all hover:scale-105"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--wc-secondary) 35%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--wc-secondary) 10%, transparent)",
+                    color: "var(--wc-on-bg)",
+                  }}
+                >
+                  <Icon name="play_circle" className="text-xl text-[var(--wc-secondary)]" />
+                  {videoSettings.button_label || "Watch Intro Video"}
+                </a>
+              )}
             </CmsElement>
             <CmsElement cmsId="6f76c4f4-19" as="div" className="landing-hero-features mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border p-3 text-left backdrop-blur-sm sm:grid-cols-3 sm:text-center">
               {[
@@ -144,6 +161,9 @@ export default async function LandingPage() {
           </FadeIn>
         </CmsElement>
       </CmsElement>
+
+      {/* Intro Video Showcase */}
+      <LandingIntroVideo settings={videoSettings} />
 
       <CmsElement cmsId="6f76c4f4-22" as="section" className="bg-[var(--wc-surface-lowest)] py-16 sm:py-20" aria-labelledby="digital-solutions-heading">
         <CmsElement cmsId="6f76c4f4-23" as="div" className="homepage-wide-container">

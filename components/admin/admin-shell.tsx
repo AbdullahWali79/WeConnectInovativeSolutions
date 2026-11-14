@@ -85,6 +85,7 @@ export const navGroups: NavGroup[] = [
     { href: "/admin/study-abroad/opportunities", label: "Opportunities List", icon: "list_alt", adminOnly: true },
   ]},
   { id: "settings", label: "Settings", icon: "settings", items: [
+    { href: "/admin/settings/intro-video", label: "Intro Video", icon: "smart_display", adminOnly: true },
     { href: "/admin/notification-settings", label: "WhatsApp Alerts", icon: "chat", adminOnly: true },
     { href: "/admin/settings/notifications", label: "Email Notifications", icon: "notifications_active", adminOnly: true },
     { href: "/admin/settings/signature", label: "Signature & Stamp", icon: "draw", adminOnly: true },
