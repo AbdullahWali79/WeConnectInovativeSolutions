@@ -328,6 +328,8 @@ function CampaignDetail({
             <SubmitPanel
               days={days}
               byDay={byDay}
+              submissions={submissions}
+              currentUserId={currentUserId}
               activeDay={activeDay}
               onPick={setActiveDayId}
               driveUrl={member.drive_url || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
@@ -619,6 +621,8 @@ function PlanPanel({
 function SubmitPanel({
   days,
   byDay,
+  submissions,
+  currentUserId,
   activeDay,
   onPick,
   driveUrl,
@@ -626,6 +630,8 @@ function SubmitPanel({
 }: {
   days: Row[];
   byDay: Record<string, Row>;
+  submissions?: Row[];
+  currentUserId?: string;
   activeDay: Row | null;
   onPick: (id: string) => void;
   driveUrl?: string | null;
@@ -633,6 +639,10 @@ function SubmitPanel({
 }) {
   const existing = activeDay ? byDay[activeDay.id] : null;
   const locked = existing && ["approved", "selected"].includes(existing.status);
+  const dayWinner = submissions?.find(
+    (s) => s.day_id === activeDay?.id && (s.is_selected || s.status === "selected"),
+  );
+  const isMeWinner = Boolean(dayWinner && currentUserId && dayWinner.student_id === currentUserId);
 
   const [form, setForm] = useState({
     video_url: existing?.video_url || "",
@@ -815,6 +825,34 @@ function SubmitPanel({
             </a>
           )}
         </div>
+
+        {dayWinner && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50/90 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
+                <Icon name="emoji_events" className="text-base" />
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300">
+                  Official Day Winner ⭐
+                </p>
+                <p className="text-xs font-bold text-on-surface">
+                  {isMeWinner ? "You are the winner for this day!" : `${dayWinner.student?.full_name || "A student"} won this day`}
+                </p>
+              </div>
+            </div>
+            {(dayWinner.video_url || dayWinner.doc_url || dayWinner.post_url) && (
+              <a
+                href={dayWinner.video_url || dayWinner.doc_url || dayWinner.post_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 rounded bg-amber-500 text-white px-2.5 py-1 text-xs font-bold shadow-sm hover:bg-amber-600 transition"
+              >
+                <Icon name="visibility" className="text-xs" /> View Winning Post ↗
+              </a>
+            )}
+          </div>
+        )}
 
         {existing && (
           <div className={`mt-3 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${STATUS_TONE[existing.status] || STATUS_TONE.submitted}`}>

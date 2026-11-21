@@ -1041,10 +1041,14 @@ function SubmissionCard({
         />
         <button
           onClick={() => onReview({ ...submission, feedback }, "selected")}
-          className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700"
-          title="Use this as the final post for the day"
+          className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold shadow-sm transition ${
+            submission.is_selected
+              ? "bg-amber-500 text-white hover:bg-amber-600"
+              : "bg-emerald-600 text-white hover:bg-emerald-700"
+          }`}
+          title="Pick this student's submission as the official Winner for this day"
         >
-          Pick final
+          {submission.is_selected ? "Winner Picked ⭐" : "Pick Winner ⭐"}
         </button>
         <button
           onClick={() => onReview({ ...submission, feedback }, "revision")}

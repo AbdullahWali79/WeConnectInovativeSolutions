@@ -436,38 +436,53 @@ export function StudentSheetView({
                   )}
                 </div>
 
-                {/* Teammates & Winner Bar */}
-                {(dayData.winner || dayData.peerSubmissions.length > 0) && (
-                  <div className="mt-2 pt-2 border-t border-outline-variant/40 flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                    {dayData.winner ? (
-                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-bold">
-                        <Icon name="emoji_events" className="text-xs" /> Winner: {dayData.winner.student?.full_name || "Student"}
+                {/* Official Winner Announcement (Visible to all students) */}
+                {dayData.winner && (
+                  <div className="mt-2.5 rounded-lg border border-amber-300 bg-amber-50/90 p-2.5 dark:border-amber-800 dark:bg-amber-950/40">
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase text-amber-800 dark:text-amber-300">
+                        <Icon name="emoji_events" className="text-sm text-amber-500" /> Official Day Winner ⭐
                       </span>
-                    ) : (
-                      <span className="text-on-surface-variant/70 italic text-[10px]">
-                        Review pending
+                      <span className="font-bold text-xs text-on-surface">
+                        {dayData.winner.student?.full_name || "Student"}
                       </span>
-                    )}
-
-                    {dayData.peerSubmissions.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span className="text-[10px] text-on-surface-variant">Peers:</span>
-                        {dayData.peerSubmissions.slice(0, 3).map((p) => {
-                          const pLink = p.video_url || p.doc_url || p.post_url;
-                          return pLink ? (
-                            <a
-                              key={p.id}
-                              href={pLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded bg-surface-container px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:underline"
-                            >
-                              {p.student?.full_name?.split(" ")[0] || "Teammate"} ↗
-                            </a>
-                          ) : null;
-                        })}
+                    </div>
+                    {(dayData.winner.video_url || dayData.winner.doc_url || dayData.winner.post_url) && (
+                      <div className="mt-1.5 pt-1 border-t border-amber-200 dark:border-amber-900/60 flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-amber-800 dark:text-amber-300 font-medium">Benchmark post:</span>
+                        <a
+                          href={toUrl(dayData.winner.video_url || dayData.winner.doc_url || dayData.winner.post_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded bg-amber-500 text-white px-2 py-0.5 text-[10px] font-bold shadow-sm hover:bg-amber-600 transition"
+                        >
+                          <Icon name="visibility" className="text-xs" /> View Winning Post ↗
+                        </a>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Peer submissions if any */}
+                {dayData.peerSubmissions.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-outline-variant/40 flex items-center justify-between gap-1 text-[11px]">
+                    <span className="text-[10px] text-on-surface-variant font-medium">Teammates&apos; work:</span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {dayData.peerSubmissions.slice(0, 3).map((p) => {
+                        const pLink = p.video_url || p.doc_url || p.post_url;
+                        return pLink ? (
+                          <a
+                            key={p.id}
+                            href={pLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded bg-surface-container px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:underline"
+                          >
+                            {p.student?.full_name?.split(" ")[0] || "Teammate"} ↗
+                          </a>
+                        ) : null;
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -778,13 +793,25 @@ export function StudentSheetView({
                       {/* WINNING BEST PICK COLUMN */}
                       <td className="p-3 align-top">
                         {dayData.winner ? (
-                          <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-2 dark:border-amber-800 dark:bg-amber-950/40">
-                            <p className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                              <Icon name="emoji_events" className="text-xs" /> Winner
-                            </p>
-                            <p className="mt-0.5 font-bold text-xs text-on-surface truncate">
+                          <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-2.5 dark:border-amber-800 dark:bg-amber-950/40 space-y-1.5">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                                <Icon name="emoji_events" className="text-sm text-amber-500" /> Day Winner ⭐
+                              </p>
+                            </div>
+                            <p className="font-bold text-xs text-on-surface truncate">
                               {dayData.winner.student?.full_name || "Student"}
                             </p>
+                            {(dayData.winner.video_url || dayData.winner.doc_url || dayData.winner.post_url) && (
+                              <a
+                                href={toUrl(dayData.winner.video_url || dayData.winner.doc_url || dayData.winner.post_url)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 rounded bg-amber-500 text-white px-2 py-0.5 text-[10px] font-bold shadow-sm hover:bg-amber-600 transition"
+                              >
+                                <Icon name="visibility" className="text-xs" /> View Winning Post ↗
+                              </a>
+                            )}
                             <p className="text-[10px] text-on-surface-variant">
                               Benchmark post — follow this style!
                             </p>
