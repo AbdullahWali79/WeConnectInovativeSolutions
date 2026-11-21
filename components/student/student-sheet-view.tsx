@@ -22,6 +22,13 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
 }
 
+function toUrl(val?: string | null) {
+  if (!val) return "";
+  const s = val.trim();
+  if (!s) return "";
+  return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+}
+
 export function StudentSheetView({
   campaign,
   days,
@@ -287,35 +294,35 @@ export function StudentSheetView({
                           )}
 
                           {/* Quick clickable links shared by Teacher/Admin */}
-                          <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
                             {day.source_link && (
                               <a
-                                href={day.source_link}
+                                href={toUrl(day.source_link)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 hover:underline dark:bg-blue-950 dark:text-blue-300"
+                                className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-800 hover:underline dark:bg-blue-950 dark:text-blue-300"
                                 title="Open Google Docs Brief"
                               >
                                 <Icon name="description" className="text-xs" /> Docs Brief ↗
                               </a>
                             )}
-                            {day.research_note && day.research_note.startsWith("http") && (
+                            {day.research_note && (
                               <a
-                                href={day.research_note}
+                                href={toUrl(day.research_note)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 hover:underline dark:bg-emerald-950 dark:text-emerald-300"
+                                className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 hover:underline dark:bg-emerald-950 dark:text-emerald-300"
                                 title="Open ChatGPT Script / Chat"
                               >
                                 <Icon name="smart_toy" className="text-xs" /> ChatGPT ↗
                               </a>
                             )}
-                            {day.image_headline && day.image_headline.startsWith("http") && (
+                            {day.image_headline && (
                               <a
-                                href={day.image_headline}
+                                href={toUrl(day.image_headline)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 hover:underline dark:bg-amber-950 dark:text-amber-300"
+                                className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 hover:underline dark:bg-amber-950 dark:text-amber-300"
                                 title="Open Drive Assets"
                               >
                                 <Icon name="folder_open" className="text-xs" /> Assets ↗
@@ -572,7 +579,7 @@ export function StudentSheetView({
                 <div className="grid gap-2 sm:grid-cols-2">
                   {activeDayDetail.source_link && (
                     <a
-                      href={activeDayDetail.source_link}
+                      href={toUrl(activeDayDetail.source_link)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 rounded-xl border border-blue-200 bg-white p-3 shadow-sm hover:border-blue-400 hover:shadow-md transition-all dark:bg-surface-lowest dark:border-blue-900"
@@ -585,9 +592,9 @@ export function StudentSheetView({
                     </a>
                   )}
 
-                  {activeDayDetail.research_note && activeDayDetail.research_note.startsWith("http") && (
+                  {activeDayDetail.research_note && (
                     <a
-                      href={activeDayDetail.research_note}
+                      href={toUrl(activeDayDetail.research_note)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 shadow-sm hover:border-emerald-400 hover:shadow-md transition-all dark:bg-surface-lowest dark:border-emerald-900"
@@ -600,9 +607,9 @@ export function StudentSheetView({
                     </a>
                   )}
 
-                  {activeDayDetail.image_headline && activeDayDetail.image_headline.startsWith("http") && (
+                  {activeDayDetail.image_headline && (
                     <a
-                      href={activeDayDetail.image_headline}
+                      href={toUrl(activeDayDetail.image_headline)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white p-3 shadow-sm hover:border-amber-400 hover:shadow-md transition-all dark:bg-surface-lowest dark:border-amber-900"

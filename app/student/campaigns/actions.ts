@@ -154,7 +154,7 @@ export async function fetchMyCampaign(campaignId: string) {
         .maybeSingle(),
       admin
         .from("sm_campaign_days" as any)
-        .select("id, day_number, post_date, theme, goal, platform_plan, caption, image_headline, reel_script, hashtags, cta, engagement_action, source_link, metrics_to_record, visible_to_students, published_url")
+        .select("id, day_number, post_date, theme, goal, research_note, platform_plan, caption, image_headline, reel_script, hashtags, cta, engagement_action, source_link, metrics_to_record, visible_to_students, published_url")
         .eq("campaign_id", campaignId)
         .eq("visible_to_students", true)
         .order("day_number"),

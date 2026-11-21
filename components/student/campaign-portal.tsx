@@ -548,16 +548,38 @@ function PlanPanel({
               </p>
               <h3 className="mt-1 text-lg font-black leading-snug text-on-surface">{active.theme || "Untitled day"}</h3>
             </div>
-            {active.source_link && (
-              <a
-                href={active.source_link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary/90 shadow-sm"
-              >
-                <Icon name="description" className="text-[14px]" /> Open Google Doc Brief
-              </a>
-            )}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {active.source_link && (
+                <a
+                  href={active.source_link.startsWith("http") ? active.source_link : `https://${active.source_link}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700 shadow-sm"
+                >
+                  <Icon name="description" className="text-[14px]" /> Docs Brief ↗
+                </a>
+              )}
+              {active.research_note && (
+                <a
+                  href={active.research_note.startsWith("http") ? active.research_note : `https://${active.research_note}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm"
+                >
+                  <Icon name="smart_toy" className="text-[14px]" /> ChatGPT ↗
+                </a>
+              )}
+              {active.image_headline && (
+                <a
+                  href={active.image_headline.startsWith("http") ? active.image_headline : `https://${active.image_headline}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-amber-700 shadow-sm"
+                >
+                  <Icon name="folder_open" className="text-[14px]" /> Assets ↗
+                </a>
+              )}
+            </div>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
