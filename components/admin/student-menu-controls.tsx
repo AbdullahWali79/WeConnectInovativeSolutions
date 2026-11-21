@@ -5,7 +5,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Icon } from "@/components/icon";
 
 const MENU_OPTIONS = [
-  ["dashboard", "My Dashboard", "dashboard"], ["profile", "My Profile", "person"], ["tasks", "Tasks / Add Task", "add_task"],
+  ["dashboard", "My Dashboard", "dashboard"], ["campaigns", "Social Media Campaigns", "rocket_launch"], ["profile", "My Profile", "person"], ["tasks", "Tasks / Add Task", "add_task"],
   ["ai-tools", "AI Tools", "smart_toy"], ["seat-reservation", "Reserve a Seat", "event_seat"], ["syllabus", "Syllabus", "menu_book"],
   ["talent-portfolio", "Talent Portfolio", "badge"], ["client-hunting", "Client Hunting", "manage_search"], ["social-media", "Social Media", "share"],
   ["assigned-projects", "Assigned Projects", "assignment_turned_in"], ["projects", "Projects", "folder_special"], ["progress", "My Progress", "monitoring"],
@@ -47,12 +47,34 @@ export function StudentMenuControls() {
         setError(result.error.message.includes("schema cache") ? "Database setup required: run supabase/student-menu-controls-setup.sql in the Supabase SQL Editor." : result.error.message);
       }
       const rows = (result.data ?? []) as Control[];
-      setVisible(Object.fromEntries(defaultOrder.map(key => [key, rows.some(row => row.menu_key === key && row.is_visible)])));
-      setOrder([...defaultOrder].sort((a, b) => (rows.find(row => row.menu_key === a)?.sort_order ?? 0) - (rows.find(row => row.menu_key === b)?.sort_order ?? 0)));
+      const selectedCourse = courses.find((c) => c.id === selected);
+      const isSocialMedia = selectedCourse?.title?.toLowerCase().includes("social");
+
+      setVisible(
+        Object.fromEntries(
+          defaultOrder.map((key) => {
+            const found = rows.find((row) => row.menu_key === key);
+            if (found) return [key, found.is_visible];
+            if (key === "campaigns" && isSocialMedia) return [key, true];
+            return [key, rows.length === 0];
+          }),
+        ),
+      );
+
+      setOrder(
+        [...defaultOrder].sort((a, b) => {
+          const orderA = rows.find((row) => row.menu_key === a)?.sort_order;
+          const orderB = rows.find((row) => row.menu_key === b)?.sort_order;
+          if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+          if (orderA !== undefined) return -1;
+          if (orderB !== undefined) return 1;
+          return 0;
+        }),
+      );
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [selected, supabase]);
+  }, [selected, supabase, courses]);
 
   function move(index: number, direction: number) {
     setOrder(current => {

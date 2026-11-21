@@ -25,7 +25,7 @@ const defaultNav: StudentNavItem[] = [
   { href: "/student/talent-portfolio", label: "Talent Portfolio", icon: "badge" },
   { href: "/student/client-hunting", label: "Client Hunting", icon: "manage_search" },
   { href: "/student/social-media", label: "Social Media", icon: "share" },
-  { href: "/student/campaigns", label: "Campaigns", icon: "rocket_launch", campaignOnly: true },
+  { href: "/student/campaigns", label: "Social Media Campaigns", icon: "rocket_launch" },
   { href: "/student/assigned-projects", label: "Assigned Projects", icon: "assignment_turned_in" },
   { href: "/student/projects", label: "Projects", icon: "folder_special" },
   { href: "/student/progress", label: "My Progress", icon: "monitoring" },
@@ -184,12 +184,18 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
 
           <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-color:rgba(255,255,255,0.35)_transparent] [scrollbar-width:thin]">
             {nav.filter((item) => {
-              if (item.campaignOnly) return Boolean(hasCampaigns);
-              return menuVisibility?.[item.href === "/student" ? "dashboard" : item.href.replace("/student/", "")] === true;
+              const key = item.href === "/student" ? "dashboard" : item.href.replace("/student/", "");
+              if (menuVisibility && key in menuVisibility) {
+                return menuVisibility[key] === true;
+              }
+              if (item.campaignOnly || key === "campaigns") return Boolean(hasCampaigns);
+              return menuVisibility?.[key] === true;
             }).sort((a, b) => {
               if (a.href === "/student") return -1;
               if (b.href === "/student") return 1;
-              return (menuOrder[a.href.replace("/student/", "")] ?? 0) - (menuOrder[b.href.replace("/student/", "")] ?? 0);
+              const keyA = a.href.replace("/student/", "");
+              const keyB = b.href.replace("/student/", "");
+              return (menuOrder[keyA] ?? 999) - (menuOrder[keyB] ?? 999);
             }).map((item) => {
               const active = pathname === item.href || (item.href !== "/student" && pathname.startsWith(`${item.href}/`));
               return (
