@@ -642,6 +642,17 @@ function SubmitPanel({
   const [uploadingFileSizeMb, setUploadingFileSizeMb] = useState(0);
   const [uploadedVideoName, setUploadedVideoName] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+
+  function cancelUpload() {
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      xhrRef.current = null;
+    }
+    setUploadingVideo(false);
+    setUploadProgress(0);
+    setError("Upload cancelled. You can paste your video link directly below.");
+  }
 
   async function handleVideoUpload(file: File) {
     if (!file) return;
@@ -650,8 +661,10 @@ function SubmitPanel({
       return;
     }
     const sizeMb = Math.round((file.size / (1024 * 1024)) * 10) / 10;
-    if (file.size > 80 * 1024 * 1024) {
-      setError(`Video file is ${sizeMb} MB (must be under 80MB). For large videos, please upload to your own Google Drive and paste the link below.`);
+    if (file.size > 4.5 * 1024 * 1024) {
+      setError(
+        `Video file is ${sizeMb} MB. Direct web uploads are limited to under 4.5 MB on cloud servers. Please click "Upload to Drive Folder" above or upload directly to your Google Drive and paste the link below (recommended for full videos).`,
+      );
       return;
     }
 
@@ -665,6 +678,8 @@ function SubmitPanel({
     formData.append("file", file);
 
     const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.timeout = 45000;
     xhr.open("POST", "/api/student/campaign-video-upload");
 
     xhr.upload.onprogress = (event) => {
@@ -675,11 +690,18 @@ function SubmitPanel({
       }
     };
 
+    xhr.ontimeout = () => {
+      xhrRef.current = null;
+      setUploadingVideo(false);
+      setError("Upload timed out. Please click 'Upload to Drive Folder' above or paste your Google Drive link below.");
+    };
+
     xhr.onload = () => {
+      xhrRef.current = null;
       setUploadingVideo(false);
       try {
         if (xhr.status === 413) {
-          setError(`File is too large for direct browser upload (${sizeMb} MB exceeds server limit). Please upload to your own Google Drive and paste the link below (recommended).`);
+          setError(`File is too large for direct browser upload (${sizeMb} MB exceeds server limit). Please upload to your Google Drive and paste the link below.`);
           return;
         }
         const data = JSON.parse(xhr.responseText);
@@ -696,6 +718,7 @@ function SubmitPanel({
     };
 
     xhr.onerror = () => {
+      xhrRef.current = null;
       setUploadingVideo(false);
       setError("Network connection issue while uploading. Please paste your Google Drive link directly below.");
     };
@@ -888,6 +911,17 @@ function SubmitPanel({
                         💡 Fast option: You can also paste your Google Drive link directly below!
                       </p>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cancelUpload();
+                      }}
+                      className="mt-1 inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 cursor-pointer"
+                    >
+                      <Icon name="close" className="text-xs" /> Cancel upload
+                    </button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-1.5 py-1">
@@ -895,7 +929,7 @@ function SubmitPanel({
                       <Icon name="video_call" className="text-2xl" />
                     </div>
                     <p className="text-sm font-bold text-on-surface">Click or drag video here to upload</p>
-                    <p className="text-xs text-on-surface-variant">MP4, MOV, or WebM (up to 80MB). Automatically saved to Drive.</p>
+                    <p className="text-xs text-on-surface-variant">Direct upload under 4.5MB. For full videos, click &quot;Upload to Drive Folder&quot; above and paste the link below.</p>
                   </div>
                 )}
               </div>

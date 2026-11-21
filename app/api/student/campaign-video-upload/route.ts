@@ -24,10 +24,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No video file provided." }, { status: 400 });
     }
 
-    if (file.size > 80 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "Video must be under 80MB. For larger videos, paste a Google Drive link." },
-        { status: 400 },
+        { error: "Direct upload is limited to 4.5MB on cloud servers. For larger videos, please upload to Google Drive and paste the link below." },
+        { status: 413 },
       );
     }
 
@@ -54,6 +54,13 @@ export async function POST(request: Request) {
     const data = await res.json().catch(() => ({}));
     if (data?.success && data?.url) {
       return NextResponse.json({ success: true, url: data.url, name: file.name });
+    }
+
+    if (data?.error && String(data.error).includes("DriveApp")) {
+      return NextResponse.json(
+        { error: "Google Drive service needs owner authorization (Access denied: DriveApp). Please paste your Google Drive video link directly below." },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json(
