@@ -246,23 +246,31 @@ function CampaignDetail({
   }
 
   const header = (
-    <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-6">
-      <button onClick={onBack} className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary">
-        <Icon name="arrow_back" className="text-[16px]" /> My campaigns
-      </button>
-      <h2 className="text-xl font-black leading-tight text-on-surface sm:text-2xl">{campaign.client_name}</h2>
-      <p className="mt-1 text-sm text-on-surface-variant flex items-center gap-1.5 flex-wrap">
-        <span>{campaign.campaign_name || "Social media campaign"} · {formatDate(campaign.period_start)} –</span>
+    <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-3.5 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary">
+          <Icon name="arrow_back" className="text-[15px]" /> My campaigns
+        </button>
         {campaign.period_end ? (
-          <span>{formatDate(campaign.period_end)}</span>
+          <span className="text-[11px] font-semibold text-on-surface-variant">
+            {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
+          </span>
         ) : (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
             Ongoing
           </span>
         )}
-      </p>
+      </div>
+
+      <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-black leading-tight text-on-surface sm:text-2xl">{campaign.client_name}</h2>
+        <span className="text-xs text-on-surface-variant font-medium">
+          {campaign.campaign_name || "Social media campaign"}
+        </span>
+      </div>
+
       {campaign.teacher?.full_name && (
-        <p className="mt-1 text-xs text-on-surface-variant">
+        <p className="mt-0.5 text-[11px] text-on-surface-variant">
           Teacher: <span className="font-bold text-on-surface">{campaign.teacher.full_name}</span>
         </p>
       )}
@@ -279,7 +287,7 @@ function CampaignDetail({
   const activeDay = days.find((day) => day.id === activeDayId) ?? nextDay ?? days[0] ?? null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {header}
 
       {tabs.length === 0 ? (
@@ -288,16 +296,16 @@ function CampaignDetail({
         </div>
       ) : (
         <>
-          <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
+          <div className="hide-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
             {tabs.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setTab(item.id)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
-                  tab === item.id ? "bg-primary text-on-primary" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary"
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
+                  tab === item.id ? "bg-primary text-on-primary shadow-sm" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary"
                 }`}
               >
-                <Icon name={item.icon} className="text-[18px]" /> {item.label}
+                <Icon name={item.icon} className="text-[16px] sm:text-[18px]" /> {item.label}
               </button>
             ))}
           </div>

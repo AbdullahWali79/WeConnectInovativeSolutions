@@ -136,39 +136,34 @@ export function StudentSheetView({
   }
 
   return (
-    <div className="space-y-4">
-      {/* 1. Page Teammates Card */}
-      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/60 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Icon name="groups" className="text-base" />
+    <div className="space-y-3">
+      {/* 1. Page Teammates Card (Compact) */}
+      <div className="rounded-xl border border-outline-variant bg-surface-lowest p-2.5 sm:p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Icon name="groups" className="text-sm" />
             </span>
-            <div>
-              <h3 className="text-sm font-bold text-on-surface">Assigned Page Collaborators</h3>
-              <p className="text-[11px] text-on-surface-variant">
-                You and your teammates are allotted to this page. Upload your video/docs to your Drive and paste your link below.
-              </p>
-            </div>
+            <span className="text-xs font-bold text-on-surface">Assigned Collaborators</span>
           </div>
-          <div className="text-xs font-semibold text-primary">
+          <span className="text-[11px] font-semibold text-primary">
             {members.length} {members.length === 1 ? "Student Team" : "Students Team"}
-          </div>
+          </span>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {members.map((m) => {
             const isMe = m.student_id === currentUserId;
             return (
               <span
                 key={m.student_id}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
                   isMe
                     ? "bg-primary text-on-primary shadow-sm"
                     : "border border-outline-variant bg-surface-low text-on-surface"
                 }`}
               >
-                <Icon name="person" className="text-xs" />
+                <Icon name="person" className="text-[11px]" />
                 {m.student?.full_name || "Student"} {isMe && "(You)"}
               </span>
             );
@@ -177,8 +172,8 @@ export function StudentSheetView({
       </div>
 
       {/* 2. Week Selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-0.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {weekNumbers.map((wNum) => {
             const count = (weeks[wNum] ?? []).length;
             const startDay = (wNum - 1) * 7 + 1;
@@ -188,13 +183,13 @@ export function StudentSheetView({
                 key={wNum}
                 type="button"
                 onClick={() => setSelectedWeek(wNum)}
-                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all shrink-0 ${
                   activeWeekNumber === wNum
                     ? "bg-primary text-on-primary shadow-sm"
                     : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary hover:bg-surface-low"
                 }`}
               >
-                Week {String(wNum).padStart(2, "0")} (Days {startDay}–{endDay})
+                W{wNum} (D{startDay}–{endDay})
               </button>
             );
           })}
@@ -202,23 +197,287 @@ export function StudentSheetView({
           <button
             type="button"
             onClick={() => setSelectedWeek("all")}
-            className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all shrink-0 ${
               activeWeekNumber === "all"
                 ? "bg-primary text-on-primary shadow-sm"
                 : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary hover:bg-surface-low"
             }`}
           >
-            All Weeks ({days.length} Days)
+            All ({days.length} Days)
           </button>
         </div>
 
-        <div className="text-xs text-on-surface-variant">
+        <div className="text-[11px] text-on-surface-variant shrink-0 hidden sm:block">
           Showing <span className="font-bold text-on-surface">{displayedDays.length}</span> planned days
         </div>
       </div>
 
-      {/* 3. Google Sheet Interactive Table */}
-      <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest shadow-sm">
+      {/* 3. MOBILE COMPACT CARD VIEW (Visible on mobile < md) */}
+      <div className="space-y-2.5 md:hidden">
+        {displayedDays.length === 0 ? (
+          <div className="rounded-xl border border-outline-variant bg-surface-lowest p-6 text-center text-xs text-on-surface-variant">
+            No days planned in this week yet.
+          </div>
+        ) : (
+          displayedDays.map((day) => {
+            const today = todayIso();
+            const isToday = day.post_date === today;
+            const dayData = submissionsByDay[day.id] || { mySubmission: null, peerSubmissions: [], winner: null };
+            const mySub = dayData.mySubmission;
+            const isMyWinner = mySub && (mySub.is_selected || mySub.status === "selected");
+            const activeMyLink = mySub?.video_url || mySub?.doc_url || mySub?.post_url;
+
+            return (
+              <div
+                key={day.id}
+                className={`rounded-xl border p-3 bg-surface-lowest transition-all ${
+                  isToday
+                    ? "border-primary shadow-sm ring-1 ring-primary/20"
+                    : isMyWinner
+                      ? "border-amber-300 dark:border-amber-700"
+                      : "border-outline-variant"
+                }`}
+              >
+                {/* Header Row: Day & Date + Status */}
+                <div className="flex items-center justify-between gap-2 border-b border-outline-variant/40 pb-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="rounded-md bg-surface-container px-2 py-0.5 text-xs font-black text-on-surface">
+                      Day #{day.day_number}
+                    </span>
+                    <span className="text-xs text-on-surface-variant font-medium">
+                      {formatDate(day.post_date)}
+                    </span>
+                    {isToday && (
+                      <span className="rounded-full bg-primary px-1.5 py-0.2 text-[9px] font-black text-on-primary uppercase">
+                        Today
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    {isMyWinner ? (
+                      <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">
+                        ⭐ Winner Pick
+                      </span>
+                    ) : mySub ? (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                        ✅ Submitted
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Topic & Guidelines */}
+                <div className="pt-2">
+                  <h4 className="text-xs font-bold text-on-surface leading-snug">
+                    {day.theme || "Topic not specified"}
+                  </h4>
+                  {day.caption && (
+                    <p className="mt-1 line-clamp-2 text-[11px] text-on-surface-variant">
+                      {day.caption}
+                    </p>
+                  )}
+
+                  {/* Quick Action Pills */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {day.source_link && (
+                      <a
+                        href={toUrl(day.source_link)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                      >
+                        <Icon name="description" className="text-[12px]" /> Docs Brief ↗
+                      </a>
+                    )}
+                    {day.research_note && (
+                      <a
+                        href={toUrl(day.research_note)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                      >
+                        <Icon name="smart_toy" className="text-[12px]" /> ChatGPT ↗
+                      </a>
+                    )}
+                    {day.image_headline && (
+                      <a
+                        href={toUrl(day.image_headline)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                      >
+                        <Icon name="folder_open" className="text-[12px]" /> Assets ↗
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setActiveDayDetail(day)}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline ml-auto"
+                    >
+                      <Icon name="visibility" className="text-xs" /> Full Brief
+                    </button>
+                  </div>
+                </div>
+
+                {/* My Submission Action Box */}
+                <div className="mt-2.5 rounded-lg bg-surface-low/70 p-2 border border-outline-variant/60">
+                  {mySub ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                          My Submission
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickInputDayId(day.id);
+                              setQuickUrl(activeMyLink || "");
+                              setQuickNote(mySub.note || "");
+                            }}
+                            className="text-[10px] font-bold text-primary hover:underline"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deletingDayId === day.id}
+                            onClick={() => handleDeleteMyLink(day.id)}
+                            className="text-[10px] font-bold text-red-600 hover:underline"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      {activeMyLink && (
+                        <a
+                          href={activeMyLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between rounded-md bg-surface-lowest border border-outline-variant/60 px-2.5 py-1.5 text-xs font-bold text-primary hover:underline"
+                        >
+                          <span className="truncate">
+                            {activeMyLink.includes("drive.google.com")
+                              ? "View Google Drive Link"
+                              : activeMyLink.includes("docs.google.com")
+                                ? "View Google Docs Link"
+                                : activeMyLink.includes("youtube.com")
+                                  ? "View YouTube Video"
+                                  : "View My Link"}
+                          </span>
+                          <Icon name="open_in_new" className="text-xs shrink-0 ml-1" />
+                        </a>
+                      )}
+
+                      {mySub.note && (
+                        <p className="text-[11px] text-on-surface-variant italic">
+                          Note: &ldquo;{mySub.note}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  ) : quickInputDayId === day.id ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-on-surface">Paste your work link:</p>
+                      <input
+                        type="url"
+                        value={quickUrl}
+                        onChange={(e) => setQuickUrl(e.target.value)}
+                        placeholder="Google Drive, Docs, or YouTube link..."
+                        className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
+                        autoFocus
+                      />
+                      <input
+                        type="text"
+                        value={quickNote}
+                        onChange={(e) => setQuickNote(e.target.value)}
+                        placeholder="Optional short note..."
+                        className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-primary"
+                      />
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => handleSaveQuickLink(day.id)}
+                          className="flex-1 rounded-lg bg-primary py-1.5 text-xs font-bold text-on-primary hover:bg-primary/90"
+                        >
+                          {saving ? "Saving…" : "Save Link 💾"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuickInputDayId(null);
+                            setQuickUrl("");
+                            setQuickNote("");
+                          }}
+                          className="rounded-lg border border-outline-variant px-3 py-1.5 text-xs text-on-surface-variant hover:bg-surface-low"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickInputDayId(day.id);
+                        setQuickUrl("");
+                        setQuickNote("");
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/60 bg-primary/10 py-2 text-xs font-bold text-primary hover:bg-primary/15 transition-colors"
+                    >
+                      <Icon name="add_link" className="text-sm" /> + Paste Drive / Docs Link
+                    </button>
+                  )}
+                </div>
+
+                {/* Teammates & Winner Bar */}
+                {(dayData.winner || dayData.peerSubmissions.length > 0) && (
+                  <div className="mt-2 pt-2 border-t border-outline-variant/40 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                    {dayData.winner ? (
+                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-bold">
+                        <Icon name="emoji_events" className="text-xs" /> Winner: {dayData.winner.student?.full_name || "Student"}
+                      </span>
+                    ) : (
+                      <span className="text-on-surface-variant/70 italic text-[10px]">
+                        Review pending
+                      </span>
+                    )}
+
+                    {dayData.peerSubmissions.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-on-surface-variant">Peers:</span>
+                        {dayData.peerSubmissions.slice(0, 3).map((p) => {
+                          const pLink = p.video_url || p.doc_url || p.post_url;
+                          return pLink ? (
+                            <a
+                              key={p.id}
+                              href={pLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded bg-surface-container px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:underline"
+                            >
+                              {p.student?.full_name?.split(" ")[0] || "Teammate"} ↗
+                            </a>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* 4. DESKTOP GOOGLE SHEET INTERACTIVE TABLE (Visible on md+) */}
+      <div className="hidden md:block overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
