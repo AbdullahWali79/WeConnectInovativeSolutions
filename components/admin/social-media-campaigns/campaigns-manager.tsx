@@ -238,8 +238,16 @@ export function CampaignsManager({
                   </span>
                 </div>
 
-                <p className="mt-2 text-xs text-on-surface-variant">
-                  {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
+                <p className="mt-2 text-xs text-on-surface-variant flex items-center gap-1.5 flex-wrap">
+                  <span>{formatDate(campaign.period_start)}</span>
+                  <span>–</span>
+                  {campaign.period_end ? (
+                    <span>{formatDate(campaign.period_end)}</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      Ongoing (No end date)
+                    </span>
+                  )}
                 </p>
                 <p className="mt-1 text-xs text-on-surface-variant">
                   Teacher: <span className="font-bold text-on-surface">{campaign.teacher?.full_name || "Not assigned"}</span>
@@ -459,8 +467,20 @@ function CampaignFormModal({
               <input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} className={FIELD_CLASS} />
             </div>
             <div>
-              <label className={LABEL_CLASS}>End date</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className={LABEL_CLASS}>End date</label>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, period_end: "" })}
+                  className="text-[11px] font-bold text-primary hover:underline"
+                >
+                  Clear (Ongoing)
+                </button>
+              </div>
               <input type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} className={FIELD_CLASS} />
+              <p className="mt-1 text-[11px] text-on-surface-variant">
+                Optional: Khali chorr dein agar project ongoing hai (jab tak client karwaye).
+              </p>
             </div>
             <div className="sm:col-span-2">
               <label className={LABEL_CLASS}>Goal</label>

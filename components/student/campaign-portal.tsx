@@ -136,8 +136,13 @@ export function CampaignPortal() {
                 </span>
               </div>
 
-              <p className="mt-2 text-xs text-on-surface-variant">
-                {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
+              <p className="mt-2 text-xs text-on-surface-variant flex items-center gap-1">
+                <span>{formatDate(campaign.period_start)} –</span>
+                {campaign.period_end ? (
+                  <span>{formatDate(campaign.period_end)}</span>
+                ) : (
+                  <span className="font-bold text-emerald-600">Ongoing</span>
+                )}
               </p>
 
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
@@ -247,8 +252,15 @@ function CampaignDetail({
         <Icon name="arrow_back" className="text-[16px]" /> My campaigns
       </button>
       <h2 className="text-xl font-black leading-tight text-on-surface sm:text-2xl">{campaign.client_name}</h2>
-      <p className="mt-1 text-sm text-on-surface-variant">
-        {campaign.campaign_name || "Social media campaign"} · {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
+      <p className="mt-1 text-sm text-on-surface-variant flex items-center gap-1.5 flex-wrap">
+        <span>{campaign.campaign_name || "Social media campaign"} · {formatDate(campaign.period_start)} –</span>
+        {campaign.period_end ? (
+          <span>{formatDate(campaign.period_end)}</span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+            Ongoing
+          </span>
+        )}
       </p>
       {campaign.teacher?.full_name && (
         <p className="mt-1 text-xs text-on-surface-variant">
