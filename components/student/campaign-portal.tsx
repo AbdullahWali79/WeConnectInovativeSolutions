@@ -638,6 +638,9 @@ function SubmitPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingFileName, setUploadingFileName] = useState("");
+  const [uploadingFileSizeMb, setUploadingFileSizeMb] = useState(0);
   const [uploadedVideoName, setUploadedVideoName] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -647,25 +650,58 @@ function SubmitPanel({
       setError("Please select a video file (MP4, MOV, WEBM).");
       return;
     }
+    const sizeMb = Math.round((file.size / (1024 * 1024)) * 10) / 10;
     if (file.size > 80 * 1024 * 1024) {
-      setError("Video file must be under 80MB. For larger videos, compress or paste a Drive link.");
+      setError(`Video file is ${sizeMb} MB (must be under 80MB). For large videos, please upload to your own Google Drive and paste the link below.`);
       return;
     }
 
     setUploadingVideo(true);
+    setUploadProgress(5);
+    setUploadingFileName(file.name);
+    setUploadingFileSizeMb(sizeMb);
     setError("");
+
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await uploadCampaignVideo(formData);
-    setUploadingVideo(false);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/student/campaign-video-upload");
 
-    if (res.success && res.url) {
-      setForm((prev) => ({ ...prev, video_url: res.url }));
-      setUploadedVideoName(file.name);
-    } else {
-      setError(res.error || "Failed to upload video to Google Drive. Please try again or paste a link.");
-    }
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        // Upload to server spans 5% to 85%
+        const percent = Math.min(85, Math.max(5, Math.round((event.loaded / event.total) * 85)));
+        setUploadProgress(percent);
+      }
+    };
+
+    xhr.onload = () => {
+      setUploadingVideo(false);
+      try {
+        if (xhr.status === 413) {
+          setError(`File is too large for direct browser upload (${sizeMb} MB exceeds server limit). Please upload to your own Google Drive and paste the link below (recommended).`);
+          return;
+        }
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && data.success && data.url) {
+          setUploadProgress(100);
+          setForm((prev) => ({ ...prev, video_url: data.url }));
+          setUploadedVideoName(file.name);
+        } else {
+          setError(data.error || "Upload failed. Please paste your Google Drive link directly below.");
+        }
+      } catch {
+        setError("Upload did not complete. Please paste your Google Drive link directly below.");
+      }
+    };
+
+    xhr.onerror = () => {
+      setUploadingVideo(false);
+      setError("Network connection issue while uploading. Please paste your Google Drive link directly below.");
+    };
+
+    xhr.send(formData);
   }
 
   useEffect(() => {
@@ -823,10 +859,36 @@ function SubmitPanel({
                   }}
                 />
                 {uploadingVideo ? (
-                  <div className="flex flex-col items-center gap-2 py-2">
-                    <Icon name="sync" className="animate-spin text-3xl text-primary" />
-                    <p className="text-sm font-bold text-primary">Uploading video to Google Drive…</p>
-                    <p className="text-xs text-on-surface-variant">Please wait a few moments while your video is processed.</p>
+                  <div className="flex flex-col items-center gap-3 py-3 w-full max-w-md mx-auto">
+                    <div className="flex items-center justify-between w-full text-xs font-bold text-on-surface">
+                      <span className="flex items-center gap-2 text-primary">
+                        <Icon name="sync" className="animate-spin text-sm" />
+                        {uploadProgress < 85 ? "Uploading video file…" : "Saving to Google Drive…"}
+                      </span>
+                      <span className="text-primary font-black text-sm">{uploadProgress}%</span>
+                    </div>
+
+                    {/* Dynamic Progress Bar */}
+                    <div className="w-full h-3 rounded-full bg-surface-container overflow-hidden border border-outline-variant/60 shadow-inner">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-300 rounded-full"
+                        style={{ width: `${Math.max(uploadProgress, 6)}%` }}
+                      />
+                    </div>
+
+                    <div className="text-center space-y-0.5">
+                      <p className="text-xs font-bold text-on-surface truncate max-w-xs">
+                        {uploadingFileName} ({uploadingFileSizeMb} MB)
+                      </p>
+                      <p className="text-[11px] text-on-surface-variant">
+                        {uploadProgress < 85
+                          ? `Uploading bytes... ${uploadProgress}%`
+                          : "Uploading completed — saving to Google Drive..."}
+                      </p>
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pt-1">
+                        💡 Fast option: You can also paste your Google Drive link directly below!
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-1.5 py-1">
