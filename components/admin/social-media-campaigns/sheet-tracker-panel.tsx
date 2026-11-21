@@ -29,6 +29,8 @@ export function SheetTrackerPanel({
   members,
   submissions,
   onReload,
+  onAddDay,
+  onEditDay,
   setToast,
 }: {
   campaign: Row;
@@ -36,6 +38,8 @@ export function SheetTrackerPanel({
   members: Row[];
   submissions: Row[];
   onReload: () => Promise<void>;
+  onAddDay?: () => void;
+  onEditDay?: (day: Row) => void;
   setToast: (toast: ToastState) => void;
 }) {
   const [selectedWeek, setSelectedWeek] = useState<number | "all">("all");
@@ -279,8 +283,19 @@ export function SheetTrackerPanel({
           })}
         </div>
 
-        <div className="text-xs text-on-surface-variant">
-          Showing <span className="font-bold text-on-surface">{displayedDays.length}</span> days
+        <div className="flex items-center gap-2">
+          {onAddDay && (
+            <button
+              type="button"
+              onClick={onAddDay}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-on-primary hover:bg-primary-container shadow-sm transition-all"
+            >
+              <Icon name="add" className="text-base" /> + Add Day / Topic
+            </button>
+          )}
+          <span className="text-xs text-on-surface-variant">
+            Total <span className="font-bold text-on-surface">{displayedDays.length}</span> days
+          </span>
         </div>
       </div>
 
@@ -359,22 +374,75 @@ export function SheetTrackerPanel({
 
                       {/* Topic & Content Idea */}
                       <td className="p-3 align-top border-r border-outline-variant/60">
-                        <div className="space-y-1">
-                          <p className="font-bold text-on-surface leading-snug">
-                            {day.theme || "Topic not specified"}
-                          </p>
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="font-bold text-on-surface leading-snug">
+                              {day.theme || "Topic not specified"}
+                            </p>
+                            {onEditDay && (
+                              <button
+                                type="button"
+                                onClick={() => onEditDay(day)}
+                                title="Edit day content & links"
+                                className="rounded p-1 text-on-surface-variant hover:text-primary hover:bg-surface-low"
+                              >
+                                <Icon name="edit" className="text-xs" />
+                              </button>
+                            )}
+                          </div>
+
                           {day.caption && (
                             <p className="line-clamp-2 text-[11px] text-on-surface-variant">
                               {day.caption}
                             </p>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => setActiveDayDetail(day)}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline pt-0.5"
-                          >
-                            <Icon name="description" className="text-xs" /> View Full Brief & Script
-                          </button>
+
+                          {/* Quick clickable links shared by Admin */}
+                          <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                            {day.source_link && (
+                              <a
+                                href={day.source_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 hover:underline dark:bg-blue-950 dark:text-blue-300"
+                                title="Open Google Docs Brief"
+                              >
+                                <Icon name="description" className="text-xs" /> Docs Brief ↗
+                              </a>
+                            )}
+                            {day.research_note && day.research_note.startsWith("http") && (
+                              <a
+                                href={day.research_note}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 hover:underline dark:bg-emerald-950 dark:text-emerald-300"
+                                title="Open ChatGPT Script / Chat"
+                              >
+                                <Icon name="smart_toy" className="text-xs" /> ChatGPT ↗
+                              </a>
+                            )}
+                            {day.image_headline && day.image_headline.startsWith("http") && (
+                              <a
+                                href={day.image_headline}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 hover:underline dark:bg-amber-950 dark:text-amber-300"
+                                title="Open Drive Assets"
+                              >
+                                <Icon name="folder_open" className="text-xs" /> Assets ↗
+                              </a>
+                            )}
+                          </div>
+
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => setActiveDayDetail(day)}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline pt-0.5"
+                            >
+                              <Icon name="visibility" className="text-xs" /> View Full Brief & Details
+                            </button>
+                          </div>
                         </div>
                       </td>
 
@@ -600,17 +668,65 @@ export function SheetTrackerPanel({
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              {activeDayDetail.goal && (
-                <div>
-                  <p className="font-bold text-on-surface-variant uppercase text-[10px]">Goal:</p>
-                  <p className="text-on-surface text-sm">{activeDayDetail.goal}</p>
-                </div>
-              )}
+            {/* Prominent Shared Reference Links */}
+            {(activeDayDetail.source_link || activeDayDetail.research_note || activeDayDetail.image_headline) && (
+              <div className="space-y-2 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <p className="text-xs font-black text-primary flex items-center gap-1.5">
+                  <Icon name="link" className="text-base" /> Shared Reference Links &amp; Guides:
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {activeDayDetail.source_link && (
+                    <a
+                      href={activeDayDetail.source_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-blue-200 bg-white p-3 shadow-sm hover:border-blue-400 hover:shadow-md transition-all dark:bg-surface-lowest dark:border-blue-900"
+                    >
+                      <Icon name="description" className="text-xl text-blue-600" />
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-on-surface truncate">Google Docs Brief</p>
+                        <p className="text-[10px] text-blue-600 truncate">Open Requirements &amp; Guide ↗</p>
+                      </div>
+                    </a>
+                  )}
 
+                  {activeDayDetail.research_note && activeDayDetail.research_note.startsWith("http") && (
+                    <a
+                      href={activeDayDetail.research_note}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 shadow-sm hover:border-emerald-400 hover:shadow-md transition-all dark:bg-surface-lowest dark:border-emerald-900"
+                    >
+                      <Icon name="smart_toy" className="text-xl text-emerald-600" />
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-on-surface truncate">ChatGPT Script / Chat</p>
+                        <p className="text-[10px] text-emerald-600 truncate">Open AI Prompt &amp; Script ↗</p>
+                      </div>
+                    </a>
+                  )}
+
+                  {activeDayDetail.image_headline && activeDayDetail.image_headline.startsWith("http") && (
+                    <a
+                      href={activeDayDetail.image_headline}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white p-3 shadow-sm hover:border-amber-400 hover:shadow-md transition-all dark:bg-surface-lowest dark:border-amber-900"
+                    >
+                      <Icon name="folder_open" className="text-xl text-amber-600" />
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-on-surface truncate">Drive Assets Folder</p>
+                        <p className="text-[10px] text-amber-600 truncate">Open Raw Assets &amp; Footage ↗</p>
+                      </div>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3 text-xs">
               {activeDayDetail.caption && (
                 <div className="rounded-xl border border-outline-variant bg-surface-low/50 p-3">
-                  <p className="font-bold text-on-surface-variant uppercase text-[10px]">Caption / Copy:</p>
+                  <p className="font-bold text-on-surface-variant uppercase text-[10px]">Note / Caption Idea:</p>
                   <p className="mt-1 text-on-surface whitespace-pre-wrap leading-relaxed">{activeDayDetail.caption}</p>
                 </div>
               )}
@@ -626,6 +742,13 @@ export function SheetTrackerPanel({
                 <div>
                   <p className="font-bold text-on-surface-variant uppercase text-[10px]">Hashtags:</p>
                   <p className="text-primary font-semibold">{activeDayDetail.hashtags}</p>
+                </div>
+              )}
+
+              {activeDayDetail.goal && (
+                <div>
+                  <p className="font-bold text-on-surface-variant uppercase text-[10px]">Goal:</p>
+                  <p className="text-on-surface text-sm">{activeDayDetail.goal}</p>
                 </div>
               )}
             </div>

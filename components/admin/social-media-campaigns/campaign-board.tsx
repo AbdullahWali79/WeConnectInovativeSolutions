@@ -480,6 +480,8 @@ export function CampaignBoard({
           members={members}
           submissions={submissions}
           onReload={load}
+          onAddDay={() => setAddingDay(true)}
+          onEditDay={(day) => setEditingDay(day)}
           setToast={setToast}
         />
       )}
@@ -1213,23 +1215,30 @@ function DayEditModal({ day, onClose, onSaved }: { day: Row; onClose: () => void
   const [form, setForm] = useState({
     post_date: day.post_date || "",
     theme: day.theme || "",
-    goal: day.goal || "",
-    research_note: day.research_note || "",
-    platform_plan: day.platform_plan || "",
+    source_link: day.source_link || "", // Google Docs Brief Link
+    research_note: day.research_note || "", // ChatGPT Link
+    image_headline: day.image_headline || "", // Assets / Drive Link
     caption: day.caption || "",
-    image_headline: day.image_headline || "",
+    goal: day.goal || "",
+    platform_plan: day.platform_plan || "",
     x_draft: day.x_draft || "",
-    source_link: day.source_link || "",
     reel_script: day.reel_script || "",
     hashtags: day.hashtags || "",
     engagement_action: day.engagement_action || "",
     cta: day.cta || "",
     metrics_to_record: day.metrics_to_record || "",
   });
+  const [showAdvanced, setShowAdvanced] = useState(
+    Boolean(day.reel_script || day.engagement_action || day.hashtags || day.cta || day.goal || day.platform_plan)
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function submit() {
+    if (!form.theme.trim()) {
+      setError("Topic / Title is required.");
+      return;
+    }
     setSaving(true);
     setError("");
     const res = await updateCampaignDay(day.id, form);
@@ -1243,89 +1252,167 @@ function DayEditModal({ day, onClose, onSaved }: { day: Row; onClose: () => void
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
-      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest shadow-2xl">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest shadow-2xl">
         <div className="flex items-center justify-between border-b border-outline-variant bg-surface-low p-4">
           <div>
-            <h3 className="text-base font-bold text-on-surface">Day #{day.day_number}</h3>
-            <p className="text-xs text-on-surface-variant">Edit the plan content for this day.</p>
+            <h3 className="text-base font-bold text-on-surface">Edit Day #{day.day_number} Plan</h3>
+            <p className="text-xs text-on-surface-variant">Update the topic and your shared links (Docs, ChatGPT, Drive).</p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-on-surface-variant hover:bg-surface-container">
             <Icon name="close" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar sm:p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className={LABEL_CLASS}>Post date</label>
-              <input type="date" value={form.post_date} onChange={(e) => setForm({ ...form, post_date: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>Topic / Theme *</label>
-              <input value={form.theme} onChange={(e) => setForm({ ...form, theme: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Hook Text (First 3-5 Seconds)</label>
-              <textarea rows={2} value={form.engagement_action} onChange={(e) => setForm({ ...form, engagement_action: e.target.value })} className={FIELD_CLASS} placeholder="Attention-grabbing opening hook..." />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Video Prompt / Visual Guidance</label>
-              <textarea rows={2} value={form.image_headline} onChange={(e) => setForm({ ...form, image_headline: e.target.value })} className={FIELD_CLASS} placeholder="Visual styling, b-roll ideas, screen recordings..." />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Reel Script / Scene-by-Scene Script</label>
-              <textarea rows={4} value={form.reel_script} onChange={(e) => setForm({ ...form, reel_script: e.target.value })} className={FIELD_CLASS} placeholder="Scene 1: Hook... Scene 2: Problem... Scene 3: Solution..." />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Google Doc Brief Link (Optional)</label>
-              <input value={form.source_link} onChange={(e) => setForm({ ...form, source_link: e.target.value })} className={FIELD_CLASS} placeholder="https://docs.google.com/document/d/..." />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Caption / Talking Points</label>
-              <textarea rows={3} value={form.caption} onChange={(e) => setForm({ ...form, caption: e.target.value })} className={FIELD_CLASS} />
+              <label className={LABEL_CLASS}>Post Date</label>
+              <input
+                type="date"
+                value={form.post_date}
+                onChange={(e) => setForm({ ...form, post_date: e.target.value })}
+                className={FIELD_CLASS}
+              />
             </div>
             <div>
-              <label className={LABEL_CLASS}>Hashtags</label>
-              <input value={form.hashtags} onChange={(e) => setForm({ ...form, hashtags: e.target.value })} className={FIELD_CLASS} placeholder="#AI #Automation #Growth" />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>Call To Action (CTA)</label>
-              <input value={form.cta} onChange={(e) => setForm({ ...form, cta: e.target.value })} className={FIELD_CLASS} placeholder="Comment GUIDE for info" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Goal / Objective</label>
-              <input value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Platform plan</label>
-              <textarea rows={2} value={form.platform_plan} onChange={(e) => setForm({ ...form, platform_plan: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Research / verify before posting</label>
-              <textarea rows={2} value={form.research_note} onChange={(e) => setForm({ ...form, research_note: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>X post draft</label>
-              <textarea rows={2} value={form.x_draft} onChange={(e) => setForm({ ...form, x_draft: e.target.value })} className={FIELD_CLASS} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>Metrics to record</label>
-              <input value={form.metrics_to_record} onChange={(e) => setForm({ ...form, metrics_to_record: e.target.value })} className={FIELD_CLASS} />
+              <label className={LABEL_CLASS}>Topic / Title * (Required)</label>
+              <input
+                value={form.theme}
+                onChange={(e) => setForm({ ...form, theme: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="e.g. 3 Free AI Tools You Didn't Know Existed"
+                required
+              />
             </div>
           </div>
-          {error && <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error">{error}</p>}
+
+          {/* Quick Sharing Links */}
+          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3.5">
+            <p className="text-xs font-black text-primary flex items-center gap-1.5">
+              <Icon name="link" className="text-sm" /> Quick Sharing Links for Students
+            </p>
+
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs font-bold text-on-surface">
+                <Icon name="description" className="text-xs text-blue-600" /> Google Docs Brief / Requirements Link
+              </label>
+              <input
+                value={form.source_link}
+                onChange={(e) => setForm({ ...form, source_link: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="https://docs.google.com/document/d/... (Full guidelines & brief)"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs font-bold text-on-surface">
+                <Icon name="smart_toy" className="text-xs text-emerald-600" /> ChatGPT Chat / Script Link
+              </label>
+              <input
+                value={form.research_note}
+                onChange={(e) => setForm({ ...form, research_note: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="https://chatgpt.com/share/... (ChatGPT conversation or prompt link)"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs font-bold text-on-surface">
+                <Icon name="folder_open" className="text-xs text-amber-600" /> Google Drive Assets / Raw Footage Link
+              </label>
+              <input
+                value={form.image_headline}
+                onChange={(e) => setForm({ ...form, image_headline: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="https://drive.google.com/... (Raw videos, logos, audio, images)"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Quick Note / Instructions for Students (Optional)</label>
+            <textarea
+              rows={2}
+              value={form.caption}
+              onChange={(e) => setForm({ ...form, caption: e.target.value })}
+              className={FIELD_CLASS}
+              placeholder="e.g. Please watch the first scene in the doc and record demo..."
+            />
+          </div>
+
+          {/* Optional Advanced Fields Accordion */}
+          <div className="border-t border-outline-variant/60 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+            >
+              <Icon name={showAdvanced ? "expand_less" : "expand_more"} className="text-sm" />
+              {showAdvanced ? "Hide Advanced Content Fields" : "+ Optional: Advanced Fields (Hook, Script, Hashtags, CTA)"}
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-3 space-y-3 rounded-xl border border-outline-variant bg-surface-low/40 p-3.5">
+                <div>
+                  <label className={LABEL_CLASS}>Hook Text (First 3-5 Seconds)</label>
+                  <textarea
+                    rows={2}
+                    value={form.engagement_action}
+                    onChange={(e) => setForm({ ...form, engagement_action: e.target.value })}
+                    className={FIELD_CLASS}
+                    placeholder="Attention-grabbing opening hook..."
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Full Reel Script / Scene Breakdown</label>
+                  <textarea
+                    rows={4}
+                    value={form.reel_script}
+                    onChange={(e) => setForm({ ...form, reel_script: e.target.value })}
+                    className={FIELD_CLASS}
+                    placeholder="Scene 1: Hook... Scene 2: Problem... Scene 3: Solution..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={LABEL_CLASS}>Hashtags</label>
+                    <input
+                      value={form.hashtags}
+                      onChange={(e) => setForm({ ...form, hashtags: e.target.value })}
+                      className={FIELD_CLASS}
+                      placeholder="#AI #Automation #Growth"
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL_CLASS}>Call To Action (CTA)</label>
+                    <input
+                      value={form.cta}
+                      onChange={(e) => setForm({ ...form, cta: e.target.value })}
+                      className={FIELD_CLASS}
+                      placeholder="Comment TOOLS for link"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {error && <p className="rounded-lg bg-red-100 p-2.5 text-xs font-semibold text-red-700">{error}</p>}
         </div>
 
         <div className="flex gap-3 border-t border-outline-variant bg-surface-low p-4">
           <button
             onClick={() => void submit()}
-            disabled={saving}
+            disabled={saving || !form.theme.trim()}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
           >
             <Icon name={saving ? "sync" : "save"} className={`text-[18px] ${saving ? "animate-spin" : ""}`} />
             {saving ? "Saving…" : "Save day"}
           </button>
-          <button onClick={onClose} className="rounded-lg border border-outline-variant px-5 py-2 text-sm font-bold text-on-surface-variant hover:bg-surface-container">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-outline-variant px-5 py-2 text-sm font-bold text-on-surface-variant hover:bg-surface-container"
+          >
             Cancel
           </button>
         </div>
@@ -1370,23 +1457,27 @@ function DayAddModal({
     day_number: String(nextDayNumber),
     post_date: defaultDate,
     theme: "",
+    doc_url: "", // Google Docs Brief Link
+    chatgpt_url: "", // ChatGPT Link
+    assets_url: "", // Google Drive Assets Link
+    note: "", // Quick Note / Instructions
+    // Advanced fields (optional)
     hook: "",
     prompt: "",
     script: "",
-    doc_url: "",
-    caption: "",
     hashtags: "",
     cta: "",
     goal: "",
     platform_plan: "",
     visible_to_students: true,
   });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function submit() {
     if (!form.theme.trim()) {
-      setError("Topic / Theme is required.");
+      setError("Topic / Title is required.");
       return;
     }
     setSaving(true);
@@ -1395,11 +1486,12 @@ function DayAddModal({
       day_number: Number(form.day_number) || nextDayNumber,
       post_date: form.post_date,
       theme: form.theme,
-      engagement_action: form.hook,
-      image_headline: form.prompt,
-      reel_script: form.script,
       source_link: form.doc_url,
-      caption: form.caption,
+      research_note: form.chatgpt_url,
+      image_headline: form.assets_url,
+      caption: form.note,
+      engagement_action: form.hook,
+      reel_script: form.script,
       hashtags: form.hashtags,
       cta: form.cta,
       goal: form.goal,
@@ -1417,19 +1509,19 @@ function DayAddModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
-      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest shadow-2xl">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest shadow-2xl">
         <div className="flex items-center justify-between border-b border-outline-variant bg-surface-low p-4">
           <div>
             <h3 className="text-base font-bold text-on-surface">Add Day #{form.day_number} Plan</h3>
-            <p className="text-xs text-on-surface-variant">Add the daily topic, hook, script, video prompt, and doc link.</p>
+            <p className="text-xs text-on-surface-variant">Just enter the Title and paste your links (Docs, ChatGPT, Drive).</p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-on-surface-variant hover:bg-surface-container">
             <Icon name="close" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar sm:p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={LABEL_CLASS}>Day Number *</label>
               <input
@@ -1449,128 +1541,145 @@ function DayAddModal({
                 className={FIELD_CLASS}
               />
             </div>
+          </div>
 
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Topic / Theme *</label>
-              <input
-                value={form.theme}
-                onChange={(e) => setForm({ ...form, theme: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="e.g. 3 Free AI Tools You Didn't Know Existed"
-                required
-              />
-            </div>
+          <div>
+            <label className={LABEL_CLASS}>Topic / Title * (Required)</label>
+            <input
+              value={form.theme}
+              onChange={(e) => setForm({ ...form, theme: e.target.value })}
+              className={FIELD_CLASS}
+              placeholder="e.g. 3 Free AI Tools You Didn't Know Existed"
+              required
+              autoFocus
+            />
+          </div>
 
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Hook Text (First 3-5 Seconds)</label>
-              <textarea
-                rows={2}
-                value={form.hook}
-                onChange={(e) => setForm({ ...form, hook: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="e.g. If you're still creating content manually, you need to see this..."
-              />
-            </div>
+          {/* Quick Sharing Links (Google Docs, ChatGPT, Drive Assets) */}
+          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3.5">
+            <p className="text-xs font-black text-primary flex items-center gap-1.5">
+              <Icon name="link" className="text-sm" /> Quick Sharing Links for Students
+            </p>
 
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Video Prompt / Visual Guidance</label>
-              <textarea
-                rows={2}
-                value={form.prompt}
-                onChange={(e) => setForm({ ...form, prompt: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="e.g. Screen recording of tool demo with fast transitions and zoomed text overlays..."
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Reel Script / Scene-by-Scene Script</label>
-              <textarea
-                rows={4}
-                value={form.script}
-                onChange={(e) => setForm({ ...form, script: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="Scene 1: Hook (0-3s)...&#10;Scene 2: Problem (3-15s)...&#10;Scene 3: Solution & Demo (15-45s)...&#10;Scene 4: Call to Action (45-60s)..."
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Google Doc Brief Link (Optional)</label>
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs font-bold text-on-surface">
+                <Icon name="description" className="text-xs text-blue-600" /> Google Docs Brief / Requirements Link (Optional)
+              </label>
               <input
                 value={form.doc_url}
                 onChange={(e) => setForm({ ...form, doc_url: e.target.value })}
                 className={FIELD_CLASS}
-                placeholder="https://docs.google.com/document/d/... (Full brief shared with students)"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Caption / Talking Points</label>
-              <textarea
-                rows={3}
-                value={form.caption}
-                onChange={(e) => setForm({ ...form, caption: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="Write the accompanying caption for social media..."
+                placeholder="https://docs.google.com/document/d/... (Full guidelines & brief)"
               />
             </div>
 
             <div>
-              <label className={LABEL_CLASS}>Hashtags</label>
-              <input
-                value={form.hashtags}
-                onChange={(e) => setForm({ ...form, hashtags: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="#AI #Automation #Marketing"
-              />
-            </div>
-
-            <div>
-              <label className={LABEL_CLASS}>Call To Action (CTA)</label>
-              <input
-                value={form.cta}
-                onChange={(e) => setForm({ ...form, cta: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="Comment TOOLS to get the direct links"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Goal / Objective</label>
-              <input
-                value={form.goal}
-                onChange={(e) => setForm({ ...form, goal: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="e.g. Drive 500+ saves and 100+ comments"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>Platform plan</label>
-              <textarea
-                rows={2}
-                value={form.platform_plan}
-                onChange={(e) => setForm({ ...form, platform_plan: e.target.value })}
-                className={FIELD_CLASS}
-                placeholder="e.g. Facebook Reel at 6 PM, cross-post to IG"
-              />
-            </div>
-
-            <div className="sm:col-span-2 flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                id="visible_students"
-                checked={form.visible_to_students}
-                onChange={(e) => setForm({ ...form, visible_to_students: e.target.checked })}
-                className="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
-              />
-              <label htmlFor="visible_students" className="text-xs font-bold text-on-surface cursor-pointer">
-                Share with students immediately (they can view this day on their portal)
+              <label className="mb-1 flex items-center gap-1 text-xs font-bold text-on-surface">
+                <Icon name="smart_toy" className="text-xs text-emerald-600" /> ChatGPT Chat / Script Link (Optional)
               </label>
+              <input
+                value={form.chatgpt_url}
+                onChange={(e) => setForm({ ...form, chatgpt_url: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="https://chatgpt.com/share/... (ChatGPT conversation or prompt link)"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs font-bold text-on-surface">
+                <Icon name="folder_open" className="text-xs text-amber-600" /> Google Drive Assets / Raw Footage Link (Optional)
+              </label>
+              <input
+                value={form.assets_url}
+                onChange={(e) => setForm({ ...form, assets_url: e.target.value })}
+                className={FIELD_CLASS}
+                placeholder="https://drive.google.com/... (Raw videos, logos, audio, images)"
+              />
             </div>
           </div>
 
-          {error && <p className="mt-3 rounded-lg bg-red-100 p-2.5 text-xs font-semibold text-red-700">{error}</p>}
+          <div>
+            <label className={LABEL_CLASS}>Quick Note / Instructions for Students (Optional)</label>
+            <textarea
+              rows={2}
+              value={form.note}
+              onChange={(e) => setForm({ ...form, note: e.target.value })}
+              className={FIELD_CLASS}
+              placeholder="e.g. Please read the Google Doc carefully and follow Scene 1..."
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="visible_students"
+              checked={form.visible_to_students}
+              onChange={(e) => setForm({ ...form, visible_to_students: e.target.checked })}
+              className="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+            />
+            <label htmlFor="visible_students" className="text-xs font-bold text-on-surface cursor-pointer">
+              Share with students immediately (Active on their portal)
+            </label>
+          </div>
+
+          {/* Optional Advanced Fields Accordion */}
+          <div className="border-t border-outline-variant/60 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+            >
+              <Icon name={showAdvanced ? "expand_less" : "expand_more"} className="text-sm" />
+              {showAdvanced ? "Hide Advanced Content Fields" : "+ Optional: Advanced Fields (Hook, Script, Hashtags, CTA)"}
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-3 space-y-3 rounded-xl border border-outline-variant bg-surface-low/40 p-3.5">
+                <div>
+                  <label className={LABEL_CLASS}>Hook Text (First 3-5 Seconds)</label>
+                  <textarea
+                    rows={2}
+                    value={form.hook}
+                    onChange={(e) => setForm({ ...form, hook: e.target.value })}
+                    className={FIELD_CLASS}
+                    placeholder="Attention-grabbing opening hook..."
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Full Reel Script / Scene Breakdown</label>
+                  <textarea
+                    rows={4}
+                    value={form.script}
+                    onChange={(e) => setForm({ ...form, script: e.target.value })}
+                    className={FIELD_CLASS}
+                    placeholder="Scene 1: Hook... Scene 2: Problem... Scene 3: Solution..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={LABEL_CLASS}>Hashtags</label>
+                    <input
+                      value={form.hashtags}
+                      onChange={(e) => setForm({ ...form, hashtags: e.target.value })}
+                      className={FIELD_CLASS}
+                      placeholder="#AI #Automation #Growth"
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL_CLASS}>Call To Action (CTA)</label>
+                    <input
+                      value={form.cta}
+                      onChange={(e) => setForm({ ...form, cta: e.target.value })}
+                      className={FIELD_CLASS}
+                      placeholder="Comment TOOLS for link"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {error && <p className="rounded-lg bg-red-100 p-2.5 text-xs font-semibold text-red-700">{error}</p>}
         </div>
 
         <div className="flex gap-3 border-t border-outline-variant bg-surface-low p-4">
