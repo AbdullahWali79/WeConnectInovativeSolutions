@@ -644,6 +644,9 @@ function SubmitPanel({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
 
+  // Set to true in future if admin wants to re-enable direct browser video upload
+  const ENABLE_DIRECT_VIDEO_UPLOAD = false;
+
   function cancelUpload() {
     if (xhrRef.current) {
       xhrRef.current.abort();
@@ -824,125 +827,134 @@ function SubmitPanel({
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2 space-y-2">
-            <label className={LABEL_CLASS}>Campaign Video (MP4 / MOV)</label>
-            {form.video_url ? (
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 p-3 dark:border-emerald-800 dark:bg-emerald-950/40">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
-                    <Icon name="movie" className="text-xl" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-emerald-950 dark:text-emerald-200">
-                      {uploadedVideoName || "Video attached"}
-                    </p>
-                    <a
-                      href={form.video_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 underline dark:text-emerald-300"
-                    >
-                      <Icon name="open_in_new" className="text-[12px]" /> View in Google Drive
-                    </a>
-                  </div>
-                </div>
-                {!locked && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForm((prev) => ({ ...prev, video_url: "" }));
-                      setUploadedVideoName(null);
-                    }}
-                    className="shrink-0 rounded-lg p-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
-                    title="Remove video"
-                  >
-                    <Icon name="close" className="text-sm" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div
-                onClick={() => !locked && !uploadingVideo && videoInputRef.current?.click()}
-                className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition cursor-pointer ${
-                  uploadingVideo
-                    ? "border-primary bg-primary/5 cursor-wait"
-                    : "border-outline-variant bg-surface-low hover:border-primary hover:bg-primary/5"
-                }`}
+            <div className="flex items-center justify-between">
+              <label className={LABEL_CLASS}>Campaign Video (Google Drive / YouTube link)</label>
+              <a
+                href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
               >
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  accept="video/*,.mp4,.mov,.webm"
-                  className="hidden"
-                  disabled={locked || uploadingVideo}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleVideoUpload(f);
-                    e.target.value = "";
-                  }}
-                />
-                {uploadingVideo ? (
-                  <div className="flex flex-col items-center gap-3 py-3 w-full max-w-md mx-auto">
-                    <div className="flex items-center justify-between w-full text-xs font-bold text-on-surface">
-                      <span className="flex items-center gap-2 text-primary">
-                        <Icon name="sync" className="animate-spin text-sm" />
-                        {uploadProgress < 85 ? "Uploading video file…" : "Saving to Google Drive…"}
-                      </span>
-                      <span className="text-primary font-black text-sm">{uploadProgress}%</span>
-                    </div>
+                <Icon name="folder" className="text-[14px]" /> Open Drive Folder ↗
+              </a>
+            </div>
 
-                    {/* Dynamic Progress Bar */}
-                    <div className="w-full h-3 rounded-full bg-surface-container overflow-hidden border border-outline-variant/60 shadow-inner">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-300 rounded-full"
-                        style={{ width: `${Math.max(uploadProgress, 6)}%` }}
-                      />
+            {ENABLE_DIRECT_VIDEO_UPLOAD && (
+              <>
+                {form.video_url ? (
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 p-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                        <Icon name="movie" className="text-xl" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                          {uploadedVideoName || "Video attached"}
+                        </p>
+                        <a
+                          href={form.video_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 underline dark:text-emerald-300"
+                        >
+                          <Icon name="open_in_new" className="text-[12px]" /> View in Google Drive
+                        </a>
+                      </div>
                     </div>
-
-                    <div className="text-center space-y-0.5">
-                      <p className="text-xs font-bold text-on-surface truncate max-w-xs">
-                        {uploadingFileName} ({uploadingFileSizeMb} MB)
-                      </p>
-                      <p className="text-[11px] text-on-surface-variant">
-                        {uploadProgress < 85
-                          ? `Uploading bytes... ${uploadProgress}%`
-                          : "Uploading completed — saving to Google Drive..."}
-                      </p>
-                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pt-1">
-                        💡 Fast option: You can also paste your Google Drive link directly below!
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        cancelUpload();
-                      }}
-                      className="mt-1 inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 cursor-pointer"
-                    >
-                      <Icon name="close" className="text-xs" /> Cancel upload
-                    </button>
+                    {!locked && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, video_url: "" }));
+                          setUploadedVideoName(null);
+                        }}
+                        className="shrink-0 rounded-lg p-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                        title="Remove video"
+                      >
+                        <Icon name="close" className="text-sm" />
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-1.5 py-1">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:scale-105 transition-transform">
-                      <Icon name="video_call" className="text-2xl" />
-                    </div>
-                    <p className="text-sm font-bold text-on-surface">Click or drag video here to upload</p>
-                    <p className="text-xs text-on-surface-variant">Direct upload under 4.5MB. For full videos, click &quot;Upload to Drive Folder&quot; above and paste the link below.</p>
+                  <div
+                    onClick={() => !locked && !uploadingVideo && videoInputRef.current?.click()}
+                    className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition cursor-pointer ${
+                      uploadingVideo
+                        ? "border-primary bg-primary/5 cursor-wait"
+                        : "border-outline-variant bg-surface-low hover:border-primary hover:bg-primary/5"
+                    }`}
+                  >
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*,.mp4,.mov,.webm"
+                      className="hidden"
+                      disabled={locked || uploadingVideo}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleVideoUpload(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    {uploadingVideo ? (
+                      <div className="flex flex-col items-center gap-3 py-3 w-full max-w-md mx-auto">
+                        <div className="flex items-center justify-between w-full text-xs font-bold text-on-surface">
+                          <span className="flex items-center gap-2 text-primary">
+                            <Icon name="sync" className="animate-spin text-sm" />
+                            {uploadProgress < 85 ? "Uploading video file…" : "Saving to Google Drive…"}
+                          </span>
+                          <span className="text-primary font-black text-sm">{uploadProgress}%</span>
+                        </div>
+
+                        {/* Dynamic Progress Bar */}
+                        <div className="w-full h-3 rounded-full bg-surface-container overflow-hidden border border-outline-variant/60 shadow-inner">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-300 rounded-full"
+                            style={{ width: `${Math.max(uploadProgress, 6)}%` }}
+                          />
+                        </div>
+
+                        <div className="text-center space-y-0.5">
+                          <p className="text-xs font-bold text-on-surface truncate max-w-xs">
+                            {uploadingFileName} ({uploadingFileSizeMb} MB)
+                          </p>
+                          <p className="text-[11px] text-on-surface-variant">
+                            {uploadProgress < 85
+                              ? `Uploading bytes... ${uploadProgress}%`
+                              : "Uploading completed — saving to Google Drive..."}
+                          </p>
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pt-1">
+                            💡 Fast option: You can also paste your Google Drive link directly below!
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelUpload();
+                          }}
+                          className="mt-1 inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 cursor-pointer"
+                        >
+                          <Icon name="close" className="text-xs" /> Cancel upload
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 py-1">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:scale-105 transition-transform">
+                          <Icon name="video_call" className="text-2xl" />
+                        </div>
+                        <p className="text-sm font-bold text-on-surface">Click or drag video here to upload</p>
+                        <p className="text-xs text-on-surface-variant">Direct upload under 4.5MB. For full videos, click &quot;Upload to Drive Folder&quot; above and paste the link below.</p>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+              </>
             )}
 
             {!locked && (
-              <div className="pt-1">
-                <div className="mb-1 flex items-center justify-between">
-                  <label className="text-xs font-semibold text-on-surface-variant">
-                    Or paste Google Drive / YouTube video link:
-                  </label>
-                  <span className="text-[11px] text-on-surface-variant/70">e.g. drive.google.com/file/d/…</span>
-                </div>
+              <div>
                 <input
                   value={form.video_url}
                   onChange={(event) => setForm({ ...form, video_url: event.target.value })}
@@ -950,6 +962,51 @@ function SubmitPanel({
                   placeholder="https://drive.google.com/file/d/… or https://youtube.com/…"
                   disabled={locked}
                 />
+                <p className="mt-1 text-[11px] text-on-surface-variant">
+                  Upload your video to the{" "}
+                  <a
+                    href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-primary hover:underline"
+                  >
+                    Google Drive folder
+                  </a>
+                  , then paste the sharing link above.
+                </p>
+              </div>
+            )}
+
+            {form.video_url && !ENABLE_DIRECT_VIDEO_UPLOAD && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 p-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                    <Icon name="movie" className="text-lg" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                      Video link provided
+                    </p>
+                    <a
+                      href={form.video_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 underline dark:text-emerald-300"
+                    >
+                      <Icon name="open_in_new" className="text-[12px]" /> Test / View video link
+                    </a>
+                  </div>
+                </div>
+                {!locked && (
+                  <button
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, video_url: "" }))}
+                    className="shrink-0 rounded-lg p-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                    title="Remove link"
+                  >
+                    <Icon name="close" className="text-sm" />
+                  </button>
+                )}
               </div>
             )}
           </div>
