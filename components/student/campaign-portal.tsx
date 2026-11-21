@@ -646,6 +646,8 @@ function SubmitPanel({
 
   // Set to true in future if admin wants to re-enable direct browser video upload
   const ENABLE_DIRECT_VIDEO_UPLOAD = false;
+  // Set to true in future if admin wants to display Drive folder links directly to students
+  const SHOW_DRIVE_FOLDER_BUTTONS = false;
 
   function cancelUpload() {
     if (xhrRef.current) {
@@ -793,15 +795,17 @@ function SubmitPanel({
             </p>
             <h3 className="mt-1 truncate text-base font-black text-on-surface">{activeDay.theme || "Untitled day"}</h3>
           </div>
-          <a
-            href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 shadow-sm transition"
-            title="Open Google Drive folder"
-          >
-            <Icon name="folder" className="text-[15px]" /> Upload to Drive Folder ↗
-          </a>
+          {SHOW_DRIVE_FOLDER_BUTTONS && (
+            <a
+              href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 shadow-sm transition"
+              title="Open Google Drive folder"
+            >
+              <Icon name="folder" className="text-[15px]" /> Upload to Drive Folder ↗
+            </a>
+          )}
         </div>
 
         {existing && (
@@ -829,14 +833,16 @@ function SubmitPanel({
           <div className="sm:col-span-2 space-y-2">
             <div className="flex items-center justify-between">
               <label className={LABEL_CLASS}>Campaign Video (Google Drive / YouTube link)</label>
-              <a
-                href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
-              >
-                <Icon name="folder" className="text-[14px]" /> Open Drive Folder ↗
-              </a>
+              {SHOW_DRIVE_FOLDER_BUTTONS && (
+                <a
+                  href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                >
+                  <Icon name="folder" className="text-[14px]" /> Open Drive Folder ↗
+                </a>
+              )}
             </div>
 
             {ENABLE_DIRECT_VIDEO_UPLOAD && (
@@ -963,16 +969,7 @@ function SubmitPanel({
                   disabled={locked}
                 />
                 <p className="mt-1 text-[11px] text-on-surface-variant">
-                  Upload your video to the{" "}
-                  <a
-                    href={driveUrl || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-bold text-primary hover:underline"
-                  >
-                    Google Drive folder
-                  </a>
-                  , then paste the sharing link above.
+                  Paste the Google Drive or YouTube link to your video.
                 </p>
               </div>
             )}
