@@ -1,7 +1,7 @@
 // Bump this on every release that changes app code. It renames both caches, so
 // `activate` deletes the previous ones and an installed app cannot keep serving
 // a stale bundle.
-const CACHE_VERSION = "weconnect-v8";
+const CACHE_VERSION = "weconnect-v9";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const OFFLINE_URL = "/offline";

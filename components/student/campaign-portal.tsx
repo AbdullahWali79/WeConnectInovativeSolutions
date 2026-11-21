@@ -90,13 +90,13 @@ export function CampaignPortal() {
 
   if (campaigns.length === 0) {
     return (
-      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-10 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-container text-on-surface-variant">
-          <Icon name="rocket_launch" />
+      <div className="rounded-3xl border border-outline-variant/60 bg-surface-lowest p-8 sm:p-12 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
+          <Icon name="table_chart" className="text-3xl" />
         </div>
-        <p className="text-sm font-bold text-on-surface">No campaigns assigned yet</p>
-        <p className="mt-1 text-sm text-on-surface-variant">
-          Your admin will assign you to a client campaign. It will appear here once they do.
+        <h3 className="text-lg font-black text-on-surface">No campaigns assigned yet</h3>
+        <p className="mt-2 text-sm text-on-surface-variant max-w-md mx-auto leading-relaxed">
+          Your teacher or admin will assign you to a client campaign. As soon as you are enrolled, your daily Google Sheet content calendar will appear here.
         </p>
       </div>
     );
@@ -105,59 +105,154 @@ export function CampaignPortal() {
   return (
     <>
       <Toast toast={toast} onClear={() => setToast(null)} />
-      <div className="grid gap-3 sm:grid-cols-2">
+
+      {/* Hero Welcome Banner */}
+      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-surface-lowest to-primary/5 p-5 sm:p-7 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 border border-emerald-600/20 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                <Icon name="table_chart" className="text-xs" /> Client Content Workspaces
+              </span>
+              <span className="text-xs text-on-surface-variant hidden sm:inline">• Google Sheets Style</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight">
+              Social Media Client Campaigns
+            </h2>
+            <p className="text-xs sm:text-sm text-on-surface-variant max-w-2xl leading-relaxed">
+              Open your assigned client spreadsheet, follow daily content guidelines, submit your video &amp; post links, and see who won the official benchmark pick!
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="rounded-2xl border border-outline-variant/60 bg-surface-lowest/80 backdrop-blur-sm p-3 text-center min-w-[90px] shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Active</p>
+              <p className="text-lg font-black text-emerald-600">{campaigns.length}</p>
+            </div>
+            <div className="rounded-2xl border border-outline-variant/60 bg-surface-lowest/80 backdrop-blur-sm p-3 text-center min-w-[100px] shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Sheet View</p>
+              <p className="text-xs font-black text-primary flex items-center justify-center gap-1 mt-1">
+                <Icon name="check_circle" className="text-xs text-emerald-600" /> Enabled
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Highlights Pills */}
+        <div className="mt-4 pt-3 border-t border-outline-variant/40 flex flex-wrap items-center gap-2 text-xs">
+          <span className="inline-flex items-center gap-1 rounded-lg bg-surface-lowest/90 border border-outline-variant/50 px-2.5 py-1 text-[11px] font-bold text-on-surface">
+            📊 Google Sheets Layout
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-lg bg-surface-lowest/90 border border-outline-variant/50 px-2.5 py-1 text-[11px] font-bold text-on-surface">
+            ⭐ Daily Winner Benchmark
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-lg bg-surface-lowest/90 border border-outline-variant/50 px-2.5 py-1 text-[11px] font-bold text-on-surface">
+            🔗 Instant Drive / Docs Link Paste
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-lg bg-surface-lowest/90 border border-outline-variant/50 px-2.5 py-1 text-[11px] font-bold text-on-surface">
+            👥 Live Teammates Work
+          </span>
+        </div>
+      </div>
+
+      {/* Campaigns Grid */}
+      <div className="grid gap-4 sm:grid-cols-2">
         {campaigns.map((campaign) => {
           const registered = campaign.registration_status === "approved";
           const waiting = campaign.registration_status === "registered";
+          const clientInitial = (campaign.client_name || "C").trim().charAt(0).toUpperCase();
+
           return (
             <button
               key={campaign.id}
               onClick={() => setSelectedId(campaign.id)}
-              className="group flex flex-col rounded-2xl border border-outline-variant bg-surface-lowest p-4 text-left transition hover:border-primary/50 hover:shadow-md"
+              className="group relative flex flex-col justify-between rounded-3xl border border-outline-variant/70 bg-surface-lowest p-5 text-left transition-all hover:border-emerald-500 hover:shadow-xl hover:-translate-y-0.5 overflow-hidden"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-black text-on-surface">{campaign.client_name}</p>
-                  <p className="truncate text-xs text-on-surface-variant">
-                    {campaign.campaign_name || "Social media campaign"}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                    registered
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : waiting
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-outline-variant bg-surface-low text-on-surface-variant"
-                  }`}
-                >
-                  {registered ? "Active" : waiting ? "Awaiting approval" : "Register first"}
-                </span>
-              </div>
+              {/* Subtle top accent bar */}
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-primary group-hover:h-2 transition-all" />
 
-              <p className="mt-2 text-xs text-on-surface-variant flex items-center gap-1">
-                <span>{formatDate(campaign.period_start)} –</span>
-                {campaign.period_end ? (
-                  <span>{formatDate(campaign.period_end)}</span>
-                ) : (
-                  <span className="font-bold text-emerald-600">Ongoing</span>
-                )}
-              </p>
+              <div>
+                {/* Header Row: Client badge, Name & Status */}
+                <div className="flex items-start justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-black text-lg shadow-md shadow-emerald-600/20">
+                      {clientInitial}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-black text-on-surface group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                        {campaign.client_name}
+                      </p>
+                      <p className="truncate text-xs font-medium text-on-surface-variant">
+                        {campaign.campaign_name || "Social media campaign"}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
-                <span className="inline-flex items-center gap-1">
-                  <Icon name="visibility" className="text-[14px]" /> {campaign.visible_days} of {campaign.total_days} days shared
-                </span>
-                {campaign.needs_attention > 0 && (
-                  <span className="inline-flex items-center gap-1 font-bold text-orange-600">
-                    <Icon name="error" className="text-[14px]" /> {campaign.needs_attention} need changes
+                  <span
+                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${
+                      registered
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                        : waiting
+                          ? "border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                          : "border-outline-variant bg-surface-low text-on-surface-variant"
+                    }`}
+                  >
+                    {registered ? "Active Client" : waiting ? "Pending approval" : "Register first"}
                   </span>
+                </div>
+
+                {/* Dates & Timeline */}
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-on-surface-variant">
+                  <Icon name="calendar_month" className="text-sm text-emerald-600" />
+                  <span>{formatDate(campaign.period_start)} –</span>
+                  {campaign.period_end ? (
+                    <span>{formatDate(campaign.period_end)}</span>
+                  ) : (
+                    <span className="font-black text-emerald-600 uppercase text-[10px] bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded">
+                      Ongoing
+                    </span>
+                  )}
+                </div>
+
+                {/* Progress Bar of Shared Days */}
+                <div className="mt-3 rounded-2xl bg-surface-low/70 border border-outline-variant/40 p-3 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-on-surface-variant text-[11px] flex items-center gap-1">
+                      <Icon name="description" className="text-xs text-emerald-600" /> Planned Calendar
+                    </span>
+                    <span className="text-on-surface text-[11px]">
+                      {campaign.visible_days} of {campaign.total_days} days shared
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-outline-variant/30">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.max(8, Math.round(((campaign.visible_days || 1) / (campaign.total_days || 1)) * 100)),
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {campaign.needs_attention > 0 && (
+                  <div className="mt-2.5 flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900 rounded-xl px-2.5 py-1">
+                    <Icon name="error" className="text-[14px]" /> {campaign.needs_attention} submission(s) need changes
+                  </div>
                 )}
               </div>
 
-              <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary">
-                Open campaign <Icon name="arrow_forward" className="text-[14px] transition-transform group-hover:translate-x-0.5" />
-              </span>
+              {/* Action Button */}
+              <div className="mt-4 pt-3 border-t border-outline-variant/40 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                  <Icon name="table_chart" className="text-sm" /> Open Google Sheet View
+                </span>
+                <span className="inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white p-2 text-xs font-bold shadow-sm group-hover:bg-emerald-700 transition-colors">
+                  <Icon name="arrow_forward" className="text-[15px] transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
             </button>
           );
         })}
@@ -246,42 +341,107 @@ function CampaignDetail({
   }
 
   const header = (
-    <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-3.5 sm:p-5">
-      <div className="flex items-center justify-between gap-2">
-        <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary">
-          <Icon name="arrow_back" className="text-[15px]" /> My campaigns
-        </button>
-        {campaign.period_end ? (
-          <span className="text-[11px] font-semibold text-on-surface-variant">
-            {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-            Ongoing
-          </span>
-        )}
-      </div>
+    <div className="overflow-hidden rounded-2xl sm:rounded-3xl border border-[#dadce0] dark:border-zinc-800 bg-surface-lowest shadow-sm">
+      {/* Google Sheets Top Titlebar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dadce0] dark:border-zinc-800 bg-[#f8f9fa] dark:bg-zinc-900/70 px-3.5 py-2.5 sm:px-5 sm:py-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Back button */}
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-lowest px-2.5 py-1 text-xs font-bold text-on-surface-variant hover:text-emerald-700 hover:border-emerald-600 shadow-sm transition"
+            title="Back to all campaigns"
+          >
+            <Icon name="arrow_back" className="text-sm" />
+            <span className="hidden sm:inline">My campaigns</span>
+          </button>
 
-      <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-black leading-tight text-on-surface sm:text-2xl">{campaign.client_name}</h2>
-        <span className="text-xs text-on-surface-variant font-medium">
-          {campaign.campaign_name || "Social media campaign"}
-        </span>
-      </div>
+          {/* Google Sheets Document Icon */}
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0F9D58] text-white shadow-sm">
+            <Icon name="table_chart" className="text-lg" />
+          </div>
 
-      {campaign.teacher?.full_name && (
-        <p className="mt-0.5 text-[11px] text-on-surface-variant">
-          Teacher: <span className="font-bold text-on-surface">{campaign.teacher.full_name}</span>
-        </p>
-      )}
+          {/* Document Title & Status */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-sm sm:text-base font-black text-on-surface tracking-tight">
+                {campaign.client_name} <span className="font-normal text-on-surface-variant hidden md:inline">— Social Media Calendar</span>
+              </h2>
+              <span className="hidden sm:inline-flex items-center text-amber-500" title="Starred">
+                <Icon name="star" className="text-xs" />
+              </span>
+            </div>
+            <p className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-on-surface-variant truncate">
+              <span>{campaign.campaign_name || "Daily Content Workflow"}</span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400 font-semibold">
+                <Icon name="cloud_done" className="text-[12px]" /> All changes saved
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Right side: Collaborators Avatars & Status */}
+        <div className="flex items-center gap-2.5 shrink-0 ml-auto">
+          {/* Collaborator Avatars (Like Google Sheets Live User Bubbles) */}
+          {members.length > 0 && (
+            <div className="flex items-center -space-x-1.5 overflow-hidden p-0.5">
+              {members.slice(0, 4).map((m, idx) => {
+                const isMe = m.student_id === currentUserId;
+                const name = m.student?.full_name || "Student";
+                const initials = name
+                  .split(" ")
+                  .map((w: string) => w[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
+                const colors = [
+                  "bg-emerald-600 text-white ring-emerald-300",
+                  "bg-blue-600 text-white ring-blue-300",
+                  "bg-purple-600 text-white ring-purple-300",
+                  "bg-amber-600 text-white ring-amber-300",
+                ];
+                const colorClass = isMe
+                  ? "bg-emerald-600 text-white ring-2 ring-emerald-500 font-black"
+                  : colors[idx % colors.length];
+
+                return (
+                  <span
+                    key={m.student_id}
+                    title={`${name} ${isMe ? "(You)" : ""}`}
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-surface-lowest shadow-sm ${colorClass}`}
+                  >
+                    {initials || "S"}
+                  </span>
+                );
+              })}
+              {members.length > 4 && (
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface-container text-[10px] font-bold text-on-surface ring-2 ring-surface-lowest shadow-sm">
+                  +{members.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Campaign status */}
+          {campaign.period_end ? (
+            <span className="text-[10px] sm:text-[11px] font-semibold text-on-surface-variant bg-surface-low border border-outline-variant/50 rounded-full px-2.5 py-0.5">
+              {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Ongoing
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 
   const tabs = [
-    { id: "sheet" as const, label: "Sheet View 📊", icon: "table_chart", enabled: true },
-    { id: "plan" as const, label: "Detailed Plan", icon: "calendar_month", enabled: menus.plan },
-    { id: "submit" as const, label: "Submit Work", icon: "cloud_upload", enabled: menus.submit },
-    { id: "history" as const, label: "My Submissions", icon: "history", enabled: menus.history },
+    { id: "sheet" as const, label: "Sheet 1: Content Sheet 📊", icon: "table_chart", enabled: true },
+    { id: "plan" as const, label: "Sheet 2: Detailed Plan 📅", icon: "calendar_month", enabled: menus.plan },
+    { id: "submit" as const, label: "Sheet 3: Submit Work 📤", icon: "cloud_upload", enabled: menus.submit },
+    { id: "history" as const, label: "Sheet 4: My Submissions 🕒", icon: "history", enabled: menus.history },
   ].filter((item) => item.enabled);
 
   const activeDay = days.find((day) => day.id === activeDayId) ?? nextDay ?? days[0] ?? null;
@@ -296,18 +456,28 @@ function CampaignDetail({
         </div>
       ) : (
         <>
-          <div className="hide-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
-            {tabs.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
-                  tab === item.id ? "bg-primary text-on-primary shadow-sm" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary"
-                }`}
-              >
-                <Icon name={item.icon} className="text-[16px] sm:text-[18px]" /> {item.label}
-              </button>
-            ))}
+          {/* Google Sheets Workbook Tabs Bar */}
+          <div className="flex items-center gap-1 overflow-x-auto border-b border-[#dadce0] dark:border-zinc-800 bg-[#f8f9fa] dark:bg-zinc-900/60 p-1.5 rounded-2xl hide-scrollbar shadow-inner">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-low text-xs font-bold shrink-0 cursor-default" title="Google Sheets Tabs">
+              <Icon name="add" className="text-sm text-on-surface-variant" />
+            </span>
+            {tabs.map((item) => {
+              const active = tab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setTab(item.id)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                    active
+                      ? "bg-surface-lowest text-[#0F9D58] border-b-2 border-[#0F9D58] shadow-sm font-black"
+                      : "text-on-surface-variant hover:bg-surface-lowest/70 hover:text-on-surface"
+                  }`}
+                >
+                  <Icon name={item.icon} className={`text-[15px] ${active ? "text-[#0F9D58]" : "text-on-surface-variant"}`} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {tab === "sheet" && (
