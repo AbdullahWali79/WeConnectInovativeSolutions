@@ -9,7 +9,6 @@ import {
   fetchMyCampaign,
   fetchMyCampaigns,
   submitDayWork,
-  uploadCampaignVideo,
 } from "@/app/student/campaigns/actions";
 import { StudentSheetView } from "./student-sheet-view";
 
