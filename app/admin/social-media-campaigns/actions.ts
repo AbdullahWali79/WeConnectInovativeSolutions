@@ -483,7 +483,7 @@ export async function addCampaignDay(campaignId: string, day: any) {
       engagement_action: cleanText(day?.engagement_action || day?.hook),
       cta: cleanText(day?.cta),
       metrics_to_record: cleanText(day?.metrics_to_record),
-      status: "pending",
+      status: "not_started",
       teacher_status: "pending",
       admin_status: "pending",
       visible_to_students: Boolean(day?.visible_to_students ?? true),
@@ -545,7 +545,7 @@ export async function appendCampaignDays(campaignId: string, days: any[]) {
         day_number: dayNum,
         post_date: postDate,
         visible_to_students: true,
-        status: "pending",
+        status: "not_started",
         teacher_status: "pending",
         admin_status: "pending",
       };
