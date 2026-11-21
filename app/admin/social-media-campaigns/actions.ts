@@ -131,13 +131,15 @@ export async function searchCampaignStudents(term: string, limit = 25) {
     const safe = String(term || "").replace(/[%,()*]/g, " ").trim();
     let query = supabase
       .from("profiles" as any)
-      .select("id, full_name, email, phone, status")
+      .select("id, full_name, email, phone, status, admin_status")
       .eq("role", "student");
     if (safe) {
       const pattern = `*${safe}*`;
       query = query.or(`full_name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`);
     }
-    const { data, error } = await query.order("full_name").limit(Math.min(Math.max(limit, 1), 50));
+    const { data, error } = await query
+      .order("full_name")
+      .limit(Math.min(Math.max(limit, 1), 50));
     if (error) return { success: false as const, error: error.message };
     return { success: true as const, students: data ?? [] };
   } catch (error: any) {
@@ -718,6 +720,15 @@ export async function addCampaignMember(campaignId: string, studentId: string, d
       return { success: false as const, error: "Only students can be assigned to a campaign." };
     }
 
+    // Ensure the student account is activated/approved so they can immediately sign in and submit
+    await supabase
+      .from("profiles" as any)
+      .update({
+        status: "approved",
+        admin_status: "approved",
+      })
+      .eq("id", studentId);
+
     const { data, error } = await supabase
       .from("sm_campaign_members" as any)
       .upsert(
@@ -1154,17 +1165,22 @@ function normalizePhone(value: any) {
  * "assign the account they already have" — never silently create a second
  * profile for the same person.
  */
-export async function findStudentDuplicates(input: { email?: string; phone?: string }) {
+export async function findStudentDuplicates(input: { email?: string; phone?: string; full_name?: string }) {
   try {
     await requireCampaignAccess("social_campaigns.view");
     const supabase = createSupabaseServiceClient();
     const email = normalizeEmail(input?.email);
     const phone = normalizePhone(input?.phone);
-    if (!email && !phone) return { success: true as const, matches: [] };
+    const name = cleanText(input?.full_name);
+    if (!email && !phone && (!name || name.length < 2)) return { success: true as const, matches: [] };
 
     const filters: string[] = [];
     if (email) filters.push(`email.ilike.${email}`);
     if (phone) filters.push(`phone.ilike.*${phone}*`);
+    if (name && name.length >= 2) {
+      const safeName = name.replace(/[%,()*]/g, " ").trim();
+      filters.push(`full_name.ilike.*${safeName}*`);
+    }
 
     const { data, error } = await supabase
       .from("profiles" as any)
@@ -1218,6 +1234,15 @@ export async function createCampaignStudent(input: {
       if ((existing as any).role !== "student") {
         return { success: false as const, error: "That account is not a student account." };
       }
+
+      // Activate the student's profile so they can immediately sign in and submit
+      await supabase
+        .from("profiles" as any)
+        .update({
+          status: "approved",
+          admin_status: "approved",
+        })
+        .eq("id", (existing as any).id);
 
       const { data: member, error: memberError } = await supabase
         .from("sm_campaign_members" as any)

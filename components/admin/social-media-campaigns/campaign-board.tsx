@@ -1796,23 +1796,20 @@ function TeamPanel({
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      return;
-    }
+    if (mode !== "existing") return;
     let cancelled = false;
     setSearching(true);
     const timer = setTimeout(async () => {
-      const res = await searchCampaignStudents(query, 15);
+      const res = await searchCampaignStudents(query, 30);
       if (cancelled) return;
       if (res.success) setResults(res.students as Row[]);
       setSearching(false);
-    }, 250);
+    }, 200);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, mode]);
 
   async function assign(student: Row) {
     setAssigning(student.id);
@@ -1823,9 +1820,14 @@ function TeamPanel({
       return;
     }
     setQuery("");
-    setResults([]);
     await onReload();
-    setToast({ type: "success", message: `${student.full_name || "Student"} assigned` });
+    const wasInactive = student.status === "rejected" || student.status === "inactive";
+    setToast({
+      type: "success",
+      message: wasInactive
+        ? `${student.full_name || "Student"} account activated & assigned to campaign!`
+        : `${student.full_name || "Student"} assigned to campaign.`,
+    });
   }
 
   async function remove(member: Row) {
@@ -1891,9 +1893,16 @@ function TeamPanel({
 
   /** Runs before we ever create an account, so the same person is never duplicated. */
   async function checkDuplicates() {
-    if (!newStudent.email && !newStudent.phone) return;
+    if (!newStudent.email && !newStudent.phone && (!newStudent.full_name || newStudent.full_name.trim().length < 2)) {
+      setDuplicates([]);
+      return;
+    }
     setCheckingDuplicate(true);
-    const res = await findStudentDuplicates({ email: newStudent.email, phone: newStudent.phone });
+    const res = await findStudentDuplicates({
+      email: newStudent.email,
+      phone: newStudent.phone,
+      full_name: newStudent.full_name,
+    });
     setCheckingDuplicate(false);
     if (!res.success) return;
     const matches = (res.matches as Row[]).filter((match) => !assignedIds.has(match.id));
@@ -1935,7 +1944,13 @@ function TeamPanel({
     setDuplicates([]);
     setNewStudent({ full_name: "", email: "", phone: "", password: "" });
     await onReload();
-    setToast({ type: "success", message: `${student.full_name || "Student"} attached to this campaign` });
+    const wasInactive = student.status === "rejected" || student.status === "inactive";
+    setToast({
+      type: "success",
+      message: wasInactive
+        ? `${student.full_name || "Student"} account activated & assigned to this campaign!`
+        : `${student.full_name || "Student"} assigned to this campaign`,
+    });
   }
 
   const assignedIds = new Set(members.map((member) => member.student_id));
@@ -2051,29 +2066,62 @@ function TeamPanel({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className={FIELD_CLASS}
-                  placeholder="Search student by name, email or phone…"
+                  placeholder="Search student by name, email or phone (shows active & inactive accounts)…"
                 />
               </div>
-              {searching && <p className="mt-2 text-xs text-on-surface-variant">Searching…</p>}
+              {searching && <p className="mt-2 text-xs text-on-surface-variant">Searching students…</p>}
               {results.length > 0 && (
-                <div className="mt-2 max-h-56 overflow-auto rounded-lg border border-outline-variant bg-surface-lowest custom-scrollbar">
+                <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-outline-variant bg-surface-lowest custom-scrollbar divide-y divide-outline-variant/60">
                   {results.map((student) => {
                     const already = assignedIds.has(student.id);
+                    const isInactive = student.status === "rejected" || student.status === "inactive";
+                    const isPending = student.status === "pending";
                     return (
-                      <button
+                      <div
                         key={student.id}
-                        disabled={already || assigning === student.id}
-                        onClick={() => void assign(student)}
-                        className="flex w-full items-center justify-between gap-2 border-b border-outline-variant p-2.5 text-left last:border-0 hover:bg-surface-low disabled:opacity-50"
+                        className="flex w-full items-center justify-between gap-3 p-2.5 hover:bg-surface-low transition-colors"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate text-sm font-bold text-on-surface">{student.full_name || "Unnamed student"}</span>
-                          <span className="block truncate text-xs text-on-surface-variant">{student.email || student.phone || "—"}</span>
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-sm font-bold text-on-surface">{student.full_name || "Unnamed student"}</span>
+                            {isInactive ? (
+                              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                Inactive (Will Activate)
+                              </span>
+                            ) : isPending ? (
+                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                                Pending
+                              </span>
+                            ) : (
+                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                Active
+                              </span>
+                            )}
+                          </span>
+                          <span className="block truncate text-xs text-on-surface-variant">
+                            {student.email || "No email"} {student.phone ? `· ${student.phone}` : ""}
+                          </span>
                         </span>
-                        <span className="shrink-0 text-xs font-bold text-primary">
-                          {already ? "Assigned" : assigning === student.id ? "Adding…" : "Assign"}
-                        </span>
-                      </button>
+                        <button
+                          disabled={already || assigning === student.id}
+                          onClick={() => void assign(student)}
+                          className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50 ${
+                            already
+                              ? "bg-surface-container text-on-surface-variant"
+                              : isInactive
+                              ? "bg-amber-600 text-white hover:bg-amber-700 shadow-sm"
+                              : "bg-primary text-on-primary hover:bg-primary-container"
+                          }`}
+                        >
+                          {already
+                            ? "Assigned"
+                            : assigning === student.id
+                            ? "Activating…"
+                            : isInactive
+                            ? "⚡ Activate & Assign"
+                            : "+ Assign"}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -2087,8 +2135,9 @@ function TeamPanel({
                   <input
                     value={newStudent.full_name}
                     onChange={(e) => setNewStudent({ ...newStudent, full_name: e.target.value })}
+                    onBlur={() => void checkDuplicates()}
                     className={FIELD_CLASS}
-                    placeholder="Full name"
+                    placeholder="Full name (e.g. Arham)"
                   />
                 </div>
                 <div>
@@ -2129,29 +2178,44 @@ function TeamPanel({
               </p>
 
               {duplicates.length > 0 && (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5">
-                  <p className="text-[11px] font-bold text-amber-900">
-                    This person already has an account. Assign it instead of creating a duplicate:
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950/40">
+                  <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                    Existing account found! Click below to activate &amp; assign them directly:
                   </p>
                   <div className="mt-1.5 space-y-1">
-                    {duplicates.map((match) => (
-                      <div key={match.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs font-bold text-on-surface">{match.full_name || "Unnamed"}</span>
-                          <span className="block truncate text-[11px] text-on-surface-variant">
-                            {match.email || match.phone || "—"} · {match.role}
-                            {match.status ? ` · ${match.status}` : ""}
+                    {duplicates.map((match) => {
+                      const isInactive = match.status === "rejected" || match.status === "inactive";
+                      return (
+                        <div key={match.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/80 p-2 dark:bg-surface-lowest">
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5">
+                              <span className="block truncate text-xs font-bold text-on-surface">{match.full_name || "Unnamed"}</span>
+                              {isInactive && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.2 text-[9px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                  Inactive
+                                </span>
+                              )}
+                            </span>
+                            <span className="block truncate text-[11px] text-on-surface-variant">
+                              {match.email || match.phone || "—"}
+                            </span>
                           </span>
-                        </span>
-                        <button
-                          onClick={() => void attachExisting(match)}
-                          disabled={creating || assignedIds.has(match.id)}
-                          className="shrink-0 rounded-md bg-primary px-2 py-1 text-[11px] font-bold text-on-primary disabled:opacity-50"
-                        >
-                          {assignedIds.has(match.id) ? "Already on campaign" : creating ? "Adding…" : "Use this account"}
-                        </button>
-                      </div>
-                    ))}
+                          <button
+                            onClick={() => void attachExisting(match)}
+                            disabled={creating || assignedIds.has(match.id)}
+                            className="shrink-0 rounded-md bg-amber-600 hover:bg-amber-700 px-2.5 py-1 text-[11px] font-bold text-white disabled:opacity-50 shadow-sm"
+                          >
+                            {assignedIds.has(match.id)
+                              ? "Already on campaign"
+                              : creating
+                              ? "Activating…"
+                              : isInactive
+                              ? "⚡ Activate & Assign"
+                              : "Assign Existing"}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
