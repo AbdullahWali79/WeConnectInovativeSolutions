@@ -726,6 +726,9 @@ export async function addCampaignMember(campaignId: string, studentId: string, d
           student_id: studentId,
           drive_url: cleanText(driveUrl),
           status: "active",
+          registration_status: "approved",
+          approved_at: new Date().toISOString(),
+          approved_by: profile.id,
           assigned_by: profile.id,
         },
         { onConflict: "campaign_id,student_id" },
@@ -1034,6 +1037,101 @@ export async function reviewSubmission(
     return { success: true as const, status, is_selected: selected };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not review this submission." };
+  }
+}
+
+/** Toggle whether a student's submission is ranked as the official Winner for that day */
+export async function toggleWinnerSubmission(submissionId: string, dayId: string) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.approve");
+    const supabase = createSupabaseServiceClient();
+
+    const { data: submission, error: subError } = await supabase
+      .from("sm_day_submissions" as any)
+      .select("id, campaign_id, day_id, is_selected, video_url, post_url, doc_url")
+      .eq("id", submissionId)
+      .maybeSingle();
+
+    if (subError) return { success: false as const, error: subError.message };
+    if (!submission) return { success: false as const, error: "Submission not found." };
+    await assertCampaignAccess((submission as any).campaign_id, profile);
+
+    const willBeWinner = !(submission as any).is_selected;
+
+    // Clear any previous winner for this day
+    await supabase
+      .from("sm_day_submissions" as any)
+      .update({ is_selected: false, status: "approved" })
+      .eq("day_id", dayId)
+      .eq("is_selected", true);
+
+    if (willBeWinner) {
+      await supabase
+        .from("sm_day_submissions" as any)
+        .update({
+          is_selected: true,
+          status: "selected",
+          reviewed_by: profile.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", submissionId);
+
+      const url = cleanText((submission as any).post_url) || cleanText((submission as any).video_url) || cleanText((submission as any).doc_url);
+      await supabase
+        .from("sm_campaign_days" as any)
+        .update({
+          published_url: url,
+          status: url ? "published" : "approved",
+          teacher_status: "done",
+          admin_status: "done",
+          admin_action_by: profile.id,
+          admin_action_at: new Date().toISOString(),
+        })
+        .eq("id", dayId);
+    } else {
+      await supabase
+        .from("sm_day_submissions" as any)
+        .update({
+          is_selected: false,
+          status: "submitted",
+        })
+        .eq("id", submissionId);
+    }
+
+    revalidateCampaign();
+    return { success: true as const, is_selected: willBeWinner };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not toggle winner." };
+  }
+}
+
+/** Admin can remove an invalid or duplicate submission */
+export async function deleteSubmissionByAdmin(submissionId: string) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.delete");
+    const supabase = createSupabaseServiceClient();
+
+    const { data: submission, error: readError } = await supabase
+      .from("sm_day_submissions" as any)
+      .select("id, campaign_id")
+      .eq("id", submissionId)
+      .maybeSingle();
+
+    if (readError) return { success: false as const, error: readError.message };
+    if (!submission) return { success: true as const };
+    await assertCampaignAccess((submission as any).campaign_id, profile);
+
+    const { error: delError } = await supabase
+      .from("sm_day_submissions" as any)
+      .delete()
+      .eq("id", submissionId);
+
+    if (delError) return { success: false as const, error: delError.message };
+
+    revalidateCampaign();
+    return { success: true as const };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not delete submission." };
   }
 }
 

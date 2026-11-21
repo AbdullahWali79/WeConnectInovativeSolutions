@@ -36,6 +36,16 @@ async function loadMembership(campaignId: string, studentId: string) {
   if (error) throw new Error(error.message);
   if (!data) throw new Error("You are not assigned to this campaign.");
   if ((data as any).status !== "active") throw new Error("Your access to this campaign is paused. Please contact the admin.");
+
+  // Automatically approve active campaign members so students have instant zero-friction access
+  if ((data as any).registration_status !== "approved") {
+    await admin
+      .from("sm_campaign_members" as any)
+      .update({ registration_status: "approved", approved_at: new Date().toISOString() })
+      .eq("id", (data as any).id);
+    (data as any).registration_status = "approved";
+  }
+
   return data as any;
 }
 
@@ -132,7 +142,11 @@ export async function fetchMyCampaign(campaignId: string) {
     const admin = createSupabaseServiceClient();
     const member = await loadMembership(campaignId, userId);
 
-    const [{ data: campaign, error: campaignError }, { data: days, error: dayError }] = await Promise.all([
+    const [
+      { data: campaign, error: campaignError },
+      { data: days, error: dayError },
+      { data: members, error: memberError },
+    ] = await Promise.all([
       admin
         .from("sm_campaigns" as any)
         .select("id, client_name, campaign_name, period_start, period_end, goal, status, teacher:profiles!teacher_id ( full_name )")
@@ -144,9 +158,14 @@ export async function fetchMyCampaign(campaignId: string) {
         .eq("campaign_id", campaignId)
         .eq("visible_to_students", true)
         .order("day_number"),
+      admin
+        .from("sm_campaign_members" as any)
+        .select("id, student_id, student:profiles!student_id ( id, full_name, email )")
+        .eq("campaign_id", campaignId)
+        .eq("status", "active"),
     ]);
 
-    const error = campaignError || dayError;
+    const error = campaignError || dayError || memberError;
     if (error) return { success: false as const, error: error.message };
     if (!campaign) return { success: false as const, error: "This campaign no longer exists." };
 
@@ -155,8 +174,12 @@ export async function fetchMyCampaign(campaignId: string) {
     if (visibleDayIds.length > 0) {
       const { data } = await admin
         .from("sm_day_submissions" as any)
-        .select("id, day_id, video_url, post_url, doc_url, image_urls, caption, note, status, score, feedback, is_selected, created_at, updated_at")
-        .eq("member_id", member.id)
+        .select(`
+          id, day_id, member_id, student_id, video_url, post_url, doc_url, image_urls,
+          caption, note, status, score, feedback, is_selected, created_at, updated_at,
+          student:profiles!student_id ( id, full_name, email )
+        `)
+        .eq("campaign_id", campaignId)
         .in("day_id", visibleDayIds)
         .order("created_at", { ascending: false });
       submissions = (data ?? []) as any[];
@@ -165,10 +188,13 @@ export async function fetchMyCampaign(campaignId: string) {
     return {
       success: true as const,
       campaign,
+      currentUserId: userId,
       member: {
         ...member,
+        registration_status: "approved",
         drive_url: member.drive_url || DEFAULT_CAMPAIGN_DRIVE_FOLDER,
       },
+      members: members ?? [],
       days: days ?? [],
       submissions,
       menus: {
@@ -294,9 +320,6 @@ export async function submitDayWork(
     }
 
     const member = await loadMembership((day as any).campaign_id, userId);
-    if (member.registration_status !== "approved") {
-      return { success: false as const, error: "Your registration is still waiting for admin approval." };
-    }
     if (!menuFor(member, "submit")) {
       return { success: false as const, error: "Submitting work is not enabled for your account." };
     }
@@ -367,5 +390,116 @@ export async function submitDayWork(
     return { success: true as const, submission: saved };
   } catch (error: any) {
     return { success: false as const, error: error?.message ?? "Could not submit your work." };
+  }
+}
+
+/**
+ * Fast Google Sheet style single-link submission.
+ * A student pastes a Google Drive link, Google Docs link, or post URL.
+ */
+export async function submitDayLink(
+  dayId: string,
+  link: string,
+  note?: string,
+) {
+  try {
+    const { userId } = await currentStudent();
+    const admin = createSupabaseServiceClient();
+
+    const cleanLink = cleanText(link);
+    if (!cleanLink) {
+      return { success: false as const, error: "Please enter a valid link." };
+    }
+
+    const linkError = getProofLinkError(cleanLink);
+    if (linkError) {
+      return { success: false as const, error: linkError };
+    }
+
+    const { data: day, error: dayError } = await admin
+      .from("sm_campaign_days" as any)
+      .select("id, campaign_id, day_number, visible_to_students")
+      .eq("id", dayId)
+      .maybeSingle();
+    if (dayError) return { success: false as const, error: dayError.message };
+    if (!day) return { success: false as const, error: "This day no longer exists." };
+    if (!(day as any).visible_to_students) {
+      return { success: false as const, error: "This day has not been shared with you yet." };
+    }
+
+    const member = await loadMembership((day as any).campaign_id, userId);
+
+    const isDoc = cleanLink.includes("docs.google.com");
+    const isSocialPost = /facebook\.com|instagram\.com|tiktok\.com|youtube\.com\/shorts/i.test(cleanLink);
+
+    const payload: any = {
+      campaign_id: (day as any).campaign_id,
+      day_id: dayId,
+      member_id: member.id,
+      student_id: userId,
+      video_url: cleanLink,
+      doc_url: isDoc ? cleanLink : null,
+      post_url: isSocialPost ? cleanLink : null,
+      note: cleanText(note),
+      status: "submitted",
+      feedback: null,
+      reviewed_by: null,
+      reviewed_at: null,
+    };
+
+    const { data: saved, error } = await admin
+      .from("sm_day_submissions" as any)
+      .upsert(payload, { onConflict: "day_id,member_id" })
+      .select(`
+        id, day_id, member_id, student_id, video_url, post_url, doc_url, image_urls,
+        caption, note, status, score, feedback, is_selected, created_at, updated_at,
+        student:profiles!student_id ( id, full_name, email )
+      `)
+      .single();
+
+    if (error) return { success: false as const, error: error.message };
+
+    revalidateStudent((day as any).campaign_id);
+    return { success: true as const, submission: saved };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not save your link." };
+  }
+}
+
+/**
+ * Delete student's own submission.
+ * Enforces strictly: a student can ONLY delete their own link, never another student's link!
+ */
+export async function deleteMyDaySubmission(dayId: string) {
+  try {
+    const { userId } = await currentStudent();
+    const admin = createSupabaseServiceClient();
+
+    const { data: sub, error: readError } = await admin
+      .from("sm_day_submissions" as any)
+      .select("id, student_id, campaign_id")
+      .eq("day_id", dayId)
+      .eq("student_id", userId)
+      .maybeSingle();
+
+    if (readError) return { success: false as const, error: readError.message };
+    if (!sub) return { success: true as const };
+
+    // Strict security check: can only delete own submission
+    if ((sub as any).student_id !== userId) {
+      return { success: false as const, error: "Permission denied: You can only delete your own link." };
+    }
+
+    const { error: delError } = await admin
+      .from("sm_day_submissions" as any)
+      .delete()
+      .eq("id", (sub as any).id);
+
+    if (delError) return { success: false as const, error: delError.message };
+
+    revalidateStudent((sub as any).campaign_id);
+    return { success: true as const };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not delete link." };
   }
 }

@@ -11,6 +11,7 @@ import {
   submitDayWork,
   uploadCampaignVideo,
 } from "@/app/student/campaigns/actions";
+import { StudentSheetView } from "./student-sheet-view";
 
 type Row = any;
 
@@ -173,10 +174,12 @@ function CampaignDetail({
   const [loading, setLoading] = useState(true);
   const [campaign, setCampaign] = useState<Row | null>(null);
   const [member, setMember] = useState<Row | null>(null);
+  const [members, setMembers] = useState<Row[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [days, setDays] = useState<Row[]>([]);
   const [submissions, setSubmissions] = useState<Row[]>([]);
   const [menus, setMenus] = useState({ plan: true, submit: true, history: true });
-  const [tab, setTab] = useState<"plan" | "submit" | "history">("plan");
+  const [tab, setTab] = useState<"sheet" | "plan" | "submit" | "history">("sheet");
   const [activeDayId, setActiveDayId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -187,6 +190,8 @@ function CampaignDetail({
       setMember(res.member as Row);
       setDays(res.days as Row[]);
       setSubmissions(res.submissions as Row[]);
+      setMembers(((res as any).members as Row[]) || []);
+      setCurrentUserId((res as any).currentUserId || "");
       setMenus(res.menus);
     } else {
       setToast({ type: "error", message: res.error || "Could not load this campaign." });
@@ -253,24 +258,11 @@ function CampaignDetail({
     </div>
   );
 
-  if (member.registration_status !== "approved") {
-    return (
-      <div className="space-y-4">
-        {header}
-        <RegistrationGate
-          member={member}
-          campaignName={campaign.client_name}
-          onDone={() => void load()}
-          setToast={setToast}
-        />
-      </div>
-    );
-  }
-
   const tabs = [
-    { id: "plan" as const, label: "Next day plan", icon: "calendar_month", enabled: menus.plan },
-    { id: "submit" as const, label: "Submit work", icon: "cloud_upload", enabled: menus.submit },
-    { id: "history" as const, label: "My submissions", icon: "history", enabled: menus.history },
+    { id: "sheet" as const, label: "Sheet View 📊", icon: "table_chart", enabled: true },
+    { id: "plan" as const, label: "Detailed Plan", icon: "calendar_month", enabled: menus.plan },
+    { id: "submit" as const, label: "Submit Work", icon: "cloud_upload", enabled: menus.submit },
+    { id: "history" as const, label: "My Submissions", icon: "history", enabled: menus.history },
   ].filter((item) => item.enabled);
 
   const activeDay = days.find((day) => day.id === activeDayId) ?? nextDay ?? days[0] ?? null;
@@ -298,6 +290,18 @@ function CampaignDetail({
               </button>
             ))}
           </div>
+
+          {tab === "sheet" && (
+            <StudentSheetView
+              campaign={campaign}
+              days={days}
+              submissions={submissions}
+              members={members}
+              currentUserId={currentUserId}
+              onReload={load}
+              setToast={setToast}
+            />
+          )}
 
           {tab === "plan" && <PlanPanel days={days} byDay={byDay} activeDayId={activeDay?.id ?? null} onPick={setActiveDayId} />}
 

@@ -28,6 +28,7 @@ import {
 } from "@/app/admin/social-media-campaigns/actions";
 import { parseCampaignPlan, downloadCampaignTemplate } from "@/lib/social-campaign-plan";
 import { getGoogleDrivePreviewUrl, getYouTubeEmbedUrl } from "@/lib/promo-media";
+import { SheetTrackerPanel } from "./sheet-tracker-panel";
 
 type Row = any;
 
@@ -75,7 +76,7 @@ export function CampaignBoard({
   const [days, setDays] = useState<Row[]>([]);
   const [members, setMembers] = useState<Row[]>([]);
   const [submissions, setSubmissions] = useState<Row[]>([]);
-  const [tab, setTab] = useState<"plan" | "review" | "team">("plan");
+  const [tab, setTab] = useState<"sheet" | "plan" | "review" | "team">("sheet");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editingDay, setEditingDay] = useState<Row | null>(null);
   const [addingDay, setAddingDay] = useState(false);
@@ -432,6 +433,7 @@ export function CampaignBoard({
 
       <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
         {[
+          { id: "sheet" as const, label: "Sheet Tracker 📊", icon: "table_chart" },
           { id: "plan" as const, label: "Day plan", icon: "calendar_month" },
           {
             id: "review" as const,
@@ -440,7 +442,7 @@ export function CampaignBoard({
             count: submissions.length,
             badge: pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} new` : undefined,
           },
-          { id: "team" as const, label: "Team & Students", icon: "group" },
+          { id: "team" as const, label: "Team & Students", icon: "group", count: members.length },
         ].map((item) => (
           <button
             key={item.id}
@@ -463,6 +465,17 @@ export function CampaignBoard({
           </button>
         ))}
       </div>
+
+      {tab === "sheet" && campaign && (
+        <SheetTrackerPanel
+          campaign={campaign}
+          days={days}
+          members={members}
+          submissions={submissions}
+          onReload={load}
+          setToast={setToast}
+        />
+      )}
 
       {tab === "plan" && (
         <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest">
