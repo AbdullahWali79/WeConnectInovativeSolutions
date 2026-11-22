@@ -57,7 +57,6 @@ export function CampaignsManager({
   const [campaigns, setCampaigns] = useState<any[]>(initialCampaigns);
   const [teachers, setTeachers] = useState<any[]>(initialTeachers);
   const [students, setStudents] = useState<CampaignStudentRow[]>([]);
-  const [loadingStudents, setLoadingStudents] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
@@ -66,9 +65,7 @@ export function CampaignsManager({
   const [setupIssue, setSetupIssue] = useState("");
 
   const loadStudents = useCallback(async () => {
-    setLoadingStudents(true);
     const res = await fetchAllCampaignStudents();
-    setLoadingStudents(false);
     if (res.success) {
       setStudents(res.students);
     }
