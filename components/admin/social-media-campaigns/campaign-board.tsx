@@ -29,6 +29,7 @@ import {
 import { parseCampaignPlan, downloadCampaignTemplate } from "@/lib/social-campaign-plan";
 import { getGoogleDrivePreviewUrl, getYouTubeEmbedUrl } from "@/lib/promo-media";
 import { SheetTrackerPanel } from "./sheet-tracker-panel";
+import { EditCampaignModal } from "./edit-campaign-modal";
 
 type Row = any;
 
@@ -86,6 +87,7 @@ export function CampaignBoard({
   const [publishCount, setPublishCount] = useState("7");
   const [publishing, setPublishing] = useState(false);
   const [setupMissing, setSetupMissing] = useState(false);
+  const [isEditingCampaign, setIsEditingCampaign] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -365,6 +367,16 @@ export function CampaignBoard({
             <span className="rounded-full border border-outline-variant px-3 py-1 text-xs font-bold uppercase tracking-wide text-on-surface-variant">
               {campaign.status}
             </span>
+            {role === "admin" && (
+              <button
+                type="button"
+                onClick={() => setIsEditingCampaign(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 shadow-xs transition"
+                title="Edit campaign name and details"
+              >
+                <Icon name="edit" className="text-[15px]" /> Edit Campaign
+              </button>
+            )}
             <a
               href={campaign.drive_folder_url || "https://drive.google.com/drive/folders/1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP"}
               target="_blank"
@@ -802,6 +814,20 @@ export function CampaignBoard({
             await load();
             setToast({ type: "success", message: `Replaced plan with ${res.dayCount} days` });
           }}
+        />
+      )}
+
+      {isEditingCampaign && campaign && (
+        <EditCampaignModal
+          campaign={campaign}
+          teachers={teachers}
+          onClose={() => setIsEditingCampaign(false)}
+          onSaved={(updated) => {
+            setCampaign((prev: any) => ({ ...prev, ...updated }));
+            setIsEditingCampaign(false);
+            setToast({ type: "success", message: `Campaign "${updated.client_name}" updated successfully` });
+          }}
+          onError={(message) => setToast({ type: "error", message })}
         />
       )}
     </div>

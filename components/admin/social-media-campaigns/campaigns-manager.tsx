@@ -13,6 +13,7 @@ import {
 } from "@/app/admin/social-media-campaigns/actions";
 import { parseCampaignPlan, downloadCampaignTemplate, type ParsedPlan } from "@/lib/social-campaign-plan";
 import { CampaignBoard } from "./campaign-board";
+import { EditCampaignModal } from "./edit-campaign-modal";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
@@ -54,6 +55,7 @@ export function CampaignsManager({
   const [openId, setOpenId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
   const [query, setQuery] = useState("");
   const [setupIssue, setSetupIssue] = useState("");
 
@@ -213,29 +215,45 @@ export function CampaignsManager({
           {filtered.map((campaign) => {
             const percent = campaign.day_count ? Math.round((campaign.done_count / campaign.day_count) * 100) : 0;
             return (
-              <button
+              <div
                 key={campaign.id}
                 onClick={() => setOpenId(campaign.id)}
-                className="group rounded-2xl border border-outline-variant bg-surface-lowest p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface-low"
+                className="group rounded-2xl border border-outline-variant bg-surface-lowest p-4 text-left transition-all hover:border-primary/40 hover:bg-surface-low hover:shadow-md cursor-pointer relative"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-black text-on-surface">{campaign.client_name}</p>
-                    <p className="truncate text-xs text-on-surface-variant">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-black text-on-surface group-hover:text-primary transition-colors">
+                      {campaign.client_name}
+                    </p>
+                    <p className="truncate text-xs text-on-surface-variant font-medium">
                       {campaign.campaign_name || "Social media campaign"}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                      campaign.status === "active"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : campaign.status === "completed"
-                          ? "border-blue-200 bg-blue-50 text-blue-700"
-                          : "border-outline-variant text-on-surface-variant"
-                    }`}
-                  >
-                    {campaign.status}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                        campaign.status === "active"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : campaign.status === "completed"
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-outline-variant text-on-surface-variant"
+                      }`}
+                    >
+                      {campaign.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingCampaign(campaign);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/70 bg-surface-lowest px-2 py-1 text-xs font-bold text-on-surface-variant hover:text-primary hover:border-primary hover:bg-primary/5 transition shadow-xs"
+                      title="Edit campaign name & settings"
+                    >
+                      <Icon name="edit" className="text-[13px]" />
+                      <span>Edit</span>
+                    </button>
+                  </div>
                 </div>
 
                 <p className="mt-2 text-xs text-on-surface-variant flex items-center gap-1.5 flex-wrap">
@@ -263,10 +281,27 @@ export function CampaignsManager({
                     {campaign.done_count}/{campaign.day_count} days
                   </span>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
+      )}
+
+      {editingCampaign && (
+        <EditCampaignModal
+          campaign={editingCampaign}
+          teachers={teachers}
+          onClose={() => setEditingCampaign(null)}
+          onSaved={async (updated) => {
+            setEditingCampaign(null);
+            setCampaigns((current) =>
+              current.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
+            );
+            setToast({ type: "success", message: `Campaign "${updated.client_name}" updated successfully` });
+            await load({ silent: true });
+          }}
+          onError={(message) => setToast({ type: "error", message })}
+        />
       )}
 
       {isCreateOpen && (
