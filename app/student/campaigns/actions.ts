@@ -419,8 +419,8 @@ export async function submitDayLink(
     let note = "";
 
     if (typeof input === "string") {
-      const singleLink = cleanText(input);
-      note = cleanText(legacyNote);
+      const singleLink = cleanText(input) || "";
+      note = cleanText(legacyNote) || "";
       if (singleLink.includes("docs.google.com")) {
         rawDoc = singleLink;
       } else if (/facebook\.com|instagram\.com|tiktok\.com|youtube\.com\/shorts/i.test(singleLink)) {
@@ -429,17 +429,17 @@ export async function submitDayLink(
         rawDrive = singleLink;
       }
     } else if (input && typeof input === "object") {
-      rawDrive = cleanText(input.driveUrl);
-      rawDoc = cleanText(input.docUrl);
-      rawPost = cleanText(input.postUrl);
-      note = cleanText(input.note);
+      rawDrive = cleanText(input.driveUrl) || "";
+      rawDoc = cleanText(input.docUrl) || "";
+      rawPost = cleanText(input.postUrl) || "";
+      note = cleanText(input.note) || "";
     }
 
     // Auto-organize if a student pasted docs link in drive field or drive link in docs field
-    if (rawDrive.includes("docs.google.com") && !rawDoc) {
+    if (rawDrive && rawDrive.includes("docs.google.com") && !rawDoc) {
       rawDoc = rawDrive;
       rawDrive = "";
-    } else if (rawDoc.includes("drive.google.com") && !rawDrive) {
+    } else if (rawDoc && rawDoc.includes("drive.google.com") && !rawDrive) {
       rawDrive = rawDoc;
       rawDoc = "";
     }
