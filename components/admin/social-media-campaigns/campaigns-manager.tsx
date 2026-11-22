@@ -10,10 +10,13 @@ import type { TeacherSelectablePermissionKey } from "@/lib/admin-permissions";
 import {
   createCampaign,
   fetchCampaignWorkspace,
+  fetchAllCampaignStudents,
+  type CampaignStudentRow,
 } from "@/app/admin/social-media-campaigns/actions";
 import { parseCampaignPlan, downloadCampaignTemplate, type ParsedPlan } from "@/lib/social-campaign-plan";
 import { CampaignBoard } from "./campaign-board";
 import { EditCampaignModal } from "./edit-campaign-modal";
+import { CampaignStudentsDirectory } from "./campaign-students-directory";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
@@ -50,8 +53,11 @@ export function CampaignsManager({
   // The server already handed us the rows, so there is nothing to wait for.
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"campaigns" | "students">("campaigns");
   const [campaigns, setCampaigns] = useState<any[]>(initialCampaigns);
   const [teachers, setTeachers] = useState<any[]>(initialTeachers);
+  const [students, setStudents] = useState<CampaignStudentRow[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
@@ -59,12 +65,24 @@ export function CampaignsManager({
   const [query, setQuery] = useState("");
   const [setupIssue, setSetupIssue] = useState("");
 
+  const loadStudents = useCallback(async () => {
+    setLoadingStudents(true);
+    const res = await fetchAllCampaignStudents();
+    setLoadingStudents(false);
+    if (res.success) {
+      setStudents(res.students);
+    }
+  }, []);
+
   const load = useCallback(async (options: { silent?: boolean } = {}) => {
     const silent = options.silent === true;
     if (silent) setRefreshing(true);
     else setLoading(true);
 
-    const result = await fetchCampaignWorkspace();
+    const [result] = await Promise.all([
+      fetchCampaignWorkspace(),
+      loadStudents(),
+    ]);
 
     if (result.success) {
       setCampaigns(result.campaigns);
@@ -81,7 +99,7 @@ export function CampaignsManager({
 
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [loadStudents]);
 
   useEffect(() => {
     if (initialError) return;
@@ -164,6 +182,56 @@ export function CampaignsManager({
         </div>
       </div>
 
+      {/* Top Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-outline-variant/60 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("campaigns")}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shadow-2xs ${
+            activeTab === "campaigns"
+              ? "bg-primary text-on-primary shadow-xs"
+              : "border border-outline-variant/70 bg-surface-lowest text-on-surface hover:bg-surface-low"
+          }`}
+        >
+          <Icon name="campaign" className="text-base" />
+          <span>Campaigns Overview</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+              activeTab === "campaigns"
+                ? "bg-white/20 text-white"
+                : "bg-surface-container text-on-surface"
+            }`}
+          >
+            {campaigns.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("students");
+            void loadStudents();
+          }}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shadow-2xs ${
+            activeTab === "students"
+              ? "bg-primary text-on-primary shadow-xs"
+              : "border border-outline-variant/70 bg-surface-lowest text-on-surface hover:bg-surface-low"
+          }`}
+        >
+          <Icon name="groups" className="text-base" />
+          <span>Campaign Students Management</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+              activeTab === "students"
+                ? "bg-white/20 text-white"
+                : "bg-surface-container text-on-surface"
+            }`}
+          >
+            {students.length}
+          </span>
+        </button>
+      </div>
+
       {setupIssue && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5">
           <p className="flex items-start gap-2 text-xs font-semibold text-amber-900">
@@ -172,6 +240,10 @@ export function CampaignsManager({
           </p>
         </div>
       )}
+
+      {/* TAB 1: CAMPAIGNS OVERVIEW */}
+      {activeTab === "campaigns" && (
+        <>
 
       {/* Search and Refresh bar */}
       <div className="flex flex-wrap items-center gap-2">
@@ -292,6 +364,22 @@ export function CampaignsManager({
             );
           })}
         </div>
+      )}
+        </>
+      )}
+
+      {/* TAB 2: CAMPAIGN STUDENTS DIRECTORY & MANAGEMENT */}
+      {activeTab === "students" && (
+        <CampaignStudentsDirectory
+          students={students}
+          campaigns={campaigns}
+          role={role}
+          onReload={async () => {
+            await load({ silent: true });
+          }}
+          onOpenCampaign={(campaignId) => setOpenId(campaignId)}
+          setToast={setToast}
+        />
       )}
 
       {editingCampaign && (

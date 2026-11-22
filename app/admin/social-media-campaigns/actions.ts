@@ -1400,3 +1400,261 @@ export async function createCampaignStudent(input: {
     return { success: false as const, error: error?.message ?? "Could not create this student." };
   }
 }
+
+// ---------------------------------------------------------
+// Central Campaign Students Management
+// ---------------------------------------------------------
+
+export type CampaignStudentRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  status: string;
+  admin_status: string;
+  created_at: string;
+  memberships: {
+    memberId: string;
+    campaignId: string;
+    campaignName: string;
+    clientName: string;
+    campaignStatus: string;
+    status: string;
+    registrationStatus: string;
+    driveUrl?: string | null;
+    joinedAt: string;
+  }[];
+  submissionsCount: number;
+  winningCount: number;
+};
+
+/**
+ * Loads all students currently assigned to any social media campaign.
+ * Aggregates their assigned campaigns, submission counts, and winning picks.
+ */
+export async function fetchAllCampaignStudents(): Promise<{
+  success: boolean;
+  students: CampaignStudentRow[];
+  error?: string;
+}> {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.view");
+    const supabase = createSupabaseServiceClient();
+
+    // Query all memberships with campaign and student profile details
+    let query = supabase
+      .from("sm_campaign_members" as any)
+      .select(`
+        id, campaign_id, student_id, drive_url, status, registration_status, created_at,
+        campaign:sm_campaigns!campaign_id ( id, client_name, campaign_name, status, teacher_id ),
+        student:profiles!student_id ( id, full_name, email, phone, status, admin_status, created_at )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (profile.role === "teacher") {
+      const { data: teacherCampaigns } = await supabase
+        .from("sm_campaigns" as any)
+        .select("id")
+        .eq("teacher_id", profile.id);
+      const cIds = (teacherCampaigns || []).map((c: any) => c.id);
+      if (cIds.length === 0) {
+        return { success: true, students: [] };
+      }
+      query = query.in("campaign_id", cIds);
+    }
+
+    const { data: members, error: membersError } = await query;
+    if (membersError) {
+      return { success: false, error: membersError.message, students: [] };
+    }
+
+    // Query submission metrics
+    const { data: subs } = await supabase
+      .from("sm_day_submissions" as any)
+      .select("id, student_id, is_selected, status");
+
+    const subCounts: Record<string, { total: number; winning: number }> = {};
+    for (const s of (subs as any[]) || []) {
+      if (!s.student_id) continue;
+      if (!subCounts[s.student_id]) {
+        subCounts[s.student_id] = { total: 0, winning: 0 };
+      }
+      subCounts[s.student_id].total += 1;
+      if (s.is_selected || s.status === "selected") {
+        subCounts[s.student_id].winning += 1;
+      }
+    }
+
+    // Group by student
+    const studentMap = new Map<string, CampaignStudentRow>();
+
+    for (const m of (members as any[]) || []) {
+      const s = m.student;
+      if (!s || !s.id) continue;
+
+      if (!studentMap.has(s.id)) {
+        studentMap.set(s.id, {
+          id: s.id,
+          full_name: s.full_name || "Student",
+          email: s.email || "",
+          phone: s.phone || "",
+          status: s.status || "approved",
+          admin_status: s.admin_status || "approved",
+          created_at: s.created_at,
+          memberships: [],
+          submissionsCount: subCounts[s.id]?.total ?? 0,
+          winningCount: subCounts[s.id]?.winning ?? 0,
+        });
+      }
+
+      const entry = studentMap.get(s.id)!;
+      entry.memberships.push({
+        memberId: m.id,
+        campaignId: m.campaign_id,
+        campaignName: m.campaign?.campaign_name || m.campaign?.client_name || "Campaign",
+        clientName: m.campaign?.client_name || "Client",
+        campaignStatus: m.campaign?.status || "active",
+        status: m.status,
+        registrationStatus: m.registration_status,
+        driveUrl: m.drive_url,
+        joinedAt: m.created_at,
+      });
+    }
+
+    const students = Array.from(studentMap.values());
+    return { success: true, students };
+  } catch (error: any) {
+    return { success: false, error: error?.message ?? "Could not load campaign students.", students: [] };
+  }
+}
+
+/**
+ * Updates a campaign student's credentials, name, email, phone/WhatsApp, and status.
+ * Safely syncs both auth.users and public.profiles.
+ */
+export async function adminUpdateCampaignStudent(
+  studentId: string,
+  input: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    status?: string;
+    newPassword?: string;
+  },
+) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    if (profile.role !== "admin") {
+      return { success: false as const, error: "Only admins can edit student accounts." };
+    }
+
+    const supabase = createSupabaseServiceClient();
+
+    const fullName = cleanText(input.fullName);
+    const email = normalizeEmail(input.email);
+    const phone = normalizePhone(input.phone);
+    const status = input.status && ["approved", "active", "inactive"].includes(input.status) ? input.status : undefined;
+    const newPassword = String(input.newPassword ?? "").trim();
+
+    if (!fullName) return { success: false as const, error: "Student name cannot be empty." };
+    if (!email) return { success: false as const, error: "A valid email address is required." };
+
+    // Check duplicate email across other accounts
+    const { data: existingUser } = await supabase
+      .from("profiles" as any)
+      .select("id")
+      .ilike("email", email)
+      .neq("id", studentId)
+      .maybeSingle();
+
+    if (existingUser) {
+      return { success: false as const, error: "This email address is already registered to another account." };
+    }
+
+    if (newPassword && newPassword.length < 6) {
+      return { success: false as const, error: "Password must be at least 6 characters long." };
+    }
+
+    // Update auth.users
+    const authPayload: any = {
+      email,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        phone: phone || null,
+      },
+    };
+    if (newPassword) {
+      authPayload.password = newPassword;
+    }
+
+    const { error: authError } = await supabase.auth.admin.updateUserById(studentId, authPayload);
+    if (authError) return { success: false as const, error: authError.message };
+
+    // Update public.profiles
+    const profileUpdate: any = {
+      full_name: fullName,
+      email: email,
+      phone: phone || null,
+    };
+    if (status) {
+      profileUpdate.status = status === "inactive" ? "inactive" : "approved";
+      profileUpdate.admin_status = status === "inactive" ? "inactive" : "approved";
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles" as any)
+      .update(profileUpdate)
+      .eq("id", studentId);
+
+    if (profileError) return { success: false as const, error: profileError.message };
+
+    revalidateCampaign();
+    return { success: true as const };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not update student account." };
+  }
+}
+
+/**
+ * Permanently deletes a student's campaign memberships, submissions, enrollments,
+ * profile, and auth login account.
+ */
+export async function adminDeleteCampaignStudent(studentId: string) {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.edit");
+    if (profile.role !== "admin") {
+      return { success: false as const, error: "Only admins can delete student accounts." };
+    }
+
+    const supabase = createSupabaseServiceClient();
+
+    // 1. Delete campaign memberships
+    await supabase.from("sm_campaign_members" as any).delete().eq("student_id", studentId);
+
+    // 2. Delete submissions
+    await supabase.from("sm_day_submissions" as any).delete().eq("student_id", studentId);
+
+    // 3. Delete enrollments
+    await supabase.from("enrollments" as any).delete().eq("student_id", studentId);
+
+    // 4. Delete profile
+    await supabase.from("profiles" as any).delete().eq("id", studentId);
+
+    // 5. Delete auth user
+    await supabase.auth.admin.deleteUser(studentId).catch(() => null);
+
+    revalidateCampaign();
+    return { success: true as const };
+  } catch (error: any) {
+    return { success: false as const, error: error?.message ?? "Could not delete student account." };
+  }
+}
+
+/**
+ * Assigns an existing student to an additional campaign.
+ */
+export async function adminAssignStudentToCampaign(studentId: string, campaignId: string, driveUrl?: string) {
+  return addCampaignMember(campaignId, studentId, driveUrl || "");
+}
+
