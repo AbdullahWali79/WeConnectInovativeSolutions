@@ -45,14 +45,23 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
   const activeBrandingStyle = brandingToCssVars(activeBranding);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(profile);
   const [menuVisibility, setMenuVisibility] = useState<Record<string, boolean> | null>(null);
   const [menuOrder, setMenuOrder] = useState<Record<string, number>>({});
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   useEffect(() => {
+    setCurrentProfile(profile);
+  }, [profile]);
+
+  useEffect(() => {
     const handleOpen = () => setPasswordModalOpen(true);
     window.addEventListener("open-change-password", handleOpen);
-    return () => window.removeEventListener("open-change-password", handleOpen);
+    window.addEventListener("open-account-settings", handleOpen);
+    return () => {
+      window.removeEventListener("open-change-password", handleOpen);
+      window.removeEventListener("open-account-settings", handleOpen);
+    };
   }, []);
 
   useEffect(() => {
@@ -248,16 +257,16 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
 
             {!collapsed ? (
               <div className="rounded-xl bg-white/10 p-4">
-                <p className="truncate text-sm font-bold">{profile?.full_name ?? "Student"}</p>
-                <p className="truncate text-xs text-blue-100">{profile?.email}</p>
+                <p className="truncate text-sm font-bold">{currentProfile?.full_name ?? "Student"}</p>
+                <p className="truncate text-xs text-blue-100">{currentProfile?.email}</p>
                 <div className="mt-3 flex flex-col gap-1.5">
                   <button
                     type="button"
                     onClick={() => setPasswordModalOpen(true)}
                     className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/25 shadow-sm"
                   >
-                    <Icon name="lock" className="text-sm" />
-                    Change Password
+                    <Icon name="manage_accounts" className="text-base" />
+                    Edit Profile &amp; Password
                   </button>
                   <button
                     onClick={logout}
@@ -273,18 +282,18 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
                 <button
                   type="button"
                   onClick={() => setPasswordModalOpen(true)}
-                  title="Change Password"
-                  aria-label="Change Password"
+                  title="Edit Profile & Password"
+                  aria-label="Edit Profile & Password"
                   className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white transition hover:bg-white/25 shadow-sm"
                 >
-                  <Icon name="lock" className="text-lg" />
+                  <Icon name="manage_accounts" className="text-lg" />
                 </button>
                 <button
                   type="button"
                   onClick={logout}
                   title="Sign out"
                   aria-label="Sign out"
-                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/30 text-white transition hover:bg-white/10"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 text-white transition hover:bg-white/10"
                 >
                   <Icon name="logout" className="text-lg" />
                 </button>
@@ -306,7 +315,11 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
       <ChangePasswordModal
         isOpen={passwordModalOpen}
         onClose={() => setPasswordModalOpen(false)}
-        userEmail={profile?.email}
+        profile={currentProfile}
+        userEmail={currentProfile?.email}
+        onSuccess={(updated) => {
+          setCurrentProfile((prev) => (prev ? { ...prev, full_name: updated.fullName, email: updated.email, phone: updated.phone || prev.phone } : prev));
+        }}
       />
     </div>
   );

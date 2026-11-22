@@ -129,13 +129,14 @@ export function CampaignPortal() {
               type="button"
               onClick={() => {
                 if (typeof window !== "undefined") {
-                  window.dispatchEvent(new Event("open-change-password"));
+                  window.dispatchEvent(new Event("open-account-settings"));
                 }
               }}
+              title="Edit your name, email, phone number, or change password"
               className="inline-flex items-center gap-1.5 rounded-2xl border border-outline-variant/60 bg-surface-lowest/90 backdrop-blur-sm px-3.5 py-3 text-xs font-bold text-on-surface shadow-sm transition hover:bg-surface hover:border-primary/40 hover:text-primary"
             >
-              <Icon name="key" className="text-base text-primary" />
-              <span>Change Password</span>
+              <Icon name="manage_accounts" className="text-base text-primary" />
+              <span>Edit Profile &amp; Password</span>
             </button>
             <div className="rounded-2xl border border-outline-variant/60 bg-surface-lowest/80 backdrop-blur-sm p-3 text-center min-w-[90px] shadow-sm">
               <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Active</p>
@@ -449,14 +450,14 @@ function CampaignDetail({
             type="button"
             onClick={() => {
               if (typeof window !== "undefined") {
-                window.dispatchEvent(new Event("open-change-password"));
+                window.dispatchEvent(new Event("open-account-settings"));
               }
             }}
-            title="Change your login password"
+            title="Edit your email, phone, or password"
             className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-lowest px-2.5 py-1 text-[11px] font-bold text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm transition"
           >
-            <Icon name="key" className="text-xs text-primary" />
-            <span className="hidden sm:inline">Password</span>
+            <Icon name="manage_accounts" className="text-xs text-primary" />
+            <span className="hidden sm:inline">Profile &amp; Password</span>
           </button>
         </div>
       </div>

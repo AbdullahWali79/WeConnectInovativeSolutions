@@ -2,16 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/icon";
-import { changeStudentPassword } from "@/app/student/actions";
+import { updateStudentAccountCredentials } from "@/app/student/actions";
+import { useRouter } from "next/navigation";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  profile?: { full_name?: string | null; email?: string | null; phone?: string | null } | null;
   userEmail?: string | null;
-  onSuccess?: () => void;
+  onSuccess?: (updated: { fullName: string; email: string; phone?: string | null }) => void;
 };
 
-export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: Props) {
+export function ChangePasswordModal({ isOpen, onClose, profile, userEmail, onSuccess }: Props) {
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [wantChangePassword, setWantChangePassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,13 +29,18 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
 
   useEffect(() => {
     if (!isOpen) {
-      setPassword("");
-      setConfirmPassword("");
       setError("");
       setSuccess(false);
       setSaving(false);
+      setPassword("");
+      setConfirmPassword("");
+      setWantChangePassword(false);
       return;
     }
+
+    setFullName(profile?.full_name || "");
+    setEmail(profile?.email || userEmail || "");
+    setPhone(profile?.phone || "");
 
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -40,7 +52,7 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [isOpen, onClose, saving]);
+  }, [isOpen, onClose, profile, userEmail, saving]);
 
   if (!isOpen) return null;
 
@@ -48,27 +60,51 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
     e.preventDefault();
     setError("");
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    const cleanName = fullName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
+
+    if (!cleanName) {
+      setError("Full name is required.");
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match. Please verify.");
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError("Please enter a valid email address.");
       return;
+    }
+
+    if (wantChangePassword || password) {
+      if (password.length < 6) {
+        setError("New password must be at least 6 characters long.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("New passwords do not match. Please verify.");
+        return;
+      }
     }
 
     setSaving(true);
-    const res = await changeStudentPassword(password);
+    const res = await updateStudentAccountCredentials({
+      fullName: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone || undefined,
+      newPassword: password.trim() ? password.trim() : undefined,
+    });
     setSaving(false);
 
     if (!res.success) {
-      setError(res.error || "Failed to update password.");
+      setError(res.error || "Failed to update profile.");
       return;
     }
 
     setSuccess(true);
-    if (onSuccess) onSuccess();
+    if (onSuccess && res.data) {
+      onSuccess(res.data);
+    }
+    router.refresh();
+
     setTimeout(() => {
       onClose();
     }, 1200);
@@ -78,27 +114,25 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="change-password-title"
+      aria-labelledby="student-account-modal-title"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget && !saving) onClose();
       }}
     >
-      <div className="relative w-full max-w-md rounded-2xl border border-outline-variant/60 bg-surface p-6 shadow-2xl">
-        <div className="flex items-center justify-between pb-4 border-b border-outline-variant/40">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Icon name="lock" className="text-xl" />
+      <div className="relative w-full max-w-lg rounded-2xl border border-outline-variant/60 bg-surface p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between pb-3.5 border-b border-outline-variant/40">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Icon name="manage_accounts" className="text-2xl" />
             </div>
             <div>
-              <h2 id="change-password-title" className="text-lg font-black text-on-surface">
-                Change Password
+              <h2 id="student-account-modal-title" className="text-base sm:text-lg font-black text-on-surface">
+                Account &amp; Security Settings
               </h2>
-              {userEmail && (
-                <p className="text-xs text-on-surface-variant font-medium truncate max-w-[220px]">
-                  {userEmail}
-                </p>
-              )}
+              <p className="text-xs text-on-surface-variant font-medium">
+                Edit your login email, phone number, name &amp; password
+              </p>
             </div>
           </div>
           <button
@@ -117,11 +151,13 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
               <Icon name="check" className="text-3xl" />
             </div>
-            <h3 className="text-base font-bold text-on-surface">Password updated!</h3>
-            <p className="text-xs text-on-surface-variant">Your new password is now active.</p>
+            <h3 className="text-base font-bold text-on-surface">Account Updated Successfully!</h3>
+            <p className="text-xs text-on-surface-variant">
+              Your new email, phone, and credentials have been saved.
+            </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
                 {error}
@@ -129,60 +165,141 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
             )}
 
             <div>
-              <label className="block text-xs font-bold text-on-surface mb-1.5">
-                New Password
+              <label className="block text-xs font-bold text-on-surface mb-1">
+                Full Name
               </label>
-              <div className="relative">
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your full name"
+                required
+                disabled={saving}
+                className="w-full rounded-xl border border-outline-variant bg-surface-lowest px-3.5 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  Email (Login ID)
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="student@example.com"
                   required
-                  minLength={6}
                   disabled={saving}
-                  className="w-full rounded-xl border border-outline-variant bg-surface-lowest px-3.5 py-2.5 pr-10 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                  className="w-full rounded-xl border border-outline-variant bg-surface-lowest px-3.5 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                 />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
-                >
-                  <Icon name={showPassword ? "visibility_off" : "visibility"} className="text-base" />
-                </button>
+                <p className="mt-1 text-[10px] text-on-surface-variant">
+                  Used to sign in at <span className="font-semibold">/login</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="03xx-xxxxxxx"
+                  disabled={saving}
+                  className="w-full rounded-xl border border-outline-variant bg-surface-lowest px-3.5 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                />
+                <p className="mt-1 text-[10px] text-on-surface-variant">
+                  Contact / WhatsApp number
+                </p>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-on-surface mb-1.5">
-                Confirm New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter new password"
-                  required
-                  minLength={6}
-                  disabled={saving}
-                  className="w-full rounded-xl border border-outline-variant bg-surface-lowest px-3.5 py-2.5 pr-10 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                />
+            {/* Password Section */}
+            <div className="pt-2 border-t border-outline-variant/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                  <Icon name="lock" className="text-sm text-primary" />
+                  Password
+                </span>
                 <button
                   type="button"
-                  tabIndex={-1}
-                  aria-label={showConfirm ? "Hide password" : "Show password"}
-                  onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                  onClick={() => {
+                    setWantChangePassword((v) => !v);
+                    if (wantChangePassword) {
+                      setPassword("");
+                      setConfirmPassword("");
+                    }
+                  }}
+                  className="text-xs font-bold text-primary hover:underline"
                 >
-                  <Icon name={showConfirm ? "visibility_off" : "visibility"} className="text-base" />
+                  {wantChangePassword ? "Cancel Password Change" : "Change Password"}
                 </button>
               </div>
+
+              {wantChangePassword ? (
+                <div className="space-y-3 rounded-xl border border-outline-variant/60 bg-surface-lowest p-3.5 animate-in fade-in duration-150">
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface mb-1">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="At least 6 characters"
+                        minLength={6}
+                        disabled={saving}
+                        className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 pr-9 text-xs text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                      >
+                        <Icon name={showPassword ? "visibility_off" : "visibility"} className="text-sm" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface mb-1">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirm ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Re-enter new password"
+                        minLength={6}
+                        disabled={saving}
+                        className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 pr-9 text-xs text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        aria-label={showConfirm ? "Hide password" : "Show password"}
+                        onClick={() => setShowConfirm((v) => !v)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                      >
+                        <Icon name={showConfirm ? "visibility_off" : "visibility"} className="text-sm" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-on-surface-variant">
+                  Password remains unchanged. Click &quot;Change Password&quot; above if you want to set a new password.
+                </p>
+              )}
             </div>
 
-            <div className="pt-2 flex items-center justify-end gap-2.5">
+            <div className="pt-3 border-t border-outline-variant/40 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={onClose}
@@ -202,7 +319,7 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
                   </>
                 ) : (
                   <>
-                    <Icon name="lock_reset" className="text-sm" /> Save Password
+                    <Icon name="save" className="text-sm" /> Save Changes
                   </>
                 )}
               </button>
@@ -213,3 +330,6 @@ export function ChangePasswordModal({ isOpen, onClose, userEmail, onSuccess }: P
     </div>
   );
 }
+
+// Re-export alias for backward compatibility
+export { ChangePasswordModal as StudentAccountModal };

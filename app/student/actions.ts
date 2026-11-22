@@ -30,7 +30,7 @@ async function requireStudentProfile() {
     throw new Error("Student profile could not be verified.");
   }
 
-  return { supabase, profile };
+  return { supabase, profile, user };
 }
 
 function actionError(error: unknown, fallback: string) {
@@ -280,5 +280,103 @@ export async function changeStudentPassword(newPassword: string): Promise<Action
     return { success: true, data: null, error: null };
   } catch (error) {
     return { success: false, data: null, error: actionError(error, "Failed to update password.") };
+  }
+}
+
+export async function updateStudentAccountCredentials(input: {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  newPassword?: string;
+}): Promise<ActionResult<{ fullName: string; email: string; phone: string | null }>> {
+  try {
+    const { profile, user } = await requireStudentProfile();
+    const admin = createSupabaseServiceClient();
+
+    const fullName = input.fullName !== undefined ? String(input.fullName ?? "").trim() : (profile.full_name || "");
+    const email = input.email !== undefined ? String(input.email ?? "").trim().toLowerCase() : (profile.email || "");
+    const phone = input.phone !== undefined ? String(input.phone ?? "").trim() : (profile.phone || "");
+    const newPassword = String(input.newPassword ?? "").trim();
+
+    if (!fullName) {
+      return { success: false, data: null, error: "Full name cannot be empty." };
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, data: null, error: "A valid email address is required." };
+    }
+
+    // 1. If email changed, check if already in use by another user
+    const emailChanged = email.toLowerCase() !== (profile.email || "").toLowerCase();
+    if (emailChanged) {
+      const { data: existingUser } = await admin
+        .from("profiles")
+        .select("id")
+        .ilike("email", email)
+        .neq("id", user.id)
+        .maybeSingle();
+
+      if (existingUser) {
+        return { success: false, data: null, error: "This email address is already registered to another account." };
+      }
+    }
+
+    // 2. Validate password if provided
+    if (newPassword && newPassword.length < 6) {
+      return { success: false, data: null, error: "New password must be at least 6 characters long." };
+    }
+
+    // 3. Prepare auth update payload
+    const authUpdatePayload: Parameters<typeof admin.auth.admin.updateUserById>[1] = {
+      user_metadata: {
+        ...(user.user_metadata || {}),
+        full_name: fullName,
+        phone: phone || null,
+      },
+    };
+
+    if (emailChanged) {
+      authUpdatePayload.email = email;
+      authUpdatePayload.email_confirm = true;
+    }
+
+    if (newPassword) {
+      authUpdatePayload.password = newPassword;
+    }
+
+    // 4. Update auth.users
+    const { error: authError } = await admin.auth.admin.updateUserById(user.id, authUpdatePayload);
+    if (authError) {
+      return { success: false, data: null, error: authError.message };
+    }
+
+    // 5. Update public.profiles
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({
+        full_name: fullName,
+        email: email,
+        phone: phone || null,
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      return { success: false, data: null, error: profileError.message };
+    }
+
+    revalidatePath("/student");
+    revalidatePath("/student/campaigns");
+    revalidatePath("/student/profile");
+
+    return {
+      success: true,
+      data: {
+        fullName,
+        email,
+        phone: phone || null,
+      },
+      error: null,
+    };
+  } catch (error) {
+    return { success: false, data: null, error: actionError(error, "Failed to update account details.") };
   }
 }
