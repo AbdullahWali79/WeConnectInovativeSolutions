@@ -13,6 +13,7 @@ import { brandingToCssVars } from "@/lib/branding-settings";
 import type { BrandingSettingsSnapshot } from "@/lib/supabase/types";
 import { useBranding } from "@/components/branding-provider";
 import { StudentActivityTracker } from "@/components/student/student-activity-tracker";
+import { ChangePasswordModal } from "@/components/student/change-password-modal";
 
 type StudentNavItem = { href: string; label: string; icon: string; campaignOnly?: boolean };
 
@@ -46,6 +47,13 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuVisibility, setMenuVisibility] = useState<Record<string, boolean> | null>(null);
   const [menuOrder, setMenuOrder] = useState<Record<string, number>>({});
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setPasswordModalOpen(true);
+    window.addEventListener("open-change-password", handleOpen);
+    return () => window.removeEventListener("open-change-password", handleOpen);
+  }, []);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -242,21 +250,45 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
               <div className="rounded-xl bg-white/10 p-4">
                 <p className="truncate text-sm font-bold">{profile?.full_name ?? "Student"}</p>
                 <p className="truncate text-xs text-blue-100">{profile?.email}</p>
-                <button onClick={logout} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/30 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/10">
-                  <Icon name="logout" className="text-lg" />
-                  Sign out
-                </button>
+                <div className="mt-3 flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordModalOpen(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/25 shadow-sm"
+                  >
+                    <Icon name="lock" className="text-sm" />
+                    Change Password
+                  </button>
+                  <button
+                    onClick={logout}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/10"
+                  >
+                    <Icon name="logout" className="text-sm" />
+                    Sign out
+                  </button>
+                </div>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={logout}
-                title="Sign out"
-                aria-label="Sign out"
-                className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/30 text-white transition hover:bg-white/10"
-              >
-                <Icon name="logout" className="text-xl" />
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPasswordModalOpen(true)}
+                  title="Change Password"
+                  aria-label="Change Password"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white transition hover:bg-white/25 shadow-sm"
+                >
+                  <Icon name="lock" className="text-lg" />
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  title="Sign out"
+                  aria-label="Sign out"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/30 text-white transition hover:bg-white/10"
+                >
+                  <Icon name="logout" className="text-lg" />
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -270,6 +302,12 @@ export function StudentShell({ profile, branding, isFreelancer, hasCampaigns, ch
       >
         {children}
       </main>
+
+      <ChangePasswordModal
+        isOpen={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        userEmail={profile?.email}
+      />
     </div>
   );
 }

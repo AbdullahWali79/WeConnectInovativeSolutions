@@ -259,3 +259,26 @@ export async function fetchGoogleMapsBusinessDetails(input: {
     return { success: false, data: null, error: actionError(error, "Failed to fetch business details.") };
   }
 }
+
+export async function changeStudentPassword(newPassword: string): Promise<ActionResult> {
+  try {
+    const { profile } = await requireStudentProfile();
+    const cleanPassword = String(newPassword ?? "").trim();
+    if (!cleanPassword || cleanPassword.length < 6) {
+      return { success: false, data: null, error: "Password must be at least 6 characters long." };
+    }
+
+    const admin = createSupabaseServiceClient();
+    const { error } = await admin.auth.admin.updateUserById(profile.id, {
+      password: cleanPassword,
+    });
+
+    if (error) {
+      return { success: false, data: null, error: error.message };
+    }
+
+    return { success: true, data: null, error: null };
+  } catch (error) {
+    return { success: false, data: null, error: actionError(error, "Failed to update password.") };
+  }
+}

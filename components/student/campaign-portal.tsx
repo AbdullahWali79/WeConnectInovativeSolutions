@@ -125,6 +125,18 @@ export function CampaignPortal() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new Event("open-change-password"));
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-outline-variant/60 bg-surface-lowest/90 backdrop-blur-sm px-3.5 py-3 text-xs font-bold text-on-surface shadow-sm transition hover:bg-surface hover:border-primary/40 hover:text-primary"
+            >
+              <Icon name="key" className="text-base text-primary" />
+              <span>Change Password</span>
+            </button>
             <div className="rounded-2xl border border-outline-variant/60 bg-surface-lowest/80 backdrop-blur-sm p-3 text-center min-w-[90px] shadow-sm">
               <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Active</p>
               <p className="text-lg font-black text-emerald-600">{campaigns.length}</p>
@@ -432,6 +444,20 @@ function CampaignDetail({
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Ongoing
             </span>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new Event("open-change-password"));
+              }
+            }}
+            title="Change your login password"
+            className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-lowest px-2.5 py-1 text-[11px] font-bold text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm transition"
+          >
+            <Icon name="key" className="text-xs text-primary" />
+            <span className="hidden sm:inline">Password</span>
+          </button>
         </div>
       </div>
     </div>
