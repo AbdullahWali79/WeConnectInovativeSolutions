@@ -57,6 +57,7 @@ export function StudentSheetView({
   const [saving, setSaving] = useState(false);
   const [deletingDayId, setDeletingDayId] = useState<string | null>(null);
   const [mobileMode, setMobileMode] = useState<"cards" | "grid">("cards");
+  const [showCollaborators, setShowCollaborators] = useState(false);
 
   // Group days into weeks (Days 1-7 = Week 1, 8-14 = Week 2, etc.)
   const weeks = useMemo(() => {
@@ -153,83 +154,103 @@ export function StudentSheetView({
     <div className="space-y-2.5">
       {/* GOOGLE SHEETS TOOLBAR & FORMULA BAR */}
       <div className="overflow-hidden rounded-2xl border border-[#dadce0] dark:border-zinc-800 bg-[#f8f9fa] dark:bg-zinc-900/80 shadow-sm">
-        {/* Spreadsheet Quick Actions Strip */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#dadce0] dark:border-zinc-800 px-3 py-2 bg-surface-lowest">
-          {/* Assigned Collaborators in Google Sheet Presence Format */}
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#0F9D58]/10 text-[#0F9D58]">
-              <Icon name="groups" className="text-sm" />
-            </span>
-            <span className="text-xs font-bold text-on-surface">Collaborators:</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {members.map((m) => {
-                const isMe = m.student_id === currentUserId;
-                return (
-                  <span
-                    key={m.student_id}
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                      isMe
-                        ? "bg-[#0F9D58] text-white shadow-sm"
-                        : "border border-outline-variant/60 bg-surface-low text-on-surface"
-                    }`}
-                  >
-                    <Icon name="person" className="text-[10px]" />
-                    {m.student?.full_name || "Student"} {isMe && "(You)"}
-                  </span>
-                );
-              })}
+        {/* Authentic Google Sheets Formula Bar (fx) with Collapsible Collaborators & Mode Toggles */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 text-xs border-b border-[#dadce0] dark:border-zinc-800 bg-[#f8f9fa] dark:bg-zinc-900/90 font-mono">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Cell Coordinate Box */}
+            <div className="flex items-center justify-center min-w-[54px] rounded border border-[#dadce0] dark:border-zinc-700 bg-surface-lowest px-2 py-0.5 text-[11px] font-bold text-on-surface shadow-xs">
+              {activePromptDay ? `Day ${activePromptDay.day_number}` : "A1"}
+            </div>
+
+            {/* fx symbol */}
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-zinc-500 font-serif italic font-bold select-none">
+              fx
+            </div>
+
+            <div className="h-4 w-px bg-outline-variant/60 shrink-0" />
+
+            {/* Formula text / Active prompt info */}
+            <div className="min-w-0 flex-1 truncate text-[11px] text-on-surface">
+              <span className="text-[#0F9D58] font-bold font-mono">=CONTENT_PLAN(</span>
+              <span className="text-blue-600 font-semibold">&quot;{campaign.client_name}&quot;</span>
+              <span className="text-[#0F9D58] font-bold">)</span>
+              {activePromptDay && (
+                <span className="text-on-surface-variant font-sans ml-2">
+                  • <strong className="text-on-surface font-semibold">Active Prompt:</strong> {activePromptDay.theme || "Content Guideline"}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Mobile View Toggle */}
-          <div className="md:hidden flex items-center gap-1 bg-surface-low rounded-lg p-0.5 border border-outline-variant/40">
-            <button
-              type="button"
-              onClick={() => setMobileMode("cards")}
-              className={`px-2 py-0.5 text-[10px] font-bold rounded ${
-                mobileMode === "cards" ? "bg-surface-lowest text-[#0F9D58] shadow-sm" : "text-on-surface-variant"
-              }`}
-            >
-              Cards
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileMode("grid")}
-              className={`px-2 py-0.5 text-[10px] font-bold rounded ${
-                mobileMode === "grid" ? "bg-surface-lowest text-[#0F9D58] shadow-sm" : "text-on-surface-variant"
-              }`}
-            >
-              Sheet Grid
-            </button>
-          </div>
-        </div>
+          {/* Right side: Mobile View Switcher & Collaborators Collapsible Button */}
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto font-sans">
+            {/* Mobile View Toggle */}
+            <div className="md:hidden flex items-center gap-0.5 bg-surface-low rounded-lg p-0.5 border border-outline-variant/40">
+              <button
+                type="button"
+                onClick={() => setMobileMode("cards")}
+                className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                  mobileMode === "cards" ? "bg-surface-lowest text-[#0F9D58] shadow-xs" : "text-on-surface-variant"
+                }`}
+              >
+                Cards
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileMode("grid")}
+                className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                  mobileMode === "grid" ? "bg-surface-lowest text-[#0F9D58] shadow-xs" : "text-on-surface-variant"
+                }`}
+              >
+                Grid
+              </button>
+            </div>
 
-        {/* Authentic Google Sheets Formula Bar (fx) */}
-        <div className="flex items-center gap-2 px-3 py-1.5 text-xs border-b border-[#dadce0] dark:border-zinc-800 bg-[#f8f9fa] dark:bg-zinc-900/90 font-mono">
-          {/* Cell Coordinate Box */}
-          <div className="flex items-center justify-center min-w-[54px] rounded border border-[#dadce0] dark:border-zinc-700 bg-surface-lowest px-2 py-0.5 text-[11px] font-bold text-on-surface shadow-xs">
-            {activePromptDay ? `Day ${activePromptDay.day_number}` : "A1"}
-          </div>
-
-          {/* fx symbol */}
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-zinc-500 font-serif italic font-bold select-none">
-            fx
-          </div>
-
-          <div className="h-4 w-px bg-outline-variant/60 shrink-0" />
-
-          {/* Formula text / Active prompt info */}
-          <div className="min-w-0 flex-1 truncate text-[11px] text-on-surface">
-            <span className="text-[#0F9D58] font-bold font-mono">=CONTENT_PLAN(</span>
-            <span className="text-blue-600 font-semibold">&quot;{campaign.client_name}&quot;</span>
-            <span className="text-[#0F9D58] font-bold">)</span>
-            {activePromptDay && (
-              <span className="text-on-surface-variant font-sans ml-2">
-                • <strong className="text-on-surface font-semibold">Active Prompt:</strong> {activePromptDay.theme || "Content Guideline"}
-              </span>
+            {/* Collapsible Collaborators Button */}
+            {members.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowCollaborators(!showCollaborators)}
+                className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-bold border transition shadow-xs ${
+                  showCollaborators
+                    ? "bg-[#0F9D58] text-white border-[#0F9D58]"
+                    : "bg-surface-lowest border-outline-variant/60 text-on-surface-variant hover:text-[#0F9D58] hover:border-[#0F9D58]/60"
+                }`}
+                title={showCollaborators ? "Collapse Team Collaborators List" : "Expand Team Collaborators List"}
+              >
+                <Icon name="groups" className="text-xs" />
+                <span className="hidden sm:inline">Collaborators</span>
+                <span>({members.length})</span>
+                <Icon name={showCollaborators ? "expand_less" : "expand_more"} className="text-xs" />
+              </button>
             )}
           </div>
         </div>
+
+        {/* Collapsible Collaborators Panel (Smoothly Expands on Click) */}
+        {showCollaborators && (
+          <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-[#dadce0] dark:border-zinc-800 bg-surface-lowest animate-in fade-in slide-in-from-top-1 duration-150">
+            <span className="text-[11px] font-bold text-on-surface-variant mr-1 flex items-center gap-1">
+              <Icon name="groups" className="text-xs text-[#0F9D58]" /> Team Members ({members.length}):
+            </span>
+            {members.map((m) => {
+              const isMe = m.student_id === currentUserId;
+              return (
+                <span
+                  key={m.student_id}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                    isMe
+                      ? "bg-[#0F9D58] text-white shadow-xs font-black"
+                      : "border border-outline-variant/60 bg-surface-low text-on-surface"
+                  }`}
+                >
+                  <Icon name="person" className="text-[10px]" />
+                  {m.student?.full_name || "Student"} {isMe && "(You)"}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {/* Week Selector Tabs (Google Sheets Sheet Tabs Style) */}
         <div className="flex items-center justify-between gap-2 overflow-x-auto px-2.5 py-1.5 bg-[#f0f3f4] dark:bg-zinc-800/60 hide-scrollbar">

@@ -58,6 +58,8 @@ export function GoogleSheetsToolbar({
   const [activeMenuDropdown, setActiveMenuDropdown] = useState<string | null>(null);
   const [isStarred, setIsStarred] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isCompactMode, setIsCompactMode] = useState(false);
+  const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(false);
 
   // Close menu dropdown on outside click
   useEffect(() => {
@@ -186,6 +188,14 @@ export function GoogleSheetsToolbar({
           icon: isMaximized ? "fullscreen_exit" : "fullscreen",
           onClick: () => {
             onToggleMaximize();
+            setActiveMenuDropdown(null);
+          },
+        },
+        {
+          label: isCompactMode ? "Expand Menus & Toolbar" : "Compact Mode (Hide Menus)",
+          icon: isCompactMode ? "unfold_more" : "unfold_less",
+          onClick: () => {
+            setIsCompactMode(!isCompactMode);
             setActiveMenuDropdown(null);
           },
         },
@@ -356,6 +366,21 @@ export function GoogleSheetsToolbar({
             <span className="hidden sm:inline">Profile</span>
           </button>
 
+          {/* Compact View Toggle (Collapses Menus & Toolbar Ribbon) */}
+          <button
+            type="button"
+            onClick={() => setIsCompactMode(!isCompactMode)}
+            title={isCompactMode ? "Expand Menus & Toolbar Ribbon" : "Compact Mode (Hide Menus & Toolbar Ribbon for extra sheet space)"}
+            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-bold shadow-xs transition ${
+              isCompactMode
+                ? "bg-[#0F9D58] text-white border-[#0F9D58]"
+                : "border-outline-variant bg-surface-lowest text-on-surface hover:text-[#0F9D58] hover:border-[#0F9D58]/60"
+            }`}
+          >
+            <Icon name={isCompactMode ? "unfold_more" : "unfold_less"} className="text-sm" />
+            <span className="hidden md:inline">{isCompactMode ? "Expand Menus" : "Compact View"}</span>
+          </button>
+
           {/* Fullscreen / Maximize Workspace button */}
           <button
             type="button"
@@ -376,45 +401,59 @@ export function GoogleSheetsToolbar({
       {/* ---------------------------------------------------------------- */}
       {/* ROW 2: GOOGLE SHEETS TEXT MENU BAR (File, Edit, View, Insert...) */}
       {/* ---------------------------------------------------------------- */}
-      <div className="flex items-center gap-1 px-3 py-1 bg-surface-lowest border-b border-[#dadce0] dark:border-zinc-800 text-xs font-semibold text-on-surface" data-sheets-menu>
-        {menus.map((menu) => {
-          const isOpen = activeMenuDropdown === menu.id;
-          return (
-            <div key={menu.id} className="relative">
-              <button
-                type="button"
-                onClick={() => setActiveMenuDropdown(isOpen ? null : menu.id)}
-                className={`rounded px-2 py-0.5 text-xs text-on-surface transition hover:bg-surface-low ${
-                  isOpen ? "bg-surface-low font-bold text-[#0F9D58]" : ""
-                }`}
-              >
-                {menu.label}
-              </button>
+      {!isCompactMode && (
+        <div className="flex items-center gap-1 px-3 py-1 bg-surface-lowest border-b border-[#dadce0] dark:border-zinc-800 text-xs font-semibold text-on-surface animate-in fade-in duration-150" data-sheets-menu>
+          {menus.map((menu) => {
+            const isOpen = activeMenuDropdown === menu.id;
+            return (
+              <div key={menu.id} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setActiveMenuDropdown(isOpen ? null : menu.id)}
+                  className={`rounded px-2 py-0.5 text-xs text-on-surface transition hover:bg-surface-low ${
+                    isOpen ? "bg-surface-low font-bold text-[#0F9D58]" : ""
+                  }`}
+                >
+                  {menu.label}
+                </button>
 
-              {isOpen && (
-                <div className="absolute left-0 top-full mt-1 min-w-[210px] rounded-xl border border-outline-variant/80 bg-surface-lowest p-1 shadow-lg z-50 animate-in fade-in duration-100">
-                  {menu.items.map((item, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={item.onClick}
-                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-on-surface hover:bg-surface-low hover:text-[#0F9D58] transition"
-                    >
-                      <Icon name={item.icon} className="text-sm shrink-0" />
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                {isOpen && (
+                  <div className="absolute left-0 top-full mt-1 min-w-[210px] rounded-xl border border-outline-variant/80 bg-surface-lowest p-1 shadow-lg z-50 animate-in fade-in duration-100">
+                    {menu.items.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={item.onClick}
+                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-on-surface hover:bg-surface-low hover:text-[#0F9D58] transition"
+                      >
+                        <Icon name={item.icon} className="text-sm shrink-0" />
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Ribbon Collapse Chevron Button */}
+          <button
+            type="button"
+            onClick={() => setIsRibbonCollapsed(!isRibbonCollapsed)}
+            title={isRibbonCollapsed ? "Expand Toolbar Ribbon" : "Collapse Toolbar Ribbon"}
+            className="ml-auto flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-bold text-on-surface-variant hover:text-on-surface hover:bg-surface-low transition"
+          >
+            <span className="hidden sm:inline">{isRibbonCollapsed ? "Show Toolbar" : "Hide Toolbar"}</span>
+            <Icon name={isRibbonCollapsed ? "keyboard_arrow_down" : "keyboard_arrow_up"} className="text-sm" />
+          </button>
+        </div>
+      )}
 
       {/* ---------------------------------------------------------------- */}
       {/* ROW 3: ICONIC ACTION TOOLBAR RIBBON (The Google Sheets Toolbar)  */}
       {/* ---------------------------------------------------------------- */}
-      <div className="flex items-center gap-1 overflow-x-auto px-2.5 py-1 bg-[#edf2fa] dark:bg-zinc-800/80 border-b border-[#dadce0] dark:border-zinc-800 text-xs text-on-surface hide-scrollbar">
+      {!isCompactMode && !isRibbonCollapsed && (
+        <div className="flex items-center gap-1 overflow-x-auto px-2.5 py-1 bg-[#edf2fa] dark:bg-zinc-800/80 border-b border-[#dadce0] dark:border-zinc-800 text-xs text-on-surface hide-scrollbar animate-in fade-in duration-150">
         {/* Undo / Redo */}
         <button
           type="button"
@@ -563,6 +602,7 @@ export function GoogleSheetsToolbar({
           <Icon name="refresh" className="text-sm" />
         </button>
       </div>
+      )}
 
       {/* Help Modal */}
       {showHelpModal && (
