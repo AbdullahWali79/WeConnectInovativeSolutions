@@ -11,6 +11,7 @@ import {
   submitDayWork,
 } from "@/app/student/campaigns/actions";
 import { StudentSheetView } from "./student-sheet-view";
+import { GoogleSheetsToolbar } from "./google-sheets-toolbar";
 
 type Row = any;
 
@@ -293,6 +294,28 @@ function CampaignDetail({
   const [menus, setMenus] = useState({ plan: true, submit: true, history: true });
   const [tab, setTab] = useState<"sheet" | "plan" | "submit" | "history">("sheet");
   const [activeDayId, setActiveDayId] = useState<string | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && isMaximized) {
+        setIsMaximized(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMaximized]);
+
+  function handleChangeZoom(delta: number) {
+    setZoomLevel((prev) => Math.min(150, Math.max(70, prev + delta)));
+  }
+
+  function handleResetZoom() {
+    setZoomLevel(100);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -353,117 +376,6 @@ function CampaignDetail({
     );
   }
 
-  const header = (
-    <div className="overflow-hidden rounded-2xl sm:rounded-3xl border border-[#dadce0] dark:border-zinc-800 bg-surface-lowest shadow-sm">
-      {/* Google Sheets Top Titlebar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dadce0] dark:border-zinc-800 bg-[#f8f9fa] dark:bg-zinc-900/70 px-3.5 py-2.5 sm:px-5 sm:py-3">
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Back button */}
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-lowest px-2.5 py-1 text-xs font-bold text-on-surface-variant hover:text-emerald-700 hover:border-emerald-600 shadow-sm transition"
-            title="Back to all campaigns"
-          >
-            <Icon name="arrow_back" className="text-sm" />
-            <span className="hidden sm:inline">My campaigns</span>
-          </button>
-
-          {/* Google Sheets Document Icon */}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0F9D58] text-white shadow-sm">
-            <Icon name="table_chart" className="text-lg" />
-          </div>
-
-          {/* Document Title & Status */}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-sm sm:text-base font-black text-on-surface tracking-tight">
-                {campaign.client_name} <span className="font-normal text-on-surface-variant hidden md:inline">— Social Media Calendar</span>
-              </h2>
-              <span className="hidden sm:inline-flex items-center text-amber-500" title="Starred">
-                <Icon name="star" className="text-xs" />
-              </span>
-            </div>
-            <p className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-on-surface-variant truncate">
-              <span>{campaign.campaign_name || "Daily Content Workflow"}</span>
-              <span>•</span>
-              <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400 font-semibold">
-                <Icon name="cloud_done" className="text-[12px]" /> All changes saved
-              </span>
-            </p>
-          </div>
-        </div>
-
-        {/* Right side: Collaborators Avatars & Status */}
-        <div className="flex items-center gap-2.5 shrink-0 ml-auto">
-          {/* Collaborator Avatars (Like Google Sheets Live User Bubbles) */}
-          {members.length > 0 && (
-            <div className="flex items-center -space-x-1.5 overflow-hidden p-0.5">
-              {members.slice(0, 4).map((m, idx) => {
-                const isMe = m.student_id === currentUserId;
-                const name = m.student?.full_name || "Student";
-                const initials = name
-                  .split(" ")
-                  .map((w: string) => w[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase();
-                const colors = [
-                  "bg-emerald-600 text-white ring-emerald-300",
-                  "bg-blue-600 text-white ring-blue-300",
-                  "bg-purple-600 text-white ring-purple-300",
-                  "bg-amber-600 text-white ring-amber-300",
-                ];
-                const colorClass = isMe
-                  ? "bg-emerald-600 text-white ring-2 ring-emerald-500 font-black"
-                  : colors[idx % colors.length];
-
-                return (
-                  <span
-                    key={m.student_id}
-                    title={`${name} ${isMe ? "(You)" : ""}`}
-                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-surface-lowest shadow-sm ${colorClass}`}
-                  >
-                    {initials || "S"}
-                  </span>
-                );
-              })}
-              {members.length > 4 && (
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface-container text-[10px] font-bold text-on-surface ring-2 ring-surface-lowest shadow-sm">
-                  +{members.length - 4}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Campaign status */}
-          {campaign.period_end ? (
-            <span className="text-[10px] sm:text-[11px] font-semibold text-on-surface-variant bg-surface-low border border-outline-variant/50 rounded-full px-2.5 py-0.5">
-              {formatDate(campaign.period_start)} – {formatDate(campaign.period_end)}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Ongoing
-            </span>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new Event("open-account-settings"));
-              }
-            }}
-            title="Edit your email, phone, or password"
-            className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-lowest px-2.5 py-1 text-[11px] font-bold text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm transition"
-          >
-            <Icon name="manage_accounts" className="text-xs text-primary" />
-            <span className="hidden sm:inline">Profile &amp; Password</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   const tabs = [
     { id: "sheet" as const, label: "Sheet 1: Content Sheet 📊", icon: "table_chart", enabled: true },
     { id: "plan" as const, label: "Sheet 2: Detailed Plan 📅", icon: "calendar_month", enabled: menus.plan },
@@ -474,18 +386,54 @@ function CampaignDetail({
   const activeDay = days.find((day) => day.id === activeDayId) ?? nextDay ?? days[0] ?? null;
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {header}
+    <div
+      className={
+        isMaximized
+          ? "fixed inset-0 z-[9999] bg-[#f8f9fa] dark:bg-zinc-950 p-2 sm:p-4 overflow-auto space-y-3"
+          : "space-y-3 sm:space-y-4"
+      }
+    >
+      <GoogleSheetsToolbar
+        campaign={campaign}
+        days={days}
+        members={members}
+        currentUserId={currentUserId}
+        driveUrl={member.drive_url || DEFAULT_CAMPAIGN_DRIVE_FOLDER}
+        onBack={onBack}
+        isMaximized={isMaximized}
+        onToggleMaximize={() => setIsMaximized((prev) => !prev)}
+        zoomLevel={zoomLevel}
+        onChangeZoom={handleChangeZoom}
+        onResetZoom={handleResetZoom}
+        isBold={isBold}
+        onToggleBold={() => setIsBold((prev) => !prev)}
+        isItalic={isItalic}
+        onToggleItalic={() => setIsItalic((prev) => !prev)}
+        onReload={load}
+        setToast={setToast}
+        onQuickSubmitLink={() => setTab("sheet")}
+        onSelectTab={(tabId) => {
+          if (tabId === "sheet" || tabId === "plan" || tabId === "submit" || tabId === "history") {
+            setTab(tabId);
+          }
+        }}
+      />
 
       {tabs.length === 0 ? (
         <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-8 text-center text-sm text-on-surface-variant">
           Your admin has not enabled any section for you yet.
         </div>
       ) : (
-        <>
+        <div
+          style={zoomLevel !== 100 ? { zoom: `${zoomLevel}%` } : undefined}
+          className={`space-y-3 transition-all ${isBold ? "font-semibold" : ""} ${isItalic ? "italic" : ""}`}
+        >
           {/* Google Sheets Workbook Tabs Bar */}
           <div className="flex items-center gap-1 overflow-x-auto border-b border-[#dadce0] dark:border-zinc-800 bg-[#f8f9fa] dark:bg-zinc-900/60 p-1.5 rounded-2xl hide-scrollbar shadow-inner">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-low text-xs font-bold shrink-0 cursor-default" title="Google Sheets Tabs">
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-low text-xs font-bold shrink-0 cursor-default"
+              title="Google Sheets Tabs"
+            >
               <Icon name="add" className="text-sm text-on-surface-variant" />
             </span>
             {tabs.map((item) => {
@@ -500,7 +448,10 @@ function CampaignDetail({
                       : "text-on-surface-variant hover:bg-surface-lowest/70 hover:text-on-surface"
                   }`}
                 >
-                  <Icon name={item.icon} className={`text-[15px] ${active ? "text-[#0F9D58]" : "text-on-surface-variant"}`} />
+                  <Icon
+                    name={item.icon}
+                    className={`text-[15px] ${active ? "text-[#0F9D58]" : "text-on-surface-variant"}`}
+                  />
                   <span>{item.label}</span>
                 </button>
               );
@@ -519,7 +470,9 @@ function CampaignDetail({
             />
           )}
 
-          {tab === "plan" && <PlanPanel days={days} byDay={byDay} activeDayId={activeDay?.id ?? null} onPick={setActiveDayId} />}
+          {tab === "plan" && (
+            <PlanPanel days={days} byDay={byDay} activeDayId={activeDay?.id ?? null} onPick={setActiveDayId} />
+          )}
 
           {tab === "submit" && (
             <SubmitPanel
@@ -541,7 +494,7 @@ function CampaignDetail({
           )}
 
           {tab === "history" && <HistoryPanel days={days} submissions={submissions} />}
-        </>
+        </div>
       )}
     </div>
   );
