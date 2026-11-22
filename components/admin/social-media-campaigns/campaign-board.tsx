@@ -62,18 +62,21 @@ function formatDate(value?: string | null) {
 
 export function CampaignBoard({
   campaignId,
+  initialCampaign = null,
   onBack,
   role,
   teachers = [],
 }: {
   campaignId: string;
+  initialCampaign?: Row | null;
   onBack: () => void;
   role: string;
   teachers?: Row[];
 }) {
   const [toast, setToast] = useState<ToastState>(null);
-  const [loading, setLoading] = useState(true);
-  const [campaign, setCampaign] = useState<Row | null>(null);
+  const [loading, setLoading] = useState(!initialCampaign);
+  const [refreshing, setRefreshing] = useState(false);
+  const [campaign, setCampaign] = useState<Row | null>(initialCampaign);
   const [days, setDays] = useState<Row[]>([]);
   const [members, setMembers] = useState<Row[]>([]);
   const [submissions, setSubmissions] = useState<Row[]>([]);
@@ -90,7 +93,8 @@ export function CampaignBoard({
   const [isEditingCampaign, setIsEditingCampaign] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!campaign) setLoading(true);
+    else setRefreshing(true);
     const res = await fetchCampaignDetail(campaignId);
     if (res.success) {
       setCampaign(res.campaign as Row);
@@ -102,7 +106,8 @@ export function CampaignBoard({
       setToast({ type: "error", message: res.error || "Could not load this campaign." });
     }
     setLoading(false);
-  }, [campaignId]);
+    setRefreshing(false);
+  }, [campaignId, campaign]);
 
   useEffect(() => {
     void load();
@@ -179,7 +184,7 @@ export function CampaignBoard({
     setUploadingDays(true);
     try {
       const buffer = await file.arrayBuffer();
-      const parsed = parseCampaignPlan(buffer);
+      const parsed = await parseCampaignPlan(buffer);
       if (parsed.days.length === 0) {
         setToast({ type: "error", message: parsed.warnings[0] || "No day rows found in this file." });
         return;
@@ -291,7 +296,7 @@ export function CampaignBoard({
     setToast({ type: "success", message: teacherId ? `${teacher?.full_name || "Teacher"} assigned` : "Teacher removed" });
   }
 
-  if (loading) {
+  if (loading && !campaign) {
     return (
       <div className="flex items-center justify-center gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-16 text-on-surface-variant">
         <Icon name="sync" className="animate-spin" /> Loading campaign…
@@ -312,6 +317,11 @@ export function CampaignBoard({
 
   return (
     <div className="space-y-4">
+      {refreshing && (
+        <div className="h-1 w-full overflow-hidden rounded-full bg-primary/10">
+          <div className="h-full bg-primary animate-pulse w-2/3 rounded-full" />
+        </div>
+      )}
       <Toast toast={toast} onClear={() => setToast(null)} />
 
       {setupMissing && (
@@ -1876,7 +1886,7 @@ function TeamPanel({
     setUploading(true);
     try {
       const buffer = await file.arrayBuffer();
-      const parsed = parseCampaignPlan(buffer);
+      const parsed = await parseCampaignPlan(buffer);
       if (parsed.days.length === 0) {
         setToast({ type: "error", message: parsed.warnings[0] || "No day rows found in this file." });
         return;

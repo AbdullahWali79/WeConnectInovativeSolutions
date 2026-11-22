@@ -1,4 +1,12 @@
-import * as xlsx from "xlsx";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Dynamic import helper to keep the massive xlsx bundle (~1.5MB) out of the critical client bundle
+let _xlsxCache: any = null;
+async function getXlsx() {
+  if (!_xlsxCache) {
+    _xlsxCache = await import("xlsx");
+  }
+  return _xlsxCache;
+}
 
 /**
  * Reads a client's day-wise social media plan (the "30-Day Calendar" workbook)
@@ -99,16 +107,16 @@ function extractYear(value: unknown): number | null {
   return match ? Number(match[1]) : null;
 }
 
-function pickSheet(workbook: xlsx.WorkBook) {
+function pickSheet(workbook: any, xlsx: any) {
   const names = workbook.SheetNames;
-  const byName = names.find((name) => /calendar|30.?day|day.?wise|plan|schedule/i.test(name));
+  const byName = names.find((name: string) => /calendar|30.?day|day.?wise|plan|schedule/i.test(name));
   if (byName) return byName;
 
   // Otherwise choose the sheet that actually contains a "Day" column header.
   let best = names[0];
   let bestScore = -1;
   for (const name of names) {
-    const rows = xlsx.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], { header: 1, blankrows: false });
+    const rows = xlsx.utils.sheet_to_json(workbook.Sheets[name], { header: 1, blankrows: false }) as unknown[][];
     const score = rows.slice(0, 5).reduce((total, row) => {
       const hasDay = row.some((cell) => normalizeHeader(cell) === "day");
       return total + (hasDay ? 100 : 0) + row.filter((cell) => text(cell)).length;
@@ -121,12 +129,12 @@ function pickSheet(workbook: xlsx.WorkBook) {
   return best;
 }
 
-function readReadMe(workbook: xlsx.WorkBook) {
+function readReadMe(workbook: any, xlsx: any) {
   const meta: Record<string, string> = {};
-  const name = workbook.SheetNames.find((sheet) => /read ?me|info|overview|about/i.test(sheet));
+  const name = workbook.SheetNames.find((sheet: string) => /read ?me|info|overview|about/i.test(sheet));
   if (!name) return meta;
 
-  const rows = xlsx.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], { header: 1, blankrows: false });
+  const rows = xlsx.utils.sheet_to_json(workbook.Sheets[name], { header: 1, blankrows: false }) as unknown[][];
   rows.forEach((row, index) => {
     const filled = row.filter((cell) => text(cell));
     // A merged title row lands here as a single filled cell.
@@ -153,14 +161,15 @@ function collectPlatformPlan(cells: { label: string; value: string | null }[]) {
   return filled.map((cell) => `${cell.label}: ${cell.value}`).join("\n");
 }
 
-export function parseCampaignPlan(data: ArrayBuffer): ParsedPlan {
+export async function parseCampaignPlan(data: ArrayBuffer): Promise<ParsedPlan> {
+  const xlsx = await getXlsx();
   const workbook = xlsx.read(data, { type: "array" });
-  const sheetName = pickSheet(workbook);
-  const rows = xlsx.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], {
+  const sheetName = pickSheet(workbook, xlsx);
+  const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
     header: 1,
     blankrows: false,
     raw: false,
-  });
+  }) as unknown[][];
 
   const warnings: string[] = [];
   if (rows.length === 0) {
@@ -213,7 +222,7 @@ export function parseCampaignPlan(data: ArrayBuffer): ParsedPlan {
   const ctaCol = column((value) => /^cta$|call to action/.test(value));
   const metricsCol = column((value) => /metric/.test(value));
 
-  const readMe = readReadMe(workbook);
+  const readMe = readReadMe(workbook, xlsx);
   const yearHint =
     extractYear(readMe["period"]) ??
     extractYear(readMe["date range"]) ??
@@ -310,7 +319,7 @@ export function emptyPlanDay(dayNumber: number): PlanDay {
  * Downloads a ready-to-fill Excel template for social media campaigns with all
  * the standard columns (Topic, Hook, Scene-by-scene script, Video prompt, Doc link, etc.).
  */
-export function downloadCampaignTemplate() {
+export async function downloadCampaignTemplate() {
   const sampleData = [
     {
       "Day": 1,
@@ -342,6 +351,7 @@ export function downloadCampaignTemplate() {
     }
   ];
 
+  const xlsx = await getXlsx();
   const worksheet = xlsx.utils.json_to_sheet(sampleData);
   worksheet["!cols"] = [
     { wch: 6 },  // Day

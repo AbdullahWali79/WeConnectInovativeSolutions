@@ -113,6 +113,7 @@ export function CampaignsManager({
         <Toast toast={toast} onClear={() => setToast(null)} />
         <CampaignBoard
           campaignId={openId}
+          initialCampaign={campaigns.find((c) => c.id === openId) ?? null}
           role={role}
           teachers={teachers}
           onBack={() => {
@@ -380,7 +381,7 @@ function CampaignFormModal({
     setFileName(file.name);
     try {
       const buffer = await file.arrayBuffer();
-      const parsed = parseCampaignPlan(buffer);
+      const parsed = await parseCampaignPlan(buffer);
       setPlan(parsed);
       setForm((current) => ({
         ...current,

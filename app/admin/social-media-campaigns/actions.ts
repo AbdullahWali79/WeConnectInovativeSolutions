@@ -189,7 +189,6 @@ export async function fetchCampaignWorkspace() {
 export async function fetchCampaignDetail(campaignId: string) {
   try {
     const profile = await requireCampaignAccess("social_campaigns.view");
-    await assertCampaignAccess(campaignId, profile);
     const supabase = createSupabaseServiceClient();
 
     const [
@@ -215,7 +214,7 @@ export async function fetchCampaignDetail(campaignId: string) {
         .order("created_at"),
       supabase
         .from("sm_day_submissions" as any)
-        .select("*, student:profiles!student_id ( id, full_name )")
+        .select("id, campaign_id, day_id, member_id, student_id, video_url, post_url, doc_url, image_urls, caption, note, status, score, feedback, is_selected, reviewed_by, reviewed_at, created_at, student:profiles!student_id ( id, full_name )")
         .eq("campaign_id", campaignId)
         .order("created_at", { ascending: false }),
     ]);
@@ -223,6 +222,9 @@ export async function fetchCampaignDetail(campaignId: string) {
     const error = campaignError || dayError || memberError;
     if (error) return { success: false as const, error: error.message };
     if (!campaign) return { success: false as const, error: "This campaign no longer exists." };
+    if (isTeacher(profile) && (campaign as any).teacher_id !== profile.id) {
+      return { success: false as const, error: "This campaign is not assigned to you." };
+    }
 
     // The student-portal migration adds the submissions table and the
     // registration columns. Until it is applied the board must still open, just
