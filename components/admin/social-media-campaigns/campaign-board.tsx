@@ -1996,6 +1996,21 @@ function TeamPanel({
 
   const assignedIds = new Set(members.map((member) => member.student_id));
 
+  const normalizedNewEmail = (newStudent.email || "").trim().toLowerCase();
+  const normalizedNewPhone = (newStudent.phone || "").replace(/\D/g, "");
+
+  const exactDuplicates = duplicates.filter((match) => {
+    const matchEmail = (match.email || "").trim().toLowerCase();
+    const matchPhone = (match.phone || "").replace(/\D/g, "");
+    return (
+      (normalizedNewEmail && matchEmail === normalizedNewEmail) ||
+      (normalizedNewPhone && normalizedNewPhone.length >= 7 && matchPhone === normalizedNewPhone)
+    );
+  });
+
+  const hasExactDuplicate = exactDuplicates.length > 0;
+  const nameSuggestions = duplicates.filter((match) => !exactDuplicates.some((e) => e.id === match.id));
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 sm:p-5 dark:border-emerald-800 dark:bg-emerald-950/30">
@@ -2218,13 +2233,58 @@ function TeamPanel({
                 application or registration needed. {checkingDuplicate && "Checking for an existing account…"}
               </p>
 
-              {duplicates.length > 0 && (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950/40">
-                  <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
-                    Existing account found! Click below to activate &amp; assign them directly:
+              {/* Exact duplicates: account with the same email or phone */}
+              {exactDuplicates.length > 0 && (
+                <div className="rounded-lg border border-red-300 bg-red-50 p-2.5 dark:border-red-800 dark:bg-red-950/40">
+                  <p className="text-[11px] font-bold text-red-900 dark:text-red-200">
+                    Existing account with this email/phone found! Click below to assign them directly:
                   </p>
                   <div className="mt-1.5 space-y-1">
-                    {duplicates.map((match) => {
+                    {exactDuplicates.map((match) => {
+                      const isInactive = match.status === "rejected" || match.status === "inactive";
+                      return (
+                        <div key={match.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/80 p-2 dark:bg-surface-lowest">
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5">
+                              <span className="block truncate text-xs font-bold text-on-surface">{match.full_name || "Unnamed"}</span>
+                              {isInactive && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.2 text-[9px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                  Inactive
+                                </span>
+                              )}
+                            </span>
+                            <span className="block truncate text-[11px] text-on-surface-variant">
+                              {match.email || match.phone || "—"}
+                            </span>
+                          </span>
+                          <button
+                            onClick={() => void attachExisting(match)}
+                            disabled={creating || assignedIds.has(match.id)}
+                            className="shrink-0 rounded-md bg-amber-600 hover:bg-amber-700 px-2.5 py-1 text-[11px] font-bold text-white disabled:opacity-50 shadow-sm"
+                          >
+                            {assignedIds.has(match.id)
+                              ? "Already on campaign"
+                              : creating
+                              ? "Activating…"
+                              : isInactive
+                              ? "⚡ Activate & Assign"
+                              : "Assign Existing"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Name-only suggestions: different email */}
+              {nameSuggestions.length > 0 && exactDuplicates.length === 0 && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-2.5 dark:border-blue-900/50 dark:bg-blue-950/30">
+                  <p className="text-[11px] font-bold text-blue-900 dark:text-blue-200">
+                    Similar name in directory (different email). If this is a new student, you can proceed with the button below, or assign the existing profile:
+                  </p>
+                  <div className="mt-1.5 space-y-1">
+                    {nameSuggestions.map((match) => {
                       const isInactive = match.status === "rejected" || match.status === "inactive";
                       return (
                         <div key={match.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/80 p-2 dark:bg-surface-lowest">
@@ -2265,7 +2325,7 @@ function TeamPanel({
 
               <button
                 onClick={() => void createStudent()}
-                disabled={creating || duplicates.length > 0}
+                disabled={creating || hasExactDuplicate || !newStudent.full_name.trim() || !newStudent.email.trim() || newStudent.password.length < 8}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
               >
                 <Icon name={creating ? "sync" : "person_add"} className={`text-[16px] ${creating ? "animate-spin" : ""}`} />
