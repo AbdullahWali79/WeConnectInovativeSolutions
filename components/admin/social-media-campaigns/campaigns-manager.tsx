@@ -127,34 +127,35 @@ export function CampaignsManager({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <Toast toast={toast} onClear={() => setToast(null)} />
 
-      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Compact Top Header & Stats Card */}
+      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-3 sm:p-4 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-black leading-tight text-on-surface sm:text-2xl">Social Media Campaigns</h1>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Upload a client&apos;s day-wise plan, assign a teacher and students, and track every day&apos;s post.
+            <h1 className="text-lg sm:text-xl font-black leading-tight text-on-surface">Social Media Campaigns</h1>
+            <p className="text-xs text-on-surface-variant">
+              Manage client campaigns, assign teachers &amp; students, and track daily deliverables.
             </p>
           </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsTeacherOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary transition shadow-2xs"
             >
-              <Icon name="person_add" className="text-[16px]" /> New teacher
+              <Icon name="person_add" className="text-[15px]" /> New teacher
             </button>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:bg-primary-container"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary-container transition shadow-2xs"
             >
-              <Icon name="add" className="text-[16px]" /> New campaign
+              <Icon name="add" className="text-[15px]" /> New campaign
             </button>
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Stat label="Campaigns" value={String(campaigns.length)} />
           <Stat label="Active" value={String(totals.active)} />
           <Stat label="Posts done" value={String(totals.done)} tone="text-emerald-700" />
@@ -163,122 +164,127 @@ export function CampaignsManager({
       </div>
 
       {setupIssue && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5">
           <p className="flex items-start gap-2 text-xs font-semibold text-amber-900">
-            <Icon name="warning" className="mt-0.5 shrink-0 text-[16px]" />
+            <Icon name="warning" className="mt-0.5 shrink-0 text-[15px]" />
             {setupIssue}
           </p>
         </div>
       )}
 
+      {/* Search and Refresh bar */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1">
-          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" />
+        <div className="relative min-w-[200px] flex-1">
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search client, campaign or teacher…"
-            className={`${FIELD_CLASS} pl-9`}
+            className="w-full rounded-lg border border-outline-variant bg-surface-lowest py-2 pl-8 pr-3 text-xs text-on-surface outline-none focus:border-primary"
           />
         </div>
         <button
           onClick={() => void load({ silent: true })}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2.5 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-60 transition"
         >
-          <Icon name="refresh" className={`text-[16px] ${refreshing ? "animate-spin" : ""}`} /> {refreshing ? "Updating…" : "Refresh"}
+          <Icon name="refresh" className={`text-[15px] ${refreshing ? "animate-spin" : ""}`} /> {refreshing ? "Updating…" : "Refresh"}
         </button>
       </div>
 
       {loading && campaigns.length === 0 ? (
-        <div className="flex items-center justify-center gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-16 text-on-surface-variant">
+        <div className="flex items-center justify-center gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-12 text-on-surface-variant">
           <Icon name="sync" className="animate-spin" /> Loading campaigns…
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-12 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-primary">
-            <Icon name="campaign" className="text-[24px]" />
+        <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-10 text-center">
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-primary">
+            <Icon name="campaign" className="text-[22px]" />
           </div>
-          <p className="mt-3 text-sm font-bold text-on-surface">No campaigns yet</p>
+          <p className="mt-2 text-sm font-bold text-on-surface">No campaigns found</p>
           <p className="mt-1 text-xs text-on-surface-variant">
             Create one and upload the client&apos;s 30-day plan to get the daily board running.
           </p>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-bold text-on-primary"
           >
-            <Icon name="add" className="text-[16px]" /> New campaign
+            <Icon name="add" className="text-[15px]" /> New campaign
           </button>
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        /* High-density 3-per-row grid */
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((campaign) => {
             const percent = campaign.day_count ? Math.round((campaign.done_count / campaign.day_count) * 100) : 0;
             return (
               <div
                 key={campaign.id}
                 onClick={() => setOpenId(campaign.id)}
-                className="group rounded-2xl border border-outline-variant bg-surface-lowest p-4 text-left transition-all hover:border-primary/40 hover:bg-surface-low hover:shadow-md cursor-pointer relative"
+                className="group rounded-xl border border-outline-variant bg-surface-lowest p-3 text-left transition-all hover:border-primary/50 hover:bg-surface-low hover:shadow-md cursor-pointer relative flex flex-col justify-between space-y-2"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-black text-on-surface group-hover:text-primary transition-colors">
-                      {campaign.client_name}
-                    </p>
-                    <p className="truncate text-xs text-on-surface-variant font-medium">
-                      {campaign.campaign_name || "Social media campaign"}
-                    </p>
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-on-surface group-hover:text-primary transition-colors">
+                        {campaign.client_name}
+                      </p>
+                      <p className="truncate text-[11px] text-on-surface-variant font-medium">
+                        {campaign.campaign_name || "Social media campaign"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-0.2 text-[9px] font-bold uppercase tracking-wide ${
+                          campaign.status === "active"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : campaign.status === "completed"
+                              ? "border-blue-200 bg-blue-50 text-blue-700"
+                              : "border-outline-variant text-on-surface-variant"
+                        }`}
+                      >
+                        {campaign.status}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingCampaign(campaign);
+                        }}
+                        className="inline-flex items-center gap-0.5 rounded-md border border-outline-variant/70 bg-surface-lowest px-1.5 py-0.5 text-[11px] font-bold text-on-surface-variant hover:text-primary hover:border-primary hover:bg-primary/5 transition shadow-2xs"
+                        title="Edit campaign name & settings"
+                      >
+                        <Icon name="edit" className="text-[12px]" />
+                        <span>Edit</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <span
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                        campaign.status === "active"
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : campaign.status === "completed"
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-outline-variant text-on-surface-variant"
-                      }`}
-                    >
-                      {campaign.status}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingCampaign(campaign);
-                      }}
-                      className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/70 bg-surface-lowest px-2 py-1 text-xs font-bold text-on-surface-variant hover:text-primary hover:border-primary hover:bg-primary/5 transition shadow-xs"
-                      title="Edit campaign name & settings"
-                    >
-                      <Icon name="edit" className="text-[13px]" />
-                      <span>Edit</span>
-                    </button>
+
+                  <div className="mt-2 space-y-1 text-[11px] text-on-surface-variant">
+                    <p className="flex items-center gap-1 truncate">
+                      <Icon name="calendar_today" className="text-[12px] text-primary shrink-0" />
+                      <span>{formatDate(campaign.period_start)} –</span>
+                      {campaign.period_end ? (
+                        <span>{formatDate(campaign.period_end)}</span>
+                      ) : (
+                        <span className="font-bold text-emerald-600">Ongoing</span>
+                      )}
+                    </p>
+                    <p className="flex items-center gap-1 truncate">
+                      <Icon name="person" className="text-[12px] text-on-surface-variant shrink-0" />
+                      <span className="truncate">Teacher: <strong className="text-on-surface font-semibold">{campaign.teacher?.full_name?.split(" ")[0] || "Not assigned"}</strong></span>
+                      <span>·</span>
+                      <span>{campaign.member_count} student{campaign.member_count === 1 ? "" : "s"}</span>
+                    </p>
                   </div>
                 </div>
 
-                <p className="mt-2 text-xs text-on-surface-variant flex items-center gap-1.5 flex-wrap">
-                  <span>{formatDate(campaign.period_start)}</span>
-                  <span>–</span>
-                  {campaign.period_end ? (
-                    <span>{formatDate(campaign.period_end)}</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      Ongoing (No end date)
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1 text-xs text-on-surface-variant">
-                  Teacher: <span className="font-bold text-on-surface">{campaign.teacher?.full_name || "Not assigned"}</span>
-                  {" · "}
-                  {campaign.member_count} student{campaign.member_count === 1 ? "" : "s"}
-                </p>
-
-                <div className="mt-3 flex items-center gap-2">
+                <div className="pt-1.5 border-t border-outline-variant/40 flex items-center gap-2">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-container">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${percent}%` }} />
+                    <div className="h-full rounded-full bg-emerald-500 transition-all duration-300" style={{ width: `${percent}%` }} />
                   </div>
-                  <span className="text-[11px] font-bold text-on-surface-variant">
-                    {campaign.done_count}/{campaign.day_count} days
+                  <span className="text-[10px] font-bold text-on-surface-variant shrink-0">
+                    {campaign.done_count}/{campaign.day_count} days ({percent}%)
                   </span>
                 </div>
               </div>
@@ -335,9 +341,9 @@ export function CampaignsManager({
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="rounded-xl border border-outline-variant bg-surface-low p-3">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</p>
-      <p className={`mt-1 text-xl font-black ${tone ?? "text-on-surface"}`}>{value}</p>
+    <div className="rounded-xl border border-outline-variant bg-surface-low p-2 sm:p-2.5">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</p>
+      <p className={`mt-0.5 text-base sm:text-lg font-black ${tone ?? "text-on-surface"}`}>{value}</p>
     </div>
   );
 }

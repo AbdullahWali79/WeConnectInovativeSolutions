@@ -325,33 +325,33 @@ export function CampaignBoard({
         </div>
       )}
 
-      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-6">
-        <button onClick={onBack} className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary">
-          <Icon name="arrow_back" className="text-[16px]" /> All campaigns
+      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-3.5 sm:p-4.5 shadow-2xs">
+        <button onClick={onBack} className="mb-2 inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary transition">
+          <Icon name="arrow_back" className="text-[15px]" /> All campaigns
         </button>
 
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-xl font-black leading-tight text-on-surface sm:text-2xl">{campaign.client_name}</h2>
-            <p className="mt-1 text-sm text-on-surface-variant flex items-center gap-1.5 flex-wrap">
+            <h2 className="text-lg sm:text-xl font-black leading-tight text-on-surface">{campaign.client_name}</h2>
+            <p className="mt-0.5 text-xs text-on-surface-variant flex items-center gap-1.5 flex-wrap">
               <span>{campaign.campaign_name || "Social media campaign"} · {formatDate(campaign.period_start)} –</span>
               {campaign.period_end ? (
                 <span>{formatDate(campaign.period_end)}</span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                   Ongoing
                 </span>
               )}
             </p>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
               <span>
-                Teacher: <span className="font-bold text-on-surface">{campaign.teacher?.full_name || "Not assigned"}</span>
+                Teacher: <strong className="text-on-surface font-bold">{campaign.teacher?.full_name || "Not assigned"}</strong>
               </span>
               {role === "admin" && (
                 <select
                   value={campaign.teacher_id || ""}
                   onChange={(event) => void saveTeacher(event.target.value)}
-                  className="rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                  className="rounded-lg border border-outline-variant bg-surface-lowest px-2 py-0.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
                 >
                   <option value="">— assign teacher —</option>
                   {teachers.map((teacher) => (
@@ -363,27 +363,27 @@ export function CampaignBoard({
               )}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-outline-variant px-3 py-1 text-xs font-bold uppercase tracking-wide text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full border border-outline-variant px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
               {campaign.status}
             </span>
             {role === "admin" && (
               <button
                 type="button"
                 onClick={() => setIsEditingCampaign(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 shadow-xs transition"
+                className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/20 shadow-2xs transition"
                 title="Edit campaign name and details"
               >
-                <Icon name="edit" className="text-[15px]" /> Edit Campaign
+                <Icon name="edit" className="text-[14px]" /> Edit Campaign
               </button>
             )}
             <a
               href={campaign.drive_folder_url || "https://drive.google.com/drive/folders/1uufJf0w7v5_4JGfqmMKuCZmyuqckC-tP"}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/10"
+              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/10 shadow-2xs transition"
             >
-              <Icon name="folder_open" className="text-[15px]" /> Synced Drive
+              <Icon name="folder_open" className="text-[14px]" /> Synced Drive
             </a>
             {role === "admin" && (
               <button
@@ -396,15 +396,16 @@ export function CampaignBoard({
                   }
                   onBack();
                 }}
-                className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
+                className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50 shadow-2xs transition"
               >
-                <Icon name="delete" className="text-[15px]" /> Delete
+                <Icon name="delete" className="text-[14px]" /> Delete
               </button>
             )}
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-6">
+        {/* High-density metrics row */}
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
           <Metric label="Days planned" value={String(stats.total)} />
           <Metric label="Shared" value={String(stats.shared)} tone="text-primary" />
           <Metric
@@ -418,11 +419,11 @@ export function CampaignBoard({
           <Metric label="Completion" value={`${stats.percent}%`} />
         </div>
 
-        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-surface-container">
+        <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
           <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${stats.percent}%` }} />
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant bg-surface-low p-3">
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant/60 bg-surface-low px-3 py-2">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-on-surface">Share the plan with students</p>
             <p className="text-[11px] text-on-surface-variant">
@@ -436,21 +437,21 @@ export function CampaignBoard({
               max={60}
               value={publishCount}
               onChange={(event) => setPublishCount(event.target.value)}
-              className="w-16 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1.5 text-sm text-on-surface outline-none focus:border-primary"
+              className="w-16 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-xs text-on-surface outline-none focus:border-primary"
             />
             <button
               onClick={() => void publishDays()}
               disabled={publishing}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50 shadow-2xs"
             >
-              <Icon name={publishing ? "sync" : "visibility"} className={`text-[16px] ${publishing ? "animate-spin" : ""}`} />
+              <Icon name={publishing ? "sync" : "visibility"} className={`text-[15px] ${publishing ? "animate-spin" : ""}`} />
               {publishing ? "Sharing…" : "Share next days"}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
+      <div className="hide-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
         {[
           { id: "sheet" as const, label: "Sheet Tracker 📊", icon: "table_chart" },
           { id: "plan" as const, label: "Day plan", icon: "calendar_month" },
@@ -466,18 +467,18 @@ export function CampaignBoard({
           <button
             key={item.id}
             onClick={() => setTab(item.id)}
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
-              tab === item.id ? "bg-primary text-on-primary" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary"
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+              tab === item.id ? "bg-primary text-on-primary shadow-xs" : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary"
             }`}
           >
-            <Icon name={item.icon} className="text-[18px]" />
+            <Icon name={item.icon} className="text-[16px]" />
             <span>{item.label}</span>
             {item.badge ? (
-              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white animate-pulse">
+              <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[9px] font-black text-white animate-pulse">
                 {item.badge}
               </span>
             ) : item.count !== undefined && item.count > 0 ? (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${tab === item.id ? "bg-white/20 text-white" : "bg-surface-container text-on-surface"}`}>
+              <span className={`rounded-full px-1.5 py-0.2 text-[9px] font-black ${tab === item.id ? "bg-white/20 text-white" : "bg-surface-container text-on-surface"}`}>
                 {item.count}
               </span>
             ) : null}
@@ -836,10 +837,10 @@ export function CampaignBoard({
 
 function Metric({ label, value, tone, hint }: { label: string; value: string; tone?: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-outline-variant bg-surface-low p-3">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</p>
-      <p className={`mt-1 text-xl font-black ${tone ?? "text-on-surface"}`}>{value}</p>
-      {hint && <p className="mt-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">{hint}</p>}
+    <div className="rounded-xl border border-outline-variant/60 bg-surface-low p-2 sm:p-2.5 shadow-2xs">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant truncate">{label}</p>
+      <p className={`mt-0.5 text-base sm:text-lg font-black ${tone ?? "text-on-surface"}`}>{value}</p>
+      {hint && <p className="mt-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400 truncate">{hint}</p>}
     </div>
   );
 }

@@ -163,61 +163,61 @@ export function SheetTrackerPanel({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* 1. Single Jhalak: Student Attendance & Performance Summary */}
-      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 sm:p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/60 pb-3">
+      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-3 sm:p-4 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 pb-2">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Icon name="fact_check" className="text-base" />
+            <div className="flex items-center gap-1.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icon name="fact_check" className="text-sm" />
               </span>
-              <h3 className="text-sm font-bold text-on-surface">Daily Attendance & Work Tracker</h3>
+              <h3 className="text-xs sm:text-sm font-bold text-on-surface">Daily Attendance &amp; Work Tracker</h3>
             </div>
-            <p className="mt-1 text-xs text-on-surface-variant">
+            <p className="mt-0.5 text-[11px] text-on-surface-variant">
               Single-glance view of all students assigned to this Facebook page. Track who submitted daily and who missed.
             </p>
           </div>
-          <div className="text-xs font-semibold text-on-surface-variant">
+          <div className="text-[11px] font-semibold text-on-surface-variant">
             {members.length} {members.length === 1 ? "Student Allotted" : "Students Allotted"}
           </div>
         </div>
 
         {members.length === 0 ? (
-          <div className="py-6 text-center text-xs text-on-surface-variant">
-            No students allotted yet. Go to the <span className="font-bold text-primary">Team & Students</span> tab to assign students to this page.
+          <div className="py-3 text-center text-xs text-on-surface-variant">
+            No students allotted yet. Go to the <span className="font-bold text-primary">Team &amp; Students</span> tab to assign students to this page.
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             {studentStats.map((stat) => (
               <div
                 key={stat.studentId}
-                className="flex flex-col justify-between rounded-xl border border-outline-variant/80 bg-surface-low/50 p-3.5 transition hover:border-primary/40"
+                className="flex flex-col justify-between rounded-xl border border-outline-variant/80 bg-surface-low/50 p-2.5 transition hover:border-primary/40"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-sm text-on-surface">
+                      <p className="truncate font-bold text-xs text-on-surface">
                         {stat.student?.full_name || "Student"}
                       </p>
-                      <p className="truncate text-[11px] text-on-surface-variant">
+                      <p className="truncate text-[10px] text-on-surface-variant">
                         {stat.student?.email || "No email"}
                       </p>
                     </div>
                     {stat.winnerCount > 0 && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                         ⭐ {stat.winnerCount} won
                       </span>
                     )}
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between text-xs">
+                  <div className="mt-2 flex items-center justify-between text-[11px]">
                     <span className="text-on-surface-variant">Consistency:</span>
                     <span className="font-black text-on-surface">{stat.percent}%</span>
                   </div>
 
                   {/* Progress bar */}
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
                     <div
                       className={`h-full transition-all duration-300 ${
                         stat.percent >= 80 ? "bg-emerald-500" : stat.percent >= 50 ? "bg-amber-500" : "bg-red-500"
@@ -227,7 +227,7 @@ export function SheetTrackerPanel({
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-outline-variant/40 pt-2 text-[11px]">
+                <div className="mt-2 flex items-center justify-between border-t border-outline-variant/40 pt-1.5 text-[10px]">
                   <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
                     ✅ {stat.totalSubmitted} Done
                   </span>
@@ -248,14 +248,14 @@ export function SheetTrackerPanel({
       </div>
 
       {/* 2. Week-Wise Selector Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => setSelectedWeek("all")}
-            className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
               selectedWeek === "all"
-                ? "bg-primary text-on-primary shadow-sm"
+                ? "bg-primary text-on-primary shadow-xs"
                 : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary hover:bg-surface-low"
             }`}
           >
@@ -271,9 +271,9 @@ export function SheetTrackerPanel({
                 key={wNum}
                 type="button"
                 onClick={() => setSelectedWeek(wNum)}
-                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                   selectedWeek === wNum
-                    ? "bg-primary text-on-primary shadow-sm"
+                    ? "bg-primary text-on-primary shadow-xs"
                     : "border border-outline-variant bg-surface-lowest text-on-surface-variant hover:text-primary hover:bg-surface-low"
                 }`}
               >
