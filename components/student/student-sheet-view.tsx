@@ -8,6 +8,7 @@ import {
   submitDayLink,
   deleteMyDaySubmission,
 } from "@/app/student/campaigns/actions";
+import { extractSubmissionLinks } from "@/lib/proof-links";
 
 type Row = any;
 
@@ -49,7 +50,9 @@ export function StudentSheetView({
   const [selectedWeek, setSelectedWeek] = useState<number | "all">(1);
   const [activeDayDetail, setActiveDayDetail] = useState<Row | null>(null);
   const [quickInputDayId, setQuickInputDayId] = useState<string | null>(null);
-  const [quickUrl, setQuickUrl] = useState("");
+  const [quickDriveUrl, setQuickDriveUrl] = useState("");
+  const [quickDocUrl, setQuickDocUrl] = useState("");
+  const [quickPostUrl, setQuickPostUrl] = useState("");
   const [quickNote, setQuickNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingDayId, setDeletingDayId] = useState<string | null>(null);
@@ -106,21 +109,28 @@ export function StudentSheetView({
   }, [displayedDays]);
 
   async function handleSaveQuickLink(dayId: string) {
-    if (!quickUrl.trim()) {
-      setToast({ type: "error", message: "Please paste your Google Drive or Docs link." });
+    if (!quickDriveUrl.trim() && !quickDocUrl.trim() && !quickPostUrl.trim()) {
+      setToast({ type: "error", message: "Please enter at least one link (Google Drive link or Google Docs link)." });
       return;
     }
     setSaving(true);
-    const res = await submitDayLink(dayId, quickUrl.trim(), quickNote.trim());
+    const res = await submitDayLink(dayId, {
+      driveUrl: quickDriveUrl.trim() || null,
+      docUrl: quickDocUrl.trim() || null,
+      postUrl: quickPostUrl.trim() || null,
+      note: quickNote.trim() || null,
+    });
     setSaving(false);
     if (!res.success) {
-      setToast({ type: "error", message: res.error || "Could not save your link." });
+      setToast({ type: "error", message: res.error || "Could not save your links." });
       return;
     }
     setQuickInputDayId(null);
-    setQuickUrl("");
+    setQuickDriveUrl("");
+    setQuickDocUrl("");
+    setQuickPostUrl("");
     setQuickNote("");
-    setToast({ type: "success", message: "Your link has been submitted successfully!" });
+    setToast({ type: "success", message: "Your links have been saved successfully!" });
     void onReload();
   }
 
@@ -280,7 +290,7 @@ export function StudentSheetView({
               const dayData = submissionsByDay[day.id] || { mySubmission: null, peerSubmissions: [], winner: null };
               const mySub = dayData.mySubmission;
               const isMyWinner = mySub && (mySub.is_selected || mySub.status === "selected");
-              const activeMyLink = mySub?.video_url || mySub?.doc_url || mySub?.post_url;
+              const myLinks = extractSubmissionLinks(mySub);
 
               return (
                 <div
@@ -385,14 +395,16 @@ export function StudentSheetView({
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-                            My Submitted Link
+                            My Submitted Links
                           </span>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => {
                                 setQuickInputDayId(day.id);
-                                setQuickUrl(activeMyLink || "");
+                                setQuickDriveUrl(myLinks.driveUrl || "");
+                                setQuickDocUrl(myLinks.docUrl || "");
+                                setQuickPostUrl(myLinks.postUrl || "");
                                 setQuickNote(mySub.note || "");
                               }}
                               className="text-[10px] font-bold text-primary hover:underline"
@@ -410,23 +422,52 @@ export function StudentSheetView({
                           </div>
                         </div>
 
-                        {activeMyLink && (
-                          <a
-                            href={activeMyLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-between rounded-lg bg-surface-lowest border border-outline-variant/60 px-2.5 py-1.5 text-xs font-bold text-primary hover:underline"
-                          >
-                            <span className="truncate">
-                              {activeMyLink.includes("drive.google.com")
-                                ? "Google Drive Link"
-                                : activeMyLink.includes("docs.google.com")
-                                  ? "Google Docs Link"
-                                  : "View My Submission"}
-                            </span>
-                            <Icon name="open_in_new" className="text-xs shrink-0 ml-1" />
-                          </a>
-                        )}
+                        <div className="space-y-1">
+                          {myLinks.driveUrl && (
+                            <a
+                              href={myLinks.driveUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between rounded-lg bg-surface-lowest border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
+                            >
+                              <span className="inline-flex items-center gap-1.5 truncate">
+                                <Icon name="folder_shared" className="text-xs shrink-0 text-emerald-600" />
+                                <span className="truncate">Google Drive Link</span>
+                              </span>
+                              <Icon name="open_in_new" className="text-xs shrink-0 ml-1 opacity-70" />
+                            </a>
+                          )}
+
+                          {myLinks.docUrl && (
+                            <a
+                              href={myLinks.docUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between rounded-lg bg-surface-lowest border border-blue-200 dark:border-blue-800/60 px-2.5 py-1.5 text-xs font-bold text-blue-700 dark:text-blue-400 hover:underline"
+                            >
+                              <span className="inline-flex items-center gap-1.5 truncate">
+                                <Icon name="description" className="text-xs shrink-0 text-blue-600" />
+                                <span className="truncate">Google Docs Link</span>
+                              </span>
+                              <Icon name="open_in_new" className="text-xs shrink-0 ml-1 opacity-70" />
+                            </a>
+                          )}
+
+                          {myLinks.postUrl && (
+                            <a
+                              href={myLinks.postUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between rounded-lg bg-surface-lowest border border-purple-200 dark:border-purple-800/60 px-2.5 py-1.5 text-xs font-bold text-purple-700 dark:text-purple-400 hover:underline"
+                            >
+                              <span className="inline-flex items-center gap-1.5 truncate">
+                                <Icon name="public" className="text-xs shrink-0 text-purple-600" />
+                                <span className="truncate">Live Post Link</span>
+                              </span>
+                              <Icon name="open_in_new" className="text-xs shrink-0 ml-1 opacity-70" />
+                            </a>
+                          )}
+                        </div>
 
                         {mySub.note && (
                           <p className="text-[11px] text-on-surface-variant italic">
@@ -436,22 +477,67 @@ export function StudentSheetView({
                       </div>
                     ) : quickInputDayId === day.id ? (
                       <div className="space-y-2">
-                        <p className="text-[11px] font-bold text-on-surface">Paste your Google Drive / Docs link:</p>
-                        <input
-                          type="url"
-                          value={quickUrl}
-                          onChange={(e) => setQuickUrl(e.target.value)}
-                          placeholder="https://drive.google.com/... or docs.google.com/..."
-                          className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
-                          autoFocus
-                        />
-                        <input
-                          type="text"
-                          value={quickNote}
-                          onChange={(e) => setQuickNote(e.target.value)}
-                          placeholder="Optional short note..."
-                          className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
-                        />
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-bold text-on-surface">Submit Your Work Links:</p>
+                          <span className="text-[10px] text-on-surface-variant">Drive &amp; Docs</span>
+                        </div>
+
+                        <div>
+                          <label className="flex items-center gap-1 text-[10px] font-bold text-on-surface mb-0.5">
+                            <Icon name="folder_shared" className="text-xs text-emerald-600" />
+                            <span>Google Drive Link (Video / Files)</span>
+                          </label>
+                          <input
+                            type="url"
+                            value={quickDriveUrl}
+                            onChange={(e) => setQuickDriveUrl(e.target.value)}
+                            placeholder="https://drive.google.com/file/d/..."
+                            className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                            autoFocus
+                          />
+                        </div>
+
+                        <div>
+                          <label className="flex items-center gap-1 text-[10px] font-bold text-on-surface mb-0.5">
+                            <Icon name="description" className="text-xs text-blue-600" />
+                            <span>Google Docs Link (Content / Script)</span>
+                          </label>
+                          <input
+                            type="url"
+                            value={quickDocUrl}
+                            onChange={(e) => setQuickDocUrl(e.target.value)}
+                            placeholder="https://docs.google.com/document/d/..."
+                            className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="flex items-center gap-1 text-[10px] font-bold text-on-surface-variant mb-0.5">
+                            <Icon name="public" className="text-xs text-purple-600" />
+                            <span>Live Post URL <span className="text-[9px] font-normal text-on-surface-variant/70">(Optional)</span></span>
+                          </label>
+                          <input
+                            type="url"
+                            value={quickPostUrl}
+                            onChange={(e) => setQuickPostUrl(e.target.value)}
+                            placeholder="https://facebook.com/... or instagram.com/..."
+                            className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-on-surface-variant mb-0.5">
+                            Short Note <span className="text-[9px] font-normal text-on-surface-variant/70">(Optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={quickNote}
+                            onChange={(e) => setQuickNote(e.target.value)}
+                            placeholder="Optional short note..."
+                            className="w-full rounded-lg border border-outline-variant bg-surface-lowest p-2 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                          />
+                        </div>
+
                         <div className="flex items-center gap-1.5 pt-0.5">
                           <button
                             type="button"
@@ -459,13 +545,15 @@ export function StudentSheetView({
                             onClick={() => handleSaveQuickLink(day.id)}
                             className="flex-1 rounded-lg bg-[#0F9D58] py-1.5 text-xs font-bold text-white hover:bg-[#0F9D58]/90"
                           >
-                            {saving ? "Saving…" : "Save Link 💾"}
+                            {saving ? "Saving…" : "Save Links 💾"}
                           </button>
                           <button
                             type="button"
                             onClick={() => {
                               setQuickInputDayId(null);
-                              setQuickUrl("");
+                              setQuickDriveUrl("");
+                              setQuickDocUrl("");
+                              setQuickPostUrl("");
                               setQuickNote("");
                             }}
                             className="rounded-lg border border-outline-variant px-3 py-1.5 text-xs text-on-surface-variant hover:bg-surface-low"
@@ -479,12 +567,14 @@ export function StudentSheetView({
                         type="button"
                         onClick={() => {
                           setQuickInputDayId(day.id);
-                          setQuickUrl("");
+                          setQuickDriveUrl("");
+                          setQuickDocUrl("");
+                          setQuickPostUrl("");
                           setQuickNote("");
                         }}
                         className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#0F9D58]/60 bg-[#0F9D58]/10 py-2 text-xs font-bold text-[#0F9D58] hover:bg-[#0F9D58]/15 transition-colors"
                       >
-                        <Icon name="add_link" className="text-sm" /> + Paste Drive / Docs Link
+                        <Icon name="add_link" className="text-sm" /> + Paste Drive &amp; Docs Links
                       </button>
                     )}
                   </div>
@@ -596,7 +686,7 @@ export function StudentSheetView({
                   const dayData = submissionsByDay[day.id] || { mySubmission: null, peerSubmissions: [], winner: null };
                   const mySub = dayData.mySubmission;
                   const isMyWinner = mySub && (mySub.is_selected || mySub.status === "selected");
-                  const activeMyLink = mySub?.video_url || mySub?.doc_url || mySub?.post_url;
+                  const myLinks = extractSubmissionLinks(mySub);
 
                   return (
                     <tr
@@ -689,14 +779,14 @@ export function StudentSheetView({
                         </div>
                       </td>
 
-                      {/* COLUMN C: MY SUBMISSION LINK (Directly paste and edit in cell) */}
+                      {/* COLUMN C: MY SUBMISSION LINKS (Drive, Docs, Post) */}
                       <td
                         className={`p-2.5 align-top border-r border-[#dadce0] dark:border-zinc-800 transition-colors ${
                           isMyWinner ? "bg-amber-50/70 dark:bg-amber-950/20" : "bg-[#0F9D58]/5"
                         }`}
                       >
                         {mySub ? (
-                          <div className="space-y-1.5">
+                          <div className="space-y-1.5 min-w-[210px]">
                             <div className="flex items-center justify-between gap-1">
                               <span
                                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black ${
@@ -713,7 +803,7 @@ export function StudentSheetView({
                                 type="button"
                                 disabled={deletingDayId === day.id}
                                 onClick={() => handleDeleteMyLink(day.id)}
-                                title="Delete my submitted link"
+                                title="Delete my submitted links"
                                 className="inline-flex items-center gap-0.5 text-xs text-on-surface-variant hover:text-red-600 p-0.5"
                               >
                                 <Icon name="delete" className="text-xs" />
@@ -721,23 +811,50 @@ export function StudentSheetView({
                               </button>
                             </div>
 
-                            {activeMyLink && (
-                              <a
-                                href={activeMyLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 max-w-[240px] truncate text-[11px] font-bold text-[#0F9D58] hover:underline rounded-lg bg-surface-lowest border border-[#dadce0] px-2.5 py-1.5 shadow-xs"
-                              >
-                                <Icon name="open_in_new" className="text-xs shrink-0" />
-                                <span className="truncate">
-                                  {activeMyLink.includes("drive.google.com")
-                                    ? "Google Drive Link"
-                                    : activeMyLink.includes("docs.google.com")
-                                      ? "Google Docs Link"
-                                      : "Open My Link"}
-                                </span>
-                              </a>
-                            )}
+                            {/* Render All Attached Submission Links */}
+                            <div className="space-y-1">
+                              {myLinks.driveUrl && (
+                                <a
+                                  href={myLinks.driveUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 max-w-[240px] truncate text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline rounded-lg bg-surface-lowest border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-1.5 shadow-xs"
+                                  title={myLinks.driveUrl}
+                                >
+                                  <Icon name="folder_shared" className="text-xs shrink-0 text-emerald-600" />
+                                  <span className="truncate">Google Drive Link</span>
+                                  <Icon name="open_in_new" className="text-[10px] shrink-0 ml-auto opacity-70" />
+                                </a>
+                              )}
+
+                              {myLinks.docUrl && (
+                                <a
+                                  href={myLinks.docUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 max-w-[240px] truncate text-[11px] font-bold text-blue-700 dark:text-blue-400 hover:underline rounded-lg bg-surface-lowest border border-blue-200 dark:border-blue-800/60 px-2.5 py-1.5 shadow-xs"
+                                  title={myLinks.docUrl}
+                                >
+                                  <Icon name="description" className="text-xs shrink-0 text-blue-600" />
+                                  <span className="truncate">Google Docs Link</span>
+                                  <Icon name="open_in_new" className="text-[10px] shrink-0 ml-auto opacity-70" />
+                                </a>
+                              )}
+
+                              {myLinks.postUrl && (
+                                <a
+                                  href={myLinks.postUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 max-w-[240px] truncate text-[11px] font-bold text-purple-700 dark:text-purple-400 hover:underline rounded-lg bg-surface-lowest border border-purple-200 dark:border-purple-800/60 px-2.5 py-1.5 shadow-xs"
+                                  title={myLinks.postUrl}
+                                >
+                                  <Icon name="public" className="text-xs shrink-0 text-purple-600" />
+                                  <span className="truncate">Live Post Link</span>
+                                  <Icon name="open_in_new" className="text-[10px] shrink-0 ml-auto opacity-70" />
+                                </a>
+                              )}
+                            </div>
 
                             {mySub.note && (
                               <p className="line-clamp-2 text-[10px] text-on-surface-variant italic">
@@ -750,50 +867,107 @@ export function StudentSheetView({
                                 type="button"
                                 onClick={() => {
                                   setQuickInputDayId(day.id);
-                                  setQuickUrl(activeMyLink || "");
+                                  setQuickDriveUrl(myLinks.driveUrl || "");
+                                  setQuickDocUrl(myLinks.docUrl || "");
+                                  setQuickPostUrl(myLinks.postUrl || "");
                                   setQuickNote(mySub.note || "");
                                 }}
-                                className="text-[10px] text-[#0F9D58] hover:underline font-bold"
+                                className="inline-flex items-center gap-1 text-[10px] text-[#0F9D58] hover:underline font-bold"
                               >
-                                ✏️ Change link
+                                <Icon name="edit" className="text-[11px]" /> Edit Links
                               </button>
                             </div>
                           </div>
                         ) : quickInputDayId === day.id ? (
-                          <div className="space-y-1.5 rounded-xl border border-[#0F9D58]/60 bg-surface-lowest p-2.5 shadow-sm">
-                            <p className="text-[10px] font-bold text-on-surface">Paste your work link:</p>
-                            <input
-                              type="url"
-                              value={quickUrl}
-                              onChange={(e) => setQuickUrl(e.target.value)}
-                              placeholder="Google Drive, Docs, or YouTube link..."
-                              className="w-full rounded-lg border border-[#dadce0] bg-surface-lowest p-1.5 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
-                              autoFocus
-                            />
-                            <input
-                              type="text"
-                              value={quickNote}
-                              onChange={(e) => setQuickNote(e.target.value)}
-                              placeholder="Optional short note..."
-                              className="w-full rounded-lg border border-[#dadce0] bg-surface-lowest p-1.5 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
-                            />
+                          <div className="space-y-2 rounded-xl border border-[#0F9D58]/60 bg-surface-lowest p-2.5 shadow-sm min-w-[240px]">
+                            <div className="flex items-center justify-between pb-1 border-b border-outline-variant/40">
+                              <p className="text-[11px] font-black text-on-surface flex items-center gap-1">
+                                <Icon name="link" className="text-xs text-[#0F9D58]" /> Submit Links:
+                              </p>
+                              <span className="text-[10px] text-on-surface-variant font-medium">Drive &amp; Docs</span>
+                            </div>
+
+                            {/* 1. Google Drive Link */}
+                            <div>
+                              <label className="flex items-center gap-1 text-[10px] font-bold text-on-surface mb-0.5">
+                                <Icon name="folder_shared" className="text-xs text-emerald-600" />
+                                <span>Google Drive Link (Video / Files)</span>
+                              </label>
+                              <input
+                                type="url"
+                                value={quickDriveUrl}
+                                onChange={(e) => setQuickDriveUrl(e.target.value)}
+                                placeholder="https://drive.google.com/file/d/..."
+                                className="w-full rounded-lg border border-[#dadce0] bg-surface-lowest p-1.5 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                                autoFocus
+                              />
+                            </div>
+
+                            {/* 2. Google Docs Link */}
+                            <div>
+                              <label className="flex items-center gap-1 text-[10px] font-bold text-on-surface mb-0.5">
+                                <Icon name="description" className="text-xs text-blue-600" />
+                                <span>Google Docs Link (Content / Script)</span>
+                              </label>
+                              <input
+                                type="url"
+                                value={quickDocUrl}
+                                onChange={(e) => setQuickDocUrl(e.target.value)}
+                                placeholder="https://docs.google.com/document/d/..."
+                                className="w-full rounded-lg border border-[#dadce0] bg-surface-lowest p-1.5 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                              />
+                            </div>
+
+                            {/* 3. Live Post URL (optional) */}
+                            <div>
+                              <label className="flex items-center gap-1 text-[10px] font-bold text-on-surface-variant mb-0.5">
+                                <Icon name="public" className="text-xs text-purple-600" />
+                                <span>Live Post URL <span className="text-[9px] font-normal text-on-surface-variant/70">(Optional)</span></span>
+                              </label>
+                              <input
+                                type="url"
+                                value={quickPostUrl}
+                                onChange={(e) => setQuickPostUrl(e.target.value)}
+                                placeholder="https://facebook.com/... or instagram.com/..."
+                                className="w-full rounded-lg border border-[#dadce0] bg-surface-lowest p-1.5 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                              />
+                            </div>
+
+                            {/* 4. Short Note (optional) */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-on-surface-variant mb-0.5">
+                                Short Note <span className="text-[9px] font-normal text-on-surface-variant/70">(Optional)</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={quickNote}
+                                onChange={(e) => setQuickNote(e.target.value)}
+                                placeholder="Optional short note..."
+                                className="w-full rounded-lg border border-[#dadce0] bg-surface-lowest p-1.5 text-xs text-on-surface outline-none focus:border-[#0F9D58]"
+                              />
+                            </div>
+
+                            {/* Buttons */}
                             <div className="flex items-center gap-1 pt-1">
                               <button
                                 type="button"
                                 disabled={saving}
                                 onClick={() => handleSaveQuickLink(day.id)}
-                                className="rounded-lg bg-[#0F9D58] px-3 py-1 text-xs font-bold text-white hover:bg-[#0F9D58]/90"
+                                className="flex-1 rounded-lg bg-[#0F9D58] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#0F9D58]/90 shadow-xs flex items-center justify-center gap-1"
                               >
-                                {saving ? "Saving…" : "Save Link 💾"}
+                                <Icon name="save" className="text-xs" />
+                                <span>{saving ? "Saving…" : "Save Links 💾"}</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
                                   setQuickInputDayId(null);
-                                  setQuickUrl("");
+                                  setQuickDriveUrl("");
+                                  setQuickDocUrl("");
+                                  setQuickPostUrl("");
                                   setQuickNote("");
                                 }}
-                                className="rounded-lg border border-outline-variant px-2.5 py-1 text-xs text-on-surface-variant hover:bg-surface-low"
+                                className="rounded-lg border border-outline-variant px-2.5 py-1.5 text-xs text-on-surface-variant hover:bg-surface-low"
                               >
                                 Cancel
                               </button>
@@ -804,12 +978,14 @@ export function StudentSheetView({
                             type="button"
                             onClick={() => {
                               setQuickInputDayId(day.id);
-                              setQuickUrl("");
+                              setQuickDriveUrl("");
+                              setQuickDocUrl("");
+                              setQuickPostUrl("");
                               setQuickNote("");
                             }}
                             className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[#0F9D58]/60 bg-[#0F9D58]/5 px-3 py-2 text-xs font-bold text-[#0F9D58] hover:bg-[#0F9D58]/10 transition-colors"
                           >
-                            <Icon name="add_link" className="text-sm" /> + Paste Drive / Docs Link
+                            <Icon name="add_link" className="text-sm" /> + Paste Drive &amp; Docs Links
                           </button>
                         )}
                       </td>
@@ -821,9 +997,9 @@ export function StudentSheetView({
                             No peer submissions yet
                           </span>
                         ) : (
-                          <div className="space-y-1.5">
+                          <div className="space-y-1.5 min-w-[180px]">
                             {dayData.peerSubmissions.map((peerSub) => {
-                              const peerLink = peerSub.video_url || peerSub.doc_url || peerSub.post_url;
+                              const peerLinks = extractSubmissionLinks(peerSub);
                               const isPeerWinner = peerSub.is_selected || peerSub.status === "selected";
 
                               return (
@@ -846,16 +1022,41 @@ export function StudentSheetView({
                                     )}
                                   </div>
 
-                                  {peerLink && (
-                                    <a
-                                      href={peerLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline"
-                                    >
-                                      <Icon name="visibility" className="text-[12px]" /> View Submission ↗
-                                    </a>
-                                  )}
+                                  <div className="flex flex-col gap-1 pt-0.5">
+                                    {peerLinks.driveUrl && (
+                                      <a
+                                        href={peerLinks.driveUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
+                                      >
+                                        <Icon name="folder_shared" className="text-[11px] text-emerald-600" />
+                                        <span>Drive Video / Files ↗</span>
+                                      </a>
+                                    )}
+                                    {peerLinks.docUrl && (
+                                      <a
+                                        href={peerLinks.docUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-400 hover:underline"
+                                      >
+                                        <Icon name="description" className="text-[11px] text-blue-600" />
+                                        <span>Docs Brief / Content ↗</span>
+                                      </a>
+                                    )}
+                                    {peerLinks.postUrl && (
+                                      <a
+                                        href={peerLinks.postUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 dark:text-purple-400 hover:underline"
+                                      >
+                                        <Icon name="public" className="text-[11px] text-purple-600" />
+                                        <span>Live Post ↗</span>
+                                      </a>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -866,27 +1067,54 @@ export function StudentSheetView({
                       {/* COLUMN E: OFFICIAL WINNER BEST PICK */}
                       <td className="p-2.5 align-top bg-amber-500/5">
                         {dayData.winner ? (
-                          <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-2.5 dark:border-amber-800 dark:bg-amber-950/40 space-y-1.5">
-                            <p className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                              <Icon name="emoji_events" className="text-sm text-amber-500" /> Day Winner ⭐
-                            </p>
-                            <p className="font-bold text-xs text-on-surface truncate">
-                              {dayData.winner.student?.full_name || "Student"}
-                            </p>
-                            {(dayData.winner.video_url || dayData.winner.doc_url || dayData.winner.post_url) && (
-                              <a
-                                href={toUrl(dayData.winner.video_url || dayData.winner.doc_url || dayData.winner.post_url)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 rounded bg-amber-500 text-white px-2 py-0.5 text-[10px] font-bold shadow-sm hover:bg-amber-600 transition"
-                              >
-                                <Icon name="visibility" className="text-xs" /> View Winning Post ↗
-                              </a>
-                            )}
-                            <p className="text-[10px] text-on-surface-variant">
-                              Benchmark post — follow this style!
-                            </p>
-                          </div>
+                          (() => {
+                            const winnerLinks = extractSubmissionLinks(dayData.winner);
+                            return (
+                              <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-2.5 dark:border-amber-800 dark:bg-amber-950/40 space-y-1.5 min-w-[180px]">
+                                <p className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                                  <Icon name="emoji_events" className="text-sm text-amber-500" /> Day Winner ⭐
+                                </p>
+                                <p className="font-bold text-xs text-on-surface truncate">
+                                  {dayData.winner.student?.full_name || "Student"}
+                                </p>
+                                <div className="flex flex-col gap-1">
+                                  {winnerLinks.driveUrl && (
+                                    <a
+                                      href={winnerLinks.driveUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 rounded bg-amber-500 text-white px-2 py-0.5 text-[10px] font-bold shadow-sm hover:bg-amber-600 transition"
+                                    >
+                                      <Icon name="folder_shared" className="text-xs" /> Drive Video ↗
+                                    </a>
+                                  )}
+                                  {winnerLinks.docUrl && (
+                                    <a
+                                      href={winnerLinks.docUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 rounded bg-blue-600 text-white px-2 py-0.5 text-[10px] font-bold shadow-sm hover:bg-blue-700 transition"
+                                    >
+                                      <Icon name="description" className="text-xs" /> Docs Content ↗
+                                    </a>
+                                  )}
+                                  {winnerLinks.postUrl && (
+                                    <a
+                                      href={winnerLinks.postUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 rounded bg-purple-600 text-white px-2 py-0.5 text-[10px] font-bold shadow-sm hover:bg-purple-700 transition"
+                                    >
+                                      <Icon name="public" className="text-xs" /> Live Post ↗
+                                    </a>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-on-surface-variant">
+                                  Benchmark post — follow this style!
+                                </p>
+                              </div>
+                            );
+                          })()
                         ) : (
                           <span className="text-[11px] text-on-surface-variant/70 italic">
                             Pending review

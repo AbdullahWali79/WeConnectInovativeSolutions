@@ -394,26 +394,71 @@ export async function submitDayWork(
 }
 
 /**
- * Fast Google Sheet style single-link submission.
- * A student pastes a Google Drive link, Google Docs link, or post URL.
+ * Fast Google Sheet style link submission.
+ * Supports submitting Google Drive link, Google Docs link, and live post link simultaneously or individually.
  */
 export async function submitDayLink(
   dayId: string,
-  link: string,
-  note?: string,
+  input:
+    | string
+    | {
+        driveUrl?: string | null;
+        docUrl?: string | null;
+        postUrl?: string | null;
+        note?: string | null;
+      },
+  legacyNote?: string,
 ) {
   try {
     const { userId } = await currentStudent();
     const admin = createSupabaseServiceClient();
 
-    const cleanLink = cleanText(link);
-    if (!cleanLink) {
-      return { success: false as const, error: "Please enter a valid link." };
+    let rawDrive = "";
+    let rawDoc = "";
+    let rawPost = "";
+    let note = "";
+
+    if (typeof input === "string") {
+      const singleLink = cleanText(input);
+      note = cleanText(legacyNote);
+      if (singleLink.includes("docs.google.com")) {
+        rawDoc = singleLink;
+      } else if (/facebook\.com|instagram\.com|tiktok\.com|youtube\.com\/shorts/i.test(singleLink)) {
+        rawPost = singleLink;
+      } else {
+        rawDrive = singleLink;
+      }
+    } else if (input && typeof input === "object") {
+      rawDrive = cleanText(input.driveUrl);
+      rawDoc = cleanText(input.docUrl);
+      rawPost = cleanText(input.postUrl);
+      note = cleanText(input.note);
     }
 
-    const linkError = getProofLinkError(cleanLink);
-    if (linkError) {
-      return { success: false as const, error: linkError };
+    // Auto-organize if a student pasted docs link in drive field or drive link in docs field
+    if (rawDrive.includes("docs.google.com") && !rawDoc) {
+      rawDoc = rawDrive;
+      rawDrive = "";
+    } else if (rawDoc.includes("drive.google.com") && !rawDrive) {
+      rawDrive = rawDoc;
+      rawDoc = "";
+    }
+
+    if (!rawDrive && !rawDoc && !rawPost) {
+      return { success: false as const, error: "Please enter at least one link (Google Drive or Google Docs link)." };
+    }
+
+    const linksToValidate: [string, string][] = [
+      ["Google Drive link", rawDrive],
+      ["Google Docs link", rawDoc],
+      ["Live Post URL", rawPost],
+    ].filter((entry): entry is [string, string] => Boolean(entry[1]));
+
+    for (const [label, url] of linksToValidate) {
+      const linkError = getProofLinkError(url);
+      if (linkError) {
+        return { success: false as const, error: `${label}: ${linkError.replace("Proof link is required.", "is required.")}` };
+      }
     }
 
     const { data: day, error: dayError } = await admin
@@ -429,18 +474,15 @@ export async function submitDayLink(
 
     const member = await loadMembership((day as any).campaign_id, userId);
 
-    const isDoc = cleanLink.includes("docs.google.com");
-    const isSocialPost = /facebook\.com|instagram\.com|tiktok\.com|youtube\.com\/shorts/i.test(cleanLink);
-
     const payload: any = {
       campaign_id: (day as any).campaign_id,
       day_id: dayId,
       member_id: member.id,
       student_id: userId,
-      video_url: cleanLink,
-      doc_url: isDoc ? cleanLink : null,
-      post_url: isSocialPost ? cleanLink : null,
-      note: cleanText(note),
+      video_url: rawDrive || rawDoc || rawPost,
+      doc_url: rawDoc || null,
+      post_url: rawPost || null,
+      note: note || null,
       status: "submitted",
       feedback: null,
       reviewed_by: null,

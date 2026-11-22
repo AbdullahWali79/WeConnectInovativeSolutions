@@ -9,6 +9,7 @@ import {
   toggleWinnerSubmission,
   deleteSubmissionByAdmin,
 } from "@/app/admin/social-media-campaigns/actions";
+import { extractSubmissionLinks } from "@/lib/proof-links";
 
 type Row = any;
 
@@ -450,7 +451,7 @@ export function SheetTrackerPanel({
                       {members.map((member) => {
                         const sub = submissionsMap[`${day.id}_${member.student_id}`];
                         const isWinner = sub && (sub.is_selected || sub.status === "selected");
-                        const activeLink = sub?.video_url || sub?.doc_url || sub?.post_url;
+                        const subLinks = extractSubmissionLinks(sub);
 
                         return (
                           <td
@@ -460,8 +461,8 @@ export function SheetTrackerPanel({
                             }`}
                           >
                             {sub ? (
-                              <div className="space-y-1.5">
-                                {/* Submission badge & link */}
+                              <div className="space-y-1.5 min-w-[170px]">
+                                {/* Submission badge & delete */}
                                 <div className="flex items-center justify-between gap-1">
                                   <span
                                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -482,24 +483,50 @@ export function SheetTrackerPanel({
                                   </button>
                                 </div>
 
-                                {activeLink && (
-                                  <a
-                                    href={activeLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 max-w-[200px] truncate text-[11px] font-bold text-primary hover:underline rounded bg-primary/5 px-2 py-1"
-                                    title={activeLink}
-                                  >
-                                    <Icon name="open_in_new" className="text-xs shrink-0" />
-                                    <span className="truncate">
-                                      {activeLink.includes("drive.google.com")
-                                        ? "Google Drive Video"
-                                        : activeLink.includes("docs.google.com")
-                                          ? "Google Docs"
-                                          : "Open Link"}
-                                    </span>
-                                  </a>
-                                )}
+                                {/* Multi-links: Drive, Docs, Post */}
+                                <div className="flex flex-col gap-1">
+                                  {subLinks.driveUrl && (
+                                    <a
+                                      href={subLinks.driveUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 max-w-[200px] truncate text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline rounded bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 px-2 py-1"
+                                      title={subLinks.driveUrl}
+                                    >
+                                      <Icon name="folder_shared" className="text-xs shrink-0 text-emerald-600" />
+                                      <span className="truncate">Google Drive Video</span>
+                                      <Icon name="open_in_new" className="text-[10px] shrink-0 ml-auto opacity-70" />
+                                    </a>
+                                  )}
+
+                                  {subLinks.docUrl && (
+                                    <a
+                                      href={subLinks.docUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 max-w-[200px] truncate text-[11px] font-bold text-blue-700 dark:text-blue-400 hover:underline rounded bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/50 px-2 py-1"
+                                      title={subLinks.docUrl}
+                                    >
+                                      <Icon name="description" className="text-xs shrink-0 text-blue-600" />
+                                      <span className="truncate">Google Docs Brief</span>
+                                      <Icon name="open_in_new" className="text-[10px] shrink-0 ml-auto opacity-70" />
+                                    </a>
+                                  )}
+
+                                  {subLinks.postUrl && (
+                                    <a
+                                      href={subLinks.postUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 max-w-[200px] truncate text-[11px] font-bold text-purple-700 dark:text-purple-400 hover:underline rounded bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/50 px-2 py-1"
+                                      title={subLinks.postUrl}
+                                    >
+                                      <Icon name="public" className="text-xs shrink-0 text-purple-600" />
+                                      <span className="truncate">Live Post</span>
+                                      <Icon name="open_in_new" className="text-[10px] shrink-0 ml-auto opacity-70" />
+                                    </a>
+                                  )}
+                                </div>
 
                                 {sub.note && (
                                   <p className="line-clamp-2 text-[10px] text-on-surface-variant italic">
