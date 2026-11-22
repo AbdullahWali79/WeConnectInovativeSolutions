@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { type ToastState } from "@/components/toast";
 import {
@@ -49,6 +49,18 @@ export function SheetTrackerPanel({
   const [editingPublishDayId, setEditingPublishDayId] = useState<string | null>(null);
   const [publishedUrlInput, setPublishedUrlInput] = useState("");
   const [savingPublish, setSavingPublish] = useState(false);
+  const [showAttendanceCards, setShowAttendanceCards] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && isMaximized) {
+        setIsMaximized(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMaximized]);
 
   // Group days into weeks (Days 1-7 = Week 1, 8-14 = Week 2, etc.)
   const weeks = useMemo(() => {
@@ -164,86 +176,133 @@ export function SheetTrackerPanel({
   }
 
   return (
-    <div className="space-y-3">
-      {/* 1. Single Jhalak: Student Attendance & Performance Summary */}
-      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-3 sm:p-4 shadow-2xs">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 pb-2">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Icon name="fact_check" className="text-sm" />
-              </span>
-              <h3 className="text-xs sm:text-sm font-bold text-on-surface">Daily Attendance &amp; Work Tracker</h3>
+    <div
+      className={
+        isMaximized
+          ? "fixed inset-0 z-50 bg-[#f8f9fa] dark:bg-zinc-950 p-3 sm:p-5 overflow-auto space-y-3"
+          : "space-y-3"
+      }
+    >
+      {/* 1. Single Jhalak: Student Attendance & Performance Summary (Collapsible) */}
+      <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-3 sm:p-3.5 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAttendanceCards(!showAttendanceCards)}
+            className="flex items-center gap-2 text-left group min-w-0"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition shadow-2xs">
+              <Icon name="fact_check" className="text-sm" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-xs sm:text-sm font-bold text-on-surface group-hover:text-primary transition">
+                  Daily Attendance &amp; Work Tracker
+                </h3>
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-surface-low border border-outline-variant/60 px-2 py-0.2 text-[10px] font-bold text-on-surface-variant">
+                  {members.length} {members.length === 1 ? "Student" : "Students"}
+                </span>
+                <span className="text-[11px] text-primary font-bold inline-flex items-center gap-0.5">
+                  <Icon name={showAttendanceCards ? "expand_less" : "expand_more"} className="text-xs" />
+                  <span>{showAttendanceCards ? "Hide Cards" : "Show Cards"}</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant line-clamp-1">
+                {showAttendanceCards
+                  ? "Single-glance view of all students assigned to this campaign."
+                  : "Click to view individual consistency, done and missed counts for each student."}
+              </p>
             </div>
-            <p className="mt-0.5 text-[11px] text-on-surface-variant">
-              Single-glance view of all students assigned to this Facebook page. Track who submitted daily and who missed.
-            </p>
-          </div>
-          <div className="text-[11px] font-semibold text-on-surface-variant">
-            {members.length} {members.length === 1 ? "Student Allotted" : "Students Allotted"}
+          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Quick summary stats in collapsed view */}
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-on-surface-variant bg-surface-low px-2.5 py-1 rounded-lg border border-outline-variant/40">
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                ✅ {studentStats.reduce((sum, s) => sum + s.totalSubmitted, 0)} Done
+              </span>
+              <span>·</span>
+              <span className="text-red-600 dark:text-red-400 font-bold">
+                ❌ {studentStats.reduce((sum, s) => sum + s.missedCount, 0)} Missed
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAttendanceCards(!showAttendanceCards)}
+              className="inline-flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-low px-2.5 py-1 text-xs font-bold text-on-surface hover:text-primary hover:border-primary/50 shadow-2xs transition"
+            >
+              <Icon name={showAttendanceCards ? "expand_less" : "expand_more"} className="text-sm" />
+              <span>{showAttendanceCards ? "Collapse" : "Expand"}</span>
+            </button>
           </div>
         </div>
 
-        {members.length === 0 ? (
-          <div className="py-3 text-center text-xs text-on-surface-variant">
-            No students allotted yet. Go to the <span className="font-bold text-primary">Team &amp; Students</span> tab to assign students to this page.
-          </div>
-        ) : (
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            {studentStats.map((stat) => (
-              <div
-                key={stat.studentId}
-                className="flex flex-col justify-between rounded-xl border border-outline-variant/80 bg-surface-low/50 p-2.5 transition hover:border-primary/40"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-bold text-xs text-on-surface">
-                        {stat.student?.full_name || "Student"}
-                      </p>
-                      <p className="truncate text-[10px] text-on-surface-variant">
-                        {stat.student?.email || "No email"}
-                      </p>
-                    </div>
-                    {stat.winnerCount > 0 && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                        ⭐ {stat.winnerCount} won
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-between text-[11px]">
-                    <span className="text-on-surface-variant">Consistency:</span>
-                    <span className="font-black text-on-surface">{stat.percent}%</span>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        stat.percent >= 80 ? "bg-emerald-500" : stat.percent >= 50 ? "bg-amber-500" : "bg-red-500"
-                      }`}
-                      style={{ width: `${stat.percent}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between border-t border-outline-variant/40 pt-1.5 text-[10px]">
-                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
-                    ✅ {stat.totalSubmitted} Done
-                  </span>
-                  {stat.missedCount > 0 ? (
-                    <span className="text-red-600 dark:text-red-400 font-semibold">
-                      ❌ {stat.missedCount} Missed
-                    </span>
-                  ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                      0 Missed
-                    </span>
-                  )}
-                </div>
+        {/* The 10 Student Cards Grid (Only visible when expanded) */}
+        {showAttendanceCards && (
+          <div className="mt-3 pt-3 border-t border-outline-variant/60 animate-in fade-in duration-150">
+            {members.length === 0 ? (
+              <div className="py-3 text-center text-xs text-on-surface-variant">
+                No students allotted yet. Go to the <span className="font-bold text-primary">Team &amp; Students</span> tab to assign students to this page.
               </div>
-            ))}
+            ) : (
+              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                {studentStats.map((stat) => (
+                  <div
+                    key={stat.studentId}
+                    className="flex flex-col justify-between rounded-xl border border-outline-variant/80 bg-surface-low/50 p-2.5 transition hover:border-primary/40"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-xs text-on-surface">
+                            {stat.student?.full_name || "Student"}
+                          </p>
+                          <p className="truncate text-[10px] text-on-surface-variant">
+                            {stat.student?.email || "No email"}
+                          </p>
+                        </div>
+                        {stat.winnerCount > 0 && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            ⭐ {stat.winnerCount} won
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between text-[11px]">
+                        <span className="text-on-surface-variant">Consistency:</span>
+                        <span className="font-black text-on-surface">{stat.percent}%</span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            stat.percent >= 80 ? "bg-emerald-500" : stat.percent >= 50 ? "bg-amber-500" : "bg-red-500"
+                          }`}
+                          style={{ width: `${stat.percent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between border-t border-outline-variant/40 pt-1.5 text-[10px]">
+                      <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                        ✅ {stat.totalSubmitted} Done
+                      </span>
+                      {stat.missedCount > 0 ? (
+                        <span className="text-red-600 dark:text-red-400 font-semibold">
+                          ❌ {stat.missedCount} Missed
+                        </span>
+                      ) : (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          0 Missed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -285,6 +344,21 @@ export function SheetTrackerPanel({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Maximize Workspace Button */}
+          <button
+            type="button"
+            onClick={() => setIsMaximized(!isMaximized)}
+            title={isMaximized ? "Exit Fullscreen (Esc)" : "Maximize Sheet Workspace"}
+            className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold transition shadow-xs ${
+              isMaximized
+                ? "bg-primary text-on-primary"
+                : "border border-outline-variant bg-surface-lowest text-on-surface hover:text-primary hover:border-primary/50"
+            }`}
+          >
+            <Icon name={isMaximized ? "fullscreen_exit" : "fullscreen"} className="text-base" />
+            <span className="hidden sm:inline">{isMaximized ? "Exit Fullscreen" : "Maximize Sheet"}</span>
+          </button>
+
           {onAddDay && (
             <button
               type="button"

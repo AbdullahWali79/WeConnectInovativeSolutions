@@ -91,6 +91,7 @@ export function CampaignBoard({
   const [publishing, setPublishing] = useState(false);
   const [setupMissing, setSetupMissing] = useState(false);
   const [isEditingCampaign, setIsEditingCampaign] = useState(false);
+  const [isHeaderOverviewCollapsed, setIsHeaderOverviewCollapsed] = useState(false);
 
   const load = useCallback(async () => {
     if (!campaign) setLoading(true);
@@ -395,6 +396,22 @@ export function CampaignBoard({
             >
               <Icon name="folder_open" className="text-[14px]" /> Synced Drive
             </a>
+
+            {/* Overview / Compact toggle button */}
+            <button
+              type="button"
+              onClick={() => setIsHeaderOverviewCollapsed(!isHeaderOverviewCollapsed)}
+              title={isHeaderOverviewCollapsed ? "Show Campaign Stats & Share Box" : "Compact Header (More Space For Sheet)"}
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-bold transition shadow-2xs ${
+                isHeaderOverviewCollapsed
+                  ? "bg-primary text-on-primary border-primary"
+                  : "border-outline-variant bg-surface-lowest text-on-surface hover:text-primary hover:border-primary/50"
+              }`}
+            >
+              <Icon name={isHeaderOverviewCollapsed ? "expand_more" : "expand_less"} className="text-[14px]" />
+              <span>{isHeaderOverviewCollapsed ? "Show Overview" : "Compact"}</span>
+            </button>
+
             {role === "admin" && (
               <button
                 onClick={async () => {
@@ -414,51 +431,101 @@ export function CampaignBoard({
           </div>
         </div>
 
-        {/* High-density metrics row */}
-        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-          <Metric label="Days planned" value={String(stats.total)} />
-          <Metric label="Shared" value={String(stats.shared)} tone="text-primary" />
-          <Metric
-            label="Videos submitted"
-            value={String(submissions.length)}
-            tone={pendingSubmissionsCount > 0 ? "text-amber-600" : "text-primary"}
-            hint={pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} pending review` : undefined}
-          />
-          <Metric label="Done" value={String(stats.done)} tone="text-emerald-700" />
-          <Metric label="Missed" value={String(stats.missed)} tone="text-red-600" />
-          <Metric label="Completion" value={`${stats.percent}%`} />
-        </div>
+        {/* Compact stats strip when overview is collapsed */}
+        {isHeaderOverviewCollapsed && (
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant/40 pt-2 animate-in fade-in duration-150">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+              <span className="rounded-md bg-surface-low border border-outline-variant/60 px-2 py-0.5 text-on-surface">
+                📅 {stats.total} days planned ({stats.shared} shared)
+              </span>
+              <span className="rounded-md bg-surface-low border border-outline-variant/60 px-2 py-0.5 text-primary">
+                🎬 {submissions.length} videos
+              </span>
+              <span className="rounded-md bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5">
+                ✅ {stats.done} done ({stats.percent}%)
+              </span>
+              {stats.missed > 0 && (
+                <span className="rounded-md bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 border border-red-200 dark:border-red-900 px-2 py-0.5">
+                  ❌ {stats.missed} missed
+                </span>
+              )}
+              {pendingSubmissionsCount > 0 && (
+                <span className="rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 px-2 py-0.5">
+                  🔔 {pendingSubmissionsCount} pending review
+                </span>
+              )}
+            </div>
 
-        <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
-          <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${stats.percent}%` }} />
-        </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={publishCount}
+                onChange={(event) => setPublishCount(event.target.value)}
+                className="w-14 rounded-lg border border-outline-variant bg-surface-lowest px-1.5 py-0.5 text-xs text-on-surface outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => void publishDays()}
+                disabled={publishing}
+                className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-0.5 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50 shadow-2xs"
+              >
+                <Icon name={publishing ? "sync" : "visibility"} className={`text-xs ${publishing ? "animate-spin" : ""}`} />
+                <span>{publishing ? "Sharing…" : "Share next"}</span>
+              </button>
+            </div>
+          </div>
+        )}
 
-        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant/60 bg-surface-low px-3 py-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-on-surface">Share the plan with students</p>
-            <p className="text-[11px] text-on-surface-variant">
-              Students only see the days you publish. Write and review first, share when ready.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={1}
-              max={60}
-              value={publishCount}
-              onChange={(event) => setPublishCount(event.target.value)}
-              className="w-16 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-xs text-on-surface outline-none focus:border-primary"
-            />
-            <button
-              onClick={() => void publishDays()}
-              disabled={publishing}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50 shadow-2xs"
-            >
-              <Icon name={publishing ? "sync" : "visibility"} className={`text-[15px] ${publishing ? "animate-spin" : ""}`} />
-              {publishing ? "Sharing…" : "Share next days"}
-            </button>
-          </div>
-        </div>
+        {!isHeaderOverviewCollapsed && (
+          <>
+            {/* High-density metrics row */}
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              <Metric label="Days planned" value={String(stats.total)} />
+              <Metric label="Shared" value={String(stats.shared)} tone="text-primary" />
+              <Metric
+                label="Videos submitted"
+                value={String(submissions.length)}
+                tone={pendingSubmissionsCount > 0 ? "text-amber-600" : "text-primary"}
+                hint={pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} pending review` : undefined}
+              />
+              <Metric label="Done" value={String(stats.done)} tone="text-emerald-700" />
+              <Metric label="Missed" value={String(stats.missed)} tone="text-red-600" />
+              <Metric label="Completion" value={`${stats.percent}%`} />
+            </div>
+
+            <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
+              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${stats.percent}%` }} />
+            </div>
+
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant/60 bg-surface-low px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-on-surface">Share the plan with students</p>
+                <p className="text-[11px] text-on-surface-variant">
+                  Students only see the days you publish. Write and review first, share when ready.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={publishCount}
+                  onChange={(event) => setPublishCount(event.target.value)}
+                  className="w-16 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-xs text-on-surface outline-none focus:border-primary"
+                />
+                <button
+                  onClick={() => void publishDays()}
+                  disabled={publishing}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1 text-xs font-bold text-on-primary hover:bg-primary-container disabled:opacity-50 shadow-2xs"
+                >
+                  <Icon name={publishing ? "sync" : "visibility"} className={`text-[15px] ${publishing ? "animate-spin" : ""}`} />
+                  {publishing ? "Sharing…" : "Share next days"}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="hide-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
