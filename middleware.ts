@@ -55,8 +55,11 @@ export async function middleware(request: NextRequest) {
         // Students the admin creates straight into a campaign have no course
         // enrollment, so without this they were locked out of the portal with
         // "No features are assigned to your course."
+        const hasControls = Boolean(controls && controls.length > 0);
         const campaignStudent = courseAllows ? false : await hasActiveCampaignMembership(user.id);
-        const campaignAllows = campaignStudent && ["dashboard", "campaigns", "profile"].includes(mappedKey);
+        const campaignAllows = !hasControls
+          ? Boolean(campaignStudent && ["dashboard", "campaigns", "profile"].includes(mappedKey))
+          : Boolean(campaignStudent && mappedKey === "campaigns");
 
         // A pure campaign student has no course menus at all, so send them
         // straight to the campaign hub instead of rendering a dashboard that

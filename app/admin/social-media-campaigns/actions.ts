@@ -705,6 +705,53 @@ function assertCanManageMembers(profile: any) {
   }
 }
 
+/**
+ * Automatically registers / enrolls the student in the default "Social Media Marketing" course
+ * whenever they are assigned to a social media campaign.
+ */
+export async function ensureSocialMediaMarketingEnrollment(supabase: any, studentId: string) {
+  try {
+    let targetCourseId = "1750b535-313c-47fe-91cf-0a95be1e75b7";
+    const { data: course } = await supabase
+      .from("courses")
+      .select("id")
+      .ilike("title", "%Social Media Marketing%")
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (course?.id) {
+      targetCourseId = course.id;
+    }
+
+    const { data: existing } = await supabase
+      .from("enrollments")
+      .select("id, status")
+      .eq("student_id", studentId)
+      .eq("course_id", targetCourseId)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase.from("enrollments").insert({
+        student_id: studentId,
+        course_id: targetCourseId,
+        status: "active",
+        progress_percentage: 0,
+        final_score: 0,
+        target_tasks: 100,
+      });
+    } else if (existing.status !== "active") {
+      await supabase
+        .from("enrollments")
+        .update({ status: "active", completed_at: null })
+        .eq("id", existing.id);
+    }
+  } catch (err) {
+    console.error("Auto-enrollment in Social Media Marketing failed:", err);
+  }
+}
+
 export async function addCampaignMember(campaignId: string, studentId: string, driveUrl: string) {
   try {
     const profile = await requireCampaignAccess("social_campaigns.edit");
@@ -730,6 +777,9 @@ export async function addCampaignMember(campaignId: string, studentId: string, d
         admin_status: "approved",
       })
       .eq("id", studentId);
+
+    // Auto-enroll the student in default Social Media Marketing course
+    await ensureSocialMediaMarketingEnrollment(supabase, studentId);
 
     const { data, error } = await supabase
       .from("sm_campaign_members" as any)
@@ -1246,6 +1296,9 @@ export async function createCampaignStudent(input: {
         })
         .eq("id", (existing as any).id);
 
+      // Auto-enroll the student in default Social Media Marketing course
+      await ensureSocialMediaMarketingEnrollment(supabase, (existing as any).id);
+
       const { data: member, error: memberError } = await supabase
         .from("sm_campaign_members" as any)
         .upsert(
@@ -1311,10 +1364,13 @@ export async function createCampaignStudent(input: {
     const { error: profileError } = await supabase
       .from("profiles" as any)
       .upsert(
-        { id: authUser.id, email, full_name: fullName, phone, role: "student", status: "approved" },
+        { id: authUser.id, email, full_name: fullName, phone, role: "student", status: "approved", admin_status: "approved" },
         { onConflict: "id" },
       );
     if (profileError) throw new Error(profileError.message);
+
+    // Auto-enroll the student in default Social Media Marketing course
+    await ensureSocialMediaMarketingEnrollment(supabase, authUser.id);
 
     const { data: member, error: memberError } = await supabase
       .from("sm_campaign_members" as any)
