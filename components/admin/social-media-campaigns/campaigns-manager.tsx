@@ -11,12 +11,15 @@ import {
   createCampaign,
   fetchCampaignWorkspace,
   fetchAllCampaignStudents,
+  fetchDailySubmissionsOverview,
+  type DailySubmissionsData,
   type CampaignStudentRow,
 } from "@/app/admin/social-media-campaigns/actions";
 import { parseCampaignPlan, downloadCampaignTemplate, type ParsedPlan } from "@/lib/social-campaign-plan";
 import { CampaignBoard } from "./campaign-board";
 import { EditCampaignModal } from "./edit-campaign-modal";
 import { CampaignStudentsDirectory } from "./campaign-students-directory";
+import { DailySubmissionsReport } from "./daily-submissions-report";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
@@ -53,10 +56,11 @@ export function CampaignsManager({
   // The server already handed us the rows, so there is nothing to wait for.
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"campaigns" | "students">("campaigns");
+  const [activeTab, setActiveTab] = useState<"campaigns" | "students" | "submissions">("campaigns");
   const [campaigns, setCampaigns] = useState<any[]>(initialCampaigns);
   const [teachers, setTeachers] = useState<any[]>(initialTeachers);
   const [students, setStudents] = useState<CampaignStudentRow[]>([]);
+  const [dailySubmissionsData, setDailySubmissionsData] = useState<DailySubmissionsData | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
@@ -71,6 +75,13 @@ export function CampaignsManager({
     }
   }, []);
 
+  const loadDailySubmissions = useCallback(async () => {
+    const res = await fetchDailySubmissionsOverview();
+    if (res.success && res.data) {
+      setDailySubmissionsData(res.data);
+    }
+  }, []);
+
   const load = useCallback(async (options: { silent?: boolean } = {}) => {
     const silent = options.silent === true;
     if (silent) setRefreshing(true);
@@ -79,6 +90,7 @@ export function CampaignsManager({
     const [result] = await Promise.all([
       fetchCampaignWorkspace(),
       loadStudents(),
+      loadDailySubmissions(),
     ]);
 
     if (result.success) {
@@ -96,7 +108,7 @@ export function CampaignsManager({
 
     setLoading(false);
     setRefreshing(false);
-  }, [loadStudents]);
+  }, [loadStudents, loadDailySubmissions]);
 
   useEffect(() => {
     if (initialError) return;
@@ -225,6 +237,31 @@ export function CampaignsManager({
             }`}
           >
             {students.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("submissions");
+            void loadDailySubmissions();
+          }}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition shadow-2xs ${
+            activeTab === "submissions"
+              ? "bg-primary text-on-primary shadow-xs"
+              : "border border-outline-variant/70 bg-surface-lowest text-on-surface hover:bg-surface-low"
+          }`}
+        >
+          <Icon name="emoji_events" className="text-base" />
+          <span>Daily Submissions &amp; Leaderboard</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+              activeTab === "submissions"
+                ? "bg-white/20 text-white"
+                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+            }`}
+          >
+            {dailySubmissionsData?.submissions.length ? `${dailySubmissionsData.submissions.length} Total` : "Report"}
           </span>
         </button>
       </div>
@@ -373,6 +410,26 @@ export function CampaignsManager({
           role={role}
           onReload={async () => {
             await load({ silent: true });
+          }}
+          onOpenCampaign={(campaignId) => setOpenId(campaignId)}
+          setToast={setToast}
+        />
+      )}
+
+      {/* TAB 3: DAILY SUBMISSIONS & LEADERBOARD */}
+      {activeTab === "submissions" && (
+        <DailySubmissionsReport
+          data={
+            dailySubmissionsData || {
+              campaigns,
+              days: [],
+              members: [],
+              submissions: [],
+            }
+          }
+          role={role}
+          onReload={async () => {
+            await loadDailySubmissions();
           }}
           onOpenCampaign={(campaignId) => setOpenId(campaignId)}
           setToast={setToast}

@@ -1658,3 +1658,84 @@ export async function adminAssignStudentToCampaign(studentId: string, campaignId
   return addCampaignMember(campaignId, studentId, driveUrl || "");
 }
 
+export type DailySubmissionsData = {
+  campaigns: Array<any>;
+  days: Array<any>;
+  members: Array<any>;
+  submissions: Array<any>;
+};
+
+export async function fetchDailySubmissionsOverview(): Promise<{
+  success: boolean;
+  data?: DailySubmissionsData;
+  error?: string;
+}> {
+  try {
+    const profile = await requireCampaignAccess("social_campaigns.view");
+    const supabase = createSupabaseServiceClient();
+
+    let campaignQuery = supabase
+      .from("sm_campaigns" as any)
+      .select("id, client_name, campaign_name, status, teacher_id, teacher:profiles!teacher_id(id, full_name, email)")
+      .order("created_at", { ascending: false });
+
+    if (isTeacher(profile)) {
+      campaignQuery = campaignQuery.eq("teacher_id", profile.id);
+    }
+
+    const { data: campaigns, error: campError } = await campaignQuery;
+    if (campError) return { success: false, error: campError.message };
+
+    const campaignIds = ((campaigns ?? []) as any[]).map((c) => c.id);
+    if (campaignIds.length === 0) {
+      return {
+        success: true,
+        data: {
+          campaigns: [],
+          days: [],
+          members: [],
+          submissions: [],
+        },
+      };
+    }
+
+    const [
+      { data: days, error: daysError },
+      { data: members, error: membersError },
+      { data: submissions, error: subsError },
+    ] = await Promise.all([
+      supabase
+        .from("sm_campaign_days" as any)
+        .select("id, campaign_id, day_number, post_date, topic, content_type, script_guideline, visible_to_students, status, teacher_status, admin_status")
+        .in("campaign_id", campaignIds)
+        .order("day_number"),
+      supabase
+        .from("sm_campaign_members" as any)
+        .select("id, campaign_id, student_id, drive_url, status, registration_status, student:profiles!student_id(id, full_name, email, phone)")
+        .in("campaign_id", campaignIds)
+        .order("created_at"),
+      supabase
+        .from("sm_day_submissions" as any)
+        .select("id, campaign_id, day_id, member_id, student_id, video_url, post_url, doc_url, image_urls, caption, note, status, score, feedback, is_selected, reviewed_by, reviewed_at, created_at, updated_at, student:profiles!student_id(id, full_name, email, phone)")
+        .in("campaign_id", campaignIds)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (daysError) return { success: false, error: daysError.message };
+    if (membersError) return { success: false, error: membersError.message };
+
+    return {
+      success: true,
+      data: {
+        campaigns: campaigns ?? [],
+        days: days ?? [],
+        members: members ?? [],
+        submissions: (subsError ? [] : submissions) ?? [],
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: error?.message ?? "Could not load daily submissions overview." };
+  }
+}
+
+
