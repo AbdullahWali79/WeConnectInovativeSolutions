@@ -13,7 +13,33 @@ import { extractSubmissionLinks } from "@/lib/proof-links";
 
 function todayIso() {
   const d = new Date();
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function shiftDate(isoDate: string, deltaDays: number) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  d.setDate(d.getDate() + deltaDays);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function cleanPhoneForWhatsapp(phone?: string | null) {
+  if (!phone) return "";
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("00")) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith("0") && digits.length === 11) {
+    digits = "92" + digits.slice(1);
+  } else if (digits.length === 10 && digits.startsWith("3")) {
+    digits = "92" + digits;
+  }
+  return digits;
 }
 
 function formatDate(isoDate: string) {
@@ -45,7 +71,9 @@ export function DailySubmissionsReport({
 }) {
   const [selectedDate, setSelectedDate] = useState<string>(todayIso());
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all");
-  const [activeView, setActiveView] = useState<"daily" | "leaderboard">("daily");
+  const [activeView, setActiveView] = useState<"glance" | "daily" | "leaderboard">("glance");
+  const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "pending">("all");
+  const [campaignDayOverrides, setCampaignDayOverrides] = useState<Record<string, string>>({});
   const [studentSearch, setStudentSearch] = useState("");
   const [busySubId, setBusySubId] = useState<string | null>(null);
   const [isExportingPng, setIsExportingPng] = useState(false);
@@ -75,14 +103,44 @@ export function DailySubmissionsReport({
   // For each campaign, compute the day for selectedDate
   const campaignDayReports = useMemo(() => {
     return filteredCampaigns.map((camp) => {
-      // Find day with post_date matching selectedDate
-      let targetDay = days.find(
-        (d) => d.campaign_id === camp.id && d.post_date === selectedDate
-      );
+      // 1. User manual override for this campaign
+      const manualDayId = campaignDayOverrides[camp.id];
+      let targetDay = manualDayId ? days.find((d) => d.id === manualDayId) : null;
 
-      // If no exact date match, check if there is an active day
+      // 2. Find day with post_date matching selectedDate
       if (!targetDay) {
-        targetDay = days.filter((d) => d.campaign_id === camp.id).sort((a, b) => a.day_number - b.day_number)[0];
+        targetDay = days.find(
+          (d) => d.campaign_id === camp.id && d.post_date === selectedDate
+        );
+      }
+
+      // 3. Find if any day received submissions on selectedDate
+      if (!targetDay) {
+        const subOnDate = submissions.find(
+          (s) =>
+            s.campaign_id === camp.id &&
+            (s.created_at?.slice(0, 10) === selectedDate || s.updated_at?.slice(0, 10) === selectedDate)
+        );
+        if (subOnDate) {
+          targetDay = days.find((d) => d.id === subOnDate.day_id);
+        }
+      }
+
+      // 4. Find day with status active or in_progress
+      if (!targetDay) {
+        targetDay = days.find(
+          (d) => d.campaign_id === camp.id && (d.status === "active" || d.status === "in_progress")
+        );
+      }
+
+      // 5. Fallback: latest day with post_date <= selectedDate, or first day
+      if (!targetDay) {
+        const pastDays = days
+          .filter((d) => d.campaign_id === camp.id && d.post_date && d.post_date <= selectedDate)
+          .sort((a, b) => b.day_number - a.day_number);
+        targetDay =
+          pastDays[0] ||
+          days.filter((d) => d.campaign_id === camp.id).sort((a, b) => a.day_number - b.day_number)[0];
       }
 
       // Members allotted to this campaign
@@ -90,7 +148,7 @@ export function DailySubmissionsReport({
         (m) => m.campaign_id === camp.id && m.status === "active"
       );
 
-      // Submissions for this day
+      // Submissions for this day / date
       const daySubmissions: any[] = [];
       const pendingMembers: any[] = [];
 
@@ -98,18 +156,33 @@ export function DailySubmissionsReport({
         const student = m.student;
         if (!student) continue;
 
-        const sub = targetDay ? submissionsMap[`${targetDay.id}_${m.student_id}`] : null;
+        let sub = targetDay ? submissionsMap[`${targetDay.id}_${m.student_id}`] : null;
+
+        // Also check if student made a submission in this campaign on selectedDate
+        if (!sub) {
+          sub = submissions.find(
+            (s) =>
+              s.campaign_id === camp.id &&
+              s.student_id === m.student_id &&
+              (s.created_at?.slice(0, 10) === selectedDate || s.updated_at?.slice(0, 10) === selectedDate)
+          );
+        }
+
         if (sub) {
+          const subDay = days.find((d) => d.id === sub.day_id) || targetDay;
           daySubmissions.push({
             member: m,
             student,
             submission: sub,
+            day: subDay,
             links: extractSubmissionLinks(sub),
           });
         } else {
           pendingMembers.push({
             member: m,
             student,
+            campaign: camp,
+            day: targetDay,
           });
         }
       }
@@ -129,7 +202,62 @@ export function DailySubmissionsReport({
         rate,
       };
     });
-  }, [filteredCampaigns, days, selectedDate, members, submissionsMap]);
+  }, [filteredCampaigns, days, selectedDate, members, submissionsMap, submissions, campaignDayOverrides]);
+
+  // Combined all submitted today across campaigns
+  const allSubmittedToday = useMemo(() => {
+    const list: any[] = [];
+    for (const r of campaignDayReports) {
+      for (const item of r.daySubmissions) {
+        list.push({
+          ...item,
+          campaign: r.campaign,
+        });
+      }
+    }
+    return list;
+  }, [campaignDayReports]);
+
+  // Combined all pending today across campaigns
+  const allPendingToday = useMemo(() => {
+    const list: any[] = [];
+    for (const r of campaignDayReports) {
+      for (const item of r.pendingMembers) {
+        list.push({
+          ...item,
+          campaign: r.campaign,
+        });
+      }
+    }
+    return list;
+  }, [campaignDayReports]);
+
+  // Search filtered submitted
+  const filteredSubmittedToday = useMemo(() => {
+    if (!studentSearch.trim()) return allSubmittedToday;
+    const q = studentSearch.toLowerCase();
+    return allSubmittedToday.filter((item) => {
+      const name = item.student?.full_name?.toLowerCase() || "";
+      const email = item.student?.email?.toLowerCase() || "";
+      const phone = item.student?.phone || "";
+      const camp = (item.campaign?.client_name || item.campaign?.campaign_name || "").toLowerCase();
+      const topic = (item.day?.topic || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || phone.includes(q) || camp.includes(q) || topic.includes(q);
+    });
+  }, [allSubmittedToday, studentSearch]);
+
+  // Search filtered pending
+  const filteredPendingToday = useMemo(() => {
+    if (!studentSearch.trim()) return allPendingToday;
+    const q = studentSearch.toLowerCase();
+    return allPendingToday.filter((item) => {
+      const name = item.student?.full_name?.toLowerCase() || "";
+      const email = item.student?.email?.toLowerCase() || "";
+      const phone = item.student?.phone || "";
+      const camp = (item.campaign?.client_name || item.campaign?.campaign_name || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || phone.includes(q) || camp.includes(q);
+    });
+  }, [allPendingToday, studentSearch]);
 
   // Summary counts for today
   const dailySummaryStats = useMemo(() => {
@@ -284,7 +412,7 @@ export function DailySubmissionsReport({
   // Copy All Campaigns WhatsApp Summary
   function handleCopyAllCampaignsWhatsapp() {
     const lines = [
-      `🌟 *WE CONNECT - ALL CAMPAIGNS DAILY SUBMISSION SUMMARY*`,
+      `🌟 *WE CONNECT - DAILY DELIVERABLES & ATTENDANCE REPORT*`,
       `📅 *Date:* ${formatDate(selectedDate)}`,
       `📊 *Overall Completion:* ${dailySummaryStats.totalSubmitted}/${dailySummaryStats.totalAssigned} (${dailySummaryStats.overallRate}%)`,
       `------------------------------------------`,
@@ -292,8 +420,8 @@ export function DailySubmissionsReport({
 
     for (const r of campaignDayReports) {
       const campName = r.campaign.client_name || r.campaign.campaign_name;
-      const dayNum = r.day ? `Day #${r.day.day_number}` : "";
-      lines.push(`\n🏢 *${campName}* ${dayNum} (${r.submittedCount}/${r.totalMembers} Submitted):`);
+      const dayNum = r.day ? `Day #${r.day.day_number}` : "Daily Task";
+      lines.push(`\n🏢 *${campName}* (${dayNum}) - ${r.submittedCount}/${r.totalMembers} Submitted:`);
       if (r.daySubmissions.length > 0) {
         for (const s of r.daySubmissions) {
           const winTag = s.submission.is_selected ? " 🏆 [WINNER]" : "";
@@ -302,16 +430,48 @@ export function DailySubmissionsReport({
       } else {
         lines.push(`  • _No submissions recorded yet._`);
       }
+      if (r.pendingMembers.length > 0) {
+        const pendingNames = r.pendingMembers.map((m: any) => m.student.full_name).join(", ");
+        lines.push(`  • ⏳ Pending (${r.pendingMembers.length}): ${pendingNames}`);
+      }
     }
 
     lines.push(
       `\n------------------------------------------`,
-      `🚀 *Keep striving for excellence and consistency!*`,
+      `🚀 *Consistency is key to learning and winning client projects!*`,
       `🌐 weconnectinnovativesolutions.com`
     );
 
     void navigator.clipboard.writeText(lines.join("\n"));
     setToast({ type: "success", message: "All campaigns summary copied to clipboard!" });
+  }
+
+  // Copy All Pending WhatsApp Numbers
+  function handleCopyAllPendingWhatsapp() {
+    const numbers = allPendingToday
+      .map((item) => {
+        const wa = cleanPhoneForWhatsapp(item.student?.phone);
+        return wa ? `+${wa}` : null;
+      })
+      .filter(Boolean) as string[];
+
+    const unique = Array.from(new Set(numbers));
+    if (unique.length === 0) {
+      setToast({ type: "error", message: "No WhatsApp numbers found among pending students." });
+      return;
+    }
+    navigator.clipboard.writeText(unique.join(", "));
+    setToast({ type: "success", message: `Copied ${unique.length} pending WhatsApp numbers to clipboard!` });
+  }
+
+  // Get single WhatsApp reminder link for a student
+  function getStudentReminderUrl(student: any, campaign: any, day: any) {
+    const wa = cleanPhoneForWhatsapp(student?.phone);
+    if (!wa) return null;
+    const client = campaign?.client_name || campaign?.campaign_name || "Social Media Campaign";
+    const taskInfo = day ? `Day #${day.day_number} (${day.topic || "Daily Task"})` : "today's task";
+    const msg = `Salam ${student?.full_name || "Student"}, reminder from WeConnect Innovative Solutions: your deliverable for ${client} [${taskInfo}] on ${formatDate(selectedDate)} is pending. Please complete and submit your work as soon as possible. Thank you!`;
+    return `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
   }
 
   // Export PNG Card
@@ -394,6 +554,22 @@ export function DailySubmissionsReport({
           <div className="inline-flex rounded-xl bg-surface-low p-1 border border-outline-variant/50">
             <button
               type="button"
+              onClick={() => setActiveView("glance")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                activeView === "glance"
+                  ? "bg-primary text-on-primary shadow-xs"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <Icon name="bolt" className="text-[15px] text-amber-400" />
+              <span>Today at a Glance</span>
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] text-emerald-700 dark:text-emerald-300 font-extrabold">
+                {dailySummaryStats.totalSubmitted} Done
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveView("daily")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
                 activeView === "daily"
@@ -401,10 +577,10 @@ export function DailySubmissionsReport({
                   : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
-              <Icon name="today" className="text-[15px]" />
-              <span>Daily Deliverables View</span>
-              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] text-emerald-700 dark:text-emerald-300 font-extrabold">
-                {dailySummaryStats.totalSubmitted} Done
+              <Icon name="campaign" className="text-[15px]" />
+              <span>By Campaign Details</span>
+              <span className="rounded-full bg-surface-container px-1.5 py-0.2 text-[10px] text-on-surface font-extrabold">
+                {campaignDayReports.length}
               </span>
             </button>
 
@@ -418,7 +594,7 @@ export function DailySubmissionsReport({
               }`}
             >
               <Icon name="military_tech" className="text-[15px]" />
-              <span>Champions &amp; Winners Hall of Fame</span>
+              <span>Champions &amp; Leaderboard</span>
               <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[10px] text-amber-700 dark:text-amber-300 font-extrabold">
                 🏆 Top Ranks
               </span>
@@ -427,7 +603,7 @@ export function DailySubmissionsReport({
 
           {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            {activeView === "daily" ? (
+            {activeView !== "leaderboard" ? (
               <>
                 <button
                   type="button"
@@ -436,7 +612,7 @@ export function DailySubmissionsReport({
                   title="Copy formatted text to send in WhatsApp student group"
                 >
                   <Icon name="content_copy" className="text-sm" />
-                  <span>Copy WhatsApp Update</span>
+                  <span>Copy WhatsApp Report</span>
                 </button>
                 <button
                   type="button"
@@ -445,7 +621,7 @@ export function DailySubmissionsReport({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-2xs"
                 >
                   <Icon name="photo_camera" className="text-sm" />
-                  <span>{isExportingPng ? "Generating…" : "Download Today's Card (PNG)"}</span>
+                  <span>{isExportingPng ? "Generating…" : "Download Report (PNG)"}</span>
                 </button>
               </>
             ) : (
@@ -473,11 +649,19 @@ export function DailySubmissionsReport({
 
         {/* Filters bar */}
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-outline-variant/40">
-          {activeView === "daily" && (
+          {activeView !== "leaderboard" && (
             <>
               {/* Date controls */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold text-on-surface-variant">Date:</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] font-bold text-on-surface-variant mr-1">Date:</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate((prev) => shiftDate(prev, -1))}
+                  className="rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-xs font-bold text-on-surface hover:bg-surface-low transition shadow-2xs"
+                  title="Previous day"
+                >
+                  ‹
+                </button>
                 <input
                   type="date"
                   value={selectedDate}
@@ -487,13 +671,21 @@ export function DailySubmissionsReport({
                 <button
                   type="button"
                   onClick={() => setSelectedDate(todayIso())}
-                  className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+                  className={`rounded-lg px-2 py-1 text-[11px] font-bold transition shadow-2xs ${
                     selectedDate === todayIso()
-                      ? "bg-primary/10 text-primary font-black"
-                      : "text-on-surface-variant hover:bg-surface-low"
+                      ? "bg-primary/10 text-primary font-black border border-primary/30"
+                      : "border border-outline-variant bg-surface-lowest text-on-surface hover:bg-surface-low"
                   }`}
                 >
                   Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate((prev) => shiftDate(prev, 1))}
+                  className="rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-xs font-bold text-on-surface hover:bg-surface-low transition shadow-2xs"
+                  title="Next day"
+                >
+                  ›
                 </button>
               </div>
 
@@ -526,7 +718,7 @@ export function DailySubmissionsReport({
               type="text"
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
-              placeholder="Filter student by name or contact..."
+              placeholder="Search student by name, email, WhatsApp, or campaign..."
               className="w-full rounded-lg border border-outline-variant bg-surface-lowest py-1 pl-8 pr-2.5 text-xs text-on-surface outline-none focus:border-primary"
             />
           </div>
@@ -534,36 +726,374 @@ export function DailySubmissionsReport({
       </div>
 
       {/* QUICK SUMMARY STATS BANNER */}
-      {activeView === "daily" && (
+      {activeView !== "leaderboard" && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <div className="rounded-xl border border-outline-variant/60 bg-surface-lowest p-3 shadow-2xs">
-            <p className="text-[11px] font-bold text-on-surface-variant">Active Campaigns</p>
+            <p className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1">
+              <Icon name="campaign" className="text-primary text-sm" /> Active Campaigns
+            </p>
             <p className="text-xl font-black text-on-surface mt-0.5">{campaignDayReports.length}</p>
           </div>
           <div className="rounded-xl border border-outline-variant/60 bg-surface-lowest p-3 shadow-2xs">
-            <p className="text-[11px] font-bold text-on-surface-variant">Total Assigned</p>
+            <p className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1">
+              <Icon name="groups" className="text-blue-600 text-sm" /> Total Assigned
+            </p>
             <p className="text-xl font-black text-on-surface mt-0.5">{dailySummaryStats.totalAssigned}</p>
           </div>
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 shadow-2xs">
-            <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">Submitted Today</p>
-            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {dailySummaryStats.totalSubmitted}
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 shadow-2xs">
+            <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+              <Icon name="check_circle" className="text-emerald-600 text-sm" /> Submitted Today
             </p>
-          </div>
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 shadow-2xs">
-            <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300">Completion Rate</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xl font-black text-amber-600 dark:text-amber-400">
-                {dailySummaryStats.overallRate}%
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                {dailySummaryStats.totalSubmitted}
               </span>
-              <div className="flex-1 bg-amber-200 dark:bg-amber-950/60 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-amber-500 h-full rounded-full transition-all"
-                  style={{ width: `${dailySummaryStats.overallRate}%` }}
-                />
-              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/80 px-1.5 py-0.2 rounded">
+                {dailySummaryStats.overallRate}% Done
+              </span>
             </div>
           </div>
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 shadow-2xs">
+            <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+              <Icon name="schedule" className="text-amber-600 text-sm" /> Pending Today
+            </p>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-black text-amber-600 dark:text-amber-400">
+                {dailySummaryStats.totalPending}
+              </span>
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-950/80 px-1.5 py-0.2 rounded">
+                Waiting
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 0: TODAY AT A GLANCE (QUICK REPORT) */}
+      {activeView === "glance" && (
+        <div className="space-y-4">
+          {/* Filter Pills and Action Bar */}
+          <div className="rounded-xl border border-outline-variant/60 bg-surface-lowest p-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2">
+            <div className="inline-flex rounded-lg bg-surface-low p-1 border border-outline-variant/40 gap-1">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className={`rounded-md px-3 py-1 text-xs font-bold transition ${
+                  statusFilter === "all"
+                    ? "bg-primary text-on-primary shadow-xs"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                All Students ({dailySummaryStats.totalAssigned})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("submitted")}
+                className={`rounded-md px-3 py-1 text-xs font-bold transition flex items-center gap-1 ${
+                  statusFilter === "submitted"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+                }`}
+              >
+                <span>✅ Submitted</span>
+                <span className="rounded-full bg-black/15 px-1.5 text-[10px] font-black">
+                  {allSubmittedToday.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("pending")}
+                className={`rounded-md px-3 py-1 text-xs font-bold transition flex items-center gap-1 ${
+                  statusFilter === "pending"
+                    ? "bg-amber-600 text-white shadow-xs"
+                    : "text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                }`}
+              >
+                <span>⏳ Pending</span>
+                <span className="rounded-full bg-black/15 px-1.5 text-[10px] font-black">
+                  {allPendingToday.length}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {allPendingToday.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleCopyAllPendingWhatsapp}
+                  className="inline-flex items-center gap-1 rounded-lg border border-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 text-xs font-bold text-amber-800 dark:text-amber-200 hover:bg-amber-100 transition shadow-2xs"
+                  title="Copy WhatsApp numbers of all pending students"
+                >
+                  <Icon name="chat" className="text-xs text-amber-600" />
+                  <span>Copy Pending WhatsApp ({allPendingToday.filter((p) => cleanPhoneForWhatsapp(p.student?.phone)).length})</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* SECTION 1: SUBMITTED DELIVERABLES TODAY */}
+          {(statusFilter === "all" || statusFilter === "submitted") && (
+            <div className="rounded-2xl border border-outline-variant/60 bg-surface-lowest shadow-sm p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
+                    <Icon name="check_circle" className="text-base" />
+                  </span>
+                  <div>
+                    <h3 className="text-xs font-black text-on-surface">
+                      Submitted Deliverables ({filteredSubmittedToday.length})
+                    </h3>
+                    <p className="text-[10px] text-on-surface-variant">
+                      Work submitted for {formatDate(selectedDate)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {filteredSubmittedToday.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-outline-variant/80 p-6 text-center text-xs text-on-surface-variant">
+                  <Icon name="cloud_off" className="text-2xl opacity-40 mx-auto mb-1 block" />
+                  No submissions found for {formatDate(selectedDate)}.
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredSubmittedToday.map(({ student, submission, day, campaign, links }: any) => {
+                    const isWinner = submission.is_selected;
+                    const submittedTime = formatTime(submission.created_at);
+                    const campName = campaign?.client_name || campaign?.campaign_name || "Campaign";
+                    const waDigits = cleanPhoneForWhatsapp(student.phone);
+                    const waChatUrl = waDigits ? `https://wa.me/${waDigits}` : null;
+
+                    return (
+                      <div
+                        key={submission.id}
+                        className={`rounded-xl border p-3.5 transition-all relative flex flex-col justify-between space-y-2.5 shadow-2xs ${
+                          isWinner
+                            ? "border-amber-400 bg-amber-500/10 dark:border-amber-500/60 dark:bg-amber-950/20"
+                            : "border-emerald-500/40 bg-emerald-500/5 hover:border-emerald-500"
+                        }`}
+                      >
+                        <div>
+                          {/* Student Header */}
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                                <span className="truncate">{student.full_name}</span>
+                                {isWinner && (
+                                  <span className="shrink-0 text-amber-500 text-sm" title="Winner Best Pick">
+                                    🏆
+                                  </span>
+                                )}
+                              </h4>
+                              <p className="text-[10px] text-on-surface-variant truncate">
+                                {student.email}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-black text-emerald-700 dark:text-emerald-300">
+                              ✅ {submittedTime || "Done"}
+                            </span>
+                          </div>
+
+                          {/* Campaign & Task Info */}
+                          <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                            <span className="rounded-md border border-outline-variant/60 bg-surface-lowest px-1.5 py-0.5 text-[10px] font-bold text-on-surface">
+                              {campName}
+                            </span>
+                            {day && (
+                              <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-primary truncate max-w-[170px]" title={day.topic}>
+                                Day #{day.day_number}: {day.topic || "Daily Task"}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Clickable Work Proof Links */}
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                            {links.driveUrl && (
+                              <a
+                                href={links.driveUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-surface-lowest px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 transition"
+                                title="Open Google Drive Files"
+                              >
+                                <Icon name="folder" className="text-xs text-[#0F9D58]" />
+                                <span>Drive Link</span>
+                              </a>
+                            )}
+                            {links.docUrl && (
+                              <a
+                                href={links.docUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-md border border-blue-500/40 bg-surface-lowest px-2 py-0.5 text-[10px] font-bold text-blue-800 dark:text-blue-200 hover:bg-blue-50 transition"
+                                title="Open Google Docs"
+                              >
+                                <Icon name="description" className="text-xs text-[#4285F4]" />
+                                <span>Docs Link</span>
+                              </a>
+                            )}
+                            {links.postUrl && (
+                              <a
+                                href={links.postUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-md border border-purple-500/40 bg-surface-lowest px-2 py-0.5 text-[10px] font-bold text-purple-800 dark:text-purple-200 hover:bg-purple-50 transition"
+                                title="Open Live Post"
+                              >
+                                <Icon name="share" className="text-xs text-purple-600" />
+                                <span>Live Post</span>
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Student Note */}
+                          {submission.note && (
+                            <p className="mt-2 text-[10px] text-on-surface-variant italic bg-surface-lowest/80 p-1.5 rounded-lg border border-outline-variant/40 line-clamp-2">
+                              &ldquo;{submission.note}&rdquo;
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Card Footer */}
+                        <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between gap-2">
+                          {waChatUrl ? (
+                            <a
+                              href={waChatUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
+                            >
+                              <Icon name="chat" className="text-xs" />
+                              <span>WhatsApp</span>
+                            </a>
+                          ) : (
+                            <span className="text-[10px] text-on-surface-variant">Logged</span>
+                          )}
+
+                          {role !== "student" && day && (
+                            <button
+                              type="button"
+                              disabled={busySubId === submission.id}
+                              onClick={() => handleToggleWinner(submission.id, day.id)}
+                              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold transition shadow-2xs ${
+                                isWinner
+                                  ? "bg-amber-600 text-white hover:bg-amber-700"
+                                  : "border border-amber-500/40 bg-surface-lowest text-amber-800 dark:text-amber-300 hover:bg-amber-50"
+                              }`}
+                            >
+                              <span>{isWinner ? "🏆 Winner" : "👑 Pick Winner"}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SECTION 2: PENDING STUDENTS TODAY */}
+          {(statusFilter === "all" || statusFilter === "pending") && (
+            <div className="rounded-2xl border border-outline-variant/60 bg-surface-lowest shadow-sm p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300">
+                    <Icon name="schedule" className="text-base" />
+                  </span>
+                  <div>
+                    <h3 className="text-xs font-black text-on-surface">
+                      Pending Deliverables ({filteredPendingToday.length})
+                    </h3>
+                    <p className="text-[10px] text-on-surface-variant">
+                      Students who have not submitted today&apos;s current task yet
+                    </p>
+                  </div>
+                </div>
+                {filteredPendingToday.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleCopyAllPendingWhatsapp}
+                    className="inline-flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-low px-2 py-1 text-[11px] font-bold text-on-surface hover:text-amber-700 transition"
+                  >
+                    <Icon name="content_copy" className="text-xs" />
+                    <span>Copy Numbers</span>
+                  </button>
+                )}
+              </div>
+
+              {filteredPendingToday.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-emerald-500/50 bg-emerald-50/20 p-6 text-center text-xs text-emerald-800 dark:text-emerald-300">
+                  <Icon name="verified" className="text-2xl text-emerald-600 mx-auto mb-1 block" />
+                  🎉 Awesome! All assigned students have submitted their tasks for {formatDate(selectedDate)}.
+                </div>
+              ) : (
+                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredPendingToday.map(({ student, campaign, day }: any) => {
+                    const campName = campaign?.client_name || campaign?.campaign_name || "Campaign";
+                    const reminderUrl = getStudentReminderUrl(student, campaign, day);
+
+                    return (
+                      <div
+                        key={`${campaign.id}_${student.id}`}
+                        className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex flex-col justify-between space-y-2 shadow-2xs hover:border-amber-500/60 transition"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-on-surface truncate">
+                                {student.full_name}
+                              </h4>
+                              <p className="text-[10px] text-on-surface-variant truncate">
+                                {student.email}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-black text-amber-700 dark:text-amber-300">
+                              ⏳ Pending
+                            </span>
+                          </div>
+
+                          <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                            <span className="rounded-md border border-outline-variant/60 bg-surface-lowest px-1.5 py-0.5 text-[10px] font-bold text-on-surface">
+                              {campName}
+                            </span>
+                            {day && (
+                              <span className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 truncate max-w-[170px]" title={day.topic}>
+                                Day #{day.day_number}: {day.topic || "Daily Task"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between gap-2">
+                          <span className="font-mono text-[10px] text-on-surface-variant">
+                            {student.phone || "No phone"}
+                          </span>
+
+                          {reminderUrl ? (
+                            <a
+                              href={reminderUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 text-[10px] font-bold shadow-2xs transition"
+                              title="Send reminder on WhatsApp"
+                            >
+                              <Icon name="chat" className="text-xs" />
+                              <span>Remind WhatsApp ↗</span>
+                            </a>
+                          ) : (
+                            <span className="text-[9px] text-on-surface-variant italic">
+                              No WhatsApp
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -609,6 +1139,25 @@ export function DailySubmissionsReport({
                         <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-black text-primary">
                           Day #{day.day_number}
                         </span>
+                      )}
+                      {days.filter((d) => d.campaign_id === campaign.id).length > 1 && (
+                        <select
+                          value={day?.id || ""}
+                          onChange={(e) =>
+                            setCampaignDayOverrides((prev) => ({ ...prev, [campaign.id]: e.target.value }))
+                          }
+                          className="rounded-md border border-outline-variant/60 bg-surface-lowest px-1.5 py-0.5 text-[10px] font-bold text-on-surface outline-none focus:border-primary max-w-[190px]"
+                          title="Select task day for this campaign"
+                        >
+                          {days
+                            .filter((d) => d.campaign_id === campaign.id)
+                            .sort((a, b) => a.day_number - b.day_number)
+                            .map((d) => (
+                              <option key={d.id} value={d.id}>
+                                Day #{d.day_number}: {d.topic ? d.topic.slice(0, 24) : "Task"}
+                              </option>
+                            ))}
+                        </select>
                       )}
                       <span className="rounded-md bg-surface-lowest border border-outline-variant/60 px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
                         {submittedCount}/{totalMembers} Submitted ({rate}%)
@@ -743,7 +1292,7 @@ export function DailySubmissionsReport({
                                 {/* Student Note */}
                                 {submission.note && (
                                   <p className="mt-1.5 text-[10px] text-on-surface-variant italic bg-surface-lowest/70 p-1.5 rounded-lg border border-outline-variant/40 line-clamp-2">
-                                    "{submission.note}"
+                                    &ldquo;{submission.note}&rdquo;
                                   </p>
                                 )}
                               </div>
@@ -1171,7 +1720,7 @@ export function DailySubmissionsReport({
           <div className="mt-12 pt-6 border-t border-white/10 flex items-center justify-between text-xs text-white/70">
             <div>
               <p className="font-bold text-white">
-                "Consistency is what transforms average into excellence." 🚀
+                &ldquo;Consistency is what transforms average into excellence.&rdquo; 🚀
               </p>
               <p className="text-[10px] text-white/50 mt-0.5">
                 We Connect Innovative Solutions • Training &amp; Production Agency
@@ -1313,7 +1862,7 @@ export function DailySubmissionsReport({
           <div className="mt-12 pt-6 border-t border-white/10 flex items-center justify-between text-xs text-white/70">
             <div>
               <p className="font-bold text-white">
-                "Dedicated creators lead tomorrow's digital economy." 🚀
+                &ldquo;Dedicated creators lead tomorrow&apos;s digital economy.&rdquo; 🚀
               </p>
               <p className="text-[10px] text-white/50 mt-0.5">
                 We Connect Innovative Solutions • Social Media Marketing Division

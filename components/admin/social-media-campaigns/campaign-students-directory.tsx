@@ -39,6 +39,7 @@ export function CampaignStudentsDirectory({
   onReload,
   onOpenCampaign,
   setToast,
+  onViewSubmissions,
 }: {
   students: CampaignStudentRow[];
   campaigns: any[];
@@ -46,6 +47,7 @@ export function CampaignStudentsDirectory({
   onReload: () => Promise<void>;
   onOpenCampaign: (campaignId: string) => void;
   setToast: (toast: ToastState) => void;
+  onViewSubmissions?: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all");
@@ -329,12 +331,27 @@ export function CampaignStudentsDirectory({
           <p className="text-xl font-black text-emerald-600 mt-0.5">{metrics.withPhone}</p>
         </div>
 
-        <div className="rounded-xl border border-outline-variant/60 bg-surface-lowest p-3 shadow-2xs">
-          <p className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1">
-            <Icon name="cloud_upload" className="text-blue-600 text-sm" /> Total Submissions
-          </p>
-          <p className="text-xl font-black text-blue-600 mt-0.5">{metrics.totalSubmissions}</p>
-        </div>
+        <button
+          type="button"
+          onClick={onViewSubmissions}
+          className="text-left rounded-xl border border-blue-500/40 bg-blue-50/30 dark:border-blue-900/60 dark:bg-blue-950/20 p-3 shadow-2xs hover:border-blue-500 hover:shadow-xs transition cursor-pointer group"
+          title="Click to open Today's Submissions & Pending Report"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1">
+              <Icon name="cloud_upload" className="text-blue-600 text-sm" /> Total Submissions
+            </p>
+            <span className="text-[10px] font-bold text-blue-600 flex items-center gap-0.5 opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+              Today &amp; Subs <Icon name="arrow_forward" className="text-xs" />
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2 mt-0.5">
+            <p className="text-xl font-black text-blue-600">{metrics.totalSubmissions}</p>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.2 rounded-md">
+              Open Report →
+            </span>
+          </div>
+        </button>
 
         <div className="rounded-xl border border-outline-variant/60 bg-surface-lowest p-3 shadow-2xs">
           <p className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1">
@@ -597,9 +614,20 @@ export function CampaignStudentsDirectory({
                       {/* Column 5: Submissions & Wins */}
                       <td className="px-3 py-3 text-center">
                         <div className="inline-flex items-center gap-1.5 font-bold text-[11px]">
-                          <span className="rounded-full bg-surface-container px-2 py-0.5 text-on-surface" title="Total submissions submitted">
-                            {s.submissionsCount} subs
-                          </span>
+                          {onViewSubmissions ? (
+                            <button
+                              type="button"
+                              onClick={onViewSubmissions}
+                              className="rounded-full bg-surface-container hover:bg-primary hover:text-white px-2 py-0.5 text-on-surface transition cursor-pointer"
+                              title="Click to view submissions & daily reports"
+                            >
+                              {s.submissionsCount} subs
+                            </button>
+                          ) : (
+                            <span className="rounded-full bg-surface-container px-2 py-0.5 text-on-surface" title="Total submissions submitted">
+                              {s.submissionsCount} subs
+                            </span>
+                          )}
                           {s.winningCount > 0 && (
                             <span className="rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 px-1.5 py-0.5 text-[10px] font-black" title="Official Benchmark Winners">
                               ⭐ {s.winningCount}

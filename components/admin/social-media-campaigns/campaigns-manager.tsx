@@ -134,6 +134,18 @@ export function CampaignsManager({
     return { active, done, planned, percent: planned ? Math.round((done / planned) * 100) : 0 };
   }, [campaigns]);
 
+  const todaySubmissionsCount = useMemo(() => {
+    if (!dailySubmissionsData?.submissions) return 0;
+    const now = new Date();
+    const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const todayUtc = now.toISOString().slice(0, 10);
+    return dailySubmissionsData.submissions.filter((s) => {
+      const created = s.created_at ? s.created_at.slice(0, 10) : "";
+      const updated = s.updated_at ? s.updated_at.slice(0, 10) : "";
+      return created === todayLocal || created === todayUtc || updated === todayLocal || updated === todayUtc;
+    }).length;
+  }, [dailySubmissionsData]);
+
   if (openId) {
     return (
       <>
@@ -186,7 +198,25 @@ export function CampaignsManager({
         <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Stat label="Campaigns" value={String(campaigns.length)} />
           <Stat label="Active" value={String(totals.active)} />
-          <Stat label="Posts done" value={String(totals.done)} tone="text-emerald-700" />
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("submissions");
+              void loadDailySubmissions();
+            }}
+            className="text-left rounded-xl border border-outline-variant/60 bg-surface-lowest p-2.5 hover:border-emerald-500 hover:bg-emerald-50/20 transition cursor-pointer group"
+            title="Click to view Today's Submissions & Deliverables"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-on-surface-variant">Posts done</span>
+              <span className="text-[9px] font-bold text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                Today →
+              </span>
+            </div>
+            <p className="text-base sm:text-lg font-black text-emerald-700 mt-0.5">
+              {totals.done} <span className="text-xs font-normal text-on-surface-variant">/ {totals.planned}</span>
+            </p>
+          </button>
           <Stat label="Completion" value={`${totals.percent}%`} />
         </div>
       </div>
@@ -252,8 +282,8 @@ export function CampaignsManager({
               : "border border-outline-variant/70 bg-surface-lowest text-on-surface hover:bg-surface-low"
           }`}
         >
-          <Icon name="emoji_events" className="text-base" />
-          <span>Daily Submissions &amp; Leaderboard</span>
+          <Icon name="task_alt" className="text-base text-emerald-500" />
+          <span>Today&apos;s Submissions</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
               activeTab === "submissions"
@@ -261,7 +291,9 @@ export function CampaignsManager({
                 : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
             }`}
           >
-            {dailySubmissionsData?.submissions.length ? `${dailySubmissionsData.submissions.length} Total` : "Report"}
+            {todaySubmissionsCount > 0
+              ? `${todaySubmissionsCount} Today`
+              : (dailySubmissionsData?.submissions?.length ? `${dailySubmissionsData.submissions.length} Total` : "Report")}
           </span>
         </button>
       </div>
@@ -413,6 +445,10 @@ export function CampaignsManager({
           }}
           onOpenCampaign={(campaignId) => setOpenId(campaignId)}
           setToast={setToast}
+          onViewSubmissions={() => {
+            setActiveTab("submissions");
+            void loadDailySubmissions();
+          }}
         />
       )}
 
