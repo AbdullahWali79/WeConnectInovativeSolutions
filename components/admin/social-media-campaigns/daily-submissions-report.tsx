@@ -481,7 +481,7 @@ export function DailySubmissionsReport({
 
     try {
       // Allow DOM to update state and styles
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
 
       if (!dailyCardRef.current) throw new Error("Card element not ready.");
 
@@ -503,7 +503,7 @@ export function DailySubmissionsReport({
       link.href = dataUrl;
       link.click();
 
-      setToast({ type: "success", message: "📸 High-resolution PNG submission card downloaded!" });
+      setToast({ type: "success", message: "📸 High-resolution WhatsApp summary card downloaded!" });
     } catch (err: any) {
       setToast({ type: "error", message: err?.message || "Could not generate PNG card." });
     } finally {
@@ -619,9 +619,10 @@ export function DailySubmissionsReport({
                   disabled={isExportingPng}
                   onClick={() => handleDownloadDailyCard("all")}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-2xs"
+                  title="Download a single compact image of all campaigns showing who did the task and who is missing for WhatsApp"
                 >
                   <Icon name="photo_camera" className="text-sm" />
-                  <span>{isExportingPng ? "Generating…" : "Download Report (PNG)"}</span>
+                  <span>{isExportingPng ? "Generating…" : "Download WhatsApp Image (All Campaigns)"}</span>
                 </button>
               </>
             ) : (
@@ -1601,116 +1602,232 @@ export function DailySubmissionsReport({
       <div className="fixed -left-[9999px] top-0 pointer-events-none" aria-hidden="true">
         <div
           ref={dailyCardRef}
-          style={{ width: "1080px", minHeight: "1080px", fontFamily: "sans-serif" }}
-          className="bg-linear-to-b from-[#0B1329] via-[#0F172A] to-[#0B1329] text-white p-12 flex flex-col justify-between"
+          style={{ width: "1120px", minHeight: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}
+          className="bg-linear-to-b from-[#0B1329] via-[#0F172A] to-[#0B1329] text-white p-10 flex flex-col justify-between"
         >
           {/* Header */}
           <div>
-            <div className="flex items-center justify-between border-b border-white/10 pb-6">
+            <div className="flex items-center justify-between border-b border-white/10 pb-5">
               <div>
-                <span className="text-emerald-400 text-sm font-black tracking-widest uppercase block">
+                <span className="text-emerald-400 text-xs font-black tracking-widest uppercase block">
                   ★ WE CONNECT INNOVATIVE SOLUTIONS ★
                 </span>
-                <h1 className="text-3xl font-black text-white mt-1">
-                  Social Media Campaigns Hub
+                <h1 className="text-2xl font-black text-white mt-1">
+                  Daily Tasks &amp; Attendance Report
                 </h1>
               </div>
               <div className="text-right">
-                <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-4 py-1.5 text-xs font-black text-emerald-300">
-                  {formatDate(selectedDate)}
+                <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3.5 py-1 text-xs font-black text-emerald-300">
+                  📅 {formatDate(selectedDate)}
                 </span>
               </div>
             </div>
 
             {/* Banner Title */}
-            <div className="my-8 rounded-2xl bg-linear-to-r from-emerald-600/30 via-indigo-600/20 to-purple-600/30 border border-white/15 p-6 text-center">
-              <span className="text-amber-400 text-xs font-black uppercase tracking-wider block mb-1">
-                🌟 DAILY SUBMISSION ROLL OF HONOR 🌟
+            <div className="my-5 rounded-2xl bg-linear-to-r from-emerald-600/30 via-indigo-600/20 to-purple-600/30 border border-white/15 p-4 text-center">
+              <span className="text-amber-400 text-[11px] font-black uppercase tracking-wider block mb-0.5">
+                🌟 DAILY SUBMISSION STATUS • ALL CAMPAIGNS 🌟
               </span>
-              <h2 className="text-2xl font-black text-white">
+              <h2 className="text-xl font-black text-white">
                 {singleExportReport
                   ? `${singleExportReport.campaign.client_name || singleExportReport.campaign.campaign_name} • Day #${singleExportReport.day?.day_number ?? 1}`
-                  : `All Campaigns Daily Deliverables Report`}
+                  : `Campaigns Deliverables & Missing Students Tracker`}
               </h2>
               {singleExportReport?.day?.topic && (
-                <p className="text-emerald-200 text-sm mt-1 font-semibold">
-                  Task: {singleExportReport.day.topic}
+                <p className="text-emerald-200 text-xs mt-1 font-semibold">
+                  🎯 Task Topic: {singleExportReport.day.topic}
                 </p>
               )}
             </div>
 
             {/* Submissions Grid */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               {singleExportReport ? (
-                <div>
-                  <h3 className="text-sm font-black text-emerald-400 uppercase tracking-wider mb-3">
-                    Submissions ({singleExportReport.submittedCount}/{singleExportReport.totalMembers} Completed)
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {singleExportReport.daySubmissions.map(({ student, submission }: any) => (
-                      <div
-                        key={submission.id}
-                        className={`rounded-xl p-3 border ${
-                          submission.is_selected
-                            ? "border-amber-400 bg-amber-400/10 ring-1 ring-amber-400"
-                            : "border-emerald-500/30 bg-emerald-500/10"
-                        } flex items-center justify-between`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center">
-                            ✓
-                          </div>
-                          <div>
-                            <span className="font-bold text-white text-sm block">
-                              {student.full_name}
-                            </span>
-                            <span className="text-[10px] text-emerald-200">
-                              Verified Deliverable
-                            </span>
-                          </div>
-                        </div>
-                        {submission.is_selected && (
-                          <span className="text-amber-300 text-xs font-black">
-                            🏆 BEST PICK
-                          </span>
-                        )}
+                <div className="space-y-4">
+                  {/* Summary row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                      <span className="text-[10px] uppercase font-bold text-white/60 block">Total Assigned</span>
+                      <span className="text-lg font-black text-white">{singleExportReport.totalMembers}</span>
+                    </div>
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center">
+                      <span className="text-[10px] uppercase font-bold text-emerald-300 block">✅ Submitted On-Time</span>
+                      <span className="text-lg font-black text-emerald-400">{singleExportReport.submittedCount} ({singleExportReport.rate}%)</span>
+                    </div>
+                    <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-center">
+                      <span className="text-[10px] uppercase font-bold text-rose-300 block">⏳ Pending / Missing</span>
+                      <span className="text-lg font-black text-rose-400">{singleExportReport.pendingMembers.length}</span>
+                    </div>
+                  </div>
+
+                  {/* Submitted List */}
+                  <div>
+                    <h3 className="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>✅ Submitted Deliverables ({singleExportReport.submittedCount})</span>
+                      <span className="text-[11px] text-emerald-300 font-bold">{singleExportReport.rate}% Done</span>
+                    </h3>
+                    {singleExportReport.daySubmissions.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-white/10 p-3 text-center text-xs text-white/50 italic">
+                        No submissions recorded for this campaign today.
                       </div>
-                    ))}
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {singleExportReport.daySubmissions.map(({ student, submission }: any) => (
+                          <div
+                            key={submission.id}
+                            className={`rounded-xl p-2.5 border ${
+                              submission.is_selected
+                                ? "border-amber-400 bg-amber-400/15 ring-1 ring-amber-400"
+                                : "border-emerald-500/30 bg-emerald-500/10"
+                            } flex items-center justify-between`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="h-5 w-5 rounded-full bg-emerald-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
+                                ✓
+                              </span>
+                              <span className="font-bold text-white text-xs truncate">
+                                {student.full_name}
+                              </span>
+                            </div>
+                            {submission.is_selected && (
+                              <span className="rounded-full bg-amber-400 px-1.5 py-0.2 text-[9px] font-black text-black shrink-0">
+                                🏆 WINNER
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Missing List */}
+                  <div>
+                    <h3 className="text-xs font-black text-rose-400 uppercase tracking-wider mb-2">
+                      ⏳ Missing / Pending Submissions ({singleExportReport.pendingMembers.length})
+                    </h3>
+                    {singleExportReport.pendingMembers.length === 0 ? (
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs font-bold text-emerald-300">
+                        🎉 Outstanding! 100% submissions completed on time!
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {singleExportReport.pendingMembers.map((m: any) => (
+                          <span
+                            key={m.member.id}
+                            className="rounded-lg border border-rose-500/40 bg-rose-500/15 px-2.5 py-1 text-xs font-bold text-rose-200 flex items-center gap-1.5"
+                          >
+                            <span className="text-rose-400">✗</span>
+                            <span>{m.student.full_name}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {campaignDayReports.map((r) => (
-                    <div key={r.campaign.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
-                      <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
-                        <span className="font-black text-white text-base">
-                          {r.campaign.client_name || r.campaign.campaign_name}
-                        </span>
-                        <span className="text-xs font-bold text-emerald-400">
-                          {r.submittedCount}/{r.totalMembers} Done ({r.rate}%)
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {r.daySubmissions.map(({ student, submission }: any) => (
-                          <span
-                            key={submission.id}
-                            className={`rounded-lg px-3 py-1 text-xs font-bold ${
-                              submission.is_selected
-                                ? "bg-amber-500 text-black font-black"
-                                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                            }`}
-                          >
-                            ✅ {student.full_name} {submission.is_selected ? "🏆" : ""}
-                          </span>
-                        ))}
-                        {r.daySubmissions.length === 0 && (
-                          <span className="text-xs text-white/50 italic">
-                            No submissions recorded yet today.
-                          </span>
-                        )}
-                      </div>
+                  {/* Top Stats Ribbon */}
+                  <div className="grid grid-cols-4 gap-3 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-white/60 block">Campaigns</span>
+                      <span className="text-lg font-black text-white">{campaignDayReports.length}</span>
                     </div>
-                  ))}
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-white/60 block">Total Assigned</span>
+                      <span className="text-lg font-black text-white">{dailySummaryStats.totalAssigned} Students</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-emerald-400 block">✅ Submitted On-Time</span>
+                      <span className="text-lg font-black text-emerald-400">{dailySummaryStats.totalSubmitted} ({dailySummaryStats.overallRate}%)</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-rose-400 block">⏳ Missing / Pending</span>
+                      <span className="text-lg font-black text-rose-400">{dailySummaryStats.totalPending}</span>
+                    </div>
+                  </div>
+
+                  {/* Campaign-Wise Cards Grid (Compact 2-Column Infographic Layout) */}
+                  <div className={campaignDayReports.length > 1 ? "grid grid-cols-2 gap-3.5" : "space-y-3.5"}>
+                    {campaignDayReports.map((r) => (
+                      <div
+                        key={r.campaign.id}
+                        className="rounded-xl border border-white/12 bg-white/5 p-3.5 flex flex-col justify-between"
+                      >
+                        <div>
+                          {/* Campaign Header */}
+                          <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-2 mb-2.5">
+                            <div className="min-w-0">
+                              <h4 className="font-black text-white text-sm truncate">
+                                🏢 {r.campaign.client_name || r.campaign.campaign_name}
+                              </h4>
+                              <p className="text-[10px] text-white/60 truncate">
+                                {r.day ? `Day #${r.day.day_number}${r.day.topic ? ` • ${r.day.topic}` : ""}` : "Daily Task"}
+                              </p>
+                            </div>
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                r.rate >= 80
+                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                  : r.rate >= 50
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                  : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                              }`}
+                            >
+                              {r.submittedCount}/{r.totalMembers} ({r.rate}%)
+                            </span>
+                          </div>
+
+                          {/* Section 1: Submitted Students */}
+                          <div className="mb-2.5">
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider block mb-1">
+                              ✅ Submitted ({r.submittedCount})
+                            </span>
+                            {r.daySubmissions.length === 0 ? (
+                              <p className="text-[10px] text-white/40 italic">No submissions yet today</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                {r.daySubmissions.map(({ student, submission }: any) => (
+                                  <span
+                                    key={submission.id}
+                                    className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                                      submission.is_selected
+                                        ? "bg-amber-400 text-black font-black"
+                                        : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                    }`}
+                                  >
+                                    ✓ {student.full_name} {submission.is_selected ? "🏆" : ""}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Section 2: Missing / Pending Students */}
+                          <div>
+                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-wider block mb-1">
+                              ⏳ Missing / Pending ({r.pendingMembers.length})
+                            </span>
+                            {r.pendingMembers.length === 0 ? (
+                              <span className="text-[10px] text-emerald-300 font-bold">
+                                🎉 100% Completed!
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                {r.pendingMembers.map((m: any) => (
+                                  <span
+                                    key={m.member.id}
+                                    className="rounded-md border border-rose-500/40 bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-200"
+                                  >
+                                    ✗ {m.student.full_name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

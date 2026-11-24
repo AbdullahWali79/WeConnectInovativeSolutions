@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { type ToastState } from "@/components/toast";
+import { toPng } from "html-to-image";
 import {
   setDayPublished,
   toggleWinnerSubmission,
@@ -51,6 +52,37 @@ export function SheetTrackerPanel({
   const [savingPublish, setSavingPublish] = useState(false);
   const [showAttendanceCards, setShowAttendanceCards] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isExportingAttendancePng, setIsExportingAttendancePng] = useState(false);
+  const attendanceCardRef = useRef<HTMLDivElement>(null);
+
+  async function handleExportAttendancePng() {
+    setIsExportingAttendancePng(true);
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+      if (!attendanceCardRef.current) throw new Error("Tracker element not ready.");
+
+      const dataUrl = await toPng(attendanceCardRef.current, {
+        cacheBust: true,
+        backgroundColor: "#0B1329",
+        pixelRatio: 2,
+      });
+
+      const campName = (campaign?.client_name || campaign?.campaign_name || "campaign")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
+
+      const link = document.createElement("a");
+      link.download = `weconnect-attendance-${campName}-${todayIso()}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      setToast({ type: "success", message: "📸 Attendance card image downloaded!" });
+    } catch (err: any) {
+      setToast({ type: "error", message: err?.message || "Could not generate attendance image." });
+    } finally {
+      setIsExportingAttendancePng(false);
+    }
+  }
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -226,6 +258,17 @@ export function SheetTrackerPanel({
                 ❌ {studentStats.reduce((sum, s) => sum + s.missedCount, 0)} Missed
               </span>
             </div>
+
+            <button
+              type="button"
+              disabled={isExportingAttendancePng}
+              onClick={handleExportAttendancePng}
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 shadow-2xs transition"
+              title="Download compact WhatsApp attendance image for this campaign"
+            >
+              <Icon name="photo_camera" className="text-sm text-emerald-600 dark:text-emerald-400" />
+              <span>{isExportingAttendancePng ? "Saving..." : "WhatsApp Image"}</span>
+            </button>
 
             <button
               type="button"
@@ -866,6 +909,89 @@ export function SheetTrackerPanel({
           </div>
         </div>
       )}
+
+      {/* Off-screen attendance template for high-resolution PNG export */}
+      <div className="fixed -left-[9999px] top-0 pointer-events-none" aria-hidden="true">
+        <div
+          ref={attendanceCardRef}
+          style={{ width: "1080px", minHeight: "600px", fontFamily: "system-ui, -apple-system, sans-serif" }}
+          className="bg-linear-to-b from-[#0B1329] via-[#0F172A] to-[#0B1329] text-white p-8 flex flex-col justify-between"
+        >
+          <div>
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <span className="text-emerald-400 text-xs font-black tracking-widest uppercase block">
+                  ★ WE CONNECT INNOVATIVE SOLUTIONS ★
+                </span>
+                <h1 className="text-2xl font-black text-white mt-1">
+                  {campaign?.client_name || campaign?.campaign_name || "Social Media Campaign"}
+                </h1>
+                <p className="text-xs text-emerald-200 mt-0.5">
+                  Daily Attendance &amp; Consistency Tracker
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 text-xs font-black text-emerald-300">
+                  📅 {formatDate(todayIso())}
+                </span>
+                <div className="mt-2 flex items-center justify-end gap-2 text-xs font-bold">
+                  <span className="text-emerald-400">✅ {studentStats.reduce((sum, s) => sum + s.totalSubmitted, 0)} Done</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-rose-400">❌ {studentStats.reduce((sum, s) => sum + s.missedCount, 0)} Missed</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Student Cards Grid */}
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              {studentStats.map((stat) => (
+                <div
+                  key={stat.studentId}
+                  className="rounded-xl border border-white/12 bg-white/5 p-3 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-1">
+                      <span className="font-bold text-white text-xs truncate max-w-[190px]">
+                        {stat.student?.full_name || "Student"}
+                      </span>
+                      {stat.winnerCount > 0 && (
+                        <span className="rounded-full bg-amber-400 px-1.5 py-0.2 text-[9px] font-black text-black shrink-0">
+                          ⭐ {stat.winnerCount} won
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className="text-white/60">Consistency:</span>
+                      <span className="font-black text-white">{stat.percent}%</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full ${
+                          stat.percent >= 80 ? "bg-emerald-500" : stat.percent >= 50 ? "bg-amber-500" : "bg-rose-500"
+                        }`}
+                        style={{ width: `${stat.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-1.5 text-[10px] font-semibold">
+                    <span className="text-emerald-400">✅ {stat.totalSubmitted} Done</span>
+                    {stat.missedCount > 0 ? (
+                      <span className="text-rose-400">❌ {stat.missedCount} Missed</span>
+                    ) : (
+                      <span className="text-emerald-400">0 Missed</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-white/60">
+            <span>&ldquo;Consistency transforms talent into results.&rdquo; 🚀</span>
+            <span className="font-mono text-emerald-400 font-bold">weconnectinnovativesolutions.com</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

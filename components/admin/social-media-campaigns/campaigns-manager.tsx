@@ -283,7 +283,7 @@ export function CampaignsManager({
           }`}
         >
           <Icon name="task_alt" className="text-base text-emerald-500" />
-          <span>Today&apos;s Submissions</span>
+          <span>Today&apos;s Submissions &amp; WhatsApp Report</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
               activeTab === "submissions"
