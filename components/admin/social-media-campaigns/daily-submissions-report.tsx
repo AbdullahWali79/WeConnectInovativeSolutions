@@ -1185,10 +1185,10 @@ export function DailySubmissionsReport({
                       disabled={isExportingPng}
                       onClick={() => handleDownloadDailyCard(campaign.id)}
                       className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-2xs"
-                      title="Download PNG image card for this campaign"
+                      title="Download PNG image card for this specific task/day showing who submitted and who is missing"
                     >
-                      <Icon name="download" className="text-xs" />
-                      <span>PNG Card</span>
+                      <Icon name="photo_camera" className="text-xs" />
+                      <span>Task PNG Card</span>
                     </button>
                   </div>
                 </div>

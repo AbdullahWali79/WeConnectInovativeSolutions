@@ -84,6 +84,73 @@ export function SheetTrackerPanel({
     }
   }
 
+  const [exportingDay, setExportingDay] = useState<Row | null>(null);
+  const [isExportingTaskPng, setIsExportingTaskPng] = useState(false);
+  const taskCardRef = useRef<HTMLDivElement>(null);
+
+  const [isExportingAllTasksPng, setIsExportingAllTasksPng] = useState(false);
+  const allTasksCardRef = useRef<HTMLDivElement>(null);
+
+  async function handleExportTaskPng(day: Row) {
+    setExportingDay(day);
+    setIsExportingTaskPng(true);
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+      if (!taskCardRef.current) throw new Error("Task card element not ready.");
+
+      const dataUrl = await toPng(taskCardRef.current, {
+        cacheBust: true,
+        backgroundColor: "#0B1329",
+        pixelRatio: 2,
+      });
+
+      const campName = (campaign?.client_name || campaign?.campaign_name || "campaign")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
+
+      const link = document.createElement("a");
+      link.download = `weconnect-${campName}-day-${day.day_number}-task-report.png`;
+      link.href = dataUrl;
+      link.click();
+
+      setToast({ type: "success", message: `📸 Day #${day.day_number} Task report image downloaded!` });
+    } catch (err: any) {
+      setToast({ type: "error", message: err?.message || "Could not generate task PNG." });
+    } finally {
+      setIsExportingTaskPng(false);
+    }
+  }
+
+  async function handleExportAllTasksPng() {
+    setIsExportingAllTasksPng(true);
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+      if (!allTasksCardRef.current) throw new Error("Tasks card element not ready.");
+
+      const dataUrl = await toPng(allTasksCardRef.current, {
+        cacheBust: true,
+        backgroundColor: "#0B1329",
+        pixelRatio: 2,
+      });
+
+      const campName = (campaign?.client_name || campaign?.campaign_name || "campaign")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
+
+      const weekLabel = selectedWeek === "all" ? "all-tasks" : `week-${selectedWeek}`;
+      const link = document.createElement("a");
+      link.download = `weconnect-${campName}-${weekLabel}-taskwise-report.png`;
+      link.href = dataUrl;
+      link.click();
+
+      setToast({ type: "success", message: "📸 Task-wise summary image downloaded!" });
+    } catch (err: any) {
+      setToast({ type: "error", message: err?.message || "Could not generate task-wise image." });
+    } finally {
+      setIsExportingAllTasksPng(false);
+    }
+  }
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && isMaximized) {
@@ -120,6 +187,44 @@ export function SheetTrackerPanel({
     }
     return map;
   }, [submissions]);
+
+  // Statistics for the single task currently being exported as PNG
+  const exportingTaskStats = useMemo(() => {
+    if (!exportingDay) return null;
+    const daySubs = members
+      .map((m) => {
+        const sub = submissionsMap[`${exportingDay.id}_${m.student_id}`];
+        if (!sub) return null;
+        return {
+          member: m,
+          student: m.student,
+          submission: sub,
+          links: extractSubmissionLinks(sub),
+          isWinner: sub.is_selected || sub.status === "selected",
+        };
+      })
+      .filter(Boolean) as any[];
+
+    const missing = members
+      .filter((m) => !submissionsMap[`${exportingDay.id}_${m.student_id}`])
+      .map((m) => ({
+        member: m,
+        student: m.student,
+      }));
+
+    const total = members.length;
+    const submittedCount = daySubs.length;
+    const rate = total > 0 ? Math.round((submittedCount / total) * 100) : 0;
+
+    return {
+      day: exportingDay,
+      daySubs,
+      missing,
+      total,
+      submittedCount,
+      rate,
+    };
+  }, [exportingDay, members, submissionsMap]);
 
   // Overall attendance & submission stats per assigned student
   const studentStats = useMemo(() => {
@@ -387,6 +492,18 @@ export function SheetTrackerPanel({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* All Tasks Summary PNG button */}
+          <button
+            type="button"
+            disabled={isExportingAllTasksPng}
+            onClick={handleExportAllTasksPng}
+            title="Download a consolidated PNG image of all tasks showing submitted and missing students"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 shadow-xs transition"
+          >
+            <Icon name="photo_camera" className="text-sm text-emerald-600 dark:text-emerald-400" />
+            <span>{isExportingAllTasksPng ? "Generating..." : "Task-Wise PNG Report"}</span>
+          </button>
+
           {/* Maximize Workspace Button */}
           <button
             type="button"
@@ -487,6 +604,16 @@ export function SheetTrackerPanel({
                           <span className="text-[11px] font-normal text-on-surface-variant mt-0.5">
                             {formatDate(day.post_date)}
                           </span>
+                          <button
+                            type="button"
+                            disabled={isExportingTaskPng && exportingDay?.id === day.id}
+                            onClick={() => handleExportTaskPng(day)}
+                            className="mt-2 inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs w-fit"
+                            title={`Download Task PNG for Day #${day.day_number} (Submitted & Missing students)`}
+                          >
+                            <Icon name="photo_camera" className="text-xs text-emerald-600 dark:text-emerald-400" />
+                            <span>{isExportingTaskPng && exportingDay?.id === day.id ? "Saving…" : "Task PNG"}</span>
+                          </button>
                         </div>
                       </td>
 
@@ -897,7 +1024,16 @@ export function SheetTrackerPanel({
               )}
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-between pt-3 border-t border-outline-variant/60">
+              <button
+                type="button"
+                disabled={isExportingTaskPng && exportingDay?.id === activeDayDetail.id}
+                onClick={() => handleExportTaskPng(activeDayDetail)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-2xs transition"
+              >
+                <Icon name="photo_camera" className="text-sm" />
+                <span>{isExportingTaskPng && exportingDay?.id === activeDayDetail.id ? "Generating…" : "Download Task PNG Report"}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveDayDetail(null)}
@@ -983,6 +1119,267 @@ export function SheetTrackerPanel({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="mt-8 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-white/60">
+            <span>&ldquo;Consistency transforms talent into results.&rdquo; 🚀</span>
+            <span className="font-mono text-emerald-400 font-bold">weconnectinnovativesolutions.com</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Off-screen single task template for high-resolution PNG export */}
+      <div className="fixed -left-[9999px] top-0 pointer-events-none" aria-hidden="true">
+        <div
+          ref={taskCardRef}
+          style={{ width: "1080px", minHeight: "720px", fontFamily: "system-ui, -apple-system, sans-serif" }}
+          className="bg-linear-to-b from-[#0B1329] via-[#0F172A] to-[#0B1329] text-white p-8 flex flex-col justify-between"
+        >
+          {exportingDay && exportingTaskStats && (
+            <div>
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                  <span className="text-emerald-400 text-xs font-black tracking-widest uppercase block">
+                    ★ WE CONNECT INNOVATIVE SOLUTIONS ★
+                  </span>
+                  <h1 className="text-2xl font-black text-white mt-1">
+                    {campaign?.client_name || campaign?.campaign_name || "Social Media Campaign"}
+                  </h1>
+                  <p className="text-xs text-emerald-200 mt-0.5">
+                    Task Submissions &amp; Deliverables Report
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 text-xs font-black text-emerald-300">
+                    📅 {formatDate(exportingDay.post_date)}
+                  </span>
+                  <div className="mt-2 flex items-center justify-end gap-2 text-xs font-bold">
+                    <span className="text-emerald-400">✅ {exportingTaskStats.submittedCount} Submitted</span>
+                    <span className="text-white/40">·</span>
+                    <span className="text-rose-400">⏳ {exportingTaskStats.missing.length} Missing</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Task Details Banner */}
+              <div className="my-5 rounded-xl border border-white/12 bg-white/5 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="rounded-lg bg-primary/20 border border-primary/40 px-2.5 py-1 text-xs font-black text-primary">
+                    Day #{exportingDay.day_number}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-300">
+                    {exportingTaskStats.submittedCount}/{exportingTaskStats.total} Students ({exportingTaskStats.rate}%)
+                  </span>
+                </div>
+                <h2 className="text-lg font-black text-white mt-2">
+                  🎯 Topic: {exportingDay.theme || "Topic not specified"}
+                </h2>
+                {exportingDay.caption && (
+                  <p className="text-xs text-white/70 mt-1 line-clamp-2">
+                    {exportingDay.caption}
+                  </p>
+                )}
+              </div>
+
+              {/* Two Sections: Submitted & Missing */}
+              <div className="space-y-4">
+                {/* Submitted */}
+                <div>
+                  <span className="text-xs font-black text-emerald-400 uppercase tracking-wider block mb-2">
+                    ✅ Submitted Students ({exportingTaskStats.submittedCount})
+                  </span>
+                  {exportingTaskStats.daySubs.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/10 p-3 text-center text-xs text-white/50 italic">
+                      No submissions recorded for this task yet.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {exportingTaskStats.daySubs.map(({ student, submission, isWinner }: any) => (
+                        <div
+                          key={submission.id}
+                          className={`rounded-xl p-2.5 border ${
+                            isWinner
+                              ? "border-amber-400 bg-amber-400/15 ring-1 ring-amber-400"
+                              : "border-emerald-500/30 bg-emerald-500/10"
+                          } flex items-center justify-between`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="h-5 w-5 rounded-full bg-emerald-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
+                              ✓
+                            </span>
+                            <span className="font-bold text-white text-xs truncate">
+                              {student?.full_name || "Student"}
+                            </span>
+                          </div>
+                          {isWinner && (
+                            <span className="rounded-full bg-amber-400 px-1.5 py-0.2 text-[9px] font-black text-black shrink-0">
+                              🏆 WINNER
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Missing */}
+                <div>
+                  <span className="text-xs font-black text-rose-400 uppercase tracking-wider block mb-2">
+                    ⏳ Missing / Pending Students ({exportingTaskStats.missing.length})
+                  </span>
+                  {exportingTaskStats.missing.length === 0 ? (
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs font-bold text-emerald-300">
+                      🎉 100% Complete! Every allotted student submitted their task on time!
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {exportingTaskStats.missing.map((m: any) => (
+                        <span
+                          key={m.member.id}
+                          className="rounded-lg border border-rose-500/40 bg-rose-500/15 px-2.5 py-1 text-xs font-bold text-rose-200 flex items-center gap-1.5"
+                        >
+                          <span className="text-rose-400">✗</span>
+                          <span>{m.student?.full_name || "Student"}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-white/60">
+            <span>&ldquo;Consistency transforms talent into results.&rdquo; 🚀</span>
+            <span className="font-mono text-emerald-400 font-bold">weconnectinnovativesolutions.com</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Off-screen all tasks summary template for high-resolution PNG export */}
+      <div className="fixed -left-[9999px] top-0 pointer-events-none" aria-hidden="true">
+        <div
+          ref={allTasksCardRef}
+          style={{ width: "1120px", minHeight: "800px", fontFamily: "system-ui, -apple-system, sans-serif" }}
+          className="bg-linear-to-b from-[#0B1329] via-[#0F172A] to-[#0B1329] text-white p-8 flex flex-col justify-between"
+        >
+          <div>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <span className="text-emerald-400 text-xs font-black tracking-widest uppercase block">
+                  ★ WE CONNECT INNOVATIVE SOLUTIONS ★
+                </span>
+                <h1 className="text-2xl font-black text-white mt-1">
+                  {campaign?.client_name || campaign?.campaign_name || "Social Media Campaign"}
+                </h1>
+                <p className="text-xs text-emerald-200 mt-0.5">
+                  Task-Wise Submissions Tracker • {selectedWeek === "all" ? "All Tasks" : `Week ${selectedWeek}`}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 text-xs font-black text-emerald-300">
+                  📅 {formatDate(todayIso())}
+                </span>
+                <div className="mt-2 text-xs font-bold text-white/80">
+                  <span>{displayedDays.length} Tasks Planned • {members.length} Students</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Grid of All Displayed Tasks */}
+            <div className="mt-5 grid grid-cols-2 gap-3.5">
+              {displayedDays.map((day) => {
+                const daySubs = members
+                  .map((m) => {
+                    const sub = submissionsMap[`${day.id}_${m.student_id}`];
+                    return sub ? { student: m.student, isWinner: sub.is_selected || sub.status === "selected" } : null;
+                  })
+                  .filter(Boolean) as any[];
+
+                const missing = members.filter((m) => !submissionsMap[`${day.id}_${m.student_id}`]);
+                const rate = members.length > 0 ? Math.round((daySubs.length / members.length) * 100) : 0;
+
+                return (
+                  <div
+                    key={day.id}
+                    className="rounded-xl border border-white/12 bg-white/5 p-3 flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Task title & rate */}
+                      <div className="flex items-start justify-between gap-1 border-b border-white/10 pb-2 mb-2">
+                        <div className="min-w-0">
+                          <span className="font-black text-white text-xs block truncate">
+                            Day #{day.day_number}: {day.theme || "Topic not specified"}
+                          </span>
+                          <span className="text-[10px] text-white/50">
+                            {formatDate(day.post_date)}
+                          </span>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.2 text-[10px] font-black ${
+                            rate >= 80
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                              : rate >= 50
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                              : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                          }`}
+                        >
+                          {daySubs.length}/{members.length} ({rate}%)
+                        </span>
+                      </div>
+
+                      {/* Submitted names */}
+                      <div className="mb-2">
+                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider block mb-1">
+                          ✅ Submitted ({daySubs.length})
+                        </span>
+                        {daySubs.length === 0 ? (
+                          <p className="text-[10px] text-white/40 italic">No submissions yet</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {daySubs.map(({ student, isWinner }: any, idx: number) => (
+                              <span
+                                key={idx}
+                                className={`rounded px-1.5 py-0.2 text-[9px] font-bold ${
+                                  isWinner
+                                    ? "bg-amber-400 text-black font-black"
+                                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                }`}
+                              >
+                                ✓ {student?.full_name} {isWinner ? "🏆" : ""}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Missing names */}
+                      <div>
+                        <span className="text-[9px] font-black text-rose-400 uppercase tracking-wider block mb-1">
+                          ⏳ Missing ({missing.length})
+                        </span>
+                        {missing.length === 0 ? (
+                          <span className="text-[10px] text-emerald-300 font-bold">🎉 100% Complete</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {missing.map((m: any) => (
+                              <span
+                                key={m.student_id}
+                                className="rounded border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.2 text-[9px] font-bold text-rose-200"
+                              >
+                                ✗ {m.student?.full_name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
