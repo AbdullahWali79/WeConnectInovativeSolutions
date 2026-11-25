@@ -55,6 +55,7 @@ export const navGroups: NavGroup[] = [
   ]},
   { id: "communication", label: "Communication", icon: "campaign", items: [
     { href: "/admin/social-media-campaigns", label: "Social Media Campaigns", icon: "campaign", permission: "social_campaigns.view" },
+    { href: "/admin/claude-projects", label: "Claude Projects", icon: "psychology", adminOnly: true },
     { href: "/admin/personal-prompts", label: "My Prompts", icon: "stars", adminOnly: true },
     { href: "/admin/vault", label: "My Vault", icon: "shield", adminOnly: true },
     { href: "/admin/prompts", label: "Public Prompts", icon: "auto_awesome", adminOnly: true },
