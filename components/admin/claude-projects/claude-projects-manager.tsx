@@ -10,6 +10,7 @@ import {
   deleteClaudeProject,
   toggleFavoriteClaudeProject,
   type ClaudeProject,
+  type ProjectFile,
 } from "@/app/admin/claude-projects/actions";
 
 const POPULAR_MODELS = [
@@ -40,11 +41,52 @@ const DEMO_PROJECT: Partial<ClaudeProject> = {
     "Jab user koi link ya topic de, to pehle us ka content parho (link ho to open karo), phir exactly 5 MCQs banao.\n\nRules:\n1. 5 multiple-choice questions (A, B, C, D options).\n2. Quiz pattern-free hona chahiye: correct option random order mein ho.\n3. Har option realistic lagna chahiye taake guesswork se solve na ho.\n4. End par answer key aur brief 1-line explanation shamil karo.",
   context_knowledge:
     "Reference Format:\nQuestion [1-5]: [Problem / Scenario based on repo or code]\nA) [Option A]\nB) [Option B]\nC) [Option C]\nD) [Option D]\n\nCorrect Answer: [Letter]\nExplanation: [Why this is correct]",
+  files: [
+    {
+      id: "demo-sample-quiz-spec",
+      name: "quiz-guidelines.txt",
+      size: 485,
+      type: "text/plain",
+      content: "Guidelines for Quiz Questions:\n- Avoid repetitive 'None of the above' options.\n- Keep question stems concise and clear.\n- Ensure each question tests practical understanding.",
+      uploaded_at: new Date().toISOString(),
+    },
+  ],
   model: "Claude 3.5 Sonnet",
   category: "Quiz & Assessment",
   tags: "github, quiz, mcqs, evaluation",
   is_favorite: true,
 };
+
+function formatFileSize(bytes: number): string {
+  if (!bytes || bytes === 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileIcon(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "txt":
+      return "description";
+    case "md":
+    case "markdown":
+      return "article";
+    case "json":
+    case "csv":
+      return "data_object";
+    case "py":
+    case "js":
+    case "ts":
+    case "tsx":
+    case "html":
+    case "css":
+    case "sql":
+      return "code";
+    default:
+      return "draft";
+  }
+}
 
 export function ClaudeProjectsManager() {
   const [toast, setToast] = useState<ToastState>(null);
@@ -52,6 +94,9 @@ export function ClaudeProjectsManager() {
   const [projects, setProjects] = useState<ClaudeProject[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editProject, setEditProject] = useState<Partial<ClaudeProject> | null>(null);
+
+  // File Preview Modal
+  const [viewingFile, setViewingFile] = useState<ProjectFile | null>(null);
 
   // Filters & Search
   const [search, setSearch] = useState("");
@@ -62,9 +107,10 @@ export function ClaudeProjectsManager() {
   const [viewMode, setViewMode] = useState<"grid" | "compact">("grid");
 
   // Collapsed sections map
-  const [expandedCards, setExpandedCards] = useState<Record<string, { instructions?: boolean; context?: boolean }>>({});
+  const [expandedCards, setExpandedCards] = useState<Record<string, { instructions?: boolean; context?: boolean; files?: boolean }>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cardFileInputRef = useRef<{ input: HTMLInputElement | null; projectId: string | null }>({ input: null, projectId: null });
 
   useEffect(() => {
     loadProjects();
@@ -91,7 +137,11 @@ export function ClaudeProjectsManager() {
   };
 
   const handleCopyBundle = (p: ClaudeProject) => {
-    const bundle = `=== CLAUDE PROJECT: ${p.name} ===\n\n[DESCRIPTION]\n${p.description || "N/A"}\n\n[CUSTOM INSTRUCTIONS / SYSTEM PROMPT]\n${p.instructions || "N/A"}\n\n[PROJECT CONTEXT / KNOWLEDGE]\n${p.context_knowledge || "N/A"}\n\n[MODEL]\n${p.model || "Claude 3.5 Sonnet"}`;
+    let filesText = "";
+    if (p.files && p.files.length > 0) {
+      filesText = "\n\n[ATTACHED TEXT FILES / KNOWLEDGE DOCS]\n" + p.files.map(f => `--- FILE: ${f.name} ---\n${f.content}`).join("\n\n");
+    }
+    const bundle = `=== CLAUDE PROJECT: ${p.name} ===\n\n[DESCRIPTION]\n${p.description || "N/A"}\n\n[CUSTOM INSTRUCTIONS / SYSTEM PROMPT]\n${p.instructions || "N/A"}\n\n[PROJECT CONTEXT / KNOWLEDGE]\n${p.context_knowledge || "N/A"}${filesText}\n\n[MODEL]\n${p.model || "Claude 3.5 Sonnet"}`;
     handleCopy(bundle, `Full project "${p.name}" bundle copied!`);
   };
 
@@ -121,6 +171,7 @@ export function ClaudeProjectsManager() {
       ...p,
       id: undefined,
       name: `${p.name} (Copy)`,
+      files: (p.files || []).map(f => ({ ...f, id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}` })),
     };
     setEditProject(clone);
     setIsModalOpen(true);
@@ -134,6 +185,74 @@ export function ClaudeProjectsManager() {
     } else {
       setToast({ type: "error", message: res.error || "Failed to add demo project" });
     }
+  };
+
+  // Direct quick file upload to a project from its card
+  const handleQuickFileUpload = async (projectId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const newFiles: ProjectFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        const content = await f.text();
+        newFiles.push({
+          id: `${Date.now()}-${i}-${Math.random().toString(36).substring(2, 7)}`,
+          name: f.name,
+          size: f.size,
+          type: f.type || "text/plain",
+          content,
+          uploaded_at: new Date().toISOString(),
+        });
+      } catch (err: any) {
+        setToast({ type: "error", message: `Failed to read file ${f.name}: ${err?.message}` });
+      }
+    }
+
+    if (newFiles.length === 0) return;
+
+    const updatedFiles = [...(project.files || []), ...newFiles];
+    const res = await saveClaudeProject({
+      ...project,
+      files: updatedFiles,
+    });
+
+    if (res.success) {
+      setToast({ type: "success", message: `Uploaded ${newFiles.length} file(s) to "${project.name}"!` });
+      loadProjects();
+    } else {
+      setToast({ type: "error", message: res.error || "Failed to upload file(s)" });
+    }
+  };
+
+  const handleDeleteFileFromProject = async (project: ClaudeProject, fileId: string) => {
+    if (!confirm("Remove this file from project?")) return;
+    const updatedFiles = (project.files || []).filter(f => f.id !== fileId);
+    const res = await saveClaudeProject({
+      ...project,
+      files: updatedFiles,
+    });
+    if (res.success) {
+      setToast({ type: "success", message: "File removed!" });
+      loadProjects();
+    } else {
+      setToast({ type: "error", message: res.error || "Failed to remove file" });
+    }
+  };
+
+  // Download a file
+  const handleDownloadFile = (f: ProjectFile) => {
+    const blob = new Blob([f.content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   // Export JSON backup
@@ -167,6 +286,7 @@ export function ClaudeProjectsManager() {
               description: item.description,
               instructions: item.instructions,
               context_knowledge: item.context_knowledge,
+              files: Array.isArray(item.files) ? item.files : [],
               model: item.model,
               category: item.category,
               tags: item.tags,
@@ -221,9 +341,10 @@ export function ClaudeProjectsManager() {
           const descMatch = (p.description || "").toLowerCase().includes(q);
           const instMatch = (p.instructions || "").toLowerCase().includes(q);
           const contextMatch = (p.context_knowledge || "").toLowerCase().includes(q);
+          const filesMatch = (p.files || []).some(f => f.name.toLowerCase().includes(q) || f.content.toLowerCase().includes(q));
           const tagsMatch = (p.tags || "").toLowerCase().includes(q);
           const catMatch = (p.category || "").toLowerCase().includes(q);
-          return nameMatch || descMatch || instMatch || contextMatch || tagsMatch || catMatch;
+          return nameMatch || descMatch || instMatch || contextMatch || filesMatch || tagsMatch || catMatch;
         }
         return true;
       })
@@ -245,6 +366,21 @@ export function ClaudeProjectsManager() {
     <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
       <Toast toast={toast} onClear={() => setToast(null)} />
 
+      {/* Hidden card file input for quick direct upload */}
+      <input
+        type="file"
+        multiple
+        accept=".txt,.md,.markdown,.json,.csv,.py,.js,.ts,.tsx,.html,.css,.sql,.yaml,.yml,.xml,.log,.sh,.bat,text/*"
+        ref={(el) => { cardFileInputRef.current.input = el; }}
+        className="hidden"
+        onChange={(e) => {
+          if (cardFileInputRef.current.projectId && e.target.files) {
+            handleQuickFileUpload(cardFileInputRef.current.projectId, e.target.files);
+          }
+          e.target.value = "";
+        }}
+      />
+
       {/* Top Banner - Claude Aesthetic */}
       <div className="rounded-2xl bg-gradient-to-r from-[#1c1917] via-[#292524] to-[#1e1b4b] border border-amber-950/40 p-4 sm:p-5 text-white shadow-lg">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -257,12 +393,13 @@ export function ClaudeProjectsManager() {
                 <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
                   Claude Projects Manager
                 </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  AI Workspace Hub
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                  <Icon name="upload_file" className="text-[12px]" />
+                  Text Files & Knowledge Enabled
                 </span>
               </div>
               <p className="text-xs text-stone-300 mt-1 max-w-2xl leading-relaxed">
-                Save, name, and categorize your Claude.ai Projects with their Custom Instructions & Context Knowledge. Easily filter and copy setups directly back into Claude.
+                Save, name, and categorize Claude.ai Projects with Custom Instructions, Knowledge Context & Text Files (.txt, .md, .json, .csv, code).
               </p>
             </div>
           </div>
@@ -321,15 +458,15 @@ export function ClaudeProjectsManager() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-stone-800/80 text-xs text-stone-300">
           <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
             <Icon name="folder_open" className="text-amber-400 text-[18px]" />
-            <span>Total Projects: <strong className="text-white">{projects.length}</strong></span>
+            <span>Projects: <strong className="text-white">{projects.length}</strong></span>
+          </div>
+          <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
+            <Icon name="attach_file" className="text-amber-400 text-[18px]" />
+            <span>Files Attached: <strong className="text-white">{projects.reduce((acc, p) => acc + (p.files?.length || 0), 0)}</strong></span>
           </div>
           <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
             <Icon name="star" className="text-amber-400 text-[18px]" />
             <span>Starred: <strong className="text-white">{favoritesCount}</strong></span>
-          </div>
-          <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
-            <Icon name="category" className="text-amber-400 text-[18px]" />
-            <span>Categories: <strong className="text-white">{allCategories.length}</strong></span>
           </div>
           <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
             <Icon name="filter_alt" className="text-amber-400 text-[18px]" />
@@ -348,7 +485,7 @@ export function ClaudeProjectsManager() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects by name, description, instructions, context, or tags..."
+              placeholder="Search by name, description, instructions, text files, or tags..."
               className="w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-gray-200 rounded-xl py-2 pl-10 pr-9 text-xs text-gray-900 outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition-all font-medium"
             />
             {search && (
@@ -514,7 +651,7 @@ export function ClaudeProjectsManager() {
             <p className="text-xs text-gray-500 mt-1">
               {search || selectedCategory !== "All" || favoriteOnly
                 ? "Try clearing your filters or search term to see other projects."
-                : "You have not saved any Claude projects yet. Click below to add an example project or create your own!"}
+                : "You have not saved any Claude projects yet. Click below to add an example project with text files or create your own!"}
             </p>
           </div>
           <div className="flex items-center justify-center gap-3">
@@ -556,6 +693,7 @@ export function ClaudeProjectsManager() {
               project={p}
               isExpandedInstructions={Boolean(expandedCards[p.id]?.instructions)}
               isExpandedContext={Boolean(expandedCards[p.id]?.context)}
+              isExpandedFiles={Boolean(expandedCards[p.id]?.files)}
               onToggleInstructions={() => setExpandedCards(prev => ({
                 ...prev,
                 [p.id]: { ...prev[p.id], instructions: !prev[p.id]?.instructions }
@@ -564,12 +702,23 @@ export function ClaudeProjectsManager() {
                 ...prev,
                 [p.id]: { ...prev[p.id], context: !prev[p.id]?.context }
               }))}
+              onToggleFiles={() => setExpandedCards(prev => ({
+                ...prev,
+                [p.id]: { ...prev[p.id], files: !prev[p.id]?.files }
+              }))}
               onCopy={handleCopy}
               onCopyBundle={() => handleCopyBundle(p)}
               onToggleFavorite={() => handleToggleFavorite(p)}
               onEdit={() => { setEditProject(p); setIsModalOpen(true); }}
               onDuplicate={() => handleDuplicate(p)}
               onDelete={() => handleDelete(p.id, p.name)}
+              onViewFile={(file) => setViewingFile(file)}
+              onDownloadFile={handleDownloadFile}
+              onDeleteFile={(fileId) => handleDeleteFileFromProject(p, fileId)}
+              onTriggerUpload={() => {
+                cardFileInputRef.current.projectId = p.id;
+                cardFileInputRef.current.input?.click();
+              }}
             />
           ))}
         </div>
@@ -585,6 +734,10 @@ export function ClaudeProjectsManager() {
               onEdit={() => { setEditProject(p); setIsModalOpen(true); }}
               onDuplicate={() => handleDuplicate(p)}
               onDelete={() => handleDelete(p.id, p.name)}
+              onTriggerUpload={() => {
+                cardFileInputRef.current.projectId = p.id;
+                cardFileInputRef.current.input?.click();
+              }}
             />
           ))}
         </div>
@@ -602,6 +755,17 @@ export function ClaudeProjectsManager() {
             loadProjects();
             setToast({ type: "success", message: editProject?.id ? "Project updated!" : "Project saved successfully!" });
           }}
+          onViewFile={(file) => setViewingFile(file)}
+        />
+      )}
+
+      {/* File Preview Modal */}
+      {viewingFile && (
+        <FilePreviewModal
+          file={viewingFile}
+          onClose={() => setViewingFile(null)}
+          onCopy={handleCopy}
+          onDownload={handleDownloadFile}
         />
       )}
     </div>
@@ -615,29 +779,42 @@ function ProjectCard({
   project,
   isExpandedInstructions,
   isExpandedContext,
+  isExpandedFiles,
   onToggleInstructions,
   onToggleContext,
+  onToggleFiles,
   onCopy,
   onCopyBundle,
   onToggleFavorite,
   onEdit,
   onDuplicate,
   onDelete,
+  onViewFile,
+  onDownloadFile,
+  onDeleteFile,
+  onTriggerUpload,
 }: {
   project: ClaudeProject;
   isExpandedInstructions: boolean;
   isExpandedContext: boolean;
+  isExpandedFiles: boolean;
   onToggleInstructions: () => void;
   onToggleContext: () => void;
+  onToggleFiles: () => void;
   onCopy: (text: string, msg?: string) => void;
   onCopyBundle: () => void;
   onToggleFavorite: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onViewFile: (file: ProjectFile) => void;
+  onDownloadFile: (file: ProjectFile) => void;
+  onDeleteFile: (fileId: string) => void;
+  onTriggerUpload: () => void;
 }) {
   const instructionLines = (project.instructions || "").split("\n").length;
   const contextLines = (project.context_knowledge || "").split("\n").length;
+  const filesCount = project.files?.length || 0;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 hover:border-amber-400/80 shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden group">
@@ -681,7 +858,7 @@ function ProjectCard({
         )}
       </div>
 
-      {/* Body: Instructions & Context preview */}
+      {/* Body: Instructions, Context & Files */}
       <div className="p-4 space-y-3 flex-1 text-xs">
         {/* Instructions Box */}
         <div className="rounded-xl border border-gray-200/90 bg-stone-50/40 overflow-hidden">
@@ -711,7 +888,7 @@ function ProjectCard({
             </div>
           </div>
           <div className={`p-2.5 font-mono text-[11px] text-gray-800 leading-relaxed whitespace-pre-wrap select-text overflow-y-auto ${
-            isExpandedInstructions ? "max-h-60" : "max-h-20"
+            isExpandedInstructions ? "max-h-60" : "max-h-16"
           }`}>
             {project.instructions ? project.instructions : <span className="text-gray-400 italic">No instructions set</span>}
           </div>
@@ -722,7 +899,7 @@ function ProjectCard({
           <div className="px-3 py-2 bg-stone-100/70 flex items-center justify-between border-b border-gray-200/60">
             <span className="font-bold text-stone-800 flex items-center gap-1.5 text-[11px]">
               <Icon name="menu_book" className="text-[14px] text-orange-600" />
-              Project Context / Knowledge ({contextLines} lines)
+              Context Notes ({contextLines} lines)
             </span>
             <div className="flex items-center gap-1">
               <button
@@ -745,9 +922,97 @@ function ProjectCard({
             </div>
           </div>
           <div className={`p-2.5 font-mono text-[11px] text-gray-800 leading-relaxed whitespace-pre-wrap select-text overflow-y-auto ${
-            isExpandedContext ? "max-h-60" : "max-h-16"
+            isExpandedContext ? "max-h-60" : "max-h-14"
           }`}>
-            {project.context_knowledge ? project.context_knowledge : <span className="text-gray-400 italic">No context/knowledge docs added</span>}
+            {project.context_knowledge ? project.context_knowledge : <span className="text-gray-400 italic">No context/knowledge notes</span>}
+          </div>
+        </div>
+
+        {/* Attached Text Files Section */}
+        <div className="rounded-xl border border-amber-200/80 bg-amber-50/30 overflow-hidden">
+          <div className="px-3 py-2 bg-amber-100/60 flex items-center justify-between border-b border-amber-200/60">
+            <span className="font-bold text-amber-950 flex items-center gap-1.5 text-[11px]">
+              <Icon name="attach_file" className="text-[15px] text-amber-700" />
+              Knowledge Files ({filesCount})
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={onTriggerUpload}
+                className="px-2 py-0.5 rounded text-[10px] font-bold bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                title="Upload text file directly into this project"
+              >
+                <Icon name="upload" className="text-[12px] text-amber-700" />
+                + Add File
+              </button>
+              {filesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onToggleFiles}
+                  className="p-0.5 rounded text-amber-800 hover:text-amber-950 transition-colors cursor-pointer"
+                  title={isExpandedFiles ? "Collapse" : "Expand"}
+                >
+                  <Icon name={isExpandedFiles ? "expand_less" : "expand_more"} className="text-[16px]" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className={`p-2 space-y-1.5 ${isExpandedFiles ? "max-h-60 overflow-y-auto" : "max-h-28 overflow-hidden"}`}>
+            {filesCount === 0 ? (
+              <p className="text-[11px] text-stone-500 italic p-1">
+                No text files attached. Click &quot;+ Add File&quot; to upload .txt, .md, code, etc.
+              </p>
+            ) : (
+              project.files?.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between gap-2 p-1.5 bg-white rounded-lg border border-amber-100 text-stone-800 hover:border-amber-300 transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onViewFile(file)}
+                    className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer group/file"
+                    title={`Click to preview "${file.name}"`}
+                  >
+                    <Icon name={getFileIcon(file.name)} className="text-amber-600 text-[16px] shrink-0" />
+                    <span className="font-semibold text-xs truncate group-hover/file:text-amber-700">
+                      {file.name}
+                    </span>
+                    <span className="text-[10px] text-stone-400 shrink-0">
+                      ({formatFileSize(file.size)})
+                    </span>
+                  </button>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onCopy(file.content, `Copied "${file.name}" content!`)}
+                      className="p-1 rounded text-stone-500 hover:text-amber-700 hover:bg-stone-100 cursor-pointer"
+                      title="Copy file text"
+                    >
+                      <Icon name="content_copy" className="text-[13px]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDownloadFile(file)}
+                      className="p-1 rounded text-stone-500 hover:text-blue-600 hover:bg-stone-100 cursor-pointer"
+                      title="Download file"
+                    >
+                      <Icon name="download" className="text-[13px]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteFile(file.id)}
+                      className="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-stone-100 cursor-pointer"
+                      title="Remove file"
+                    >
+                      <Icon name="close" className="text-[13px]" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -775,7 +1040,7 @@ function ProjectCard({
             type="button"
             onClick={onCopyBundle}
             className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
-            title="Copy entire project bundle (instructions + context) to paste into Claude"
+            title="Copy entire project bundle (instructions, context & attached files) to paste into Claude"
           >
             <Icon name="bolt" className="text-[14px]" />
             <span>Copy All</span>
@@ -837,6 +1102,7 @@ function CompactProjectRow({
   onEdit,
   onDuplicate,
   onDelete,
+  onTriggerUpload,
 }: {
   project: ClaudeProject;
   onCopy: (text: string, msg?: string) => void;
@@ -845,7 +1111,10 @@ function CompactProjectRow({
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onTriggerUpload: () => void;
 }) {
+  const filesCount = project.files?.length || 0;
+
   return (
     <div className="p-3.5 hover:bg-stone-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -869,6 +1138,12 @@ function CompactProjectRow({
             <span className="px-2 py-0.2 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">
               {project.model}
             </span>
+            {filesCount > 0 && (
+              <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-orange-100 text-orange-800 flex items-center gap-0.5">
+                <Icon name="attach_file" className="text-[11px]" />
+                {filesCount} {filesCount === 1 ? "file" : "files"}
+              </span>
+            )}
           </div>
           {project.description && (
             <p className="text-[11px] text-gray-500 truncate mt-0.5">{project.description}</p>
@@ -877,6 +1152,15 @@ function CompactProjectRow({
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+        <button
+          type="button"
+          onClick={onTriggerUpload}
+          className="px-2 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+          title="Upload Text File"
+        >
+          <Icon name="upload" className="text-[12px]" />
+          + File
+        </button>
         <button
           type="button"
           onClick={() => onCopy(project.instructions, "Instructions copied!")}
@@ -890,7 +1174,7 @@ function CompactProjectRow({
           type="button"
           onClick={onCopyBundle}
           className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
-          title="Copy Complete Project Bundle"
+          title="Copy Complete Project Bundle (Instructions + Context + Files)"
         >
           <Icon name="bolt" className="text-[12px]" />
           Copy All
@@ -925,7 +1209,7 @@ function CompactProjectRow({
 }
 
 // -------------------------------------------------------------
-// CREATE / EDIT PROJECT MODAL
+// CREATE / EDIT PROJECT MODAL (With Drag & Drop File Upload)
 // -------------------------------------------------------------
 function ProjectModal({
   initialData,
@@ -933,12 +1217,14 @@ function ProjectModal({
   models,
   onClose,
   onSaved,
+  onViewFile,
 }: {
   initialData: Partial<ClaudeProject> | null;
   categories: string[];
   models: string[];
   onClose: () => void;
   onSaved: () => void;
+  onViewFile: (file: ProjectFile) => void;
 }) {
   const [name, setName] = useState(initialData?.name || "");
   const [category, setCategory] = useState(initialData?.category || "General");
@@ -952,8 +1238,62 @@ function ProjectModal({
   const [tags, setTags] = useState(initialData?.tags || "");
   const [isFavorite, setIsFavorite] = useState(Boolean(initialData?.is_favorite));
 
+  // Attached files list
+  const [files, setFiles] = useState<ProjectFile[]>(initialData?.files || []);
+  const [isDragging, setIsDragging] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const modalFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Process uploaded files
+  const processFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const added: ProjectFile[] = [];
+
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      try {
+        const text = await f.text();
+        added.push({
+          id: `${Date.now()}-${i}-${Math.random().toString(36).substring(2, 7)}`,
+          name: f.name,
+          size: f.size,
+          type: f.type || "text/plain",
+          content: text,
+          uploaded_at: new Date().toISOString(),
+        });
+      } catch (err: any) {
+        setErrorMsg(`Could not read file ${f.name}: ${err?.message}`);
+      }
+    }
+
+    if (added.length > 0) {
+      setFiles(prev => [...prev, ...added]);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    setFiles(prev => prev.filter(f => f.id !== fileId));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -974,6 +1314,7 @@ function ProjectModal({
       description,
       instructions,
       context_knowledge: contextKnowledge,
+      files,
       model: finalModel,
       category: finalCategory,
       tags,
@@ -1003,7 +1344,7 @@ function ProjectModal({
                 {initialData?.id ? "Edit Claude Project" : "New Claude Project"}
               </h2>
               <p className="text-[11px] text-stone-300">
-                Save your project name, custom instructions, and context knowledge.
+                Save your project name, custom instructions, and text files / knowledge context.
               </p>
             </div>
           </div>
@@ -1144,7 +1485,7 @@ function ProjectModal({
               </span>
             </div>
             <textarea
-              rows={5}
+              rows={4}
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               placeholder="Paste instructions given to Claude here (e.g. Jab user koi link ya topic de, to pehle us ka content parho...)"
@@ -1152,24 +1493,122 @@ function ProjectModal({
             />
           </div>
 
-          {/* Project Knowledge & Context */}
+          {/* Project Knowledge & Context Notes */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="font-bold text-gray-800 flex items-center gap-1.5">
                 <Icon name="menu_book" className="text-[14px] text-orange-600" />
-                Project Context / Knowledge Docs
+                Project Context / Knowledge Notes
               </label>
               <span className="text-[10px] text-gray-400">
                 {contextKnowledge.length} chars
               </span>
             </div>
             <textarea
-              rows={4}
+              rows={3}
               value={contextKnowledge}
               onChange={(e) => setContextKnowledge(e.target.value)}
-              placeholder="Paste reference documents, templates, rules, code snippets, or notes that Claude should reference in this project..."
+              placeholder="Paste reference text, templates, guidelines, or quick notes here..."
               className="w-full font-mono bg-stone-50 border border-gray-300 rounded-xl p-3 text-xs text-gray-900 outline-none focus:border-amber-600 focus:bg-white transition-all leading-relaxed select-text"
             />
+          </div>
+
+          {/* Upload Text Files (Claude Context Knowledge Files) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                <Icon name="attach_file" className="text-[15px] text-amber-700" />
+                Attach Text Files / Documents ({files.length})
+              </label>
+              <span className="text-[10px] text-gray-500">
+                Supports .txt, .md, .csv, .json, .py, .js, .html, and all text files
+              </span>
+            </div>
+
+            {/* Drag and Drop Zone */}
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`border-2 border-dashed rounded-xl p-4 text-center transition-all ${
+                isDragging
+                  ? "border-amber-600 bg-amber-50"
+                  : "border-gray-300 hover:border-amber-400 bg-stone-50/50"
+              }`}
+            >
+              <input
+                type="file"
+                multiple
+                accept=".txt,.md,.markdown,.json,.csv,.py,.js,.ts,.tsx,.html,.css,.sql,.yaml,.yml,.xml,.log,.sh,.bat,text/*"
+                ref={modalFileInputRef}
+                onChange={(e) => {
+                  processFiles(e.target.files);
+                  e.target.value = "";
+                }}
+                className="hidden"
+              />
+              <div className="flex flex-col items-center justify-center gap-1.5">
+                <Icon name="cloud_upload" className="text-[28px] text-amber-600" />
+                <p className="text-xs font-bold text-stone-800">
+                  Drag and drop text files here, or{" "}
+                  <button
+                    type="button"
+                    onClick={() => modalFileInputRef.current?.click()}
+                    className="text-amber-700 hover:text-amber-800 underline font-extrabold cursor-pointer"
+                  >
+                    browse from computer
+                  </button>
+                </p>
+                <p className="text-[10px] text-stone-500">
+                  Files are stored directly in your Claude Project knowledge base for instant reference & copying.
+                </p>
+              </div>
+            </div>
+
+            {/* Attached Files List */}
+            {files.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between gap-2 p-2 bg-stone-100 rounded-xl border border-stone-200"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onViewFile(file)}
+                      className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer group/item"
+                      title="Preview file"
+                    >
+                      <Icon name={getFileIcon(file.name)} className="text-amber-600 text-[18px] shrink-0" />
+                      <span className="font-bold text-xs truncate group-hover/item:text-amber-800">
+                        {file.name}
+                      </span>
+                      <span className="text-[10px] text-stone-500 shrink-0">
+                        ({formatFileSize(file.size)})
+                      </span>
+                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onViewFile(file)}
+                        className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-stone-200 text-stone-700 border border-stone-300 cursor-pointer"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(file.id)}
+                        className="p-1 rounded text-red-500 hover:bg-red-50 cursor-pointer"
+                        title="Remove file"
+                      >
+                        <Icon name="delete" className="text-[15px]" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tags & Favorite */}
@@ -1232,6 +1671,87 @@ function ProjectModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// FILE PREVIEW MODAL
+// -------------------------------------------------------------
+function FilePreviewModal({
+  file,
+  onClose,
+  onCopy,
+  onDownload,
+}: {
+  file: ProjectFile;
+  onClose: () => void;
+  onCopy: (text: string, msg?: string) => void;
+  onDownload: (file: ProjectFile) => void;
+}) {
+  const lineCount = file.content.split("\n").length;
+
+  return (
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl border border-gray-300 overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-3.5 bg-stone-900 text-white flex items-center justify-between border-b border-stone-800">
+          <div className="flex items-center gap-2 min-w-0">
+            <Icon name={getFileIcon(file.name)} className="text-amber-400 text-[20px] shrink-0" />
+            <div className="min-w-0">
+              <h3 className="font-bold text-sm truncate">{file.name}</h3>
+              <p className="text-[10px] text-stone-400">
+                {formatFileSize(file.size)} · {lineCount} lines · {file.type || "text/plain"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => onCopy(file.content, `"${file.name}" copied!`)}
+              className="px-2.5 py-1 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              title="Copy text"
+            >
+              <Icon name="content_copy" className="text-[13px]" />
+              Copy
+            </button>
+            <button
+              type="button"
+              onClick={() => onDownload(file)}
+              className="px-2.5 py-1 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              title="Download file"
+            >
+              <Icon name="download" className="text-[13px]" />
+              Download
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 rounded-lg text-stone-400 hover:text-white cursor-pointer ml-1"
+            >
+              <Icon name="close" className="text-[18px]" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content Viewer */}
+        <div className="flex-1 overflow-y-auto p-4 bg-stone-950 font-mono text-xs text-stone-200 leading-relaxed whitespace-pre-wrap select-text selection:bg-amber-800">
+          {file.content}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-2.5 bg-stone-100 border-t border-stone-200 flex items-center justify-between text-xs text-stone-600">
+          <span>Click anywhere to select or copy lines.</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded-lg font-bold cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -3,12 +3,22 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export type ProjectFile = {
+  id: string;
+  name: string;
+  size: number; // in bytes
+  type?: string;
+  content: string; // full text content
+  uploaded_at: string;
+};
+
 export type ClaudeProject = {
   id: string;
   name: string;
   description: string;
   instructions: string;
   context_knowledge: string;
+  files: ProjectFile[];
   model: string;
   category: string;
   tags: string;
@@ -51,6 +61,7 @@ export async function fetchClaudeProjects(): Promise<{
           description: row.description || "",
           instructions: row.instructions || "",
           context_knowledge: row.context_knowledge || "",
+          files: Array.isArray(row.context_files) ? row.context_files : [],
           model: row.model || "Claude 3.7 Sonnet",
           category: row.category || "General",
           tags: row.tags || "",
@@ -97,10 +108,17 @@ async function fetchFromFallbackStorage(supabase: any, userId: string, initialEr
       const pData = Array.isArray(r.prompts_data) ? r.prompts_data : [];
       const instructionsItem = pData.find((p: any) => p.label === "Instructions" || p.label === "System Prompt");
       const contextItem = pData.find((p: any) => p.label === "Context" || p.label === "Knowledge");
+      const filesItem = pData.find((p: any) => p.label === "Files");
       const metaItem = pData.find((p: any) => p.label === "Metadata");
+
       let meta: any = {};
       try {
         if (metaItem?.text) meta = JSON.parse(metaItem.text);
+      } catch {}
+
+      let files: ProjectFile[] = [];
+      try {
+        if (filesItem?.text) files = JSON.parse(filesItem.text);
       } catch {}
 
       return {
@@ -109,6 +127,7 @@ async function fetchFromFallbackStorage(supabase: any, userId: string, initialEr
         description: meta.description || r.description || r.subtitle || "",
         instructions: instructionsItem?.text || "",
         context_knowledge: contextItem?.text || "",
+        files: Array.isArray(files) ? files : [],
         model: meta.model || "Claude 3.7 Sonnet",
         category: parsedCat,
         tags: (r.tags || "").replace(/claude-project,?/g, "").trim(),
@@ -135,6 +154,7 @@ export async function saveClaudeProject(project: {
   description?: string;
   instructions?: string;
   context_knowledge?: string;
+  files?: ProjectFile[];
   model?: string;
   category?: string;
   tags?: string;
@@ -146,11 +166,12 @@ export async function saveClaudeProject(project: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not logged in" };
 
-  const payload = {
+  const payload: any = {
     name: project.name.trim(),
     description: (project.description || "").trim(),
     instructions: project.instructions || "",
     context_knowledge: project.context_knowledge || "",
+    context_files: project.files || [],
     model: project.model || "Claude 3.7 Sonnet",
     category: (project.category || "General").trim(),
     tags: project.tags || "",
@@ -166,11 +187,19 @@ export async function saveClaudeProject(project: {
       const { error } = await (supabase.from("admin_claude_projects" as any)
         .update(payload)
         .eq("id", project.id)
-        .eq("user_id", user.id)
-        .select("id")
-        .maybeSingle());
+        .eq("user_id", user.id));
 
       if (!error) return { success: true, id: project.id };
+
+      // If context_files column doesn't exist, try without it
+      if (error.message?.includes("context_files") || error.code === "42703") {
+        delete payload.context_files;
+        const retry = await (supabase.from("admin_claude_projects" as any)
+          .update(payload)
+          .eq("id", project.id)
+          .eq("user_id", user.id));
+        if (!retry.error) return { success: true, id: project.id };
+      }
 
       if (error.code === "PGRST205" || error.message?.includes("does not exist") || error.message?.includes("schema cache")) {
         return await saveToFallbackStorage(supabase, user.id, project);
@@ -184,6 +213,16 @@ export async function saveClaudeProject(project: {
         .single());
 
       if (!error && data) return { success: true, id: data.id };
+
+      // If context_files column doesn't exist, try without it
+      if (error?.message?.includes("context_files") || error?.code === "42703") {
+        delete payload.context_files;
+        const retry = await (supabase.from("admin_claude_projects" as any)
+          .insert({ ...payload, user_id: user.id })
+          .select("id")
+          .single());
+        if (!retry.error && retry.data) return { success: true, id: retry.data.id };
+      }
 
       if (error && (error.code === "PGRST205" || error.message?.includes("does not exist") || error.message?.includes("schema cache"))) {
         return await saveToFallbackStorage(supabase, user.id, project);
@@ -207,6 +246,7 @@ async function saveToFallbackStorage(supabase: any, userId: string, project: any
   const prompts_data = [
     { label: "Instructions", text: project.instructions || "" },
     { label: "Context", text: project.context_knowledge || "" },
+    { label: "Files", text: JSON.stringify(project.files || []) },
     { label: "Metadata", text: JSON.stringify(meta) },
   ];
 
