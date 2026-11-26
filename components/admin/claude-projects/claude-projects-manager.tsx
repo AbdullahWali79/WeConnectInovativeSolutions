@@ -103,11 +103,13 @@ export function ClaudeProjectsManager() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedModel, setSelectedModel] = useState("All");
   const [favoriteOnly, setFavoriteOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<"recent" | "name" | "favorites">("recent");
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "favorites" | "files">("recent");
   const [viewMode, setViewMode] = useState<"grid" | "compact">("grid");
 
-  // Collapsed sections map
-  const [expandedCards, setExpandedCards] = useState<Record<string, { instructions?: boolean; context?: boolean; files?: boolean }>>({});
+  // Track which cards are expanded (collapsed by default for compact space-saving layout)
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  // Track inner box expansions (instructions, context, files)
+  const [expandedSections, setExpandedSections] = useState<Record<string, { instructions?: boolean; context?: boolean; files?: boolean }>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cardFileInputRef = useRef<{ input: HTMLInputElement | null; projectId: string | null }>({ input: null, projectId: null });
@@ -344,7 +346,8 @@ export function ClaudeProjectsManager() {
           const filesMatch = (p.files || []).some(f => f.name.toLowerCase().includes(q) || f.content.toLowerCase().includes(q));
           const tagsMatch = (p.tags || "").toLowerCase().includes(q);
           const catMatch = (p.category || "").toLowerCase().includes(q);
-          return nameMatch || descMatch || instMatch || contextMatch || filesMatch || tagsMatch || catMatch;
+          const modelMatch = (p.model || "").toLowerCase().includes(q);
+          return nameMatch || descMatch || instMatch || contextMatch || filesMatch || tagsMatch || catMatch || modelMatch;
         }
         return true;
       })
@@ -356,14 +359,59 @@ export function ClaudeProjectsManager() {
           return Number(Boolean(b.is_favorite)) - Number(Boolean(a.is_favorite)) ||
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }
+        if (sortBy === "files") {
+          return (b.files?.length || 0) - (a.files?.length || 0);
+        }
         return new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime();
       });
   }, [projects, search, selectedCategory, selectedModel, favoriteOnly, sortBy]);
 
   const favoritesCount = useMemo(() => projects.filter(p => p.is_favorite).length, [projects]);
+  const totalFilesCount = useMemo(() => projects.reduce((acc, p) => acc + (p.files?.length || 0), 0), [projects]);
+
+  // Auto-expand cards that match search query so the user can see what matched
+  useEffect(() => {
+    if (search.trim().length > 1) {
+      const matchMap: Record<string, boolean> = {};
+      filteredProjects.forEach(p => {
+        matchMap[p.id] = true;
+      });
+      setExpandedCards(matchMap);
+    }
+  }, [search]);
+
+  const areAllExpanded = filteredProjects.length > 0 && filteredProjects.every(p => Boolean(expandedCards[p.id]));
+
+  const handleToggleExpandAll = () => {
+    if (areAllExpanded) {
+      setExpandedCards({});
+    } else {
+      const all: Record<string, boolean> = {};
+      filteredProjects.forEach(p => {
+        all[p.id] = true;
+      });
+      setExpandedCards(all);
+    }
+  };
+
+  const handleToggleCard = (id: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const isAnyFilterActive = search.trim() !== "" || selectedCategory !== "All" || selectedModel !== "All" || favoriteOnly;
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setSelectedCategory("All");
+    setSelectedModel("All");
+    setFavoriteOnly(false);
+  };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-4 md:p-5 space-y-3 max-w-7xl mx-auto">
       <Toast toast={toast} onClear={() => setToast(null)} />
 
       {/* Hidden card file input for quick direct upload */}
@@ -381,48 +429,64 @@ export function ClaudeProjectsManager() {
         }}
       />
 
-      {/* Top Banner - Claude Aesthetic */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#1c1917] via-[#292524] to-[#1e1b4b] border border-amber-950/40 p-4 sm:p-5 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-900/30 shrink-0">
-              <Icon name="psychology" className="text-white text-[24px]" />
+      {/* Top Banner - Compact Claude Aesthetic */}
+      <div className="rounded-xl bg-gradient-to-r from-[#1c1917] via-[#292524] to-[#1e1b4b] border border-amber-950/40 p-3 sm:p-3.5 text-white shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-sm shadow-amber-900/30 shrink-0">
+              <Icon name="psychology" className="text-white text-[20px]" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+                <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5">
                   Claude Projects Manager
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                  <Icon name="upload_file" className="text-[12px]" />
-                  Text Files & Knowledge Enabled
+                  <Icon name="upload_file" className="text-[11px]" />
+                  Knowledge & Files Enabled
                 </span>
               </div>
-              <p className="text-xs text-stone-300 mt-1 max-w-2xl leading-relaxed">
-                Save, name, and categorize Claude.ai Projects with Custom Instructions, Knowledge Context & Text Files (.txt, .md, .json, .csv, code).
-              </p>
+              {/* Inline Compact Stats */}
+              <div className="flex items-center gap-2 text-[11px] text-stone-300 mt-1 flex-wrap">
+                <span className="flex items-center gap-1 bg-stone-900/70 px-2 py-0.5 rounded-md border border-stone-800">
+                  <Icon name="folder_open" className="text-amber-400 text-[13px]" />
+                  Projects: <strong className="text-white ml-0.5">{projects.length}</strong>
+                </span>
+                <span className="flex items-center gap-1 bg-stone-900/70 px-2 py-0.5 rounded-md border border-stone-800">
+                  <Icon name="attach_file" className="text-amber-400 text-[13px]" />
+                  Files: <strong className="text-white ml-0.5">{totalFilesCount}</strong>
+                </span>
+                <span className="flex items-center gap-1 bg-stone-900/70 px-2 py-0.5 rounded-md border border-stone-800">
+                  <Icon name="star" className="text-amber-400 text-[13px]" />
+                  Starred: <strong className="text-white ml-0.5">{favoritesCount}</strong>
+                </span>
+                <span className="flex items-center gap-1 bg-stone-900/70 px-2 py-0.5 rounded-md border border-stone-800">
+                  <Icon name="filter_alt" className="text-amber-400 text-[13px]" />
+                  Showing: <strong className="text-white ml-0.5">{filteredProjects.length}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Top Actions */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
             <button
               type="button"
               onClick={handleLoadDemo}
-              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 cursor-pointer"
               title="Add example quiz maker project from Claude"
             >
-              <Icon name="auto_awesome" className="text-[16px] text-amber-400" />
+              <Icon name="auto_awesome" className="text-[14px] text-amber-400" />
               <span>Load Example</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportJSON}
-              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 cursor-pointer"
               title="Backup all projects to JSON"
             >
-              <Icon name="download" className="text-[16px] text-blue-300" />
+              <Icon name="download" className="text-[14px] text-blue-300" />
               <span>Export</span>
             </button>
 
@@ -436,163 +500,155 @@ export function ClaudeProjectsManager() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 cursor-pointer"
               title="Import projects from JSON file"
             >
-              <Icon name="upload" className="text-[16px] text-emerald-300" />
+              <Icon name="upload" className="text-[14px] text-emerald-300" />
               <span>Import</span>
             </button>
 
             <button
               type="button"
               onClick={() => { setEditProject(null); setIsModalOpen(true); }}
-              className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer"
             >
-              <Icon name="add" className="text-[18px]" />
+              <Icon name="add" className="text-[16px]" />
               <span>New Project</span>
             </button>
           </div>
         </div>
-
-        {/* Quick Stats Ribbon */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-stone-800/80 text-xs text-stone-300">
-          <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
-            <Icon name="folder_open" className="text-amber-400 text-[18px]" />
-            <span>Projects: <strong className="text-white">{projects.length}</strong></span>
-          </div>
-          <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
-            <Icon name="attach_file" className="text-amber-400 text-[18px]" />
-            <span>Files Attached: <strong className="text-white">{projects.reduce((acc, p) => acc + (p.files?.length || 0), 0)}</strong></span>
-          </div>
-          <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
-            <Icon name="star" className="text-amber-400 text-[18px]" />
-            <span>Starred: <strong className="text-white">{favoritesCount}</strong></span>
-          </div>
-          <div className="flex items-center gap-2 bg-stone-900/60 rounded-lg px-3 py-1.5">
-            <Icon name="filter_alt" className="text-amber-400 text-[18px]" />
-            <span>Showing: <strong className="text-white">{filteredProjects.length}</strong></span>
-          </div>
-        </div>
       </div>
 
-      {/* Main Filter & Search Toolbar */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-3 shadow-xs space-y-2.5">
-        <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center justify-between">
+      {/* Main Filter & Search Toolbar - Compact */}
+      <div className="bg-white rounded-xl border border-gray-200 p-2.5 shadow-2xs space-y-2">
+        <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center justify-between">
           {/* Search Box */}
           <div className="relative flex-1">
-            <Icon name="search" className="absolute left-3.5 top-2.5 text-gray-400 text-[18px]" />
+            <Icon name="search" className="absolute left-3 top-2.5 text-gray-400 text-[16px]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, description, instructions, text files, or tags..."
-              className="w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-gray-200 rounded-xl py-2 pl-10 pr-9 text-xs text-gray-900 outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition-all font-medium"
+              placeholder="Search projects by name, instructions, context notes, text files, or tags..."
+              className="w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-gray-200 rounded-lg py-1.5 pl-9 pr-8 text-xs text-gray-900 outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition-all font-medium"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 cursor-pointer"
+                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 cursor-pointer"
                 title="Clear search"
               >
-                <Icon name="close" className="text-[16px]" />
+                <Icon name="close" className="text-[15px]" />
               </button>
             )}
           </div>
 
-          {/* Dropdown Filters */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+          {/* Dropdown Filters & Controls */}
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
             {/* Category Dropdown */}
-            <div className="min-w-[140px] flex-1 sm:flex-initial">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-3 text-xs font-semibold text-gray-800 outline-none focus:border-amber-600 cursor-pointer"
-              >
-                <option value="All">All Categories ({projects.length})</option>
-                {allCategories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {cat} ({projects.filter(p => (p.category || "").toLowerCase() === cat.toLowerCase()).length})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-semibold text-gray-800 outline-none focus:border-amber-600 cursor-pointer"
+            >
+              <option value="All">All Categories ({projects.length})</option>
+              {allCategories.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat} ({projects.filter(p => (p.category || "").toLowerCase() === cat.toLowerCase()).length})
+                </option>
+              ))}
+            </select>
 
             {/* Model Filter */}
-            <div className="min-w-[130px] flex-1 sm:flex-initial">
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-3 text-xs font-semibold text-gray-800 outline-none focus:border-amber-600 cursor-pointer"
-              >
-                <option value="All">All Models</option>
-                {allModels.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-semibold text-gray-800 outline-none focus:border-amber-600 cursor-pointer"
+            >
+              <option value="All">All Models</option>
+              {allModels.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
 
             {/* Sort Dropdown */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="min-w-[130px] bg-gray-50 border border-gray-200 rounded-xl py-2 px-3 text-xs font-semibold text-gray-800 outline-none focus:border-amber-600 cursor-pointer flex-1 sm:flex-initial"
+              className="bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-semibold text-gray-800 outline-none focus:border-amber-600 cursor-pointer"
             >
               <option value="recent">Recently Updated</option>
-              <option value="name">Project Name (A–Z)</option>
+              <option value="name">Name (A–Z)</option>
               <option value="favorites">Favorites First</option>
+              <option value="files">Most Files</option>
             </select>
 
             {/* Favorite Star Filter Button */}
             <button
               type="button"
               onClick={() => setFavoriteOnly(prev => !prev)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border cursor-pointer shrink-0 ${
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all border cursor-pointer shrink-0 ${
                 favoriteOnly
-                  ? "bg-amber-500 text-white border-amber-600 shadow-xs"
+                  ? "bg-amber-500 text-white border-amber-600 shadow-2xs"
                   : "bg-gray-50 text-gray-700 border-gray-200 hover:border-amber-300 hover:bg-amber-50/50"
               }`}
               title="Show only starred projects"
             >
-              <Icon name={favoriteOnly ? "star" : "star_outline"} className={`text-[16px] ${favoriteOnly ? "text-white" : "text-amber-500"}`} />
-              <span>Starred</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              <Icon name={favoriteOnly ? "star" : "star_outline"} className={`text-[15px] ${favoriteOnly ? "text-white" : "text-amber-500"}`} />
+              <span className="hidden sm:inline">Starred</span>
+              <span className={`text-[10px] px-1 rounded-full font-bold ${
                 favoriteOnly ? "bg-white/30 text-white" : "bg-amber-100 text-amber-800"
               }`}>
                 {favoritesCount}
               </span>
             </button>
 
+            {/* Expand All / Collapse All Button */}
+            <button
+              type="button"
+              onClick={handleToggleExpandAll}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all border cursor-pointer shrink-0 ${
+                areAllExpanded
+                  ? "bg-stone-800 text-white border-stone-900 shadow-2xs"
+                  : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-stone-100"
+              }`}
+              title={areAllExpanded ? "Collapse all project cards" : "Expand all project cards"}
+            >
+              <Icon name={areAllExpanded ? "unfold_less" : "unfold_more"} className="text-[15px]" />
+              <span>{areAllExpanded ? "Collapse All" : "Expand All"}</span>
+            </button>
+
             {/* View Mode Switcher */}
-            <div className="flex items-center rounded-xl border border-gray-200 p-0.5 bg-gray-50 shrink-0">
+            <div className="flex items-center rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
               <button
                 type="button"
                 onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${viewMode === "grid" ? "bg-white text-gray-900 shadow-2xs font-bold" : "text-gray-500 hover:text-gray-800"}`}
+                className={`p-1 rounded-md text-xs transition-colors cursor-pointer ${viewMode === "grid" ? "bg-white text-gray-900 shadow-2xs font-bold" : "text-gray-500 hover:text-gray-800"}`}
                 title="Grid View"
               >
-                <Icon name="grid_view" className="text-[17px]" />
+                <Icon name="grid_view" className="text-[16px]" />
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("compact")}
-                className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${viewMode === "compact" ? "bg-white text-gray-900 shadow-2xs font-bold" : "text-gray-500 hover:text-gray-800"}`}
+                className={`p-1 rounded-md text-xs transition-colors cursor-pointer ${viewMode === "compact" ? "bg-white text-gray-900 shadow-2xs font-bold" : "text-gray-500 hover:text-gray-800"}`}
                 title="Compact List View"
               >
-                <Icon name="view_list" className="text-[17px]" />
+                <Icon name="view_list" className="text-[16px]" />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Quick Filter Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1 border-t border-gray-100">
+        {/* Quick Filter Category Pills & Reset */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none pt-1 border-t border-gray-100">
           <button
             type="button"
             onClick={() => { setSelectedCategory("All"); setFavoriteOnly(false); }}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               selectedCategory === "All" && !favoriteOnly
-                ? "bg-amber-600 text-white shadow-xs"
+                ? "bg-amber-600 text-white shadow-2xs"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
@@ -602,13 +658,13 @@ export function ClaudeProjectsManager() {
           <button
             type="button"
             onClick={() => setFavoriteOnly(prev => !prev)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${
+            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${
               favoriteOnly
-                ? "bg-amber-500 text-white shadow-xs"
+                ? "bg-amber-500 text-white shadow-2xs"
                 : "bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-700"
             }`}
           >
-            <Icon name="star" className={`text-[13px] ${favoriteOnly ? "text-white" : "text-amber-500"}`} />
+            <Icon name="star" className={`text-[12px] ${favoriteOnly ? "text-white" : "text-amber-500"}`} />
             Starred ({favoritesCount})
           </button>
 
@@ -620,9 +676,9 @@ export function ClaudeProjectsManager() {
                 key={cat}
                 type="button"
                 onClick={() => { setSelectedCategory(cat); setFavoriteOnly(false); }}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   isActive
-                    ? "bg-amber-600 text-white shadow-xs"
+                    ? "bg-amber-600 text-white shadow-2xs"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
@@ -630,19 +686,31 @@ export function ClaudeProjectsManager() {
               </button>
             );
           })}
+
+          {isAnyFilterActive && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="px-2.5 py-0.5 rounded-full text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer shrink-0 ml-auto"
+              title="Reset all search & filters"
+            >
+              <Icon name="close" className="text-[12px]" />
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
       {/* Projects List / Grid */}
       {loading ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-gray-200 shadow-2xs">
+        <div className="p-12 text-center bg-white rounded-xl border border-gray-200 shadow-2xs">
           <div className="inline-block animate-spin text-amber-600 mb-3">
             <Icon name="progress_activity" className="text-[32px]" />
           </div>
           <p className="text-sm font-semibold text-gray-700">Loading your Claude Projects...</p>
         </div>
       ) : filteredProjects.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-gray-200 shadow-2xs space-y-4">
+        <div className="p-12 text-center bg-white rounded-xl border border-gray-200 shadow-2xs space-y-4">
           <div className="h-16 w-16 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <Icon name="psychology" className="text-[36px]" />
           </div>
@@ -658,7 +726,7 @@ export function ClaudeProjectsManager() {
             {search || selectedCategory !== "All" || favoriteOnly ? (
               <button
                 type="button"
-                onClick={() => { setSearch(""); setSelectedCategory("All"); setSelectedModel("All"); setFavoriteOnly(false); }}
+                onClick={handleClearFilters}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Clear All Filters
@@ -686,23 +754,25 @@ export function ClaudeProjectsManager() {
           </div>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredProjects.map((p) => (
             <ProjectCard
               key={p.id}
               project={p}
-              isExpandedInstructions={Boolean(expandedCards[p.id]?.instructions)}
-              isExpandedContext={Boolean(expandedCards[p.id]?.context)}
-              isExpandedFiles={Boolean(expandedCards[p.id]?.files)}
-              onToggleInstructions={() => setExpandedCards(prev => ({
+              isExpanded={Boolean(expandedCards[p.id])}
+              onToggleExpand={() => handleToggleCard(p.id)}
+              isExpandedInstructions={Boolean(expandedSections[p.id]?.instructions)}
+              isExpandedContext={Boolean(expandedSections[p.id]?.context)}
+              isExpandedFiles={Boolean(expandedSections[p.id]?.files)}
+              onToggleInstructions={() => setExpandedSections(prev => ({
                 ...prev,
                 [p.id]: { ...prev[p.id], instructions: !prev[p.id]?.instructions }
               }))}
-              onToggleContext={() => setExpandedCards(prev => ({
+              onToggleContext={() => setExpandedSections(prev => ({
                 ...prev,
                 [p.id]: { ...prev[p.id], context: !prev[p.id]?.context }
               }))}
-              onToggleFiles={() => setExpandedCards(prev => ({
+              onToggleFiles={() => setExpandedSections(prev => ({
                 ...prev,
                 [p.id]: { ...prev[p.id], files: !prev[p.id]?.files }
               }))}
@@ -719,25 +789,32 @@ export function ClaudeProjectsManager() {
                 cardFileInputRef.current.projectId = p.id;
                 cardFileInputRef.current.input?.click();
               }}
+              onTagClick={(tag) => setSearch(tag)}
             />
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100 shadow-xs overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 shadow-2xs overflow-hidden">
           {filteredProjects.map((p) => (
             <CompactProjectRow
               key={p.id}
               project={p}
+              isExpanded={Boolean(expandedCards[p.id])}
+              onToggleExpand={() => handleToggleCard(p.id)}
               onCopy={handleCopy}
               onCopyBundle={() => handleCopyBundle(p)}
               onToggleFavorite={() => handleToggleFavorite(p)}
               onEdit={() => { setEditProject(p); setIsModalOpen(true); }}
               onDuplicate={() => handleDuplicate(p)}
               onDelete={() => handleDelete(p.id, p.name)}
+              onViewFile={(file) => setViewingFile(file)}
+              onDownloadFile={handleDownloadFile}
+              onDeleteFile={(fileId) => handleDeleteFileFromProject(p, fileId)}
               onTriggerUpload={() => {
                 cardFileInputRef.current.projectId = p.id;
                 cardFileInputRef.current.input?.click();
               }}
+              onTagClick={(tag) => setSearch(tag)}
             />
           ))}
         </div>
@@ -777,6 +854,8 @@ export function ClaudeProjectsManager() {
 // -------------------------------------------------------------
 function ProjectCard({
   project,
+  isExpanded,
+  onToggleExpand,
   isExpandedInstructions,
   isExpandedContext,
   isExpandedFiles,
@@ -793,8 +872,11 @@ function ProjectCard({
   onDownloadFile,
   onDeleteFile,
   onTriggerUpload,
+  onTagClick,
 }: {
   project: ClaudeProject;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
   isExpandedInstructions: boolean;
   isExpandedContext: boolean;
   isExpandedFiles: boolean;
@@ -811,399 +893,687 @@ function ProjectCard({
   onDownloadFile: (file: ProjectFile) => void;
   onDeleteFile: (fileId: string) => void;
   onTriggerUpload: () => void;
+  onTagClick?: (tag: string) => void;
 }) {
   const instructionLines = (project.instructions || "").split("\n").length;
   const contextLines = (project.context_knowledge || "").split("\n").length;
   const filesCount = project.files?.length || 0;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 hover:border-amber-400/80 shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden group">
-      {/* Top Header */}
-      <div className="p-4 pb-3 border-b border-gray-100 bg-gradient-to-b from-stone-50/50 to-white">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100/80 text-amber-900 border border-amber-200">
-                {project.category || "General"}
-              </span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-stone-100 text-stone-700 border border-stone-200 flex items-center gap-1">
-                <Icon name="smart_toy" className="text-[12px] text-stone-500" />
-                {project.model || "Claude 3.5 Sonnet"}
-              </span>
-            </div>
-            <h3 className="text-sm font-bold text-gray-900 truncate group-hover:text-amber-800 transition-colors" title={project.name}>
+    <div className={`bg-white rounded-xl border transition-all flex flex-col overflow-hidden group shadow-2xs hover:shadow-xs ${
+      isExpanded ? "border-amber-400 ring-1 ring-amber-400/40" : "border-gray-200 hover:border-amber-300"
+    }`}>
+      {/* Top Header & Collapsed Summary */}
+      <div className="p-3 bg-gradient-to-b from-stone-50/70 to-white flex flex-col gap-1.5">
+        {/* Category, Model & Card Quick Actions */}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100/90 text-amber-900 border border-amber-200">
+              {project.category || "General"}
+            </span>
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-stone-100 text-stone-700 border border-stone-200 flex items-center gap-1">
+              <Icon name="smart_toy" className="text-[12px] text-stone-500" />
+              {project.model || "Claude 3.5 Sonnet"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-0.5 shrink-0">
+            {/* Star Favorite Button */}
+            <button
+              type="button"
+              onClick={onToggleFavorite}
+              className="p-1 rounded-md text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors cursor-pointer"
+              title={project.is_favorite ? "Unstar project" : "Star as favorite"}
+            >
+              <Icon
+                name={project.is_favorite ? "star" : "star_outline"}
+                className={`text-[18px] ${project.is_favorite ? "text-amber-500 fill-amber-500" : ""}`}
+              />
+            </button>
+
+            {/* Quick Copy Bundle */}
+            <button
+              type="button"
+              onClick={onCopyBundle}
+              className="p-1 rounded-md text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition-colors cursor-pointer"
+              title="Copy complete bundle to paste into Claude"
+            >
+              <Icon name="bolt" className="text-[16px]" />
+            </button>
+
+            {/* Quick Edit */}
+            <button
+              type="button"
+              onClick={onEdit}
+              className="p-1 rounded-md text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+              title="Edit project"
+            >
+              <Icon name="edit" className="text-[14px]" />
+            </button>
+
+            {/* Quick Delete */}
+            <button
+              type="button"
+              onClick={onDelete}
+              className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+              title="Delete project"
+            >
+              <Icon name="delete" className="text-[14px]" />
+            </button>
+          </div>
+        </div>
+
+        {/* Project Title & Click-to-Expand trigger */}
+        <div
+          onClick={onToggleExpand}
+          className="cursor-pointer select-none group/title pt-0.5"
+          title={isExpanded ? "Click to collapse" : "Click to expand details"}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate group-hover/title:text-amber-800 transition-colors">
               {project.name}
             </h3>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
+              className={`text-[10px] font-bold flex items-center gap-0.5 px-2 py-0.5 rounded-md border transition-all shrink-0 cursor-pointer ${
+                isExpanded
+                  ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                  : "bg-white text-stone-700 border-stone-200 hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300"
+              }`}
+            >
+              <Icon name={isExpanded ? "expand_less" : "expand_more"} className="text-[14px]" />
+              <span>{isExpanded ? "Collapse" : "Expand"}</span>
+            </button>
           </div>
 
-          {/* Star Favorite Button */}
-          <button
-            type="button"
-            onClick={onToggleFavorite}
-            className="p-1 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors cursor-pointer shrink-0"
-            title={project.is_favorite ? "Unstar project" : "Star as favorite"}
-          >
-            <Icon
-              name={project.is_favorite ? "star" : "star_outline"}
-              className={`text-[20px] ${project.is_favorite ? "text-amber-500 fill-amber-500" : ""}`}
-            />
-          </button>
+          {project.description && (
+            <p className={`text-[11px] text-gray-500 mt-0.5 leading-relaxed ${
+              isExpanded ? "bg-stone-50 p-2 rounded-lg border border-stone-100" : "line-clamp-1"
+            }`}>
+              {project.description}
+            </p>
+          )}
         </div>
 
-        {/* Project Description / Goal */}
-        {project.description && (
-          <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed bg-stone-50/70 p-2 rounded-lg border border-stone-100">
-            {project.description}
-          </p>
-        )}
-      </div>
+        {/* Quick Stats Summary Chips & Clickable Tags */}
+        <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-gray-100 text-[10px] text-gray-500 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => onCopy(project.instructions, `Instructions for "${project.name}" copied!`)}
+              className="flex items-center gap-1 bg-stone-100 hover:bg-stone-200 px-1.5 py-0.5 rounded text-stone-700 font-medium cursor-pointer transition-colors"
+              title="Click to copy instructions"
+            >
+              <Icon name="format_list_bulleted" className="text-[11px] text-amber-600" />
+              <span>{instructionLines} lines</span>
+              <Icon name="content_copy" className="text-[10px] text-stone-400" />
+            </button>
 
-      {/* Body: Instructions, Context & Files */}
-      <div className="p-4 space-y-3 flex-1 text-xs">
-        {/* Instructions Box */}
-        <div className="rounded-xl border border-gray-200/90 bg-stone-50/40 overflow-hidden">
-          <div className="px-3 py-2 bg-stone-100/70 flex items-center justify-between border-b border-gray-200/60">
-            <span className="font-bold text-stone-800 flex items-center gap-1.5 text-[11px]">
-              <Icon name="format_list_bulleted" className="text-[14px] text-amber-600" />
-              Instructions ({instructionLines} lines)
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onCopy(project.instructions, `Instructions for "${project.name}" copied!`)}
-                className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1 transition-colors cursor-pointer"
-                title="Copy instructions to clipboard"
-              >
-                <Icon name="content_copy" className="text-[12px]" />
-                Copy
-              </button>
-              <button
-                type="button"
-                onClick={onToggleInstructions}
-                className="p-0.5 rounded text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
-                title={isExpandedInstructions ? "Collapse" : "Expand"}
-              >
-                <Icon name={isExpandedInstructions ? "expand_less" : "expand_more"} className="text-[16px]" />
-              </button>
-            </div>
-          </div>
-          <div className={`p-2.5 font-mono text-[11px] text-gray-800 leading-relaxed whitespace-pre-wrap select-text overflow-y-auto ${
-            isExpandedInstructions ? "max-h-60" : "max-h-16"
-          }`}>
-            {project.instructions ? project.instructions : <span className="text-gray-400 italic">No instructions set</span>}
-          </div>
-        </div>
-
-        {/* Context / Knowledge Box */}
-        <div className="rounded-xl border border-gray-200/90 bg-stone-50/40 overflow-hidden">
-          <div className="px-3 py-2 bg-stone-100/70 flex items-center justify-between border-b border-gray-200/60">
-            <span className="font-bold text-stone-800 flex items-center gap-1.5 text-[11px]">
-              <Icon name="menu_book" className="text-[14px] text-orange-600" />
-              Context Notes ({contextLines} lines)
-            </span>
-            <div className="flex items-center gap-1">
+            {contextLines > 0 && project.context_knowledge && (
               <button
                 type="button"
                 onClick={() => onCopy(project.context_knowledge, `Context for "${project.name}" copied!`)}
-                className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1 transition-colors cursor-pointer"
-                title="Copy context knowledge to clipboard"
+                className="flex items-center gap-1 bg-stone-100 hover:bg-stone-200 px-1.5 py-0.5 rounded text-stone-700 font-medium cursor-pointer transition-colors"
+                title="Click to copy context knowledge"
               >
-                <Icon name="content_copy" className="text-[12px]" />
-                Copy
+                <Icon name="menu_book" className="text-[11px] text-orange-600" />
+                <span>{contextLines} lines ctx</span>
+                <Icon name="content_copy" className="text-[10px] text-stone-400" />
               </button>
-              <button
-                type="button"
-                onClick={onToggleContext}
-                className="p-0.5 rounded text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
-                title={isExpandedContext ? "Collapse" : "Expand"}
-              >
-                <Icon name={isExpandedContext ? "expand_less" : "expand_more"} className="text-[16px]" />
-              </button>
-            </div>
-          </div>
-          <div className={`p-2.5 font-mono text-[11px] text-gray-800 leading-relaxed whitespace-pre-wrap select-text overflow-y-auto ${
-            isExpandedContext ? "max-h-60" : "max-h-14"
-          }`}>
-            {project.context_knowledge ? project.context_knowledge : <span className="text-gray-400 italic">No context/knowledge notes</span>}
-          </div>
-        </div>
+            )}
 
-        {/* Attached Text Files Section */}
-        <div className="rounded-xl border border-amber-200/80 bg-amber-50/30 overflow-hidden">
-          <div className="px-3 py-2 bg-amber-100/60 flex items-center justify-between border-b border-amber-200/60">
-            <span className="font-bold text-amber-950 flex items-center gap-1.5 text-[11px]">
-              <Icon name="attach_file" className="text-[15px] text-amber-700" />
-              Knowledge Files ({filesCount})
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={onTriggerUpload}
-                className="px-2 py-0.5 rounded text-[10px] font-bold bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
-                title="Upload text file directly into this project"
-              >
-                <Icon name="upload" className="text-[12px] text-amber-700" />
-                + Add File
-              </button>
-              {filesCount > 0 && (
+            <button
+              type="button"
+              onClick={onTriggerUpload}
+              className="flex items-center gap-1 bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded text-amber-800 font-medium cursor-pointer transition-colors border border-amber-200/50"
+              title="Attach text file"
+            >
+              <Icon name="attach_file" className="text-[11px] text-amber-700" />
+              <span>{filesCount} {filesCount === 1 ? "file" : "files"}</span>
+            </button>
+          </div>
+
+          {project.tags && (
+            <div className="flex items-center gap-1">
+              {project.tags.split(",").slice(0, 3).map((t, idx) => {
+                const tag = t.trim();
+                if (!tag) return null;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => onTagClick?.(tag)}
+                    className="px-1.5 py-0.2 bg-gray-100 hover:bg-amber-100 text-gray-600 hover:text-amber-800 rounded text-[9px] font-medium cursor-pointer transition-colors"
+                    title={`Filter by tag #${tag}`}
+                  >
+                    #{tag}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Expanded Body: Instructions, Context & Files (Visible ONLY when isExpanded is true!) */}
+      {isExpanded && (
+        <div className="p-3 space-y-2.5 text-xs border-t border-gray-100 bg-stone-50/20 animate-in fade-in duration-150 flex-1">
+          {/* Instructions Box */}
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            <div className="px-2.5 py-1.5 bg-stone-100/70 flex items-center justify-between border-b border-gray-200/60">
+              <span className="font-bold text-stone-800 flex items-center gap-1.5 text-[11px]">
+                <Icon name="format_list_bulleted" className="text-[13px] text-amber-600" />
+                Instructions ({instructionLines} lines)
+              </span>
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={onToggleFiles}
-                  className="p-0.5 rounded text-amber-800 hover:text-amber-950 transition-colors cursor-pointer"
-                  title={isExpandedFiles ? "Collapse" : "Expand"}
+                  onClick={() => onCopy(project.instructions, `Instructions for "${project.name}" copied!`)}
+                  className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Copy instructions to clipboard"
                 >
-                  <Icon name={isExpandedFiles ? "expand_less" : "expand_more"} className="text-[16px]" />
+                  <Icon name="content_copy" className="text-[11px]" />
+                  Copy
                 </button>
+                <button
+                  type="button"
+                  onClick={onToggleInstructions}
+                  className="p-0.5 rounded text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                  title={isExpandedInstructions ? "Collapse text" : "Expand text"}
+                >
+                  <Icon name={isExpandedInstructions ? "expand_less" : "expand_more"} className="text-[15px]" />
+                </button>
+              </div>
+            </div>
+            <div className={`p-2.5 font-mono text-[11px] text-gray-800 leading-relaxed whitespace-pre-wrap select-text overflow-y-auto ${
+              isExpandedInstructions ? "max-h-60" : "max-h-20"
+            }`}>
+              {project.instructions ? project.instructions : <span className="text-gray-400 italic">No instructions set</span>}
+            </div>
+          </div>
+
+          {/* Context / Knowledge Box */}
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            <div className="px-2.5 py-1.5 bg-stone-100/70 flex items-center justify-between border-b border-gray-200/60">
+              <span className="font-bold text-stone-800 flex items-center gap-1.5 text-[11px]">
+                <Icon name="menu_book" className="text-[13px] text-orange-600" />
+                Context Notes ({contextLines} lines)
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onCopy(project.context_knowledge, `Context for "${project.name}" copied!`)}
+                  className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Copy context knowledge to clipboard"
+                >
+                  <Icon name="content_copy" className="text-[11px]" />
+                  Copy
+                </button>
+                <button
+                  type="button"
+                  onClick={onToggleContext}
+                  className="p-0.5 rounded text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                  title={isExpandedContext ? "Collapse text" : "Expand text"}
+                >
+                  <Icon name={isExpandedContext ? "expand_less" : "expand_more"} className="text-[15px]" />
+                </button>
+              </div>
+            </div>
+            <div className={`p-2.5 font-mono text-[11px] text-gray-800 leading-relaxed whitespace-pre-wrap select-text overflow-y-auto ${
+              isExpandedContext ? "max-h-60" : "max-h-16"
+            }`}>
+              {project.context_knowledge ? project.context_knowledge : <span className="text-gray-400 italic">No context/knowledge notes</span>}
+            </div>
+          </div>
+
+          {/* Attached Text Files Section */}
+          <div className="rounded-lg border border-amber-200/80 bg-amber-50/20 overflow-hidden">
+            <div className="px-2.5 py-1.5 bg-amber-100/60 flex items-center justify-between border-b border-amber-200/60">
+              <span className="font-bold text-amber-950 flex items-center gap-1.5 text-[11px]">
+                <Icon name="attach_file" className="text-[14px] text-amber-700" />
+                Knowledge Files ({filesCount})
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={onTriggerUpload}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                  title="Upload text file directly into this project"
+                >
+                  <Icon name="upload" className="text-[11px] text-amber-700" />
+                  + Add File
+                </button>
+                {filesCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={onToggleFiles}
+                    className="p-0.5 rounded text-amber-800 hover:text-amber-950 transition-colors cursor-pointer"
+                    title={isExpandedFiles ? "Collapse list" : "Expand list"}
+                  >
+                    <Icon name={isExpandedFiles ? "expand_less" : "expand_more"} className="text-[15px]" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className={`p-2 space-y-1 ${isExpandedFiles ? "max-h-60 overflow-y-auto" : "max-h-24 overflow-hidden"}`}>
+              {filesCount === 0 ? (
+                <p className="text-[10px] text-stone-500 italic p-1">
+                  No text files attached. Click &quot;+ Add File&quot; to upload .txt, .md, code, etc.
+                </p>
+              ) : (
+                project.files?.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between gap-1.5 p-1.5 bg-white rounded-md border border-amber-100 text-stone-800 hover:border-amber-300 transition-colors"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onViewFile(file)}
+                      className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer group/file"
+                      title={`Click to preview "${file.name}"`}
+                    >
+                      <Icon name={getFileIcon(file.name)} className="text-amber-600 text-[15px] shrink-0" />
+                      <span className="font-semibold text-xs truncate group-hover/file:text-amber-700">
+                        {file.name}
+                      </span>
+                      <span className="text-[9px] text-stone-400 shrink-0">
+                        ({formatFileSize(file.size)})
+                      </span>
+                    </button>
+
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onCopy(file.content, `Copied "${file.name}" content!`)}
+                        className="p-1 rounded text-stone-500 hover:text-amber-700 hover:bg-stone-100 cursor-pointer"
+                        title="Copy file text"
+                      >
+                        <Icon name="content_copy" className="text-[12px]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDownloadFile(file)}
+                        className="p-1 rounded text-stone-500 hover:text-blue-600 hover:bg-stone-100 cursor-pointer"
+                        title="Download file"
+                      >
+                        <Icon name="download" className="text-[12px]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteFile(file.id)}
+                        className="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-stone-100 cursor-pointer"
+                        title="Remove file"
+                      >
+                        <Icon name="close" className="text-[12px]" />
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
-          <div className={`p-2 space-y-1.5 ${isExpandedFiles ? "max-h-60 overflow-y-auto" : "max-h-28 overflow-hidden"}`}>
-            {filesCount === 0 ? (
-              <p className="text-[11px] text-stone-500 italic p-1">
-                No text files attached. Click &quot;+ Add File&quot; to upload .txt, .md, code, etc.
-              </p>
-            ) : (
-              project.files?.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center justify-between gap-2 p-1.5 bg-white rounded-lg border border-amber-100 text-stone-800 hover:border-amber-300 transition-colors"
-                >
+          {/* Tags */}
+          {project.tags && (
+            <div className="flex items-center gap-1 flex-wrap pt-0.5">
+              <Icon name="tag" className="text-gray-400 text-[11px]" />
+              {project.tags.split(",").map((t, idx) => {
+                const tag = t.trim();
+                if (!tag) return null;
+                return (
                   <button
+                    key={idx}
                     type="button"
-                    onClick={() => onViewFile(file)}
-                    className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer group/file"
-                    title={`Click to preview "${file.name}"`}
+                    onClick={() => onTagClick?.(tag)}
+                    className="px-1.5 py-0.5 bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded text-[10px] cursor-pointer transition-colors"
                   >
-                    <Icon name={getFileIcon(file.name)} className="text-amber-600 text-[16px] shrink-0" />
-                    <span className="font-semibold text-xs truncate group-hover/file:text-amber-700">
-                      {file.name}
-                    </span>
-                    <span className="text-[10px] text-stone-400 shrink-0">
-                      ({formatFileSize(file.size)})
-                    </span>
+                    #{tag}
                   </button>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onCopy(file.content, `Copied "${file.name}" content!`)}
-                      className="p-1 rounded text-stone-500 hover:text-amber-700 hover:bg-stone-100 cursor-pointer"
-                      title="Copy file text"
-                    >
-                      <Icon name="content_copy" className="text-[13px]" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDownloadFile(file)}
-                      className="p-1 rounded text-stone-500 hover:text-blue-600 hover:bg-stone-100 cursor-pointer"
-                      title="Download file"
-                    >
-                      <Icon name="download" className="text-[13px]" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteFile(file.id)}
-                      className="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-stone-100 cursor-pointer"
-                      title="Remove file"
-                    >
-                      <Icon name="close" className="text-[13px]" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Tags */}
-        {project.tags && (
-          <div className="flex items-center gap-1 flex-wrap pt-0.5">
-            <Icon name="tag" className="text-gray-400 text-[12px]" />
-            {project.tags.split(",").map((t, idx) => {
-              const tag = t.trim();
-              if (!tag) return null;
-              return (
-                <span key={idx} className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] text-gray-600">
-                  {tag}
-                </span>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Card Action Footer */}
-      <div className="p-3 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between gap-1.5">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onCopyBundle}
-            className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
-            title="Copy entire project bundle (instructions, context & attached files) to paste into Claude"
-          >
-            <Icon name="bolt" className="text-[14px]" />
-            <span>Copy All</span>
-          </button>
-
-          {project.project_url && (
-            <a
-              href={project.project_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-2 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-              title="Open direct link in Claude.ai"
-            >
-              <Icon name="open_in_new" className="text-[13px] text-amber-600" />
-              <span>Claude</span>
-            </a>
+                );
+              })}
+            </div>
           )}
-        </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onDuplicate}
-            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
-            title="Duplicate project"
-          >
-            <Icon name="content_copy" className="text-[15px]" />
-          </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-            title="Edit project"
-          >
-            <Icon name="edit" className="text-[15px]" />
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-            title="Delete project"
-          >
-            <Icon name="delete" className="text-[15px]" />
-          </button>
+          {/* Card Action Footer */}
+          <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onCopyBundle}
+                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                title="Copy entire project bundle"
+              >
+                <Icon name="bolt" className="text-[13px]" />
+                <span>Copy All</span>
+              </button>
+
+              {project.project_url && (
+                <a
+                  href={project.project_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Open direct link in Claude.ai"
+                >
+                  <Icon name="open_in_new" className="text-[12px] text-amber-600" />
+                  <span>Claude</span>
+                </a>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onDuplicate}
+                className="p-1 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
+                title="Duplicate project"
+              >
+                <Icon name="content_copy" className="text-[14px]" />
+              </button>
+              <button
+                type="button"
+                onClick={onEdit}
+                className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                title="Edit project"
+              >
+                <Icon name="edit" className="text-[14px]" />
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                className="p-1 rounded-lg text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                title="Delete project"
+              >
+                <Icon name="delete" className="text-[14px]" />
+              </button>
+              <button
+                type="button"
+                onClick={onToggleExpand}
+                className="px-2 py-0.5 rounded text-[10px] font-semibold text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer ml-1"
+                title="Collapse card"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 // -------------------------------------------------------------
-// COMPACT ROW COMPONENT (List View)
+// COMPACT ROW COMPONENT (List View with Expandable Drawer)
 // -------------------------------------------------------------
 function CompactProjectRow({
   project,
+  isExpanded,
+  onToggleExpand,
   onCopy,
   onCopyBundle,
   onToggleFavorite,
   onEdit,
   onDuplicate,
   onDelete,
+  onViewFile,
+  onDownloadFile,
+  onDeleteFile,
   onTriggerUpload,
+  onTagClick,
 }: {
   project: ClaudeProject;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
   onCopy: (text: string, msg?: string) => void;
   onCopyBundle: () => void;
   onToggleFavorite: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onViewFile: (file: ProjectFile) => void;
+  onDownloadFile: (file: ProjectFile) => void;
+  onDeleteFile: (fileId: string) => void;
   onTriggerUpload: () => void;
+  onTagClick?: (tag: string) => void;
 }) {
   const filesCount = project.files?.length || 0;
+  const instructionLines = (project.instructions || "").split("\n").length;
+  const contextLines = (project.context_knowledge || "").split("\n").length;
 
   return (
-    <div className="p-3.5 hover:bg-stone-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div className="flex items-start gap-3 min-w-0 flex-1">
-        <button
-          type="button"
-          onClick={onToggleFavorite}
-          className="mt-0.5 text-gray-400 hover:text-amber-500 cursor-pointer shrink-0"
-        >
-          <Icon
-            name={project.is_favorite ? "star" : "star_outline"}
-            className={`text-[19px] ${project.is_favorite ? "text-amber-500" : ""}`}
-          />
-        </button>
+    <div className={`transition-colors ${isExpanded ? "bg-amber-50/20" : "hover:bg-stone-50/80"}`}>
+      <div className="p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+          {/* Expand Chevron Toggle */}
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            className={`mt-0.5 p-1 rounded-md transition-colors cursor-pointer shrink-0 ${
+              isExpanded ? "bg-amber-200/80 text-amber-900" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+            }`}
+            title={isExpanded ? "Collapse row" : "Expand details"}
+          >
+            <Icon name={isExpanded ? "expand_less" : "expand_more"} className="text-[18px]" />
+          </button>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-xs font-bold text-gray-900 truncate">{project.name}</h4>
-            <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-              {project.category || "General"}
-            </span>
-            <span className="px-2 py-0.2 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">
-              {project.model}
-            </span>
-            {filesCount > 0 && (
-              <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-orange-100 text-orange-800 flex items-center gap-0.5">
-                <Icon name="attach_file" className="text-[11px]" />
-                {filesCount} {filesCount === 1 ? "file" : "files"}
+          {/* Star Button */}
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            className="mt-0.5 text-gray-400 hover:text-amber-500 cursor-pointer shrink-0"
+            title={project.is_favorite ? "Unstar" : "Star"}
+          >
+            <Icon
+              name={project.is_favorite ? "star" : "star_outline"}
+              className={`text-[18px] ${project.is_favorite ? "text-amber-500 fill-amber-500" : ""}`}
+            />
+          </button>
+
+          <div className="min-w-0 flex-1" onClick={onToggleExpand}>
+            <div className="flex items-center gap-1.5 flex-wrap cursor-pointer">
+              <h4 className="text-xs font-bold text-gray-900 hover:text-amber-800 transition-colors truncate">
+                {project.name}
+              </h4>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                {project.category || "General"}
               </span>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">
+                {project.model}
+              </span>
+              {filesCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-orange-100 text-orange-800 flex items-center gap-0.5">
+                  <Icon name="attach_file" className="text-[11px]" />
+                  {filesCount}
+                </span>
+              )}
+            </div>
+            {project.description && (
+              <p className="text-[11px] text-gray-500 truncate mt-0.5">{project.description}</p>
             )}
           </div>
-          {project.description && (
-            <p className="text-[11px] text-gray-500 truncate mt-0.5">{project.description}</p>
-          )}
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
+          <button
+            type="button"
+            onClick={onTriggerUpload}
+            className="px-2 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+            title="Upload Text File"
+          >
+            <Icon name="upload" className="text-[11px]" />
+            + File
+          </button>
+          <button
+            type="button"
+            onClick={() => onCopy(project.instructions, "Instructions copied!")}
+            className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+            title="Copy Instructions"
+          >
+            <Icon name="content_copy" className="text-[11px]" />
+            Instructions
+          </button>
+          <button
+            type="button"
+            onClick={onCopyBundle}
+            className="px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
+            title="Copy Complete Project Bundle"
+          >
+            <Icon name="bolt" className="text-[11px]" />
+            Copy All
+          </button>
+          <button
+            type="button"
+            onClick={onDuplicate}
+            className="p-1 rounded text-gray-500 hover:bg-gray-100 cursor-pointer"
+            title="Duplicate"
+          >
+            <Icon name="content_copy" className="text-[14px]" />
+          </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="p-1 rounded text-blue-600 hover:bg-blue-50 cursor-pointer"
+            title="Edit"
+          >
+            <Icon name="edit" className="text-[14px]" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="p-1 rounded text-red-600 hover:bg-red-50 cursor-pointer"
+            title="Delete"
+          >
+            <Icon name="delete" className="text-[14px]" />
+          </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-        <button
-          type="button"
-          onClick={onTriggerUpload}
-          className="px-2 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
-          title="Upload Text File"
-        >
-          <Icon name="upload" className="text-[12px]" />
-          + File
-        </button>
-        <button
-          type="button"
-          onClick={() => onCopy(project.instructions, "Instructions copied!")}
-          className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
-          title="Copy Instructions"
-        >
-          <Icon name="content_copy" className="text-[12px]" />
-          Instructions
-        </button>
-        <button
-          type="button"
-          onClick={onCopyBundle}
-          className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
-          title="Copy Complete Project Bundle (Instructions + Context + Files)"
-        >
-          <Icon name="bolt" className="text-[12px]" />
-          Copy All
-        </button>
-        <button
-          type="button"
-          onClick={onDuplicate}
-          className="p-1 rounded text-gray-500 hover:bg-gray-100 cursor-pointer"
-          title="Duplicate"
-        >
-          <Icon name="content_copy" className="text-[15px]" />
-        </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="p-1 rounded text-blue-600 hover:bg-blue-50 cursor-pointer"
-          title="Edit"
-        >
-          <Icon name="edit" className="text-[15px]" />
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="p-1 rounded text-red-600 hover:bg-red-50 cursor-pointer"
-          title="Delete"
-        >
-          <Icon name="delete" className="text-[15px]" />
-        </button>
-      </div>
+      {/* Expandable Drawer in List View */}
+      {isExpanded && (
+        <div className="px-4 pb-3 pt-1 border-t border-gray-100 bg-stone-50/50 space-y-2 animate-in fade-in duration-150 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {/* Instructions */}
+            <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between mb-1 pb-1 border-b border-gray-100">
+                <span className="font-bold text-gray-800 text-[11px] flex items-center gap-1">
+                  <Icon name="format_list_bulleted" className="text-amber-600 text-[12px]" />
+                  Instructions ({instructionLines} lines)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onCopy(project.instructions, "Copied instructions!")}
+                  className="text-[10px] text-amber-700 hover:underline flex items-center gap-0.5 cursor-pointer font-semibold"
+                >
+                  <Icon name="content_copy" className="text-[10px]" />
+                  Copy
+                </button>
+              </div>
+              <div className="font-mono text-[11px] text-gray-700 whitespace-pre-wrap max-h-28 overflow-y-auto">
+                {project.instructions || <span className="text-gray-400 italic">No instructions set</span>}
+              </div>
+            </div>
+
+            {/* Context Knowledge */}
+            <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between mb-1 pb-1 border-b border-gray-100">
+                <span className="font-bold text-gray-800 text-[11px] flex items-center gap-1">
+                  <Icon name="menu_book" className="text-orange-600 text-[12px]" />
+                  Context Notes ({contextLines} lines)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onCopy(project.context_knowledge, "Copied context!")}
+                  className="text-[10px] text-orange-700 hover:underline flex items-center gap-0.5 cursor-pointer font-semibold"
+                >
+                  <Icon name="content_copy" className="text-[10px]" />
+                  Copy
+                </button>
+              </div>
+              <div className="font-mono text-[11px] text-gray-700 whitespace-pre-wrap max-h-28 overflow-y-auto">
+                {project.context_knowledge || <span className="text-gray-400 italic">No context notes</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Attached Files List (if any) */}
+          {filesCount > 0 && (
+            <div className="bg-white p-2.5 rounded-lg border border-amber-200/80">
+              <div className="font-bold text-amber-950 text-[11px] mb-1.5 flex items-center gap-1">
+                <Icon name="attach_file" className="text-amber-700 text-[13px]" />
+                Attached Files ({filesCount})
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {project.files?.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-1 bg-amber-50/70 border border-amber-200 px-2 py-1 rounded text-[11px] text-stone-800"
+                  >
+                    <Icon name={getFileIcon(file.name)} className="text-amber-700 text-[13px]" />
+                    <button
+                      type="button"
+                      onClick={() => onViewFile(file)}
+                      className="font-semibold hover:underline cursor-pointer truncate max-w-[150px]"
+                      title="Preview file"
+                    >
+                      {file.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onCopy(file.content, `Copied "${file.name}"!`)}
+                      className="text-stone-500 hover:text-amber-700 ml-1 cursor-pointer"
+                      title="Copy content"
+                    >
+                      <Icon name="content_copy" className="text-[11px]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDownloadFile(file)}
+                      className="text-stone-500 hover:text-blue-600 cursor-pointer"
+                      title="Download"
+                    >
+                      <Icon name="download" className="text-[11px]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteFile(file.id)}
+                      className="text-stone-400 hover:text-red-600 cursor-pointer"
+                      title="Delete file"
+                    >
+                      <Icon name="close" className="text-[11px]" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tags in drawer */}
+          {project.tags && (
+            <div className="flex items-center gap-1 flex-wrap pt-0.5">
+              <span className="text-[10px] text-gray-400">Tags:</span>
+              {project.tags.split(",").map((t, idx) => {
+                const tag = t.trim();
+                if (!tag) return null;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => onTagClick?.(tag)}
+                    className="px-1.5 py-0.2 bg-gray-200/80 hover:bg-amber-100 text-gray-700 hover:text-amber-900 rounded text-[10px] cursor-pointer"
+                  >
+                    #{tag}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
