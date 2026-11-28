@@ -361,6 +361,9 @@ export async function updateCampaign(campaignId: string, input: any) {
 export async function deleteCampaign(campaignId: string) {
   try {
     const profile = await requireCampaignAccess("social_campaigns.delete");
+    if (profile.role !== "admin") {
+      return { success: false as const, error: "Only an administrator can delete campaigns." };
+    }
     await assertCampaignAccess(campaignId, profile);
     const supabase = createSupabaseServiceClient();
     const { error } = await supabase.from("sm_campaigns" as any).delete().eq("id", campaignId);

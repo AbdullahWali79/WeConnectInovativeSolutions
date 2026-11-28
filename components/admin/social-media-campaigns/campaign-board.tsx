@@ -899,11 +899,16 @@ export function CampaignBoard({
         <EditCampaignModal
           campaign={campaign}
           teachers={teachers}
+          role={role}
           onClose={() => setIsEditingCampaign(false)}
           onSaved={(updated) => {
             setCampaign((prev: any) => ({ ...prev, ...updated }));
             setIsEditingCampaign(false);
             setToast({ type: "success", message: `Campaign "${updated.client_name}" updated successfully` });
+          }}
+          onDeleted={() => {
+            setIsEditingCampaign(false);
+            onBack();
           }}
           onError={(message) => setToast({ type: "error", message })}
         />

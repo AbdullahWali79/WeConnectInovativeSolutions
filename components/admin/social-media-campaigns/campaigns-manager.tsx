@@ -9,6 +9,7 @@ import { createTeacherAccount } from "@/app/admin/actions";
 import type { TeacherSelectablePermissionKey } from "@/lib/admin-permissions";
 import {
   createCampaign,
+  deleteCampaign,
   fetchCampaignWorkspace,
   fetchAllCampaignStudents,
   fetchDailySubmissionsOverview,
@@ -65,6 +66,7 @@ export function CampaignsManager({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [setupIssue, setSetupIssue] = useState("");
 
@@ -109,6 +111,29 @@ export function CampaignsManager({
     setLoading(false);
     setRefreshing(false);
   }, [loadStudents, loadDailySubmissions]);
+
+  const handleDeleteCampaign = useCallback(
+    async (campaignId: string, clientName: string) => {
+      if (
+        !window.confirm(
+          `Are you sure you want to permanently delete campaign "${clientName}"?\n\nThis will remove all planned days, student submissions, and member assignments. This action cannot be undone.`
+        )
+      ) {
+        return;
+      }
+      setDeletingId(campaignId);
+      const res = await deleteCampaign(campaignId);
+      setDeletingId(null);
+      if (!res.success) {
+        setToast({ type: "error", message: res.error || "Could not delete this campaign." });
+        return;
+      }
+      setCampaigns((current) => current.filter((c) => c.id !== campaignId));
+      setToast({ type: "success", message: `Campaign "${clientName}" deleted successfully.` });
+      await load({ silent: true });
+    },
+    [load]
+  );
 
   useEffect(() => {
     if (initialError) return;
@@ -396,6 +421,24 @@ export function CampaignsManager({
                         <Icon name="edit" className="text-[12px]" />
                         <span>Edit</span>
                       </button>
+                      {role === "admin" && (
+                        <button
+                          type="button"
+                          disabled={deletingId === campaign.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDeleteCampaign(campaign.id, campaign.client_name);
+                          }}
+                          className="inline-flex items-center gap-0.5 rounded-md border border-red-200/80 bg-surface-lowest px-1.5 py-0.5 text-[11px] font-bold text-red-600 hover:text-red-700 hover:border-red-300 hover:bg-red-50/70 transition shadow-2xs disabled:opacity-50"
+                          title="Delete campaign"
+                        >
+                          <Icon
+                            name={deletingId === campaign.id ? "sync" : "delete"}
+                            className={`text-[12px] ${deletingId === campaign.id ? "animate-spin" : ""}`}
+                          />
+                          <span>{deletingId === campaign.id ? "…" : "Delete"}</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -476,6 +519,7 @@ export function CampaignsManager({
         <EditCampaignModal
           campaign={editingCampaign}
           teachers={teachers}
+          role={role}
           onClose={() => setEditingCampaign(null)}
           onSaved={async (updated) => {
             setEditingCampaign(null);
@@ -483,6 +527,13 @@ export function CampaignsManager({
               current.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
             );
             setToast({ type: "success", message: `Campaign "${updated.client_name}" updated successfully` });
+            await load({ silent: true });
+          }}
+          onDeleted={async (deletedId) => {
+            const clientName = editingCampaign?.client_name || "Campaign";
+            setEditingCampaign(null);
+            setCampaigns((current) => current.filter((c) => c.id !== deletedId));
+            setToast({ type: "success", message: `Campaign "${clientName}" deleted successfully` });
             await load({ silent: true });
           }}
           onError={(message) => setToast({ type: "error", message })}

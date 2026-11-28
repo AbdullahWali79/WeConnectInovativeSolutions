@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/icon";
-import { updateCampaign } from "@/app/admin/social-media-campaigns/actions";
+import { updateCampaign, deleteCampaign } from "@/app/admin/social-media-campaigns/actions";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-outline-variant bg-surface-lowest p-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-surface-container";
@@ -25,14 +25,20 @@ export interface EditCampaignData {
 export function EditCampaignModal({
   campaign,
   teachers = [],
+  role = "admin",
+  canDelete,
   onClose,
   onSaved,
+  onDeleted,
   onError,
 }: {
   campaign: EditCampaignData;
   teachers?: any[];
+  role?: string;
+  canDelete?: boolean;
   onClose: () => void;
   onSaved: (updatedCampaign: EditCampaignData) => void;
+  onDeleted?: (campaignId: string) => void;
   onError: (message: string) => void;
 }) {
   const [form, setForm] = useState({
@@ -47,6 +53,27 @@ export function EditCampaignModal({
   });
 
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const allowDelete = canDelete ?? (role === "admin");
+
+  async function handleDelete() {
+    setDeleting(true);
+    const res = await deleteCampaign(campaign.id);
+    setDeleting(false);
+
+    if (!res.success) {
+      onError(res.error || "Could not delete this campaign.");
+      return;
+    }
+
+    if (onDeleted) {
+      onDeleted(campaign.id);
+    } else {
+      onClose();
+    }
+  }
 
   async function handleSave(e?: React.FormEvent) {
     if (e) e.preventDefault();
@@ -227,23 +254,63 @@ export function EditCampaignModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-outline-variant/60">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="rounded-xl border border-outline-variant px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-low transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary-container shadow-sm transition-colors disabled:opacity-50"
-            >
-              <Icon name={saving ? "sync" : "save"} className={`text-[16px] ${saving ? "animate-spin" : ""}`} />
-              {saving ? "Saving…" : "Save Changes"}
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-outline-variant/60">
+            <div>
+              {allowDelete && (
+                !confirmDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={saving || deleting}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50/60 px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50 shadow-2xs"
+                    title="Permanently delete this campaign"
+                  >
+                    <Icon name="delete" className="text-[15px]" />
+                    <span>Delete Campaign</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 p-1.5 shadow-2xs animate-in fade-in duration-150">
+                    <span className="text-[11px] font-bold text-red-700 px-1">Delete campaign?</span>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50 shadow-xs"
+                    >
+                      <Icon name={deleting ? "sync" : "delete_forever"} className={`text-[13px] ${deleting ? "animate-spin" : ""}`} />
+                      <span>{deleting ? "Deleting…" : "Yes, Delete"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleting}
+                      className="rounded-lg border border-outline-variant/80 bg-surface-lowest px-2.5 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-low transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5 ml-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving || deleting}
+                className="rounded-xl border border-outline-variant px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-low transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary-container shadow-sm transition-colors disabled:opacity-50"
+              >
+                <Icon name={saving ? "sync" : "save"} className={`text-[16px] ${saving ? "animate-spin" : ""}`} />
+                {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
